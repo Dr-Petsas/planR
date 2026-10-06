@@ -1,0 +1,24 @@
+# Abhaengigkeiten und Build-Ausgaben (npm install / npm run build erzeugen sie neu)
+node_modules/
+dist/
+dist-ssr/
+logs/
+*.log
+
+# Geheimnisse und lokale Einstellungen
+.env
+.env.*
+*.local
+
+# KZBV "Digitale Planungshilfe Festzuschusssystem" (DPF3): Fremdprogramm, ~95 MB,
+# bei der KZBV herunterladbar. Beschreibung und Skripte daneben bleiben im Repo.
+ZE/HKP/_quellen/dpf/**/*.exe
+ZE/HKP/_quellen/dpf/**/*.dll
+ZE/HKP/_quellen/dpf/**/*.zip
+
+# Editor / System
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,325 @@
+BEBPreisliste2024 ITZGmbH
+BEB2024
+Datum:23.01.2024
+Nr. Bezeichnung PreisEUR
+Modell aus Hartgips 10,40
+Modell aus Superhartgips 10,40
+Modell nach Uberabformung 23,64
+Kontrollmodell 10,40
+Modell ausKunststoff 23,00
+10 Spezialmodell 23,00
+18 Modell bei Implantatversorgung 10,40
+19 Frassmodell 16,00
+20 Remontage-Modell 10,40
+21 Sagemodell 23,00
+23 ModellfurEinzelstumpfe 10,40
+24 VerwendungKunststoff 19,64
+Modell nachUberabformung 23,60
+29 Keramikstufe 40,00
+33 BissgabelnachGauge 15,00
+36 Versandkosten bei Datenlieferung 8,52
+37 Konstruierenund Frasen einerBasis ausKunststoff 102,00
+39 Interimsprothese aus Polyamid 199,00
+40 InterimsprotheseausPolyamid 249,00
+42 FraseneinesSekundarteilsNEM 138,00
+105 Stumpf aus Kunststoff 8,50
+217 StumpfunterMikroskopvorbereiten 5,50
+221 Hilfsteil inAbdruck 9,00
+223 Zahnfleischmaske,abnehmbarjeKieferhalfte 31,00
+224 Modellimplantatrepositionieren 11,00
+225 ImplantatpfostenaufModellierimplantataufschrauben 6,20
+241 Dubliereneines ModellesoderModellteiles 21,33
+243 Dubliereneines Einzelstumpfes 13,66
+251 AngeliefertesModelluntersockeln 10,40
+252 AngeliefertesModell oderZahnkranzbearbeiten 10,40
+253 Split-CastSockelanModell 10,40
+301 Zahnvermessen 5,00
+302 Modellvermessen 7,00
+307 RadierendesAbschluBrandes 11,00
+401 Montage eines Modellpaares in Fixator 13,07
+402 ModellmontageinMittelwertartikulatorI 14,75
+403 Modellmontage in Mittelwertartikulator ll 16,20
+404 ModellmontageinMittelwertnachGesichtsbogen 26,50
+405 Modellmontage in individuellenArtikulator ll 16,20
+408 Montage einesGegenkiefermodelles 7,70
+511 Mehraufwand fur Einstellen nach Zentrikregistrat 7,70
+521 AuswerteneinesRegistrates 25,50
+522 Frontzahnfuhrungstellerindividuell 26,50
+523 PfeilwinkelaufFrontzahnfuhrungstellerubertragen 26,50
+601 Modellpaartrimmen,okklusionsbezogen 11,00
+602 Modellpaarsockeln,dreidimensional 11,00
+701 VersandjeVersandgang 8,52
+702 SonderversandoderFahrtkosten 25,00
+703 VersandUPSExpressbis12:00 14,00
+705 nachtraglicheFarbanpassungimLabor 58,00
+706 FotooderVideoDokumentation 10,00
+710 Eilterminzuschlag 1,00
+721 Zeiteinheit,Zahntechniker-Meister je15Min 28,50
+722 Zeiteinheit, Zahntechniker je 15Min 20,00
+723 Zahnfarbenbestimmung im Labor 30,00
+724 Zahnfarbenbestimmung in derPraxis incl.Anfahrt 45,00
+731 IndividuelleNamenskennzeichnung 35,00
+732 Desinfektion 1,80
+Seite1/6
+BEBPreisliste2024 ITZGmbH
+BEB2024
+Datum:23.01.2024
+Nr. Bezeichnung PreisEUR
+801 ProthetischePlanung 15,00
+802 ProthetischeAlternativplanung 10,00
+811 ModellanalysefurProthetik 15,00
+821 Kostenvoranschlag 15,00
+833 Set-Up/WaxUp/MockUp-jeZahn 19,00
+1002 BasisfurBiregistrierung 31,68
+1003 BasisfurStutzstiftregistrat 31,68
+1005 FunktionsloffelausKunststoff 31,68
+1006 IndividuellerLoffelausKunststoff 31,68
+1007 BasisfurAufstellung 31,68
+1019 BasisfurneueAbdrucknahmevorbereiten 12,00
+1108 LoffelfurImplantatversorgung 31,68
+1111 BiBwallausWachs,aufBasis 9,90
+1113 BiBwallausKunststoff,aufBasis 9,90
+1115 Registrierplatteund-stiftaufBasen 39,00
+1122 Wachsplattefurzentrische BinahmeimArtikulatorvorbereiten 35,00
+1201 UbertragungskappeausKunststoff 12,00
+1223 BasisfurBohrschablonebeiImplantat 31,68
+1225 Implantat-Kontrollschablone 25,00
+1251 Vorwall 8,00
+1311 Rontgenkugel oderBohrhulsepositionieren 7,00
+1341 WalkhoffscheTastkugelanBiBschablone 12,00
+1401 ProvisorischeKrone,Bruckenglied,Stiftzahn,Onlay,InlayausKunststoff 35,00
+1402 ProvisorischeKrone,Bruckenglied,Stiftzahn,Onlay,InlayausMetall 35,00
+1403 Metallarmierung fur provisorische Versorgung 48,00
+1404 Formteil furprovisorischeVersorgung 35,00
+1405 FormteilKunststoff(Schleifkappchen) 19,20
+1406 ReiseprotheseausPMMA (monochrome) 190,00
+1601 Allergietestplattchen 11,00
+1902 AufwandbeiSuprastruktur 28,50
+2001 Wurzelstiftgegossen 108,67
+2011 Wurzelkappe 108,67
+2012 Wurzelstiftkappe 108,67
+2033 IndividuellesAbutment 95,31
+2035 GusstufenkroneoderStegkappeauf Implantataufbaunach 115,80
+2101 Kronegegossen/gefrast 115,80
+2104 Dreiviertelkronegegossen/gefrast 115,80
+2121 Kronegegossen/gefrastfurKeramik/Kompositverblendung 95,00
+2126 Dreiviertelkronegegossen/gefrastfurKeramik/Kompositverblendung 85,10
+2154 Dreiviertelkronegefrast 80,00
+2155 Ankergegossen/gefrast,furKlebebrucke 114,38
+2181 Stegkappe 115,80
+2251 SeitenzahnkroneausKeramikgefrast (vollanatomisch) 110,00
+2252 FrontzahnkroneausKeramikgefrast (vollanatomisch) 135,00
+2281 KroneausKeramikgefrast 110,00
+2301 Inlayeinflachig 90,00
+2302 Inlayzweiflachig 90,00
+2303 Inlay dreiflachig 90,00
+2304 Inlaymehrflachig 115,80
+2351 BruckengliedgefraBtSeitenzahn (vollanatomisch) 110,00
+2352 BruckengliedgefraBtFrontzahn(vollanatomisch) 135,00
+2353 83,60
+2361 Bruckenglied gegossen/gefraBt Metall 98,00
+2534 TeilkroneKeramik 116,80
+2551 InlayausKeramik,gefrast,einflachig 78,00
+2552 InlayausKeramik,gefrast, zweiflachig 87,00
+2553 Inlay aus Keramik, gefrast, dreiflachig 98,00
+2554 InlayausKeramik,gefrast,mehrflachig 115,80
+Seite 2/6
+BEBPreisliste2024 ITZGmbH
+BEB2024
+Datum:23.01.2024
+Nr. Bezeichnung PreisEUR
+2601 Teil-VerblendungausKomposite 103,40
+2602 mehrflachigeVerblendungausKomposite 105,40
+2603 VerblendschaleausKunststoff 72,00
+2611 Teil-Verblendung aus Keramik 132,20
+2612 MehrflachigeVerblendung ausKeramik 135,21
+2653 Veneer ausKeramik 135,21
+2663 VerblendschaleausKomposit 105,40
+2671 PapilleausKomposite 29,00
+2672 ZahnfleischausKomposite 29,00
+2676 PapilleausKeramik 52,50
+2677 ZahnfleischausKeramik 52,50
+2678 Wurzelpontic ausKeramik 52,50
+2682 PapilleausKomposit 29,00
+2901 Stiftaufbauinvorhandene Krone einarbeiten 35,00
+2904 AngelieferteModellationgieBen/pressen 29,00
+2907 Bruckenteilungsgeschiebe,individuell 260,00
+2909 individuellescharakterisiereneinesKunststoffzahnes 20,00
+2911 Krone/BruckengliedfurKlammervorbereiten 21,13
+2912 Krone/Bruckenglied, InlaypassendfurvorhandeneProthesearbeiten 21,13
+2913 Umgehungsbugel beiDiastema 15,00
+2918 Krone/BruckengliedfurKlammervorbereiten 21,13
+2922 Krone/lnlay/Bruckengliedaufpassen 7,00
+2941 Individuellcharakterisieren,Kunststoff 15,00
+2945 Individuell charakterisieren,Komposit 15,00
+2951 Individuell charakterisieren,Keramik 21,00
+2953 Frasenje GliedbeiDatenlieferungMaterialKatanaYML 39,00
+2954 Frasen Glied bei Datenanlieferung-Material KatanaMLo.a. 21,50
+2955 FrasenjeGliedbeiDatenanlieferung-MaterialNEM 21,50
+2956 Frasen jeGliedbeiDatenanlieferung-Material PMMA 21,50
+2957 FraseneinerAufbisschienebeiDatenanlieferung(PMMA) 53,00
+2958 FraseneinerAufbisschienebeiDatenlieferung (Nylon) 63,00
+2959 Konst.undFraseneinerAufbisschienebeiModellanlieferung (Nylon) 73,00
+2960 Konst.undFraseneinerAufbisschienebeiModellanlieferung(PMMA) 83,00
+2961 Konst.und Frasen KuB (NEM) 32,00
+2962 Konst.und Frasen KuB aus (PMMA) 29,00
+2963 Krone/lnlay/Bruckengliedaufpassen 7,00
+2964 Konst.undFrasenKuBaus(ZrO2Mono) 29,00
+2965 Konst.und Frasen KuB aus (ZrO2 Multi) 49,00
+2966 Konst.und Frasen KuB aus (Li2Silikat) 69,00
+2967 Frasen jeGliedbeiDatenlieferung-Material (e.max) 59,00
+2972 AufwandzuSuprastrukturbeiverschraubbaremImplantat 28,00
+2981 NEMZuschlag 20,46
+2983 Titanverarbeiten beifestsitzendemZahnersatz 20,46
+2984 WaxUPjeZahn 13,00
+3001 Teleskopkrone,primar/Sekundar 210,00
+3004 Teleskopkrone 320,00
+3021 IndividuellesGeschiebe 290,00
+3023 KonfektioniertesGeschiebe,Gelenk,Ankereinarb 135,00
+3024 LagerfurRaste 35,00
+3025 UmlaufrastefurSchubverteilungsarm 35,00
+3027 Locator/Kugelankerinproth.einarbeiten 130,00
+3031 IndividuellerSteg,Grundeinheit 95,00
+3032 Individueller Steg,Langeneinheit 15,00
+3104 Stegfrasung 110,00
+3105 gefrastesLager 70,00
+3215 Schubverteilungsarm 59,00
+3221 IndividuellesSteggeschiebe 260,00
+3322 Steggeschiebeindividuell,an/inMetallbasis 54,96
+Seite 3/6
+BEBPreisliste2024 ITZGmbH
+BEB2024
+Datum:23.01.2024
+Nr. Bezeichnung PreisEUR
+3401 Drehriegel 235,00
+3403 Schwenkriegel 235,00
+3405 Schub-oderSteckriegel 235,00
+3521 KonfektionsstegGrundeinheit 89,00
+3523 KonfektionsstegLangeneinheit 19,00
+3621 Konfektions-Steglaschean/inKunststoffbasis 65,00
+3623 Konfektions-Steglaschean/inMetallbasis 75,00
+3903 Friktionsstifteinarbeiten 32,50
+3905 VerschraubungVerbolzung 102,00
+3906 VerschraubungImplantat 33,00
+3931 LosungsknopffurVerbindungselement 31,00
+4001 Metallbasis 175,00
+4007 Gitter total 110,00
+4008 Bugel 110,00
+4101 EinarmigeKlammergebogen 12,80
+4103 Kralle gebogen 12,80
+4106 FortlaufendeKlammerjeZahngebogen 12,80
+4107 Gegenlagergebogen 12,80
+4111 Zweiarmige gefrasteKlammer (Valplast) 63,00
+4112 ZweiarmigeKlammermitAuflagegebogen 25,22
+4119 Bonwill-Klammergebogen 25,22
+4121 NeyStielgebogen 15,00
+4122 Auflage gegossen 18,33
+4201 GegosseneRetention 69,00
+4202 GegossenesBasisteil 96,54
+4203 RetentionanSekundarteil 49,00
+4208 Retentiongebogen 50,44
+4401 EinarmigeKlammergegossen 18,33
+4411 ZweiarmigeKlammergegossen 21,00
+4412 ZweiarmigeKlammermitAuflagegegossen 30,97
+4413 Bonwillkammergegossen 76,32
+4421 Bearbeiteneineslmplantataufbaus 41,00
+4431 FederarminklusiveFederarmlager 17,90
+4902 Ruckenschutzplatte 55,24
+4903 Ruckenschutzplatte 55,24
+4905 Metallzahn 55,24
+4907 Metallflache alsTuberabdeckung 24,00
+4941 LosungsknopffurFriktionsprothese 13,00
+4951 Klammereinzelngegossen 27,20
+5211 Lotvergoldung 30,00
+5307 konditionieren je Zahn/Flugel 20,90
+6001 AufstellenGrundeinheit 41,60
+6002 Aufstellen jeZahneinheit auf Wachs oderKunststoffbasis 2,69
+6003 AufstellenjeZahneinheitaufMetallbasis 3,26
+6021 UbertrageneinerWachsaufstellungaufMetallbasis 2,22
+6121 ZuschlagfurAufstellungbeiAnwesenheitdesPatienten 60,50
+6301 GrundeinheitFertigstellungmitKunststoffbasis 69,84
+6302 FertigstellenmitKunststoffbasis,jeZahneinheit 4,86
+6311 Grundeinheit Fertigstellungauf Metallbasis 69,84
+6312 FertigstellenaufMetallbasis,jeZahneinheit 4,86
+6401 TransparenteGaumenplatte 52,54
+6405 VerarbeitungWeichkunststoff 75,72
+6412 Sonderkunststoffverarbeiten 75,72
+6414 UnterfutterbarerAbschluBrand 27,62
+6431 BefestigungeinesZahnesmitzahnfarbenemKunststoff,Pontic 12,50
+6432 HerstelleneinesZahnesauszahnfarbenemKunststoff 21,50
+6433 KauflacheauszahnfarbenemKunststoff 12,50
+6451 Zahnfleischklammer 23,00
+Seite 4/6
+BEBPreisliste2024 ITZGmbH
+BEB2024
+Datum:23.01.2024
+Nr. Bezeichnung Preis EUR
+6452 Pelottenklammer 23,00
+6501 Netz einarbeiten 90,00
+6502 GuBgittereinarbeiten 90,00
+6503 Konfektioniertes Metallgitteranpassen und einarbeiten 70,00
+6504 Draht einarbeiten 36,54
+6505 Bugel einarbeiten 70,00
+6506 IndividuelleBeschwerungseinlageeinarbeiten 70,00
+6509 Retentionfur Einzelzahneinarbeiten 26,39
+6521 Metallfacetteeinarbeiten 36,54
+6905 PrimarteleskopausKeramikZuschlagjeTeleskop 35,99
+6906 individuellerImplantataufbauKeramik 70,91
+6907 Veneer/InlayausKeramik 115,00
+6908 provisorische Krone/Brgl.je Glied (PMMA) 33,00
+6912 VersandUPSExpress 14,00
+7001 BasisfurEinzelkiefergerat 64,94
+7002 BasisfurbimaxilaresGerat 129,00
+7090 BetterSmile-Schiene Planungspauschale 90,00
+7091 BetterSmile-Modell und Regulierung-Schiene (Paar) 75,00
+7104 Dreiecksklammer 12,45
+7105 Pfeilklammer 11,60
+7106 Adams-Klammer 16,17
+7122 Auflage 12,45
+7201 FrontaleroderlateralerAufbils,hart 15,67
+7202 FrontaleroderlateralerAufbis,weich 15,67
+7301 Labialbogen 27,47
+7501 TrenneneinerBasisundFunktionsfahigmachenderSchraube 12,00
+7502 15,00
+7503 TrenneneinerBasisohne Schraube 8,00
+7504 FunktionsfahigmacheneinerSchraubeohneTrennenderBasis 8,00
+7601 Aufbisschieneadjustiert 110,70
+7602 Aufbisschiene nicht adjustiert 80,19
+7606 Bleaching Schiene 52,95
+7607 Fluoridierungsschiene 59,69
+7621 Aufbischiene adjustiert 110,70
+7801 SportschutzausWeichkunststoff 170,00
+8002 Basisunterfuttern 79,14
+8003 Basis erneuern 79,14
+8006 EinarbeiteneinerModellguβsbasisinvorhandeneKunststoffprothese 70,00
+8011 InstandsetzeneinerProthese,KunststoffbasisoderKFO/FKOGerat,Grundeinheit 29,14
+8021 Leistungseinheit, SprungausKunststoff 12,55
+8022 Leistungseinheit,BruchausKunststoff 12,55
+8023 Leistungseinheit, Wiederbefestigung Zahn 12,55
+8024 Leistungseinheit, Erneuerung Zahn 12,55
+8025 Leistungseinheit,Klammereinarbeiten 12,55
+8027 Leistungseinheit, Basisteil aus Kunststoff 12,55
+8028 Leistungseinheit, Sprung aus Metall 12,55
+8029 Leistungseinheit,BruchausMetall 12,55
+8030 Leistungseinheit,Kunststoffsattellosenundwiederbefestigen 12,55
+8034 Leistungseinheit,Sekundarteil 65,67
+8036 LeistungseinheitMetallverbindung/Wiederherstellung 27,38
+8039 Prothesensattelkurzen,ausschleifenundpolieren 20,15
+8111 AuswechselnvonKonfektionsteil,einfach 18,39
+8112 AuswechselnvonKonfektionsteil,kompliziert 21,00
+8123 Prothese/ABS/KFO-Geratsaubernundpolieren 35,00
+8201 Kronen-oderBruckengliedreparatur,jeGlied 49,80
+8211 Leistungseinheit,InstandsetzenindividuellerRiegel 25,00
+8212 Leistungseinheit,AktivierenTeleskopkroneoderSteggeschiebe 25,00
+8999 Rapid Prototyping Druck Pro Gramm inkl.Stutzmaterial 1,90
+Seite5/6
+BEBPreisliste2024 ITZGmbH
+BEB2024
+Datum: 23.01.2024
+Nr. Bezeichnung PreisEUR
+9029 GerustausZikon monolitisch 29,00
+9031 Gerust vollanatomisch(glasiert) 75,00
+9034 GerustNEM 32,00
+9581 EinarbeitenSekundarteil 65,67
+9634 FrasenjeEinheitohneMaterial 10,00
+Seite 6/6

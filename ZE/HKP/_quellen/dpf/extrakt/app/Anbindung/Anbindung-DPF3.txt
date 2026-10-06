@@ -1,0 +1,131 @@
+Anbindung "Digitale Planungshilfe Festzuschusssystem Ver. 3 - DPF3" Stand 18.4.2022
+
+Übersicht:
+DPF3 kann unter Windows in ein Praxisverwaltungsprogramm (nachfolgend "PVP") eingebunden werden.
+Dazu übergibt das PVP eine Textdatei mit dem HKP-Befund.
+Nach der interaktiven Bearbeitung durch DPF3 kann der Anwender
+über die Schaltfläche "Fertig" die Ergebnisse an das PVP als Textdatei zurückgeben.
+
+Befundübergabe:
+Die Textdatei hat den Aufbau einer Windows-INI-Datei. Die Inhalte sind
+hierbei beliebig, insbesondere kann das PVP Verwaltungsinformationen
+für die Weiterverarbeitung ablegen, die in die Ausgabedatei kopiert werden.
+Es werden die folgenden Angaben benötigt:
+
+ - Patientenidentifikation
+ - HKP-Befund
+ - Dateiname für die Rückgabe
+
+Patientenidentifikation:
+Es werden in der Gruppe [Patient] die Werte 'Patientennummer', 'Nachname', 'Vorname',
+'Geburtsdatum'(dd.mm.yyyy),'Geschlecht' (m/w) ausgewertet.
+Also z. B.
+[Patient]
+Nachname=Stientje
+Vorname=Silke
+Geburtsdatum=10.6.1974
+Geschlecht=w
+Patientennummer=1234
+
+HKP-Befund:
+Der Befund wird in der Gruppe [Befund] erwartet, in der Form
+<Zahnindex>=<Befundkürzel>.
+Der Zahnindex läuft von 1..32 und bezeichnet die Zähne von 18-48 im Uhrzeigersinn.
+Insbesondere ist Zahnindex 32 der Zahn 48 und Zahnindex 17 der Zahn 38.
+Als Befundkürzel werden die offiziellen Befundkürzel aus der "Technischen Anlage" Ver. 1.5 erwartet, 
+mit Ausnahme des Kürzels t2w, welches eine nicht implementierte Reparaturplanung und keine Neuplanung auslöst.
+Zusätzlich können die Kürzel
+"fi  - fehlender Zahn mit geplantem Implantat"
+"nb  - nicht behandlungsbedürftiger Zahn (Einzelimplantat/Ausnahmeindikation)"
+angegeben werden. Zähne ohne Befund müssen nicht angegeben werden.
+
+Beispiel 18 f 11 kw 37 38 f:
+[Befund]
+1=f
+8=kw
+17=f
+18=f
+
+Zur Befundübergabe wird DPF3.EXE vom PVP aufgerufen und als Parameter wird der
+absolute Dateiname übergeben. Der Pfad zu DPF3.EXE ist nach erfolgter DPF-Installation in der Windows-Registry abgelegt
+unter dem Schlüssel 'HKLM\Software\KZBV\DPF3' im Wert 'Verzeichnis'.
+Dabei ist zu beachten, dass bei den neueren Windowsversionen der Zugriff eines 32-Bit-Programms auf
+den Schlüssel "HKLM" automatisch auf "HKLM\WOW6432Node" umgeleitet wird.
+
+Der Aufruf hat also die Form:
+<Pfad zu DPF>\DPF3.EXE <Befunddatei>
+
+Rückgabe der Ergebnisse:
+Es wird ein Eintrag in der Befunddatei in der Gruppe [Programm] erwartet,
+wobei unter 'Aufruf' der absolute Pfad der Rückgabedatei eingetragen wird,
+die von DPF3 nach Abschluss der Eingabe mit den Ergebnissen beschrieben werden soll.
+Der Aufruf eines separaten Programms zur Rückgabe der Ergebnisse wird nicht mehr unterstützt.
+Wird keine Ergebnisdatei angegeben, wird das Resultat in die Eingabedatei geschrieben.
+Hat der Benutzer keine Schreibrechte im angebenen Verzeichnis, so erfolgt eine Fehlermeldung.
+
+Beispiel:
+[Programm]
+Aufruf=C:\PVP-Daten\ERGEBNIS.DAT
+
+Nach Abschluss der Eingabe überschreibt DPF3
+dann "C:\PVP-Daten\ERGEBNIS.DAT" mit den Ergebnissen.
+
+Ergebnisse:
+Es werden die folgenden Informationen in der Ergebnisdatei abgelegt:
+
+ - ggfs. geänderter HKP-Befund
+ - Regelversorgung
+ - Therapieplan
+ - BEMA-Positionen
+ - GOZ-Positionen
+ - Festzuschuss
+ - Gleich-/Andersartigkeit
+
+HKP-Befund, Regelversorgung und Therapieplan werden in der gleichen Weise
+abgelegt wie der HKP-Befund, bei der Regelversorgung und dem Therapieplan
+sind die Planungskürzel die in der "Technischen Anlage" Ver. 1.5 aufgeführten Planungskürzel
+zuzüglich der nachträglich eingeführten Kürzel "EO" und "SEO" für Stegkonstruktionen.
+
+Die Gebührenpositionen werden in der Form
+<Gebührennummer>=<Zahnbezeichnung>;<Anzahl><Fragezeichen>
+in den Gruppen [BEMA],[GOZ] und [Festzuschuss] abgelegt.
+Die Zahnbezeichnung kann Kommata und Bindestriche enthalten, deswegen wird
+die Anzahl mit einem Semikolon abgetrennt. Nach der Anzahl kann ein
+Fragezeichen stehen, dass darauf hinweist, dass die betreffende Position
+fakultativ ist und nicht zwingend mit der vorgeschlagenen Anzahl übernommen
+werden soll.
+Bei gleich- oder andersartigen Versorgungen wird jedem betroffenen Zahn einer der
+Buchstaben g,a,z,p zugeordnet, wobei "g" für gleichartige, "a" für andersartige, "z" für
+Kassen-ZE und "p" für rein private Therapien stehen. 
+
+
+Beispiel:
+
+[BEMA]
+19=17-15;3
+97b=UK;1
+98c=UK;1
+98d=;1?
+98e=UK;1?
+
+[GOZ]
+5010=17,15;2
+5070=16;1
+
+[Festzuschuss]
+2.1=16;1
+2.7=15;1
+4.4=UK;1
+4.9=OK,UK;1?
+4.5=UK;1?
+
+[Gleich-Anders]
+2=g
+3=g
+4=g
+6=z
+13=p
+
+------- Ende des Textes ---------------
+
+

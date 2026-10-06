@@ -1,0 +1,192 @@
+{
+ "geprueftAm": "2026-10-05T06:58:39.057Z",
+ "quellen": [
+  {
+   "id": "fz",
+   "typ": "festzuschuss",
+   "name": "Festzuschüsse (bundeseinheitlich)",
+   "status": "aktuell",
+   "gueltigAb": "2026-01-01",
+   "url": "https://www.kzbv.de/zahnaerzte/rechtsgrundlagen/festzuschuesse/festzuschussbetraege/",
+   "meldung": "Festzuschüsse 2027 noch nicht veröffentlicht (G-BA-Beschluss bis 30.11., Veröffentlichung meist im Dezember)."
+  },
+  {
+   "id": "bema",
+   "typ": "bema",
+   "name": "BEMA Teil 5 / ZE-Punktwert (bundeseinheitlich)",
+   "gueltigAb": "2026-01-01",
+   "status": "aktuell",
+   "url": "https://www.kzbv.de/wp-content/uploads/KZBV_BEMA_Kurzfassung_2026-01-01.pdf",
+   "meldung": "Punktwert 1,1844 € (ab 01.01.2026); der neue Punktwert kommt mit der Festzuschussliste."
+  },
+  {
+   "id": "bel-bw",
+   "typ": "bel2",
+   "name": "BEL II Baden-Württemberg",
+   "status": "aktuell",
+   "meldung": "Aktuell: 02la0126.csv",
+   "url": "https://www.kzvbw.de/zahnaerzte/abrechnung/punktwerte-formulare-vordrucke/bel-leistungen-download/",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-bayern",
+   "typ": "bel2",
+   "name": "BEL II Bayern",
+   "status": "aktuell",
+   "meldung": "Aktuell: 11la0126.csv",
+   "url": "https://www.kzvb.de/abrechnung/bel-preise",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-berlin",
+   "typ": "bel2",
+   "name": "BEL II Berlin",
+   "status": "aktuell",
+   "meldung": "Aktuell: 30la0226.csv",
+   "url": "https://www.kzv-berlin.de/fuer-praxen/abrechnung/bel-ii-laborpreise",
+   "gueltigAb": "2026-02-01"
+  },
+  {
+   "id": "bel-brandenburg",
+   "typ": "bel2",
+   "name": "BEL II Brandenburg",
+   "status": "aktuell",
+   "meldung": "Aktuell: 53la0226.csv",
+   "url": "https://www.kzvlb.de/service/downloadcenter",
+   "gueltigAb": "2026-02-01"
+  },
+  {
+   "id": "bel-bremen",
+   "typ": "bel2",
+   "name": "BEL II Bremen",
+   "status": "manuell",
+   "meldung": "Liste nur im Mitgliederbereich der KZV – CSV dort herunterladen und unter „Preislisten“ importieren.",
+   "url": "https://www.kzv-bremen.de/mitglieder/abrechnung/bel"
+  },
+  {
+   "id": "bel-hamburg",
+   "typ": "bel2",
+   "name": "BEL II Hamburg",
+   "status": "aktuell",
+   "meldung": "Aktuell: 32la0126.csv",
+   "url": "https://www.zahnaerzte-hh.de/zahnaerzte-portal/praxis/abrechnung/kassenabrechnung-kzv/punktwerte-laborpreise-bel-materialkosten",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-hessen",
+   "typ": "bel2",
+   "name": "BEL II Hessen",
+   "status": "aktuell",
+   "meldung": "Aktuell: 20la0126.csv",
+   "url": "https://www.kzvh.de/BEL-Preisliste/index.html",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-mv",
+   "typ": "bel2",
+   "name": "BEL II Mecklenburg-Vorpommern",
+   "status": "aktuell",
+   "meldung": "Aktuell: 52la0126.csv",
+   "url": "https://www.kzvmv.de/bkv-download/index.html",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-niedersachsen",
+   "typ": "bel2",
+   "name": "BEL II Niedersachsen",
+   "status": "aktuell",
+   "meldung": "Aktuell: 04la0126.csv",
+   "url": "https://www.kzvn.de/abrechnung/punktwerte-formulare/bel-ll/",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-nordrhein",
+   "typ": "bel2",
+   "name": "BEL II Nordrhein",
+   "status": "aktuell",
+   "meldung": "Aktuell: 13la0126.csv",
+   "url": "https://www.kzvnr.de/praxis/abrechnung-honorar/bel-ii-listen",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-rlp",
+   "typ": "bel2",
+   "name": "BEL II Rheinland-Pfalz",
+   "status": "aktuell",
+   "meldung": "Aktuell: 06la0126.csv",
+   "url": "https://www.kzvrlp.de/mitglieder/abrechnung/bel-ii/",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-saarland",
+   "typ": "bel2",
+   "name": "BEL II Saarland",
+   "status": "aktuell",
+   "meldung": "Aktuell: 35la0126.csv",
+   "url": "https://www.kzv-saarland.de/praxen/abrechnung/zahntechnik-bel",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-sachsen",
+   "typ": "bel2",
+   "name": "BEL II Sachsen",
+   "status": "aktuell",
+   "meldung": "Aktuell: 56la0126.csv",
+   "url": "https://www.zahnaerzte-in-sachsen.de/zahnarztpraxis/abrechnung/bema-abrechnung/allgemeine-abrechnungsinformationen/",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-lsa",
+   "typ": "bel2",
+   "name": "BEL II Sachsen-Anhalt",
+   "status": "aktuell",
+   "meldung": "Aktuell: 54la0126.csv",
+   "url": "https://www.kzv-lsa.de/f%C3%BCr-die-praxis/abrechnung/bel-liste.html",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-sh",
+   "typ": "bel2",
+   "name": "BEL II Schleswig-Holstein",
+   "status": "aktuell",
+   "meldung": "Aktuell: 36la0126.csv",
+   "url": "https://www.kzv-sh.de/fuer-die-praxis/abrechnung/bel-csv/",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-thueringen",
+   "typ": "bel2",
+   "name": "BEL II Thüringen",
+   "status": "aktuell",
+   "meldung": "Aktuell: 55la0126.csv",
+   "url": "https://www.kzvth.de/bel-beb",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "bel-wl",
+   "typ": "bel2",
+   "name": "BEL II Westfalen-Lippe",
+   "status": "aktuell",
+   "meldung": "Aktuell: 37la0126.csv",
+   "url": "https://zahnaerzte-wl.de/pages/aktuelle-abrechnungsinfos",
+   "gueltigAb": "2026-01-01"
+  },
+  {
+   "id": "goz",
+   "typ": "goz",
+   "name": "GOZ (Bundesrecht)",
+   "status": "aktuell",
+   "meldung": "Gebührenverzeichnis unverändert (Punktwert 5,62421 Cent).",
+   "url": "https://www.gesetze-im-internet.de/goz_1987/",
+   "gueltigAb": "2012-01-01"
+  },
+  {
+   "id": "beb",
+   "typ": "beb",
+   "name": "BEB (Privat-Labor)",
+   "status": "manuell",
+   "url": "https://www.vdzi.net/",
+   "meldung": "Keine amtlichen Preise – die BEB-Preise legt jedes Labor selbst fest. Preisliste bzw. Labor-XML des eigenen Labors einlesen."
+  }
+ ]
+}

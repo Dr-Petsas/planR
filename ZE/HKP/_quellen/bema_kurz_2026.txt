@@ -1,0 +1,580 @@
+1 
+BEMA: Kurzfassung, Stand 01.01.2026 
+(Änderungen zur Vorversion sind gelb markiert) 
+Geb.-
+Nr. 
+Abkür-
+zung Leistungsbeschreibung Bew.-
+Zahl 
+Teil 1 – Konservierende und chirurgische Leistungen und Röntgenleistungen  
+Ä 1 Ber Beratung eines Kranken, auch fernmündlich 9 
+01 U Eingehende Untersuchung zur Feststellung von Zahn -, Mund- und Kieferkrank-
+heiten einschließlich Beratung 18 
+01k  Kieferorthopädische Untersuchung zur Klärung von Indikation und Zeitpunkt kie-
+ferorthopädisch-therapeutischer Maßnahmen 28 
+02 Ohn Hilfeleistung bei Ohnmacht oder Kollaps 20 
+03 Zu Zuschlag für Leistungen außerhalb der Sprechstunde, bei Nacht (20 Uhr bis 8 
+Uhr) oder an Sonn- und Feiertagen 15 
+04  Erhebung Parodontaler Screening-Index 12 
+05  Gewinnung von Zellmaterial aus der Mundhöhle und Aufbereitung zur zytologi-
+schen Untersuchung, einschließlich Materialkosten 20 
+Ä 161 Inz1 Eröffnung eines oberflächlichen, unmittelbar unter der Haut oder Schleimhaut ge-
+legenen Abszesses 15 
+Ä 925  Röntgendiagnostik der Zähne  
+Ä 925 a Rö2 bis zwei Aufnahmen 12 
+Ä 925 b Rö5 bis fünf Aufnahmen 19 
+Ä 925 c Rö8 bis acht Aufnahmen 27 
+Ä 925 d Stat Status bei mehr als acht Aufnahmen 34 
+Ä 928  Röntgenaufnahme der Hand 30 
+Ä 934  Aufnahme des Schädels  
+Ä 934 a  eine Aufnahme (auch Fernröntgenaufnahme) 19 
+Ä 934 b  zwei Aufnahmen 30 
+Ä 934 c  mehr als zwei Aufnahmen 36 
+Ä 935  Teilaufnahme des Schädels (auch in Spezialprojektion), auch Nebenhöhlen, Un-
+terkiefer, Panoramaaufnahme der Zähne eines Kiefers bzw. der Zähne des Ober- 
+und Unterkiefers derselben Seite 
+ 
+Ä 935 a  eine Aufnahme 21 
+Ä 935 b  zwei Aufnahmen 25 
+Ä 935 c  mehr als zwei Aufnahmen 31 
+Ä 935 d  Orthopantomogramm sowie Panoramaaufnahmen oder Halbseitenaufnahmen al-
+ler Zähne des Ober- und Unterkiefers 36 
+8 ViPr Sensibilitätsprüfung der Zähne 6 
+10 üZ Behandlung überempfindlicher Zähne, für jede Sitzung 6 
+11 pV Exkavieren und provisorischer Verschluss einer Kavität als alleinige Leistung,  
+auch unvollendete Füllung 19 
+12 bMF 
+Besondere Maßnahmen beim Präparieren oder Füllen (Separieren, Beseitigen  
+störenden Zahnfleisches, Anlegen von Spanngummi, Stillung einer übermäßigen 
+Papillenblutung), je Sitzung, je Kieferhälfte oder Frontzahnbereich 
+10 
+13  Präparieren einer Kavität, Füllen mit plastischem Füllmaterial einschließlich einer 
+erforderlichen Unterfüllung, dem Anlegen einer Matrize oder der Benutzung an-
+derer Hilfsmittel zur Formung der Füllung sowie dem Polieren 
+ 
+13 a F1 einflächig 33 
+13 b F2 zweiflächig 41 
+13 c F3 dreiflächig 53 
+13 d F4 mehr als dreiflächig oder Eckenaufbau im Frontzahnbereich unter Einbeziehung 
+der Schneidekante 63 
+14  Konfektionierte Krone (im Seitenzahnbereich in der Regel aus Metall) einschließ-
+lich Material- und Laboratoriumskosten in der pädiatrischen Zahnheilkunde 50 
+16 St Stiftverankerung einer Füllung (zusätzlich zu den Nrn. 13 c, d), je Zahn,  ein-
+schließlich Materialkosten 20 
+2 
+Geb.-
+Nr. 
+Abkür-
+zung Leistungsbeschreibung Bew.-
+Zahl 
+Teil 1 – Konservierende und chirurgische Leistungen und Röntgenleistungen  
+23 Ekr 
+Entfernen einer Krone bzw. eines Brückenankers oder eines abgebrochenen  
+Wurzelstiftes bzw. das Abtrennen eines Brückengliedes oder Steges, je Trenn-
+stelle 
+17 
+25 Cp Indirekte Überkappung zur Erhaltung der gefährdeten Pulpa, ggf.  einschließlich 
+des provisorischen oder temporären Verschlusses der Kavität 6 
+26 P Direkte Überkappung, je Zahn 6 
+27 Pulp Pulpotomie 29 
+28 VitE Exstirpation der vitalen Pulpa, je Kanal 18 
+29 Dev Devitalisieren einer Pulpa einschließlich des Verschlusses der Kavität, je Zahn  11 
+31 Trep1 Trepanation eines pulpatoten Zahnes 11 
+32 WK Aufbereiten des Wurzelkanalsystems, je Kanal 29 
+34 Med Medikamentöse Einlage in Verbindung mit Maßnahmen nach den Nrn. 28, 29 und 
+32, ggf. einschließlich eines provisorischen Verschlusses, je Zahn und Sitzung 15 
+35 WF Wurzelkanalfüllung inkl. eines evtl. provisorischen Verschlusses, je Kanal 17 
+36 Nbl1 Stillung einer übermäßigen Blutung 15 
+37 Nbl2 Stillung einer übermäßigen Blutung durch Abbinden oder Umstechen eines Gefä-
+ßes oder durch Knochenbolzung 29 
+38 N Nachbehandlung nach chirurgischem Eingriff oder Tamponieren oder derglei-
+chen, je Kieferhälfte oder Frontzahnbereich, als selbständige Leistung, je Sitzung 10 
+40 I Infiltrationsanästhesie 8 
+41 a L1 Leitungsanästhesie, intraoral 12 
+41 b L2 Leitungsanästhesie, extraoral 16 
+43 X1 Entfernen eines einwurzeligen Zahnes einschließlich Wundversorgung 10 
+44 X2 Entfernen eines mehrwurzeligen Zahnes einschließlich Wundversorgung  15 
+45 X3 Entfernen eines tieffrakturierten Zahnes einschließlich Wundversorgung 40 
+46 XN 
+Chirurgische Wundrevision (Glätten des Knochens, Auskratzen, Naht)  als selb-
+ständige Leistung in einer besonderen Sitzung je Kieferhälfte oder Frontzahnbe-
+reich 
+21 
+47a Ost1 Entfernen eines Zahnes durch Osteotomie einschließlich Wundversorgung 58 
+47b Hem Hemisektion und Teilextraktion eines mehrwurzeligen Zahnes 72 
+48 Ost2 Entfernen eines verlagerten und/oder retinierten Zahnes, Zahnkeimes oder  im-
+paktierten Wurzelrestes durch Osteotomie einschließlich Wundversorgung 78 
+49 Exz1 Exzision von Mundschleimhaut oder Granulationsgewebe für das Gebiet  eines 
+Zahnes 10 
+50 Exz2 Exzision einer Schleimhautwucherung (z. B. lappiges Fibrom, Epulis) 37 
+51a Pla1 Plastischer Verschluss einer eröffneten Kieferhöhle durch Zahnfleischplastik  als 
+selbständige Leistung oder in Verbindung mit einer Extraktion 80 
+51b Pla0 Plastischer Verschluss einer eröffneten Kieferhöhle in Verbindung mit Osteotomie 40 
+52 Trep2 Trepanation des Kieferknochens 24 
+53 Ost3 Sequestrotomie bei Osteomyelitis der Kiefer 72 
+54  Wurzelspitzenresektion  
+54 a WR1 an einem Frontzahn 72 
+54 b WR2 an einem Seitenzahn, einschließlich der ersten resezierten Wurzelspitze 96 
+54 c WR3 am selben Seitenzahn, sofern durch denselben Zugang erreichbar, je weitere 
+Wurzelspitze 48 
+55 RI Reimplantation eines Zahnes, ggf. einschließlich einfacher Fixation an den  be-
+nachbarten Zähnen 72 
+56  Operation einer Zyste  
+56 a Zy1 durch Zystektomie 120 
+56 b Zy2 durch orale Zystostomie 72 
+56 c Zy3 durch Zystektomie i.V.m. mit einer Osteotomie oder Wurzelspitzenresektion 48 
+56 d Zy4 durch orale Zystostomie i.V.m. einer Osteotomie oder Wurzelspitzenresektion 48 
+57 SMS Beseitigen störender Schleimhautbänder, Muskelansätze oder eines  Schlotter-
+kammes im Frontzahnbereich oder in einer Kieferhälfte, je Sitzung 48 
+3 
+Geb.-
+Nr. 
+Abkür-
+zung Leistungsbeschreibung Bew.-
+Zahl 
+Teil 1 – Konservierende und chirurgische Leistungen und Röntgenleistungen  
+58 KnR Knochenresektion am Alveolarfortsatz zur Formung des Prothesenlagers im  
+Frontzahnbereich oder in einer Kieferhälfte als selbständige Leistung, je Sitzung  48 
+59 Pla2 Mundboden- oder Vestibulumplastik im Frontzahnbereich oder in einer  Kiefer-
+hälfte 120 
+60 Pla3 Tuberplastik, einseitig 80 
+61 Dia Korrektur des Lippenbändchens bei echtem Diastema mediale 72 
+62 Alv Alveolotomie 36 
+63 FI Freilegung eines retinierten und/oder verlagerten Zahnes zur  kieferorthopädi-
+schen Einstellung 80 
+105 Mu 
+Lokale medikamentöse Behandlung von Schleimhauterkrankungen,  Aufbringung 
+von auf der Mundschleimhaut haftenden Medikamenten oder Behandlung von 
+Prothesendruckstellen, je Sitzung 
+8 
+106 sK Beseitigen scharfer Zahnkanten oder störender Prothesenränder oder Ähnliches, 
+je Sitzung 10 
+107 Zst Entfernen harter Zahnbeläge, je Sitzung 16 
+107a PBZst 
+Entfernen harter Zahnbeläge bei Versicherten, die  einem Pflegegrad nach § 15 
+SGB XI zugeordnet sind oder Eingliederungshilfe nach § 53 SGB XII erhalten, je 
+Sitzung 
+16 
+151 Bs1 Besuch eines Versicherten, einschl. Beratung und eingehende Untersuchung 38 
+152 a Bs2a 
+Besuch je weiteren Versicherten in derselben häuslichen Gemeinschaft in unmit-
+telbarem zeitlichen Zusammenhang mit einer Leistung nach Nr. 151 – einschließ-
+lich Beratung und eingehende Untersuchung 
+34 
+152 b Bs2b 
+Besuch je weiteren Versicherten in derselben Einrichtung in unmittelbarem zeitli-
+chen Zusammenhang mit einer Leistung nach Nummer 151 –  einschließlich Be-
+ratung und eingehende Untersuchung 
+26 
+153 a Bs3a 
+Besuch eines Versicherten in einer Einrichtung zu vorher vereinbarten Zeiten und 
+bei regelmäßiger Tätigkeit in der Einrichtung einschließlich Beratung und einge-
+hende Untersuchung, ohne Vorliegen eines Kooperationsvertrags nach § 119b 
+Abs. 1 SGB V, welcher den verbindlichen Anforderungen der Vereinbarung nach 
+§ 119b Abs. 2 SGB V entspricht 
+30 
+153 b Bs3b 
+Besuch je weiteren Versicherten in derselben Einrichtung in unmittelbarem zeitli-
+chen Zusammenhang mit einer Leistung nach Nummer 153a zu vorher vereinbar-
+ten Zeiten und bei regelmäßiger Tätigkeit in der Einrichtung einschließlich Bera-
+tung und eingehende Untersuchung, ohne Vorliegen eines Kooperationsvertrags 
+nach § 119b Abs. 1 SGB V, welcher den verbindlichen Anforderungen der Ver-
+einbarung nach § 119b Abs. 2 SGB V entspricht 
+26 
+154 Bs4 
+Besuch eines pflegebedürftigen Versicherten in einer stationären  Pflegeeinrich-
+tung (§ 71 Abs. 2 SGB XI) im Rahmen eines Kooperationsvertrags nach § 119b 
+Abs. 1 SGB V, einschließlich Beratung und eingehende Untersuchung 
+30 
+155 Bs5 
+Besuch je weiteren pflegebedürftigen Versicherten in derselben stationären Pfle-
+geeinrichtung (§ 71 Abs. 2 SGB XI) im Rahmen eines Kooperationsvertrags nach 
+§ 119b Abs. 1 SGB V, in unmittelbarem zeitlichen Zusammenhang mit einer Leis-
+tung nach Nr. 154 – einschließlich Beratung und eingehende Untersuchung 
+26 
+161  Zuschläge für Besuche nach den Nrn. 151 und 154  
+161 a ZBs1a Zuschlag für dringend angeforderte und unverzüglich durchgeführte Besuche  18 
+161 b ZBs1b Zuschlag für Montag bis Freitag in der Zeit von 20 bis 22 Uhr oder 6 bis 8 Uhr 
+durchgeführte Besuche 29 
+161 c ZBs1c Zuschlag für Montag bis Freitag in der Zeit zwischen 22 und 6 Uhr durchgeführte 
+Besuche 50 
+161 d ZBs1d Zuschlag für an Samstagen, Sonn- oder Feiertagen in der Zeit zwischen 8 und 20 
+Uhr durchgeführte Besuche 38 
+161 e ZBs1e Zuschlag für an Samstagen, Sonn- oder Feiertagen in der Zeit von 20 bis 22 Uhr 
+oder 6 bis 8 Uhr durchgeführte Besuche 67 
+161 f ZBs1f Zuschlag für an Samstagen, Sonn - oder Feiertagen in der Zeit zwischen 22 und 
+6 Uhr durchgeführte Besuche 88 
+162  Zuschläge für Besuche nach den Nrn. 152 a, 152 b und 155  
+162 a ZBs2a Zuschlag für dringend angeforderte und unverzüglich durchgeführte Besuche  9 
+4 
+Geb.-
+Nr. 
+Abkür-
+zung Leistungsbeschreibung Bew.-
+Zahl 
+Teil 1 – Konservierende und chirurgische Leistungen und Röntgenleistungen  
+162 b ZBs2b Zuschlag für Montag bis Freitag in der Zeit von 20 bis 22 Uhr oder 6 bis 8 Uhr 
+durchgeführte Besuche 15 
+162 c ZBs2c Zuschlag für Montag bis Freitag in der Zeit zwischen 22 und 6 Uhr durchgeführte 
+Besuche 25 
+162 d ZBs2d Zuschlag für an Samstagen, Sonn- oder Feiertagen in der Zeit zwischen 8 und 20 
+Uhr durchgeführte Besuche 19 
+162 e ZBs2e Zuschlag für an Samstagen, Sonn- oder Feiertagen in der Zeit von 20 bis 22 Uhr 
+oder 6 bis 8 Uhr durchgeführte Besuche 34 
+162 f ZBs2f Zuschlag für an Samstagen, Sonn - oder Feiertagen in der Zeit zwischen 22 und 
+6 Uhr durchgeführte Besuche 44 
+165 ZKi Zuschlag zu den Leistungen nach den Nrn. 151, 152  a, 152 b, 153 a, 153 b, 154 
+und 155 bei Kindern bis zum vollendeten vierten Lebensjahr 14 
+171  Zuschlag für Besuche nach Nrn. 151, 152  
+171 a PBA1a Zuschlag für das Aufsuchen von Versicherten, die einem Pflegegrad nach § 15 
+SGB XI zugeordnet sind oder Eingliederungshilfe nach § 53 SGB XII erhalten  37 
+171 b PBA1b 
+Zuschlag für das Aufsuchen je weiteren Versicherten, der einem Pflegegrad nach 
+§ 15 SGB XI zugeordnet ist oder Eingliederungshilfe nach § 53 SGB XII erhält, in 
+derselben häuslichen Gemeinschaft oder Einrichtung in unmittelbarem zeitlichen 
+Zusammenhang mit einer Leistung nach Nummer 171 a 
+30 
+172  
+Zuschlag nach § 87 Abs. 2j SGB V für die kooperative und koordinierte zahnärzt-
+liche und pflegerische Versorgung von pflegebedürftigen Versicherten in statio-
+nären Pflegeeinrichtungen im Rahmen eines Kooperationsvertrags nach § 119b 
+Abs. 1 SGB V 
+ 
+172 a SP1a Zuschlag für das Aufsuchen eines pflegebedürftigen Versicherten in einer statio-
+nären Pflegeeinrichtung 40 
+172 b SP1b 
+Zuschlag für das Aufsuchen je weiteren pflegebedürftigen Versicherten in dersel-
+ben stationären Pflegeeinrichtung in unmittelbarem zeitlichen Zusammenhang mit 
+einer Leistung nach Nr. 172 a 
+32 
+173  Zuschlag für Besuche nach Nr. 153  
+173 a ZBs3a 
+Zuschlag für das Aufsuchen nach Nr. 153  a von Versicherten, die einem Pflege-
+grad nach § 15 SGB XI zugeordnet sind oder Eingliederungshilfe nach § 53 SGB 
+XII erhalten 
+32 
+173 b ZBs3b 
+Zuschlag für das Aufsuchen nach Nr. 153  b je weiteren Versicherten, der einem 
+Pflegegrad nach § 15 SGB XI zugeordnet ist oder Eingliederungshilfe nach § 53 
+SGB XII erhält, in derselben Einrichtung in unmittelbarem zeitlichen Zusammen-
+hang mit einer Leistung nach Nummer 173 a 
+24 
+174  
+Präventive zahnärztliche Leistungen nach § 22a SGB V zur Verhütung von 
+Zahnerkrankungen bei Versicherten, die einem Pflegegrad nach § 15 SGB XI zu-
+geordnet sind oder Eingliederungshilfe nach § 53 SGB XII erhalten 
+ 
+174 a PBa Mundgesundheitsstatus und individueller Mundgesundheitsplan 20 
+174 b PBb Mundgesundheitsaufklärung 26 
+181  Konsiliarische Erörterung mit Ärzten und Zahnärzten  
+181 a Ksla persönlich oder fernmündlich 14 
+181 b Kslb im Rahmen eines Telekonsils 16 
+182  Konsiliarische Erörterung mit Ärzten und Zahnärzten im Rahmen eines Koopera-
+tionsvertrags nach § 119b Abs. 1 SGB V 
+ 
+182 a KslKa persönlich oder fernmündlich 14 
+182 b KslKb im Rahmen eines Telekonsils 16 
+VS  Videosprechstunde 16 
+VFK  Videofallkonferenz mit an der Versorgung des Versicherten beteiligten Pflege - 
+und Unterstützungspersonen  
+VFK a  bezüglich eines Versicherten 12 
+VFK b  bezüglich jedes weiteren Versicherten in unmittelbarem zeitlichen Zusammen-
+hang 6 
+TZ  Technikzuschlag für Videosprechstunde, Videofallkonferenz oder Videokonsil  16 
+eMP  Aktualisierung elektronischer Medikationsplan 3 
+NFD  Aktualisierung Notfalldatensatz 6 
+5 
+Geb.-
+Nr. 
+Abkür-
+zung Leistungsbeschreibung Bew.-
+Zahl 
+Teil 1 – Konservierende und chirurgische Leistungen und Röntgenleistungen  
+ePA1  Erstbefüllung einer elektronischen Patientenakte 4 
+ePA2  Aktualisierung einer elektronischen Patientenakte 2 
+IP 1  Mundhygienestatus 20 
+IP 2  Mundgesundheitsaufklärung bei Kindern und Jugendlichen 17 
+IP 4  Lokale Fluoridierung der Zähne 12 
+IP 5  Versiegelung von kariesfreien Fissuren und Grübchen der bleibenden Molaren 
+(Zähne 6 und 7) mit aushärtenden Kunststoffen, je Zahn 16 
+FU1  Zahnärztliche Früherkennungsuntersuchung eines Kindes vom 6. bis zum vollen-
+deten 33. Lebensmonat 28 
+FU Pr  Praktische Anleitung der Betreuungspersonen zur Mundhygiene beim Kind 10 
+FU2  Zahnärztliche Früherkennungsuntersuchung eines Kindes vom 34. bis zum voll-
+endeten 72. Lebensmonat 26 
+FLA  Fluoridlackanwendung zur Zahnschmelzhärtung 14 
+ 
+  
+6 
+Geb.- 
+Nr. Leistungsbeschreibung Bew.- 
+Zahl 
+Teil 2 – Kieferbruch, Kiefergelenkserkrankungen, Unterkieferprotrusionsschiene 
+2 Schriftliche Niederlegung eines Heil- und Kostenplanes 20 
+7 Vorbereitende Maßnahmen  
+7 a 
+Abformung, Bissnahme in habitueller Okklusion für das Erstellen von dreidimensional orien-
+tierten Modellen des Ober - und Unterkiefers zur diagnostischen Auswertung und Planung 
+sowie schriftliche Niederlegung 
+19 
+7 b Abformung, Bissnahme für das Erstellen von Modellen des Ober- und Unterkiefers zur diag-
+nostischen Auswertung und Planung sowie schriftliche Niederlegung 19 
+K1 Eingliedern eines Aufbissbehelfs mit adjustierter Oberfläche 106 
+K2 Eingliedern eines Aufbissbehelfs zur Unterbrechung der Okklusionskontakte ohne adjus-
+tierte Oberfläche 45 
+K3 Umarbeitung einer vorhandenen Prothese zum Aufbissbehelf zur Unterbrechung der Okklu-
+sionskontakte mit adjustierter Oberfläche 61 
+K4 Semipermanente Schienung unter Anwendung der Ätztechnik, je Interdentalraum  11 
+K6 Wiederherstellung und/oder Unterfütterung eines Aufbissbehelfs 30 
+K7 Kontrollbehandlung, ggf. mit einfachen Korrekturen des Aufbissbehelfs oder der Fixierung  6 
+K8 Kontrollbehandlung mit Einschleifen des Aufbissbehelfs oder der Schienung (subtraktive 
+Methode) 12 
+K9 Kontrollbehandlung mit Aufbau einer neuen adjustierten Oberfläche (additive Methode)  35 
+UP1 Untersuchung zur Versorgung mit einer Unterkieferprotrusionsschiene einschließlich Bera-
+tung 27 
+UP2 Abformung und dreidimensionale Registrierung der Startprotrusionsposition  49 
+UP3 Eingliedern einer Unterkieferprotrusionsschiene 223 
+UP4 Nachadaption des Protrusionsgrads 10 
+UP5 Kontrollbehandlung  
+UP5 a ggf. mit einfachen Korrekturen der UP 8 
+UP5 b mit Einschleifen der Stütz- und Gleitzonen einer UP (subtraktive Methode) 12 
+UP5 c mit Aufbau der Stütz- und Gleitzone einer UP (additive Methode) 35 
+UP6 Maßnahmen zum Wiederherstellen der Funktion oder zur Erweiterung einer Unterkiefer-
+protrusionsschiene  
+UP6 a kleinen Umfanges (ohne Abformung) 25 
+UP6 b größeren Umfanges (mit Abformung) 42 
+UP6 c Teilunterfütterung einer Unterkieferprotrusionsschiene 37 
+UP6 d Wiederherstellung eines einzelnen oder mehrerer Halte- oder Stützvorrichtungen 19 
+UP6 e Wiederherstellung eines einzelnen oder mehrerer Protrusionselemente 19 
+101 Maßnahmen zur Weichteilstützung zum Ausgleich oder zum Verschluss von Defekten im 
+Bereich des Kiefers 
+ 
+101 a bei vorhandenem Restgebiss 80 
+101 b bei zahnlosem Kiefer 120 
+102 Eingliedern eines Obturators zum Verschluss von Defekten des weichen Gaumens  240 
+103 Resektionsprothesen:  
+103 a Eingliedern einer temporären Verschlussprothese nach Resektion oder bei großen Defekten 
+des Oberkiefers 160 
+103 b Ergänzungsmaßnahmen im Anschluss an Leistungen nach Buchstabe a) 80 
+103 c Eingliedern einer Dauerprothese 300 
+104 Eingliedern einer Prothese oder Epithese zum Verschluss extraoraler Weichteildefekte oder 
+zum Ersatz fehlender Gesichtsteile 
+ 
+104 a kleineren Umfanges 300 
+104 b größeren Umfanges 500 
+  
+7 
+Geb.- 
+Nr. Leistungsbeschreibung Bew.- 
+Zahl 
+Teil 3 – Kieferorthopädische Behandlung 
+5 Kieferorthopädische Behandlungsplanung 95 
+116 Fotografie 15 
+117 Modellanalyse 35 
+118 Kephalometrische Auswertung 29 
+119 Maßnahmen zur Umformung eines Kiefers einschließlich Retention  
+119 a einfach durchführbarer Art 132 
+119 b mittelschwer durchführbarer Art 204 
+119 c schwierig durchführbarer Art 276 
+119 d besonders schwierig durchführbarer Art 336 
+120 Maßnahmen zur Einstellung des Unterkiefers in den Regelbiss in sagittaler oder lateraler 
+Richtung einschließlich Retention 
+ 
+120 a einfach durchführbarer Art 204 
+120 b mittelschwer durchführbarer Art 228 
+120 c schwierig durchführbarer Art 276 
+120 d besonders schwierig durchführbarer Art 336 
+121 Beseitigung von Habits bei einem habituellen Distalbiss oder bei einem habituell offenen 
+Biss, je Sitzung 17 
+122 Kieferorthopädische Verrichtungen als alleinige Leistung  
+122 a Kontrolle des Behandlungsverlaufs einschließlich kleiner Änderungen für Behandlungsmit-
+tel, für jede Sitzung 21 
+122 b Vorbereitende Maßnahmen zur Herstellung von kieferorthopädischen Behandlungsmitteln, 
+je Kiefer 43 
+122 c Einfügen von kieferorthopädischen Behandlungsmitteln, je Kiefer 27 
+123a Kieferorthopädische Maßnahmen mit herausnehmbaren Geräten zum Offenhalten von Lü-
+cken infolge vorzeitigem Milchzahnverlustes, je Kiefer 40 
+123b Kontrolle eines Lückenhalters, je Behandlungsquartal 14 
+124 Einschleifen von Milchzähnen bei Kreuz- oder Zwangsbiss, je Sitzung 16 
+125 Maßnahmen zur Wiederherstellung von Behandlungsmitteln inkl. Wiedereinfügen, je Kiefer 30 
+126a Eingliedern eines Brackets oder eines Attachments aus Edelstahl oder nickelfreiem Metall 
+einschließlich Material- und Laborkosten 18 
+126b Eingliedern eines Bandes einschließlich Material- und Laborkosten 42 
+126c Wiedereingliederung eines Bandes 30 
+126d Entfernen eines Bandes, eines Brackets oder eines Attachments 6 
+127a Eingliederung eines Teilbogens aus Edelstahl einschließlich Material- und Laborkosten 25 
+127b Ausgliederung eines Teilbogens 7 
+128a Eingliederung eines konfektionierten Vollbogens  aus Edelstahl einschließlich Material- und 
+Laborkosten 32 
+128b Eingliederung eines individualisierten Vollbogens aus Edelstahl einschließlich Material- und 
+Laborkosten 40 
+128c Ausgliederung von Vollbögen, je Bogen 9 
+129 Wiedereingliederung eines Voll- oder Teilbogens 24 
+130 
+Eingliederung ergänzender festsitzender Apparaturen (Palatinal - oder Transversalbogen, 
+Quadhelix, Lingualbogen, Lipbumper, Headgear über je zwei Ankerbänder) einschließlich 
+Material- und Laborkosten 
+72 
+131a Eingliederung und Ausgliederung einer Gaumennahterweiterungsapparatur  50 
+131b 
+Eingliederung und Ausgliederung einer festsitzenden Apparatur zur Bisslagekorrektur 
+(Herbstscharnier) bei spätem Behandlungsbeginn, wenn der Wachstumshöhepunkt über-
+schritten ist und die Bisslagekorrektur mit konventionellen Maßnahmen nicht erreicht werden 
+kann, je Seite 
+50 
+131c Eingliederung einer Gesichtsmaske 50 
+ 
+  
+8 
+Geb.- 
+Nr. Leistungsbeschreibung Bew.- 
+Zahl 
+Teil 4 – Systematische Behandlung von Parodontopathien 
+4 Befundaufnahme und Erstellen eines Parodontalstatus 44 
+ATG Parodontologisches Aufklärungs- und Therapiegespräch 28 
+MHU Patientenindividuelle Mundhygieneunterweisung 45 
+AIT Antiinfektiöse Therapie  
+AIT a je behandeltem einwurzeligen Zahn 14 
+AIT b je behandeltem mehrwurzeligen Zahn 26 
+BEV Befundevaluation  
+BEV a nach AIT 32 
+BEV b nach CPT 32 
+CPT Chirurgische Therapie  
+CPT a je behandeltem einwurzeligen Zahn 22 
+CPT b je behandeltem mehrwurzeligen Zahn 34 
+UPT Unterstützende Parodontitistherapie  
+UPT a Mundhygienekontrolle 18 
+UPT b Mundhygieneunterweisung (soweit erforderlich) 24 
+UPT c Supragingivale und gingivale Reinigung aller Zähne von anhaftenden Biofilmen und Belä-
+gen, je Zahn 3 
+UPT d Messung von Sondierungstiefen und Sondierungsbluten 15 
+UPT e 
+Subgingivale Instrumentierung bei Sondierungstiefen von 4 mm oder mehr und Sondie-
+rungsbluten sowie an allen Stellen mit einer Sondierungstiefe von 5 mm oder mehr, je ein-
+wurzeligem Zahn 
+5 
+UPT f 
+Subgingivale Instrumentierung bei Sondierungstiefen von 4 mm oder mehr und Sondie-
+rungsbluten sowie an allen Stellen mit einer Sondierungstiefe von 5 mm oder mehr, je mehr-
+wurzeligem Zahn 
+12 
+UPT g 
+Untersuchung des Parodontalzustands , die hierzu notwendige Dokumentation des klini-
+schen Befunds umfasst die Sondierungstiefen und die Sondierungsblutung, die Zahnlocke-
+rung, den Furkationsbefall, den röntgenologischen Knochenabbau sowie die Angabe des 
+Knochenabbaus in Relation zum Patientenalter (%/Alter).  Die erhobenen Befunddaten wer-
+den mit den Befunddaten der Untersuchung nach Nr. BEV oder nach Nr. UPT d verglichen. 
+Dem Versicherten werden die Ergebnisse erläutert und es wird mit ihm das weitere Vorge-
+hen besprochen. 
+32 
+108 Einschleifen des natürlichen Gebisses zum Kauebenenausgleich und zur Entlastung, je Sit-
+zung 6 
+111 Nachbehandlung im Rahmen der systematischen Behandlung von Parodontopathien, je Sit-
+zung 10 
+  
+9 
+Geb.- 
+Nr. Leistungsbeschreibung Bew.- 
+Zahl 
+Teil 5 – Versorgung mit Zahnersatz und Zahnkronen 
+18 Vorbereiten eines endodontisch behandelten Zahnes zur Aufnahme einer Krone, mit Veran-
+kerung im Wurzelkanal, 
+ 
+18 a durch einen konfektionierten Stift- oder Schraubenaufbau, einzeitig 50 
+18 b durch einen gegossenen Stiftaufbau, zweizeitig 80 
+19 Schutz eines beschliffenen Zahnes und Sicherung der Kaufunktion durch eine provisorische 
+Krone oder provisorischer Ersatz eines fehlenden Zahnes durch ein Brückenglied  19 
+20 Versorgung eines Einzelzahnes durch  
+20 a eine metallische Vollkrone 148 
+20 b eine vestibulär verblendete Verblendkrone 158 
+20 c eine metallische Teilkrone 187 
+21 Schutz eines beschliffenen Zahnes und Sicherung der Kaufunktion durch eine provisorische 
+Krone mit Stiftverankerung 28 
+22 Teilleistungen bei nicht vollendeten Leistungen nach den Nrn. 18 und 20   
+24 Maßnahmen zur Wiederherstellung der Funktion von Kronen  
+24 a Wiedereinsetzen einer Krone oder dergleichen 25 
+24 b Erneuerung oder Wiedereinsetzen einer Facette, einer Verblendschale oder dergleichen  43 
+24 c Abnahme und Wiederbefestigung einer provisorischen Krone nach der Nr. 19 oder 21  7 
+89 Beseitigung grober Artikulations- und Okklusionsstörungen vor Eingliederung von Prothesen 
+und Brücken 16 
+90 Versorgung eines Zahnes durch eine Wurzelstiftkappe mit Verankerung im Wurzelkanal mit 
+Kugelknopfanker 154 
+91 Versorgung eines Lückengebisses durch eine Brücke, bei Verwendung von Teleskopkronen 
+im Zusammenhang mit einer herausnehmbaren Prothese, je Pfeilerzahn  
+ 
+91 a Metallische Vollkrone 118 
+91 b Vestibulär verblendete Verblendkrone 128 
+91 c Metallische Teilkrone 136 
+91 d Teleskop-/Konuskrone 190 
+91 e Verwendung eines Geschiebes bei geteilten Brücken mit disparallelen Pfeilern zusätzlich zu 
+den Nrn. 91 a bis c 43 
+92 Versorgung eines Lückengebisses durch eine Brücke, je Spanne 62 
+93a 
+Adhäsivbrücke mit Metallgerüst im Frontzahnbereich mit einem Flügel einschließlich der Prä-
+paration von Retentionen an dem Pfeilerzahn, Abformung, Farbbestimmung, Bissnahme, 
+Einprobe und adhäsive Befestigung, Kontrolle und ggf. Korrekturen der Okklusion und Arti-
+kulation 
+240 
+93b 
+Adhäsivbrücke mit Metallgerüst im Frontzahnbereich mit zwei Flügeln einschließlich der Prä-
+paration von Retentionen an den Pfeilerzähnen, Abformung, Farbbestimmung, Bissnahme, 
+Einprobe und adhäsive Befestigung, Kontrolle und ggf. Korrekturen der Okklusion und Arti-
+kulation 
+335 
+94a Teilleistungen nach den Nrn. 90 bis 92 bei nicht vollendeten Leistungen   
+94b Teilleistungen bei nicht vollendeten Leistungen nach den Nrn. 93a und 93b   
+95 Maßnahmen zum Wiederherstellen der Funktion von Brücken und provisorischen Brücken   
+95 a Wiedereinsetzen einer Brücke mit 2 Ankern 34 
+95 b Wiedereinsetzen einer Brücke mit mehr als 2 Ankern 50 
+95 c Erneuerung oder Wiedereinsetzen einer Facette, einer Verblendschale oder dergleichen  36 
+95 d Abnahme und Wiedereinsetzen einer provisorischen Brücke 18 
+95 e Wiedereingliederung einer einflügeligen Adhäsivbrücke 61 
+95 f Wiedereingliederung einer zweiflügeligen Adhäsivbrücke 85 
+96 Versorgung eines Lückengebisses durch eine partielle Prothese einschließlich einfacher 
+Haltevorrichtungen 
+ 
+96 a zum Ersatz von 1 bis 4 fehlenden Zähnen 57 
+96 b zum Ersatz von 5 bis 8 fehlenden Zähnen 83 
+96 c zum Ersatz von mehr als 8 fehlenden Zähnen 115 
+97a Totale Prothese/Cover-Denture-Prothese im Oberkiefer 250 
+10 
+Geb.- 
+Nr. Leistungsbeschreibung Bew.- 
+Zahl 
+Teil 5 – Versorgung mit Zahnersatz und Zahnkronen 
+97b Totale Prothese/Cover-Denture-Prothese im Unterkiefer 290 
+98a Abformung mit individuellem oder individualisiertem Löffel, je Kiefer 29 
+98b Funktionsabformung mit individuellem Löffel, Oberkiefer 57 
+98c Funktionsabformung mit individuellem Löffel, Unterkiefer 76 
+98d Intraorale Stützstiftregistrierung zur Feststellung der Zentrallage 23 
+98e Verwendung einer Metallbasis in besonderen Ausnahmefällen, zu den Bewertungszahlen 
+nach den Nrn. 97 a oder b zusätzlich 16 
+98f 
+Verwendung doppelarmiger Halte- oder einfacher Stützvorrichtungen oder mehrarmiger ge-
+bogener Halte- und Stützvorrichtungen zu den Bewertungszahlen nach Nr. 96, zusätzlich je 
+Prothese, nur abrechnungsfähig bei Interimsversorgung 
+22 
+98g Verwendung einer Metallbasis in Verbindung mit Halte - und Stützvorrichtungen - nicht bei 
+Interimsprothesen - 44 
+98h Verwendung von gegossenen Halte - und Stützvorrichtungen, zu den Bewertungszahlen 
+nach Nr. 96 oder Nr. 98 g zusätzlich - nicht bei Interimsprothesen - 
+ 
+98 h/1 bei Verwendung von einer Halte- und Stützvorrichtung 29 
+98 h/2 bei Verwendung von mindestens 2 Halte- und Stützvorrichtungen 50 
+99 Teilleistungen nach den Nrn. 96, 97 und 98 bei nicht vollendeten Leistungen:   
+99 a Anatomischer Abdruck zur prothetischen Versorgung eines Kiefers 19 
+99 b Maßnahmen einschließlich der Ermittlung der Bissverhältnisse  
+99 c Weitergehende Maßnahmen  
+100 Maßnahmen zum Wiederherstellen der Funktion oder zur Erweiterung einer abnehmbaren 
+Prothese 
+ 
+100 a kleinen Umfanges (ohne Abformung) 30 
+100 b größeren Umfanges (mit Abformung) 50 
+100 c Teilunterfütterung einer Prothese 44 
+100 d Vollständige Unterfütterung einer Prothese im indirekten Verfahren 55 
+100 e Vollständige Unterfütterung einer Prothese im indirekten Verfahren einschließlich funktionel-
+ler Randgestaltung im Oberkiefer 81 
+100 f Vollständige Unterfütterung einer Prothese im indirekten Verfahren einschließlich funktionel-
+ler Randgestaltung im Unterkiefer 81 
+ 
+ 

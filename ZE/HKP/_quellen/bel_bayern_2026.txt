@@ -1,0 +1,159 @@
+BEL - Nr. Leistungsbeschreibung                                           
+(Kurzbeschreibung) 
+Höchstpreis 
+in EURO 
+ohne Mwst. 
+Gewerbe-    
+laboratorien
+Höchstpreis 
+in EURO 
+ohne Mwst. 
+Praxis-
+laboratorien
+001 0 Modell 8,45 8,02
+001 8 Modell bei Implantatversorgung 8,45 8,02
+002 2 Platzhalter einfügen 17,89 16,99
+002 3 Verwendung von Kunststoff 17,89 16,99
+002 4 Galvanisieren 17,89 16,99
+005 1 Sägemodell 19,88 18,88
+005 2 Einzelstumpfmodell 19,88 18,88
+005 3 Modell nach Überabdruck 19,88 18,88
+005 5 Fräsmodell 13,54 12,86
+006 0 Zahnkranz 6,86 6,51
+007 0 Zahnkranz sockeln 7,25 6,88
+011 2 Fixator 11,00 10,45
+012 0 Mittelwertartikulator 12,42 11,79
+012 8 Mittelwertartikulator bei Implantatversorgung 12,42 11,79
+020 1 Basis für Vorbissnahme 11,47 10,89
+021 1 Individueller Löffel 28,87 27,42
+021 2 Funktionslöffel 28,87 27,42
+021 3 Basis für Bissregistrierung 28,87 27,42
+021 4 Basis für Stützstiftregistrierung 28,87 27,42
+021 5 Basis für Aufstellung 28,87 27,42
+021 6 Basis für Bissregistr. bei Implantatversorgung 28,87 27,42
+021 8 Basis für Aufstellung bei Implantatversorgung 28,87 27,42
+022 0 Bisswall 8,32 7,90
+022 8 Bisswall bei Implantatversorgung 8,32 7,90
+023 0 Registrierplatte und -stift auf Basen 37,12 35,26
+024 0 Übertragungskappe Kunststoff/Metall 31,79 30,20
+031 0 Provisorische Krone/Brückenglied 42,52 40,39
+032 0 Formteil 23,03 21,87
+101 3 Wurzelstiftkappe 99,06 94,10
+102 1 Vollkrone/Metall 104,54 99,31
+102 2 Teilkrone/Metall 104,54 99,31
+102 3 Flügel für Adhäsivbrücke, je Flügel 102,36 97,24
+102 4 Krone für vestibuläre Verblendung 103,68 98,49
+102 6 Vollkrone/Metall bei Implantatversorgung 104,54 99,31
+102 8 Krone f. vestib. Verbl. bei Implantatversorgung 103,68 98,49
+103 1 Vorbereiten Krone 17,78 16,89
+103 2 Krone/Brückenglied einarbeiten 17,78 16,89
+103 3 Stiftaufbau einarbeiten 17,78 16,89
+104 0 Modellation gießen 23,17 22,01
+105 0 Stiftaufbau 70,05 66,54
+110 0 Brückenglied 76,21 72,39
+120 0 Teleskopierende Krone 325,75 309,46
+120 1 Teleskopierende Primär- o. Sekundärkrone 217,37 206,50
+in Bayern gemäß § 57 Abs. 2 SGB V
+gültig ab 01.01.2026
+Verzeichnis
+der aufgelisteten zahntechnischen Leistungen
+bei der medizinisch notwendigen Versorgung 
+einschließlich Zahnkronen und Suprakonstruktionen 
+BEL - Nr. Leistungsbeschreibung                                           
+(Kurzbeschreibung) 
+Höchstpreis 
+in EURO 
+ohne Mwst. 
+Gewerbe-    
+laboratorien
+Höchstpreis 
+in EURO 
+ohne Mwst. 
+Praxis-
+laboratorien
+133 1 Individuelles Geschiebe 277,22 263,35
+134 1 Konfektions-Geschiebe 137,37 130,50
+134 3 Konfektions-Anker 137,37 130,50
+134 7 Primär-/Sek.-Teil Konf.-Anker 91,40 86,83
+134 9 Wiederbef. Sek.-Teil 91,40 86,83
+136 0 Gefrästes Lager 66,01 62,70
+137 0 Schubverteilungsarm 49,49 47,01
+150 0 Metallverbindung nach Brand 36,91 35,06
+155 0 Konditionierung je Zahn/Flügel 17,58 16,70
+160 0 Vestibuläre Verblendung Kunststoff 60,29 57,27
+161 0 Zahnfleisch Kunststoff 19,18 18,22
+162 0 Vestibuläre Verblendung Keramik 121,59 115,51
+162 8 Vestib. Verbl. Keramik bei Implantatversorgung 121,59 115,51
+163 0 Zahnfleisch Keramik 44,25 42,03
+163 8 Zahnfleisch Keramik bei Implantatversorgung 44,25 42,03
+164 0 Vestibuläre Verblendung Komposite 94,27 89,55
+165 0 Zahnfleisch Komposite 25,55 24,27
+201 0 Metallbasis 180,04 171,03
+202 1 Einarmige gegossene Haltevorrichtung 15,42 14,64
+202 5 Kralle 15,42 14,64
+202 6 Ney-Stiel 15,42 14,64
+202 7 Auflage 15,42 14,64
+202 8 Umgehungsbügel bei Diastema 15,42 14,64
+203 1 Zweiarmige gegossene Haltevorrichtung 28,23 26,81
+204 1 Zweiarmige gegossene Halte- und Stützvorrichtung/Auflage 38,13 36,22
+205 0 Bonwillklammer 69,57 66,09
+208 1 Rückenschutzplatte 50,36 47,84
+208 2 Metallzahn, gegossen 50,36 47,84
+208 3 Metallkaufläche, gegossen 50,36 47,84
+210 0 Lösungshilfe 14,56 13,83
+211 0 Unterfütterbarer Abschlussrand 23,24 22,07
+212 0 Zuschlag einzelne gegossene Klammer 24,17 22,96
+301 0 Aufstellung Grundeinheit 43,44 41,26
+301 8 Aufstellung Grundeinh. bei Implantatversorgung 43,44 41,26
+302 0 Aufstellen Wachs oder Kunststoff je Zahn 2,38 2,26
+302 8 Aufst. Wachs oder Kunststoff je Zahn bei Implantatversorgung 2,38 2,26
+303 0 Aufstellen Metall je Zahn 3,12 2,96
+341 0 Übertragung je Zahn 1,86 1,76
+361 0 Fertigstellung Grundeinheit 65,39 62,12
+361 8 Fertigst. Grundeinheit bei Implantatversorgung 65,39 62,12
+362 0 Fertigstellen je Zahn 4,09 3,88
+362 8 Fertigstellen je Zahn bei Implantatversorgung 4,09 3,88
+380 0 Einfache gebogene Halte-/Stützvorrichtung 12,56 11,93
+380 5 Gebogene Auflage 12,56 11,93
+381 0 Sonstige gebogene Halte-/Stützvorrichtung 21,22 20,15
+382 1 Weichkunststoff 68,76 65,32
+382 2 Sonderkunststoff 68,76 65,32
+383 0 Zahn zahnfarben hergestellt 28,83 27,38
+384 0 Zahn zahnfarben hinterlegt 15,13 14,37
+BEL - Nr. Leistungsbeschreibung                                           
+(Kurzbeschreibung) 
+Höchstpreis 
+in EURO 
+ohne Mwst. 
+Gewerbe-    
+laboratorien
+Höchstpreis 
+in EURO 
+ohne Mwst. 
+Praxis-
+laboratorien
+801 0 Grundeinheit ZE 28,54 27,11
+801 8 Grundeinh. Instands. ZE/implantatgestützt 28,54 27,11
+802 1 LE Sprung 10,57 10,04
+802 2 LE Bruch 10,57 10,04
+802 3 LE Einarbeiten Zahn 10,57 10,04
+802 4 LE Basisteil Kunststoff 10,57 10,04
+802 5 LE Halte- und/oder Stützvorrichtung einarbeiten 10,57 10,04
+802 6 LE Rückenschutzplatte einarbeiten 10,57 10,04
+802 7 LE Kunststoffsattel 10,57 10,04
+803 0 Retention, gebogen 46,00 43,70
+804 0 Retention, gegossen 58,09 55,18
+806 0 Gegossenes Basisteil 88,01 83,60
+807 0 Metallverbindung bei Instandsetzung/Erweiterung 23,03 21,87
+808 0 Teilunterfütterung einer Basis 45,11 42,85
+808 8 Teilunterfütterung/implantatgestützt 45,11 42,85
+809 0 Vollständige Unterfütterung 72,16 68,55
+809 8 Vollst. Unterfütterung/implantatgestützt 72,16 68,55
+810 0 Prothesenbasis erneuern 88,30 83,88
+810 8 Prothesenbasis erneuern/Implantatversorgung 88,30 83,88
+813 0 Auswechseln Konfektionsteil 15,47 14,69
+820 0 Instandsetzung Krone/Flügel/Brückenglied 45,39 43,12
+820 8 Instandsetzung Krone/implantatgestützt 45,39 43,12
+933 0 Versandkosten 7,17
+933 8 Versandkosten bei Implantatversorgung 7,17
+970 0 Verarbeitungsaufwand NEM-Legierung 17,22 17,22

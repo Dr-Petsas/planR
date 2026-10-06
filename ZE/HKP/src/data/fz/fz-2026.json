@@ -1,0 +1,585 @@
+{
+ "id": "fz-2026",
+ "typ": "festzuschuss",
+ "name": "Festzuschüsse ab 01.01.2026 (G-BA / GKV-SV)",
+ "gueltigAb": "2026-01-01",
+ "quelle": "https://www.gkv-spitzenverband.de/media/dokumente/krankenversicherung_1/zahnaerztliche_versorgung/rili_g_ba/2026-01-01-FZ-Betraege.pdf",
+ "eintraege": [
+  {
+   "nr": "1.1",
+   "text": "Erhaltungswürdiger Zahn mit weitgehender Zerstörung der klinischen Krone oder unzureichende Retentionsmöglichkeit, je Zahn",
+   "honorar": 201.93,
+   "mul": 196.46,
+   "betraege": {
+    "100": 398.39,
+    "60": 239.03,
+    "70": 278.87,
+    "75": 298.79
+   }
+  },
+  {
+   "nr": "1.2",
+   "text": "Erhaltungswürdiger Zahn mit großen Substanzdefekten, aber erhaltener vestibulärer und/oder oraler Zahnsubstanz, je Zahn",
+   "honorar": 245.84,
+   "mul": 211.43,
+   "betraege": {
+    "100": 457.27,
+    "60": 274.36,
+    "70": 320.09,
+    "75": 342.95
+   }
+  },
+  {
+   "nr": "1.3",
+   "text": "Erhaltungswürdiger Zahn mit weitgehender Zerstörung der klinischen Krone oder unzureichende Retentionsmöglichkeit im Verblendbereich (15-25 und 34-44), je Verblendung für Kronen (auch implantatgestützte)",
+   "honorar": 12.61,
+   "mul": 121.83,
+   "betraege": {
+    "100": 134.44,
+    "60": 80.66,
+    "70": 94.11,
+    "75": 100.83
+   }
+  },
+  {
+   "nr": "1.4",
+   "text": "Endodontisch behandelter Zahn mit Notwendigkeit eines konfektionierten metallischen Stiftaufbaus mit herkömmlichen Zementierungsverfahren, je Zahn",
+   "honorar": 59.22,
+   "mul": 24.3,
+   "betraege": {
+    "100": 83.52,
+    "60": 50.11,
+    "70": 58.46,
+    "75": 62.64
+   }
+  },
+  {
+   "nr": "1.5",
+   "text": "Endodontisch behandelter Zahn mit Notwendigkeit eines gegossenen metallischen Stiftaufbaus mit herkömmlichen Zementierungsverfahren, je Zahn",
+   "honorar": 113.95,
+   "mul": 137.62,
+   "betraege": {
+    "100": 251.57,
+    "60": 150.94,
+    "70": 176.1,
+    "75": 188.68
+   }
+  },
+  {
+   "nr": "2.1",
+   "text": "Zahnbegrenzte Lücke mit einem fehlenden Zahn, je Lücke",
+   "honorar": 452.17,
+   "mul": 469.43,
+   "betraege": {
+    "100": 921.6,
+    "60": 552.96,
+    "70": 645.12,
+    "75": 691.2
+   }
+  },
+  {
+   "nr": "2.2",
+   "text": "Zahnbegrenzte Lücke mit zwei nebeneinander fehlenden Zähnen, je Lücke",
+   "honorar": 479.75,
+   "mul": 572.09,
+   "betraege": {
+    "100": 1051.84,
+    "60": 631.1,
+    "70": 736.29,
+    "75": 788.88
+   }
+  },
+  {
+   "nr": "2.3",
+   "text": "Zahnbegrenzte Lücke mit drei nebeneinander fehlenden Zähnen, je Kiefer",
+   "honorar": 503.03,
+   "mul": 671.86,
+   "betraege": {
+    "100": 1174.89,
+    "60": 704.93,
+    "70": 822.42,
+    "75": 881.17
+   }
+  },
+  {
+   "nr": "2.4",
+   "text": "Frontzahnlücke mit vier nebeneinander fehlenden Zähnen, je Kiefer",
+   "honorar": 522.32,
+   "mul": 765.58,
+   "betraege": {
+    "100": 1287.9,
+    "60": 772.74,
+    "70": 901.53,
+    "75": 965.93
+   }
+  },
+  {
+   "nr": "2.5",
+   "text": "An eine Lücke unmittelbar angrenzende weitere zahnbegrenzte Lücke mit einem fehlenden Zahn",
+   "honorar": 267.94,
+   "mul": 243.41,
+   "betraege": {
+    "100": 511.35,
+    "60": 306.81,
+    "70": 357.95,
+    "75": 383.51
+   }
+  },
+  {
+   "nr": "2.6",
+   "text": "Disparallele Pfeilerzähne zur festsitzenden Zahnersatzversorgung, Zuschlag je",
+   "honorar": 64.24,
+   "mul": 314.47,
+   "betraege": {
+    "100": 378.71,
+    "60": 227.23,
+    "70": 265.1,
+    "75": 284.03
+   }
+  },
+  {
+   "nr": "2.7",
+   "text": "Fehlender Zahn in einer zahnbegrenzten Lücke im Verblendbereich (15-25 und 34- 44), je Verblendung für einen ersetzten Zahn, auch für einen der Lücke angrenzenden Brückenanker im Verblendbereich",
+   "honorar": 7.8,
+   "mul": 124.64,
+   "betraege": {
+    "100": 132.44,
+    "60": 79.46,
+    "70": 92.71,
+    "75": 99.33
+   }
+  },
+  {
+   "nr": "3.1",
+   "text": "Alle zahnbegrenzten Lücken, die nicht den Befunden nach Nrn. 2.1 bis 2.5 und 4 entsprechen, oder Freiendsituationen (Lückensituation II), je Kiefer",
+   "honorar": 251.49,
+   "mul": 700.66,
+   "betraege": {
+    "100": 952.15,
+    "60": 571.29,
+    "70": 666.51,
+    "75": 714.11
+   }
+  },
+  {
+   "nr": "3.2",
+   "text": "a) Beidseitig bis zu den Eckzähnen oder bis zu den ersten Prämolaren verkürzte Zahnreihe, b) einseitig bis zum Eckzahn oder bis zum ersten Prämolaren verkürzte Zahnreihe und kontralateral im Seitenzahngebiet bis zum Eckzahn oder bis zum ersten Prämolaren unterbrochene Zahnreihe mit mindestens zwei nebeneinander fehlenden Zähnen, c) beidseitig im Seitenzahngebiet bis zum Eckzahn oder bis zum ersten Prämolaren unterbrochene Zahnreihe mit jeweils mindestens zwei nebeneinander fehlenden Zähnen mit der Notwendigkeit einer dentalen Verankerung wenn die Regelversorgung eine Kombinationsversorgung vorsieht, auch für frontal unterbrochene Zahnreihe, je Eckzahn oder erstem Prämolar. Der Befund ist zweimal je Kiefer ansetzbar.",
+   "honorar": 272.82,
+   "mul": 395.09,
+   "betraege": {
+    "100": 667.91,
+    "60": 400.75,
+    "70": 467.54,
+    "75": 500.93
+   }
+  },
+  {
+   "nr": "4.1",
+   "text": "Restzahnbestand bis zu 3 Zähnen im Oberkiefer",
+   "honorar": 307.42,
+   "mul": 687.38,
+   "betraege": {
+    "100": 994.8,
+    "60": 596.88,
+    "70": 696.36,
+    "75": 746.1
+   }
+  },
+  {
+   "nr": "4.2",
+   "text": "Zahnloser Oberkiefer",
+   "honorar": 369.77,
+   "mul": 590.97,
+   "betraege": {
+    "100": 960.74,
+    "60": 576.44,
+    "70": 672.52,
+    "75": 720.56
+   }
+  },
+  {
+   "nr": "4.3",
+   "text": "Restzahnbestand bis zu 3 Zähnen im Unterkiefer",
+   "honorar": 328.05,
+   "mul": 699.94,
+   "betraege": {
+    "100": 1027.99,
+    "60": 616.79,
+    "70": 719.59,
+    "75": 770.99
+   }
+  },
+  {
+   "nr": "4.4",
+   "text": "Zahnloser Unterkiefer",
+   "honorar": 438.93,
+   "mul": 590.61,
+   "betraege": {
+    "100": 1029.54,
+    "60": 617.72,
+    "70": 720.68,
+    "75": 772.16
+   }
+  },
+  {
+   "nr": "4.5",
+   "text": "Notwendigkeit einer Metallbasis, Zuschlag je Kiefer",
+   "honorar": 18.95,
+   "mul": 203.12,
+   "betraege": {
+    "100": 222.07,
+    "60": 133.24,
+    "70": 155.45,
+    "75": 166.55
+   }
+  },
+  {
+   "nr": "4.6",
+   "text": "Restzahnbestand bis zu 3 Zähnen je Kiefer mit der Notwendigkeit einer dentalen Verankerung, wenn die Regelversorgung eine Kombinationsversorgung vorsieht, je Ankerzahn",
+   "honorar": 267.68,
+   "mul": 416.5,
+   "betraege": {
+    "100": 684.18,
+    "60": 410.51,
+    "70": 478.93,
+    "75": 513.14
+   }
+  },
+  {
+   "nr": "4.7",
+   "text": "Verblendung einer Teleskopkrone im Verblendbereich (15-25 und 34-44), Zuschlag je Ankerzahn",
+   "honorar": 0.0,
+   "mul": 108.82,
+   "betraege": {
+    "100": 108.82,
+    "60": 65.29,
+    "70": 76.17,
+    "75": 81.62
+   }
+  },
+  {
+   "nr": "4.8",
+   "text": "Restzahnbestand bis zu 3 Zähnen je Kiefer bei Notwendigkeit einer dentalen Verankerung durch Wurzelstiftkappen, je Ankerzahn",
+   "honorar": 210.51,
+   "mul": 409.03,
+   "betraege": {
+    "100": 619.54,
+    "60": 371.72,
+    "70": 433.68,
+    "75": 464.66
+   }
+  },
+  {
+   "nr": "4.9",
+   "text": "Schwierig zu bestimmende Lagebeziehung der Kiefer bei der Versorgung mit Totalprothesen und schleimhautgetragenen Deckprothesen (Notwendigkeit einer Stützstiftregistrierung), Zuschlag je Gesamtbefund",
+   "honorar": 27.24,
+   "mul": 129.71,
+   "betraege": {
+    "100": 156.95,
+    "60": 94.17,
+    "70": 109.87,
+    "75": 117.71
+   }
+  },
+  {
+   "nr": "5.1",
+   "text": "Lückengebiss nach Verlust von bis zu 4 Zähnen je Kiefer in Fällen, in denen eine endgültige Versorgung nicht sofort möglich ist, je Kiefer",
+   "honorar": 82.28,
+   "mul": 249.64,
+   "betraege": {
+    "100": 331.92,
+    "60": 199.15,
+    "70": 232.34,
+    "75": 248.94
+   }
+  },
+  {
+   "nr": "5.2",
+   "text": "Lückengebiss nach Zahnverlust von 5 bis 8 Zähnen je Kiefer in Fällen, in denen ein e endgültige Versorgung nicht sofort möglich ist, je Kiefer",
+   "honorar": 116.74,
+   "mul": 339.2,
+   "betraege": {
+    "100": 455.94,
+    "60": 273.56,
+    "70": 319.16,
+    "75": 341.96
+   }
+  },
+  {
+   "nr": "5.3",
+   "text": "Lückengebiss nach Verlust von über 8 Zähnen je Kiefer in Fällen, in denen eine endgültige Versorgung nicht sofort möglich ist, je Kiefer",
+   "honorar": 159.61,
+   "mul": 431.71,
+   "betraege": {
+    "100": 591.32,
+    "60": 354.79,
+    "70": 413.92,
+    "75": 443.49
+   }
+  },
+  {
+   "nr": "5.4",
+   "text": "Zahnloser Ober- oder Unterkiefer in Fällen, in denen eine endgültige Versorgung nicht sofort möglich ist, je Kiefer",
+   "honorar": 319.38,
+   "mul": 490.35,
+   "betraege": {
+    "100": 809.73,
+    "60": 485.84,
+    "70": 566.81,
+    "75": 607.3
+   }
+  },
+  {
+   "nr": "6.0",
+   "text": "Prothetisch versorgtes Gebiss ohne Befundveränderung mit wiederherstellungsbedürftiger herausnehmbarer-/Kombinationsversorgung ohne Notwendigkeit der Abformung und ohne Notwendigkeit zahntechnischer Leistungen, auch Auffüllen von Sekundärteleskopen im direkten Verfahren, je Prothese",
+   "honorar": 35.58,
+   "mul": 3.47,
+   "betraege": {
+    "100": 39.05,
+    "60": 23.43,
+    "70": 27.34,
+    "75": 29.29
+   }
+  },
+  {
+   "nr": "6.1",
+   "text": "Prothetisch versorgtes Gebiss ohne Befundveränderung mit wiederherstellungsbedürftiger herausnehmbarer-/Kombinationsversorgung ohne Notwendigkeit der Abformung, je Prothese",
+   "honorar": 35.67,
+   "mul": 61.06,
+   "betraege": {
+    "100": 96.73,
+    "60": 58.04,
+    "70": 67.71,
+    "75": 72.55
+   }
+  },
+  {
+   "nr": "6.2",
+   "text": "Prothetisch versorgtes Gebiss ohne Befundveränderung mit wiederherstellungsbedürftiger herausnehmbarer-/Kombinationsversorgung mit Notwendigkeit der Abformung (Maßnahmen im Kunststoffbereich), auch Wiederbefestigung von Sekundärteleskopen oder anderer Verbindungselemente an dieser Versorgung, je Prothese",
+   "honorar": 60.03,
+   "mul": 98.33,
+   "betraege": {
+    "100": 158.36,
+    "60": 95.02,
+    "70": 110.85,
+    "75": 118.77
+   }
+  },
+  {
+   "nr": "6.3",
+   "text": "Prothetisch versorgtes Gebiss ohne Befundveränderung mit wiederherstellungsbedürftiger herausnehmbarer-/Kombinationsversorgung mit Maßnahmen im gegossenen Metallbereich, auch Wiederbefestigung von Sekundärteleskopen oder anderer Verbindungselemente an dieser Versorgung, je Prothese",
+   "honorar": 64.38,
+   "mul": 159.14,
+   "betraege": {
+    "100": 223.52,
+    "60": 134.11,
+    "70": 156.46,
+    "75": 167.64
+   }
+  },
+  {
+   "nr": "6.4",
+   "text": "Prothetisch versorgtes Gebiss mit Befundveränderung mit erweiterungsbedürftiger herausnehmbarer-/Kombinationsversorgung mit Maßnahmen im Kunststoffbereich, je Prothese bei Erweiterung um einen Zahn",
+   "honorar": 61.22,
+   "mul": 107.88,
+   "betraege": {
+    "100": 169.1,
+    "60": 101.46,
+    "70": 118.37,
+    "75": 126.83
+   }
+  },
+  {
+   "nr": "6.4.1",
+   "text": "Prothetisch versorgtes Gebiss mit Befundveränderung mit erweiterungsbedürftiger herausnehmbarer-/Kombinationsversorgung mit Maßnahmen im Kunststoffbereich, je Prothese bei Erweiterung um jeden weiteren Zahn",
+   "honorar": 0.0,
+   "mul": 33.08,
+   "betraege": {
+    "100": 33.08,
+    "60": 19.85,
+    "70": 23.16,
+    "75": 24.81
+   }
+  },
+  {
+   "nr": "6.5",
+   "text": "Prothetisch versorgtes Gebiss mit Befundveränderung mit erweiterungsbedürftiger herausnehmbarer-/Kombinationsversorgung im gegossenen Metallbereich, je Prothese",
+   "honorar": 65.88,
+   "mul": 179.26,
+   "betraege": {
+    "100": 245.14,
+    "60": 147.08,
+    "70": 171.6,
+    "75": 183.86
+   }
+  },
+  {
+   "nr": "6.5.1",
+   "text": "Prothetisch versorgtes Gebiss mit Befundveränderung mit erweiterungsbedürftiger herausnehmbarer-/Kombinationsversorgung im gegossenen Metallbereich, je Prothese",
+   "honorar": 0.0,
+   "mul": 48.34,
+   "betraege": {
+    "100": 48.34,
+    "60": 29.0,
+    "70": 33.84,
+    "75": 36.26
+   }
+  },
+  {
+   "nr": "6.6",
+   "text": "Verändertes Prothesenlager bei erhaltungswürdigem Teil-Zahnersatz, je Prothese",
+   "honorar": 66.3,
+   "mul": 113.83,
+   "betraege": {
+    "100": 180.13,
+    "60": 108.08,
+    "70": 126.09,
+    "75": 135.1
+   }
+  },
+  {
+   "nr": "6.7",
+   "text": "Verändertes Prothesenlager bei erhaltungswürdigem totalem Zahnersatz oder schleimhautgetragener Deckprothese, je Kiefer",
+   "honorar": 92.9,
+   "mul": 124.02,
+   "betraege": {
+    "100": 216.92,
+    "60": 130.15,
+    "70": 151.84,
+    "75": 162.69
+   }
+  },
+  {
+   "nr": "6.8",
+   "text": "Wiederherstellungsbedürftiger festsitzender rezementierbarer Zahnersatz, je Zahn",
+   "honorar": 27.31,
+   "mul": 0.97,
+   "betraege": {
+    "100": 28.28,
+    "60": 16.97,
+    "70": 19.8,
+    "75": 21.21
+   }
+  },
+  {
+   "nr": "6.8.1",
+   "text": "Wiederherstellungsbedürftiger festsitzender Zahnersatz, je Flügel einer Adhäsivbrücke",
+   "honorar": 61.35,
+   "mul": 18.75,
+   "betraege": {
+    "100": 80.1,
+    "60": 48.06,
+    "70": 56.07,
+    "75": 60.08
+   }
+  },
+  {
+   "nr": "6.9",
+   "text": "Wiederherstellungsbedürftige Facette/Verblendung (auch wiedereinsetzbar oder erneuerungsbedürftig) im Verblendbereich an einer Krone, einem Sekundärteleskop einem Brückenanker oder einem Brückenglied, je Verblendung",
+   "honorar": 50.33,
+   "mul": 106.46,
+   "betraege": {
+    "100": 156.79,
+    "60": 94.07,
+    "70": 109.75,
+    "75": 117.59
+   }
+  },
+  {
+   "nr": "6.10",
+   "text": "Erneuerungsbedürftiges Primär- oder Sekundärteleskop, je Zahn",
+   "honorar": 144.12,
+   "mul": 323.51,
+   "betraege": {
+    "100": 467.63,
+    "60": 280.58,
+    "70": 327.34,
+    "75": 350.72
+   }
+  },
+  {
+   "nr": "7.1",
+   "text": "Erneuerungsbedürftige Suprakonstruktion (vorhandenes Implantat bei zahnbegrenzter Einzelzahnlücke), je implantatgetragene Krone",
+   "honorar": 201.93,
+   "mul": 195.59,
+   "betraege": {
+    "100": 397.52,
+    "60": 238.51,
+    "70": 278.26,
+    "75": 298.14
+   }
+  },
+  {
+   "nr": "7.2",
+   "text": "Erneuerungsbedürftige Suprakonstruktion, die über den Befund nach Nr. 7.1 hinausgeht, je implantatgetragene Krone, Brückenanker oder Brückenglied, höchstens viermal je Kiefer",
+   "honorar": 106.48,
+   "mul": 137.5,
+   "betraege": {
+    "100": 243.98,
+    "60": 146.39,
+    "70": 170.79,
+    "75": 182.99
+   }
+  },
+  {
+   "nr": "7.3",
+   "text": "Wiederherstellungsbedürftige Suprakonstruktionen (Facette), je Facette",
+   "honorar": 50.9,
+   "mul": 94.47,
+   "betraege": {
+    "100": 145.37,
+    "60": 87.22,
+    "70": 101.76,
+    "75": 109.03
+   }
+  },
+  {
+   "nr": "7.4",
+   "text": "Wiederherstellungsbedürftiger festsitzender rezementierbarer oder zu verschraubender Zahnersatz, je implantatgetragene Krone oder Brückenanker",
+   "honorar": 29.51,
+   "mul": 0.98,
+   "betraege": {
+    "100": 30.49,
+    "60": 18.29,
+    "70": 21.34,
+    "75": 22.87
+   }
+  },
+  {
+   "nr": "7.5",
+   "text": "Erneuerungsbedürftige implantatgetragene Prothesenkonstruktionen, je Prothesenkonstruktion",
+   "honorar": 392.9,
+   "mul": 591.11,
+   "betraege": {
+    "100": 984.01,
+    "60": 590.41,
+    "70": 688.81,
+    "75": 738.01
+   }
+  },
+  {
+   "nr": "7.6",
+   "text": "Erneuerungsbedürftige Prothesenkonstruktion bei atrophiertem zahnlosem Kiefer, je implantatgetragenem Konnektor als Zuschlag zum Befund nach Nr. 7.5, höchstens viermal je Kiefer",
+   "honorar": 27.23,
+   "mul": 0.93,
+   "betraege": {
+    "100": 28.16,
+    "60": 16.9,
+    "70": 19.71,
+    "75": 21.12
+   }
+  },
+  {
+   "nr": "7.7",
+   "text": "Wiederherstellungsbedürftige implantatgetragene Prothesenkonstruktion, Umgestaltung einer vorhandenen Totalprothese zur Suprakonstruktion bei Vorliegen eines zahnlosen atrophierten Kiefers, je Prothesenkonstruktion",
+   "honorar": 47.33,
+   "mul": 96.39,
+   "betraege": {
+    "100": 143.72,
+    "60": 86.23,
+    "70": 100.6,
+    "75": 107.79
+   }
+  }
+ ]
+}

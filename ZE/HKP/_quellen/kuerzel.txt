@@ -1,0 +1,45 @@
+ 
+3 
+ 
+Elektronischer Heil- und Kostenplan zum Zahnersatz / Listen zuläs-
+siger Befund- und Therapiekürzel 
+1. Befundkürzel 
+Kürzel Beschreibung 
+a Adhäsivbrücke (Anker) 
+ab Adhäsivbrücke (Brückenglied) 
+abw erneuerungsbedürftige Adhäsivbrücke (Brückenglied) 
+aw erneuerungsbedürftige Adhäsivbrücke (Anker) 
+b Brückenglied 
+bw erneuerungsbedürftiges Brückenglied 
+e ersetzter Zahn 
+ew ersetzter, aber erneuerungsbedürftiger Zahn 
+f fehlender Zahn 
+ix zu entfernendes Implantat 
+k klinisch intakte Krone 
+kw erneuerungsbedürftige Krone 
+pkw erneuerungsbedürftige Teilkrone 
+pw erhaltungswürdiger Zahn mit partiellen Substanzdefekten 
+r Wurzelstiftkappe mit ersetztem Zahn 
+rw erneuerungsbedürftige Wurzelstiftkappe mit erneuerungsbedürftigem ersetztem Zahn  
+sb implantatgetragenes Brückenglied 
+sbw erneuerungsbedürftiges implantatgetragenes Brückenglied 
+se ersetzter Zahn einer implantatgetragenen (Teil-)Prothese 
+sew ersetzter, aber erneuerungsbedürftiger Zahn einer implantatgetragenen (Teil -)Prothese 
+sk implantatgetragene intakte Krone 
+skw erneuerungsbedürftige implantatgetragene Krone 
+so implantatgetragenes Verbindungselement (Kugelknopfanker, Steg u. Ä.) mit ersetztem 
+Zahn 
+sow erneuerungsbedürftiges implantatgetragenes Verbindungselement (Kugelknopfanker, 
+Steg u. Ä.) mit erneuerungsbedürftigem ersetztem Zahn 
+st implantatgetragene Teleskopkrone 
+stw erneuerungsbedürftige implantatgetragene Teleskopkrone 
+t Teleskopkrone 
+t2w erneuerungsbedürftiges Sekundärteil einer Teleskopkrone 
+tw erneuerungsbedürftige Teleskopkrone 
+ur unzureichende Retention 
+ww erhaltungswürdiger Zahn mit weitgehender Zerstörung 
+x nicht erhaltungswürdiger Zahn 
+)( Lückenschluss 
+ 
+ 
+  
