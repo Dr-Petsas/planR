@@ -48,6 +48,18 @@ describe('Clara-Einstieg', () => {
     expect(fehlt.katalog[0]?.text).toMatch(/Krone/i)
   })
 
+  it('Regelversorgung ohne TP-Zeile steht trotzdem in der Zusammenfassung (Anruf 06.10.2026 20:14)', () => {
+    const r = hkpEntwurf('Brücke von 14 auf 17 mit 15 und 16 als Brücke', { 15: 'f', 16: 'f' })
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(Object.values(r.plan.zaehne).every((z) => !z.TP.trim())).toBe(true)
+    expect(r.zusammenfassung).toMatchObject({ kronen: ['17', '14'], glieder: ['16', '15'], ersetzt: ['16', '15'] })
+    const z = hkpEntwurf('Brücke von 14 auf 17 mit 15 und 16 als Brückenglied in Zirkon', { 15: 'f', 16: 'f' })
+    expect(z.status === 'ok' && z.zusammenfassung.kronen).toEqual(['17', '14'])
+    const impl = hkpEntwurf('Implantatkronen auf 14 und 15', { 14: 'f', 15: 'f' })
+    expect(impl.status === 'ok' && impl.zusammenfassung).toMatchObject({ implantatkronen: ['15', '14'], kronen: [] })
+  })
+
   it('Bonus und Härtefall aus dem Satz', () => {
     const r = hkpEntwurf(`${SATZ}, Bonus 30 Prozent`, { ...BEFUND, 14: '', 24: '' })
     expect(r.status === 'ok' && r.plan.zuschuss).toEqual({ bonus: '75', haertefall: false })

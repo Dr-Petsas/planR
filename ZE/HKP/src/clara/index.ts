@@ -53,7 +53,11 @@ export interface Zusammenfassung {
 const sortiert = (zs: string[]) => [...zs].sort((a, b) => ALLE_ZAEHNE.indexOf(a) - ALLE_ZAEHNE.indexOf(b))
 
 export function zusammenfassen(plan: HkpPlan, e: Ergebnis): Zusammenfassung {
-  const mit = (re: RegExp) => sortiert(Object.entries(plan.zaehne).filter(([, z]) => re.test(z.TP ?? '')).map(([n]) => n))
+  // Ganz ohne TP-Zeile ist die Therapie die Regelversorgung (sonst fehlte bei Kassenbrücken das „Geplant“).
+  // Nicht zahnweise: bei Implantaten statt Brücke stünden sonst die Regel-Brückenanker als Kronen da.
+  const ohneTp = Object.values(plan.zaehne).every((z) => !z.TP?.trim())
+  const versorgung = (z: { TP?: string; R?: string }) => ((ohneTp ? z.R : z.TP) ?? '').trim().toUpperCase()
+  const mit = (re: RegExp) => sortiert(Object.entries(plan.zaehne).filter(([, z]) => re.test(versorgung(z))).map(([n]) => n))
   return {
     teleskope: mit(/^T2?V?$/),
     kronen: mit(/^(K|KV|KH|KVH|KM|PK|PKM|PKV)$/),
