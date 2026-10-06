@@ -271,10 +271,10 @@ export default function App() {
           <RegisterSeite plan={plan} ergebnis={ergebnis} r={register} onGeoeffnet={() => setTab('teil1')} onEinstellungen={() => setTab('einstellungen')} />
         )}
         {tab === 'einstellungen' && (
-          <>
+          <div className="einstellungen es-seite">
             <EinstellungenSeite plan={plan} setEinstellung={setEinstellung} alle={alle} listen={listen} />
             <MasVerbindung alle={alle} eigen={eigenlabor} einstellungen={e} />
-          </>
+          </div>
         )}
       </main>
       </div>
@@ -297,73 +297,112 @@ function EinstellungenSeite({ plan, setEinstellung, alle, listen }: {
 }) {
   const e = plan.einstellungen
   const bereich = kzvBereich(e)
+  const kzvName = kzvNachNr(bereich.nr)?.name ?? bereich.nr
   const verwendet: Record<string, Listen[keyof Listen]> = {
     bemaListe: listen.bema, gozListe: listen.goz, belListe: listen.bel, bebListe: listen.beb, fzListe: listen.fz,
   }
-  const auswahl = (feld: keyof Einstellungen, typ: keyof typeof TYP_NAMEN) => {
+  const listeKarte = (feld: keyof Einstellungen, typ: keyof typeof TYP_NAMEN) => {
     const aktiv = verwendet[feld] as { name: string } | undefined
+    const auto = e[feld] === AUTO
+    const [titel, unter] = TYP_NAMEN[typ].replace(/\)$/, '').split(' (')
     return (
-      <label>{TYP_NAMEN[typ]}
+      <div className="es-liste" key={feld}>
+        <div className="es-liste-kopf">
+          <b>{titel}</b>{unter && <small>{unter}</small>}
+          <span className={`es-chip${auto ? ' auto' : ''}`}>{auto ? 'automatisch' : 'fest gewählt'}</span>
+        </div>
+        <div className="es-liste-name">{aktiv?.name ?? 'keine passende Liste'}</div>
         <select value={e[feld] as string} onChange={(ev) => setEinstellung(feld, ev.target.value as never)}>
-          <option value={AUTO}>Automatisch nach {typ === 'bel2' ? 'KZV-Bereich und ' : ''}Stichtag{e[feld] === AUTO && aktiv ? ` → ${aktiv.name}` : ''}</option>
+          <option value={AUTO}>Automatisch nach {typ === 'bel2' ? 'KZV-Bereich und ' : ''}Stichtag</option>
           {alle.filter((l) => l.typ === typ).map((l) => <option key={l.id} value={l.id}>{l.name} (ab {l.gueltigAb.split('-').reverse().join('.')})</option>)}
         </select>
-      </label>
+      </div>
     )
   }
+  const LABORE = [
+    ['praxis', 'Eigenlabor', 'Praxislabor · BEL II 5 % unter Gewerbe'],
+    ['gewerbe', 'Fremdlabor', 'gewerblich · Preise aus der Labor-XML'],
+  ] as const
   return (
-    <div className="formular einstellungen">
-      <section className="abschnitt">
-        <h3>Preislisten für diesen Plan</h3>
-        <div className="raster">
-          <label>KZV-Bereich (regionale BEL-II-Höchstpreise)
+    <>
+      <section className="es-block">
+        <header className="es-kopf">
+          Praxis
+          <small>Grundwerte für neue Pläne – nach der Freigabe unten rechnet Clara ihre HKP-Entwürfe ebenso</small>
+        </header>
+        <div className="es-kern">
+          <div className="es-kachel es-labor">
+            <span className="es-titel">Standard-Labor</span>
+            <div className="es-wahl" role="radiogroup" aria-label="Standard-Labor">
+              {LABORE.map(([id, titel, text]) => (
+                <button key={id} role="radio" aria-checked={e.labor === id}
+                  className={`es-option${e.labor === id ? ' aktiv' : ''}`} onClick={() => setEinstellung('labor', id)}>
+                  <b>{titel}</b><small>{text}</small>
+                </button>
+              ))}
+            </div>
+            <span className="es-fuss">für neue Laborpositionen – jede Position lässt sich in der Positionsliste einzeln umstellen</span>
+          </div>
+          <label className="es-kachel">
+            <span className="es-titel">Praxis-PLZ</span>
+            <input className="es-gross" value={e.praxisPlz} maxLength={5} inputMode="numeric" placeholder="z. B. 40235"
+              onChange={(ev) => setEinstellung('praxisPlz', ev.target.value)} />
+            <span className={`es-folge${bereich.quelle === 'standard' ? ' warn' : ''}`}>
+              {bereich.quelle === 'plz' ? `→ KZV ${kzvName}` : bereich.quelle === 'einstellung' ? `KZV fest: ${kzvName}` : 'fehlt → bayerische BEL-Preise'}
+            </span>
+          </label>
+          <label className="es-kachel">
+            <span className="es-titel">GOZ-Faktor</span>
+            <input className="es-gross" type="number" step="0.1" min="1" max="3.5" value={e.gozFaktor}
+              onChange={(ev) => setEinstellung('gozFaktor', Number(ev.target.value))} />
+            <span className="es-fuss">Standard-Steigerung</span>
+          </label>
+          <label className="es-kachel">
+            <span className="es-titel">MwSt. Labor</span>
+            <span className="es-mit-einheit">
+              <input className="es-gross" type="number" step="0.1" value={e.mwstLabor}
+                onChange={(ev) => setEinstellung('mwstLabor', Number(ev.target.value))} /><i>%</i>
+            </span>
+            <span className="es-fuss">auf zahntechnische Leistungen</span>
+          </label>
+        </div>
+        <p className="es-info">
+          Eigenlabor: BEL II zum Praxislabor-Höchstpreis (95 % der Gewerbepreise). Fremdlabor: Preise aus der Labor-XML
+          (Laborabrechnungsdaten KZBV/VDZI/VDDS 4.5). Die PLZ bestimmt den KZV-Bereich und steht in der Labor-Auftragsnummer.
+        </p>
+      </section>
+
+      <section className="es-block">
+        <header className="es-kopf">
+          Preislisten für diesen Plan
+          <small>gewählt nach KZV-Bereich und Stichtag – fest wählen nur, wenn eine bestimmte Liste gelten soll</small>
+        </header>
+        <div className="es-listen">
+          <div className={`es-liste${bereich.quelle === 'standard' ? ' es-warn' : ''}`}>
+            <div className="es-liste-kopf">
+              <b>KZV-Bereich</b><small>BEL-II-Höchstpreise</small>
+              <span className={`es-chip${bereich.quelle === 'plz' ? ' auto' : ''}`}>
+                {bereich.quelle === 'plz' ? `aus PLZ ${e.praxisPlz}` : bereich.quelle === 'einstellung' ? 'fest gewählt' : 'PLZ fehlt'}
+              </span>
+            </div>
+            <div className="es-liste-name">{kzvName}</div>
             <select value={e.kzv} onChange={(ev) => setEinstellung('kzv', ev.target.value)}>
-              <option value="">
-                {bereich.quelle === 'plz' ? `Aus der Praxis-PLZ → ${kzvNachNr(bereich.nr)?.name}` : 'Aus der Praxis-PLZ (noch keine PLZ → Bayern)'}
-              </option>
+              <option value="">Aus der Praxis-PLZ</option>
               {KZVEN.map((k) => <option key={k.nr} value={k.nr}>{k.name} ({k.kurz}){k.login ? ' – Liste nur mit Login' : ''}</option>)}
             </select>
-          </label>
-          {auswahl('bemaListe', 'bema')}
-          {auswahl('gozListe', 'goz')}
-          {auswahl('belListe', 'bel2')}
-          {auswahl('bebListe', 'beb')}
-          {auswahl('fzListe', 'festzuschuss')}
+          </div>
+          {listeKarte('belListe', 'bel2')}
+          {listeKarte('bebListe', 'beb')}
+          {listeKarte('bemaListe', 'bema')}
+          {listeKarte('gozListe', 'goz')}
+          {listeKarte('fzListe', 'festzuschuss')}
         </div>
-        <p className="klein">
-          Stichtag ist das Eingliederungsdatum, vorher das Ausstellungsdatum des HKP. Festzuschüsse und ZE-Punktwert
-          sind bundeseinheitlich, die BEL-II-Höchstpreise vereinbart jedes Land gesondert (bis ±5 % um den Bundesmittelpreis,
-          Praxislabor 5 % darunter).
+        <p className="es-info">
+          Stichtag ist das Eingliederungsdatum, vorher das Ausstellungsdatum des HKP. Festzuschüsse und ZE-Punktwert sind
+          bundeseinheitlich, die BEL-II-Höchstpreise vereinbart jedes Land gesondert (bis ±5 % um den Bundesmittelpreis,
+          Praxislabor 5 % darunter). BEMA-Punktwert (ZE 2026: 1,1844 €) und GOZ-Punktwert (5,62421 Cent) stehen in der jeweiligen Preisliste.
         </p>
       </section>
-      <section className="abschnitt">
-        <h3>Labor und Honorar</h3>
-        <div className="raster">
-          <label>Standard-Labor für neue Laborpositionen
-            <select value={e.labor} onChange={(ev) => setEinstellung('labor', ev.target.value as 'gewerbe')}>
-              <option value="gewerbe">Fremdlabor (gewerblich, XML-Austausch)</option>
-              <option value="praxis">Eigenlabor (Praxislabor)</option>
-            </select>
-          </label>
-          <label>Postleitzahl der Praxis (KZV-Bereich, Labor-Auftragsnummer)
-            <input value={e.praxisPlz} maxLength={5} onChange={(ev) => setEinstellung('praxisPlz', ev.target.value)} />
-          </label>
-          <label>MwSt. auf zahntechnische Leistungen (%)
-            <input type="number" step="0.1" value={e.mwstLabor} onChange={(ev) => setEinstellung('mwstLabor', Number(ev.target.value))} />
-          </label>
-          <label>Standard-Steigerungsfaktor GOZ
-            <input type="number" step="0.1" min="1" max="3.5" value={e.gozFaktor} onChange={(ev) => setEinstellung('gozFaktor', Number(ev.target.value))} />
-          </label>
-        </div>
-        <p className="klein">
-          Jede Laborposition lässt sich in der Positionsliste einzeln dem Eigen- oder Fremdlabor zuordnen.
-          Eigenlabor: BEL II zum Praxislabor-Höchstpreis (95 % der Gewerbepreise). Fremdlabor: Preise kommen aus der
-          Labor-XML (Laborabrechnungsdaten KZBV/VDZI/VDDS 4.5).
-        </p>
-        <p className="klein">
-          Der BEMA-Punktwert (ZE 2026: 1,1844 €) und der GOZ-Punktwert (5,62421 Cent) werden in der jeweiligen Preisliste gepflegt.
-        </p>
-      </section>
-    </div>
+    </>
   )
 }
