@@ -8,12 +8,24 @@ export const kieferVon = (zahn: string): 'OK' | 'UK' => (zahn[0] === '1' || zahn
 export const istMolar = (zahn: string) => ['6', '7', '8'].includes(zahn[1])
 
 /**
- * Ein-/Mehrwurzeligkeit für die AIT-/CPT-/UPT-Abrechnung (a = einwurzelig,
- * b = mehrwurzelig). Nach üblicher BEMA-Auslegung gelten die Molaren (6er–8er)
- * als mehrwurzelig, Front- und Prämolaren als einwurzelig. Der Oberkiefer-
- * Sechser/Siebener/Achter ist mehrwurzelig; der Prämolar bleibt einwurzelig.
+ * Zähne mit FB-Kästchen auf Blatt 2 (eFormular 5 v2.1.0): OK 18-16, 14, 24,
+ * 26-28 und UK 48-46, 36-38.
  */
-export const istMehrwurzelig = (zahn: string) => istMolar(zahn)
+export const FB_ZAEHNE = new Set(['18', '17', '16', '14', '24', '26', '27', '28', '48', '47', '46', '36', '37', '38'])
+export const hatFbFeld = (zahn: string) => FB_ZAEHNE.has(zahn)
+
+/**
+ * Ein-/Mehrwurzeligkeit für die AIT-/CPT-/UPT-Abrechnung (a = einwurzelig,
+ * b = mehrwurzelig): Molaren und die ersten OK-Prämolaren (14, 24) sind
+ * mehrwurzelig — dieselben Zähne, die auf Blatt 2 ein FB-Kästchen haben.
+ */
+export const istMehrwurzelig = (zahn: string) => hatFbFeld(zahn)
+
+/** Zahnstatus, die als natürlicher Zahn behandelt und gemessen werden (0, 3, 4). */
+export const istBehandelbar = (zs: number) => zs === 0 || zs === 3 || zs === 4
+
+/** Quadrant 1-4 eines FDI-Zahns. */
+export const quadrant = (zahn: string) => Number(zahn[0])
 
 /** Die sechs Messstellen je Zahn (3 vestibulär, 3 oral) in Formular-Reihenfolge. */
 export const MESSSTELLEN = ['mb', 'b', 'db', 'mo', 'o', 'do'] as const

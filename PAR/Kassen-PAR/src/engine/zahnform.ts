@@ -1,0 +1,139 @@
+// Zahngeometrie fuer das grafische Blatt 2 (KZBV eFormular 5, V2.1.0).
+// Die Proportionen stammen aus tools/zahnform-extrahieren.py (Spalte ~33pt,
+// Krone ~28pt, zentrales Lockerungsfeld ~10pt). Die Krone wird deterministisch
+// aus Kronenviereck + zentralem Feld + 4 Diagonalen + Mittellinie gebildet =
+// 6 Mess-Segmente, wie im amtlichen Vordruck.
+
+// --- Kronen-Konstanten (lokales Koordinatensystem, Ursprung Kronen-Ecke oben links)
+export const KW = 28; // Kronenbreite
+export const KH = 30; // Kronenhoehe
+export const WURZEL_H = 32; // Wurzelhoehe (ueber bzw. unter der Krone)
+export const SPALTE = 34; // Spaltenbreite je Zahn
+
+// Zentrales Lockerungsfeld
+const BW = 10;
+const BH = 10;
+const BX0 = (KW - BW) / 2; // 9
+const BX1 = BX0 + BW; // 19
+const BY0 = (KH - BH) / 2; // 10
+const BY1 = BY0 + BH; // 20
+const MY = KH / 2; // Mittellinie y = 15
+
+export const lockerungsFeld = { x: BX0, y: BY0, w: BW, h: BH };
+
+type Punkt = [number, number];
+const p = (pts: Punkt[]) => pts.map(([x, y]) => `${x},${y}`).join(' ');
+
+// Die sechs Mess-Segmente der Krone als Polygon-Punkte (SVG points-Attribut).
+type Region = 'UL' | 'UC' | 'UR' | 'LL' | 'LC' | 'LR';
+
+const REGION_POLY: Record<Region, string> = {
+  UL: p([[0, 0], [BX0, BY0], [BX0, MY], [0, MY]]),
+  UC: p([[0, 0], [KW, 0], [BX1, BY0], [BX0, BY0]]),
+  UR: p([[KW, 0], [KW, MY], [BX1, MY], [BX1, BY0]]),
+  LL: p([[0, MY], [BX0, MY], [BX0, BY1], [0, KH]]),
+  LC: p([[BX0, BY1], [BX1, BY1], [KW, KH], [0, KH]]),
+  LR: p([[KW, MY], [KW, KH], [BX1, BY1], [BX1, MY]]),
+};
+
+const REGION_MITTE: Record<Region, Punkt> = {
+  UL: [4.5, 7], UC: [14, 4], UR: [23.5, 7],
+  LL: [4.5, 23], LC: [14, 26], LR: [23.5, 23],
+};
+
+// Linien im Kronenbild: Mittellinie (zwei Stuecke) + vier Diagonalen.
+export const KRONEN_LINIEN: Array<[number, number, number, number]> = [
+  [0, MY, BX0, MY], [BX1, MY, KW, MY], // Mittellinie
+  [BX0, BY0, 0, 0], [BX1, BY0, KW, 0], // obere Diagonalen
+  [BX0, BY1, 0, KH], [BX1, BY1, KW, KH], // untere Diagonalen
+];
+
+// --- Mess-Segment-Zuordnung je Quadrant -------------------------------------
+// st-Index: 0=vest.mesial 1=vest.mittig 2=vest.distal 3=oral.mesial 4=oral.mittig 5=oral.distal
+export interface Segment {
+  stIndex: number;
+  region: Region;
+  poly: string;
+  mitte: Punkt;
+  label: string;
+}
+
+const LABELS = ['mesio-vestibulaer', 'vestibulaer', 'disto-vestibulaer',
+  'mesio-oral', 'oral', 'disto-oral'];
+
+/** FDI-Quadrant (erste Ziffer) bestimmt, ob mesial auf der Bildschirm-Rechtsseite liegt. */
+export function mesialRechts(fdi: number): boolean {
+  const q = Math.floor(fdi / 10);
+  return q === 1 || q === 4; // Quadrant 1 und 4 liegen bild-links, mesial zeigt nach rechts
+}
+
+/** Oberkiefer (Quadrant 1/2): Wurzel oben, vestibulaer = obere Kronenhaelfte. */
+export function istOberkiefer(fdi: number): boolean {
+  const q = Math.floor(fdi / 10);
+  return q === 1 || q === 2;
+}
+
+export function segmente(fdi: number): Segment[] {
+  const ok = istOberkiefer(fdi);
+  const mr = mesialRechts(fdi);
+  // vestibulaere Halbregionen (links/mitte/rechts am Bildschirm)
+  const vest: [Region, Region, Region] = ok ? ['UL', 'UC', 'UR'] : ['LL', 'LC', 'LR'];
+  const oral: [Region, Region, Region] = ok ? ['LL', 'LC', 'LR'] : ['UL', 'UC', 'UR'];
+  // Reihenfolge mesial/mittig/distal auf links->rechts abbilden
+  const vestMesial = mr ? vest[2] : vest[0];
+  const vestDistal = mr ? vest[0] : vest[2];
+  const oralMesial = mr ? oral[2] : oral[0];
+  const oralDistal = mr ? oral[0] : oral[2];
+  const order: Region[] = [vestMesial, vest[1], vestDistal, oralMesial, oral[1], oralDistal];
+  return order.map((region, stIndex) => ({
+    stIndex,
+    region,
+    poly: REGION_POLY[region],
+    mitte: REGION_MITTE[region],
+    label: LABELS[stIndex],
+  }));
+}
+
+// --- Wurzelformen -----------------------------------------------------------
+// Anzahl Wurzel-Lappen je Zahntyp und Kiefer.
+function wurzelLappen(fdi: number): number {
+  const zahn = fdi % 10; // 1..8
+  const ok = istOberkiefer(fdi);
+  if (ok && zahn === 4) return 2; // erster OK-Praemolar: zweiwurzlig
+  if (zahn <= 5) return 1; // Front + Praemolaren: ein Lappen
+  return ok ? 3 : 2; // Molaren: OK dreiwurzlig, UK zweiwurzlig
+}
+
+/** Wurzelpfade (gestrichelt) in Kronen-lokalen Koordinaten. */
+export function wurzelPfade(fdi: number): string[] {
+  const ok = istOberkiefer(fdi);
+  const n = wurzelLappen(fdi);
+  const h = WURZEL_H;
+  const baseY = ok ? 0 : KH; // Ansatz an der kiefer-nahen Kronenkante
+  const dir = ok ? -1 : 1; // Wurzel zeigt vom Kiefer weg
+  const paths: string[] = [];
+  // Lappenbreite ueber die Kronenbreite verteilen
+  const rand = 1.5;
+  const nutz = KW - 2 * rand;
+  const lw = nutz / n;
+  for (let i = 0; i < n; i++) {
+    const cx = rand + lw * (i + 0.5);
+    const halb = (lw / 2) * (n === 1 ? 0.95 : 0.85);
+    const lh = h * (n === 1 ? 1 : 0.9);
+    const tip = baseY + dir * lh;
+    const mid = baseY + dir * lh * 0.4;
+    paths.push(
+      `M ${(cx - halb).toFixed(1)},${baseY} ` +
+      `C ${(cx - halb - 0.5).toFixed(1)},${mid.toFixed(1)} ${(cx - halb * 0.5).toFixed(1)},${tip.toFixed(1)} ${cx.toFixed(1)},${tip.toFixed(1)} ` +
+      `C ${(cx + halb * 0.5).toFixed(1)},${tip.toFixed(1)} ${(cx + halb + 0.5).toFixed(1)},${mid.toFixed(1)} ${(cx + halb).toFixed(1)},${baseY}`,
+    );
+  }
+  return paths;
+}
+
+/** Hoehe der gesamten Zahnzeichnung (Krone + Wurzel) und y-Offset der Krone. */
+export function zahnBox(): { breite: number; hoehe: number; kroneY: number } {
+  // Krone + Wurzel; Krone sitzt nach der Wurzel (OK) bzw. zuerst (UK) – wird im
+  // Chart je Kiefer gesetzt. Hier die reine Groesse.
+  return { breite: KW, hoehe: KH + WURZEL_H, kroneY: WURZEL_H };
+}

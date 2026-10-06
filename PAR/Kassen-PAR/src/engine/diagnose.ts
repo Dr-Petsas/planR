@@ -19,9 +19,12 @@ export const betroffeneZaehne = (befund: Befund) =>
  *  IV  wie III + komplexe Rehabilitation / >= 5 verlorene Zähne
  */
 function stadiumBerechnen(d: Diagnose): { stadium: 1 | 2 | 3 | 4; text: string } {
+  // Formularzeile Blatt 1: Roentg. Knochenabbau ODER interdentaler CAL.
+  // KA%: < 15 % = I, 15-33 % = II, > 33 % = III/IV (apikales Drittel).
+  // CAL: 1-2 mm = I, 3-4 mm = II, >= 5 mm = III/IV.
   let stadium: 1 | 2 | 3 | 4 = 1
-  if (d.calMax >= 5) stadium = 3
-  else if (d.calMax >= 3) stadium = 2
+  if (d.calMax >= 5 || d.knochenabbauProzent > 33) stadium = 3
+  else if (d.calMax >= 3 || d.knochenabbauProzent >= 15) stadium = 2
   else stadium = 1
 
   // Komplexität hebt mindestens auf Stadium III
@@ -73,7 +76,9 @@ export function diagnostizieren(d: Diagnose, initial: Befund): DiagnoseErgebnis 
   const gesamt = vorhandeneZaehne(initial)
   const befallen = betroffeneZaehne(initial)
   const anteil = gesamt > 0 ? (befallen / gesamt) * 100 : 0
-  const ausmass: DiagnoseErgebnis['ausmass'] = anteil >= 30 ? 'generalisiert' : 'lokalisiert'
+  const ausmass: DiagnoseErgebnis['ausmass'] = d.mipMuster
+    ? 'molaren-inzisiven'
+    : anteil >= 30 ? 'generalisiert' : 'lokalisiert'
 
   const hinweise: string[] = []
   if (gesamt === 0) hinweise.push('Noch kein Befund erfasst – Staging/Ausmaß vorläufig.')
@@ -99,6 +104,6 @@ export function diagnostizieren(d: Diagnose, initial: Befund): DiagnoseErgebnis 
 /** Diagnose-Kurztext für den Antrag, z. B. „Parodontitis Stadium III, generalisiert, Grad B". */
 export function diagnoseText(e: DiagnoseErgebnis): string {
   const stad = ['', 'I', 'II', 'III', 'IV'][e.stadium]
-  const ausmass = e.ausmass === 'generalisiert' ? 'generalisiert' : 'lokalisiert'
+  const ausmass = e.ausmass === 'generalisiert' ? 'generalisiert' : e.ausmass === 'molaren-inzisiven' ? 'Molaren-Inzisiven-Muster' : 'lokalisiert'
   return `Parodontitis Stadium ${stad}, ${ausmass}, Grad ${e.grad}`
 }
