@@ -36,6 +36,22 @@ export default function App() {
   }
   const tp = (z: string) => (plan.zaehne[z]?.TP ?? '').trim().toUpperCase()
   const implantate = ALLE_ZAEHNE.filter((z) => /^S(K|T|O)/.test(tp(z)))
+  const implantologieExport = () => {
+    const daten = {
+      app: 'privat-ze' as const,
+      nummer: plan.nummer,
+      datum: plan.datum,
+      betrag: kalk.gesamt,
+      zusammenfassung: `Implantatgetragene Suprakonstruktion: ${implantate.length} Pfeiler (${implantate.join(', ')}).`,
+      implantate: implantate.map((z) => ({ zahn: z, art: tp(z) })),
+    }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(daten, null, 2)], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${plan.nummer || 'ze-plan'}-implantologie.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   const geplant = ALLE_ZAEHNE.some((z) => tp(z))
   const herausnehmbar = ALLE_ZAEHNE.some((z) => /^(S?EO?|SO|S?T)/.test(tp(z)))
   const einheiten = useMemo(() => kronenEinheiten(positionen(plan).positionen.filter((p) => p.ebene === 'BEB')), [plan])
@@ -58,6 +74,7 @@ export default function App() {
         </div>
         <div className="aktionen">
           <button className="sekundaer" onClick={neu}>Neuer Kostenvoranschlag</button>
+          {implantate.length > 0 && <button className="sekundaer" onClick={implantologieExport} title="Implantatpositionen als Datei für den Implantologie-Planer exportieren">Für Implantologie exportieren</button>}
           <button className="primaer" onClick={() => window.print()}>Drucken / PDF</button>
         </div>
       </header>
