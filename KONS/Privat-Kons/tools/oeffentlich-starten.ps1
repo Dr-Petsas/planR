@@ -1,15 +1,15 @@
-# Oeffentlicher Privat-Implantologie-Planer: https://pimpl.pickadoc-tunnel.com
+# Oeffentlicher Kons-MKV-Planer: https://mkv.pickadoc-tunnel.com
 #
-# vite preview liefert NUR den Build aus dist\ auf 127.0.0.1:5196 aus (kein Quellcode).
+# vite preview liefert NUR den Build aus dist\ auf 127.0.0.1:5198 aus (kein Quellcode).
 # Der Cloudflare-Tunnel "pickadoc-mas" (%USERPROFILE%\.cloudflared\config.yml)
-# leitet pimpl.pickadoc-tunnel.com dorthin.
+# leitet mkv.pickadoc-tunnel.com dorthin.
 #
 # Aktualisieren: im Projekt "npm run build" - preview liefert danach die neuen Dateien aus.
-# Start bei der Anmeldung: Autostart\pimpl-oeffentlich.cmd. Idempotent: laeuft der Server schon, passiert nichts.
+# Start bei der Anmeldung: Autostart\mkv-oeffentlich.cmd. Idempotent: laeuft der Server schon, passiert nichts.
 
 $ErrorActionPreference = 'Continue'
 $Root = Split-Path $PSScriptRoot -Parent
-$Port = 5196
+$Port = 5198
 $Logs = Join-Path $Root 'logs'
 New-Item -ItemType Directory -Force -Path $Logs | Out-Null
 

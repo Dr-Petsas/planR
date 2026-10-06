@@ -354,7 +354,14 @@ input.mittel { width: 90px; }
 .tag.GOZ { background: var(--akzent-hell); color: var(--akzent); }
 .tag.GOAE { background: #eef; color: #35488c; }
 .tag.MAT { background: #f0ece3; color: var(--grau); }
+.tag.BEMA { background: #eaf0fb; color: #35488c; }
 .tag.analog { background: var(--warn-hell); color: var(--warn); }
+.kl-fuellung { border-top-color: #0f6e6a; }
+.modell-wahl { display: flex; gap: 4px; }
+.modell-wahl button { flex: 1; border: 1px solid var(--linie); background: white; border-radius: 6px; padding: 4px 6px; font-size: 11.5px; color: var(--grau); }
+.modell-wahl button.aktiv { background: var(--akzent); border-color: var(--akzent); color: white; font-weight: 600; }
+.zeile-kasse { color: #35488c; }
+.kv-zeile-kasse td { color: #35488c; }
 .tag.material { background: #f0ece3; color: var(--grau); }
 .tag.anteil { background: var(--warn-hell); color: var(--warn); margin-left: 4px; }
 

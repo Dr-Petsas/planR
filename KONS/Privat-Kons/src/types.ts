@@ -100,7 +100,6 @@ export interface Regler {
   fuellungPauschale: number // € je Füllung (pauschal)
   fuellungProFlaeche: number // € je Fläche
   gozFaktor: number
-  zusatzStufe: number // 0..4: Kofferdam · Mehrschicht · elektrometr. Messung · Mikroskop
   materialKlasse: number // 0..2
 }
 
