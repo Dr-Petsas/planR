@@ -9,9 +9,14 @@ import { berechnen, belNrNorm, type Ergebnis, type Listen } from '../engine/bere
 import type { EigenPosition } from '../engine/eigenlabor'
 import { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, type Befund, type PlanOptionen, type Rueckfrage } from '../engine/auftrag'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
+import {
+  ausfuehrungAnwenden, ausfuehrungIn, ausfuehrungSatz, ausfuehrungUnterschied, ausfuehrungVon, systemSprech,
+  LABOR_SPRECH, WERKSTOFF_SPRECH, type Ausfuehrung, type AusfuehrungStand,
+} from '../engine/ausfuehrung'
 
 export { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, planNormalisieren, berechnen, STANDARD_LISTEN }
-export type { Befund, PlanOptionen, Rueckfrage, Ergebnis, HkpPlan }
+export { ausfuehrungIn, ausfuehrungSatz, ausfuehrungVon, systemSprech, LABOR_SPRECH, WERKSTOFF_SPRECH }
+export type { Befund, PlanOptionen, Rueckfrage, Ergebnis, HkpPlan, Ausfuehrung, AusfuehrungStand }
 
 declare const __HKP_ENGINE_STAND__: string | undefined
 export const ENGINE_STAND = typeof __HKP_ENGINE_STAND__ === 'string' ? __HKP_ENGINE_STAND__ : 'dev'
@@ -237,6 +242,28 @@ export function positionAendern(planRoh: HkpPlan, a: Aenderung, praxis: PraxisLi
   const nachher = zusammenfassen(neu, ergebnis)
   warnungen.push(...nachher.warnungen.filter((w) => !vorher.warnungen.includes(w)))
   return { ok: true, plan: neu, ergebnis, beschreibung, vorher, nachher, warnungen }
+}
+
+export type AusfuehrungsErgebnis =
+  | { ok: true; plan: HkpPlan; ergebnis: Ergebnis; beschreibung: string; vorher: Zusammenfassung; nachher: Zusammenfassung; ausfuehrung: AusfuehrungStand; warnungen: string[] }
+  | { ok: false; grund: 'nichts' | 'unveraendert'; meldung: string }
+
+/** Ändert Kronenmaterial, Abformung, Labor, Implantatsystem bzw. Eigenlabor-Stufe eines Plans und rechnet neu. */
+export function ausfuehrungAendern(planRoh: HkpPlan, a: Ausfuehrung, praxis: PraxisListen = {}): AusfuehrungsErgebnis {
+  if (!Object.keys(a).length)
+    return { ok: false, grund: 'nichts', meldung: 'Was soll ich an der Ausführung ändern – Material, Abformung, Labor oder Implantatsystem?' }
+  const plan = planNormalisieren(planRoh)
+  const vorher = zusammenfassen(plan, rechnen(plan, praxis))
+  const stand = ausfuehrungVon(plan)
+  const r = ausfuehrungAnwenden(plan, a)
+  const ergebnis = rechnen(r.plan, praxis)
+  const nachher = zusammenfassen(r.plan, ergebnis)
+  const neu = ausfuehrungVon(r.plan)
+  const beschreibung = ausfuehrungUnterschied(stand, neu)
+  if (!beschreibung)
+    return { ok: false, grund: 'unveraendert', meldung: r.hinweise.length ? r.hinweise.join(' ') : `Das ist schon so geplant: ${ausfuehrungSatz(neu)}.` }
+  const warnungen = [...r.hinweise, ...nachher.warnungen.filter((w) => !vorher.warnungen.includes(w))]
+  return { ok: true, plan: r.plan, ergebnis, beschreibung, vorher, nachher, ausfuehrung: neu, warnungen }
 }
 
 /** Leistungstext sprechbar kürzen: ohne Klammerzusätze, höchstens ~80 Zeichen an einer Wortgrenze. */

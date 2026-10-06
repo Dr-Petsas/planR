@@ -6,9 +6,10 @@
 import type { Abformung, HkpPlan } from '../types'
 import { leererPlan } from '../store/plan'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './regeln'
-import { regelUebernehmen } from './aufwertung'
+import { privatStufeAnwenden, regelUebernehmen } from './aufwertung'
 import { FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerblendbereich, istWeisheitszahn, kieferVon } from './zahnschema'
 import { WERKSTOFFE, WERKSTOFFE_FUER, kronenEinheiten, type Werkstoff } from './material'
+import { ausfuehrungIn } from './ausfuehrung'
 
 export type Versorgung = 'teleskopprothese' | 'totalprothese' | 'kronen' | 'bruecke' | 'implantatkronen'
 export type Kiefer = 'OK' | 'UK'
@@ -26,6 +27,11 @@ export interface HkpAuftrag {
   mitAchtern: boolean
   abformung?: Exclude<Abformung, ''>
   werkstoff?: Werkstoff
+  labor?: HkpPlan['einstellungen']['labor']
+  /** ID aus dem Katalog der Implantatsysteme */
+  implantatSystem?: string
+  /** Eigenlabor-Stufe „Kasse → Privat“ */
+  privatStufe?: number
   /** laut Ansage zu entfernen bzw. zu erhalten */
   entfernen: string[]
   erhalten: string[]
@@ -50,6 +56,9 @@ export interface PlanOptionen {
   haertefall?: boolean
   labor?: HkpPlan['einstellungen']['labor']
   abformung?: Exclude<Abformung, ''>
+  /** Praxis-Standard, wenn der Auftrag kein System nennt */
+  implantatSystem?: string
+  privatStufe?: number
   patient?: Partial<HkpPlan['patient']>
   kzv?: string
   praxisPlz?: string
@@ -199,15 +208,7 @@ function einzelAuftrag(text: string): HkpAuftrag {
   auftrag.kiefer = kieferIn(t)
   const nummern = [...t.matchAll(FDI)].map((m) => kieferVon(m[1]))
   if (!auftrag.kiefer && nummern.length && nummern.every((k) => k === nummern[0])) auftrag.kiefer = nummern[0]
-  if (/scan|intraoral|gescannt|digital/.test(t)) auftrag.abformung = 'scan'
-  else if (/abdruck|konventionell|abform/.test(t)) auftrag.abformung = 'abdruck'
-  if (/hochgold/.test(t)) auftrag.werkstoff = 'hochgold'
-  else if (/gold ?reduziert|reduzierte?s? gold|edelmetallreduziert/.test(t)) auftrag.werkstoff = 'goldreduziert'
-  else if (/\bgold/.test(t)) auftrag.werkstoff = 'hochgold'
-  else if (/\bnem\b|nichtedel|kobalt|chrom/.test(t)) auftrag.werkstoff = 'nem'
-  else if (/zirkon/.test(t)) auftrag.werkstoff = 'zirkon'
-  else if (/press(keramik)?|e\.?max press/.test(t)) auftrag.werkstoff = 'presskeramik'
-  else if (/lithium|e\.?max|cad-?block/.test(t)) auftrag.werkstoff = 'lithiumdisilikat'
+  Object.assign(auftrag, ausfuehrungIn(text))
 
   if (/h(ä|ae)rtefall/.test(t)) auftrag.haertefall = true
   if (/(kein|ohne)(en)? bonus/.test(t)) auftrag.bonus = '60'
@@ -443,9 +444,10 @@ function implantatPlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string,
   const stehen = sitze.filter((z) => z in befund && !fehlt(befund, z))
   if (stehen.length)
     return { status: 'rueckfrage', grund: 'zahn_vorhanden', zaehne: stehen, frage: `Laut Befund ${stehen.length > 1 ? 'sind' : 'ist'} ${liste(stehen)} noch vorhanden. ${stehen.length > 1 ? 'Werden sie' : 'Wird er'} vorher entfernt? Dann sagen Sie zum Beispiel: ${stehen[0]} wird entfernt.` }
+  const keramik = auftrag.werkstoff && WERKSTOFFE[auftrag.werkstoff].art === 'keramik'
   for (const z of sitze) {
     if (!(z in befund)) befund[z] = 'f'
-    tp[z] = 'SK'
+    tp[z] = keramik ? 'SKM' : 'SK'
   }
   return undefined
 }
@@ -509,17 +511,26 @@ function planRechnen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, t
   const bonus = auftrag.bonus ?? optionen.bonus
   plan.zuschuss = { bonus: bonus ?? '60', haertefall: !!(auftrag.haertefall ?? optionen.haertefall) }
   if (!bonus) hinweise.push('Bonus nicht bekannt – 60 % angenommen.')
+  const labor = auftrag.labor ?? optionen.labor
   plan.einstellungen = {
     ...plan.einstellungen,
     ...optionen.einstellungen,
-    ...(optionen.labor ? { labor: optionen.labor } : {}),
+    ...(labor ? { labor } : {}),
     ...(optionen.kzv ? { kzv: optionen.kzv } : {}),
     ...(optionen.praxisPlz ? { praxisPlz: optionen.praxisPlz } : {}),
   }
+  const system = auftrag.implantatSystem ?? optionen.implantatSystem
+  if (system) plan.implantat = { ...plan.implantat, system }
 
   const regel = therapieAnwenden(regelversorgungErmitteln(plan.zaehne, regelOptionen(plan)), plan.zaehne, plan)
-  const fertig = regelUebernehmen(plan, regel)
+  let fertig = regelUebernehmen(plan, regel)
   hinweise.push(...regel.hinweise)
+  const stufe = auftrag.privatStufe ?? optionen.privatStufe ?? 0
+  if (stufe > 0 && fertig.einstellungen.labor === 'praxis') {
+    const r = privatStufeAnwenden(fertig, stufe)
+    fertig = r.plan
+    hinweise.push(...r.hinweise)
+  } else if (stufe > 0) hinweise.push('Die Stufe „Kasse → Privat“ gibt es nur im Eigenlabor – im Fremdlabor nicht angewendet.')
   if (auftrag.werkstoff) {
     const art = WERKSTOFFE[auftrag.werkstoff].art
     const einheiten = kronenEinheiten(fertig.positionen)
