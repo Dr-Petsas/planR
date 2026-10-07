@@ -1,11 +1,14 @@
 import { useSyncExternalStore } from 'react'
 import type { HkpPlan } from '../types'
 import type { Ergebnis, Listen } from '../engine/berechnung'
+import { MANDANT_ID, STANDARD_ID, mk } from '../mandant'
 
 /** HKP-Register in MAS. PlanR spricht über den Vite-Proxy /mas (gleicher Ursprung, auch über den Tunnel). */
 const BASIS = '/mas/planr'
-const VERBINDUNG_KEY = 'hkp.mas.v1'
-const AKTIV_KEY = 'hkp.register.v1'
+/** Weitere Mandanten bekommen am Praxis-PC nicht automatisch den Schlüssel der Praxis (vite.config.ts) */
+const MANDANT_KOPF: Record<string, string> = MANDANT_ID === STANDARD_ID ? {} : { 'X-PlanR-Mandant': MANDANT_ID }
+const VERBINDUNG_KEY = mk('hkp.mas.v1')
+const AKTIV_KEY = mk('hkp.register.v1')
 
 export type HkpStatus = 'wartet_auf_freigabe' | 'freigegeben' | 'eingereicht' | 'genehmigt' | 'abgelehnt' | 'abgerechnet' | 'verworfen'
 
@@ -88,7 +91,7 @@ export const verbunden = (v: { schluessel: string; automatisch?: boolean } = ver
 /** Erledigt, sobald geprüft ist, ob der PlanR-Server den Schlüssel selbst einträgt */
 export const verbindungBereit: Promise<void> = typeof window === 'undefined' || typeof fetch !== 'function'
   ? Promise.resolve()
-  : fetch(`${BASIS}/status`, { headers: { 'Content-Type': 'application/json' } })
+  : fetch(`${BASIS}/status`, { headers: { 'Content-Type': 'application/json', ...MANDANT_KOPF } })
     .then((r) => {
       if (!r.ok) return
       verbindung = { ...verbindung, automatisch: true }
@@ -120,7 +123,7 @@ async function anfrage<T>(pfad: string, init: RequestInit = {}): Promise<T> {
   if (!verbunden()) throw new RegisterFehler(401, { message: 'Kein MAS-Schlüssel eingetragen (Einstellungen).' })
   const r = await fetch(`${BASIS}${pfad}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(verbindung.schluessel ? { 'X-PlanR-Key': verbindung.schluessel } : {}), ...init.headers },
+    headers: { 'Content-Type': 'application/json', ...MANDANT_KOPF, ...(verbindung.schluessel ? { 'X-PlanR-Key': verbindung.schluessel } : {}), ...init.headers },
   })
   const daten = await r.json().catch(() => ({ error: `HTTP ${r.status}` }))
   if (!r.ok || daten.ok === false) {

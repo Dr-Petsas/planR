@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { Einstellungen, GlobalOptionen, Plan, Regler } from './types'
 import { useAblage } from './ablage'
+import { mk } from './mandant'
 
-const PLAN_KEY = 'privat-impl.plan.v1'
-const EINST_KEY = 'privat-impl.einstellungen.v1'
-const LISTE_KEY = 'privat-impl.liste.v1'
+const PLAN_KEY = mk('privat-impl.plan.v1')
+const EINST_KEY = mk('privat-impl.einstellungen.v1')
+const LISTE_KEY = mk('privat-impl.liste.v1')
 
 export const heute = () => new Date().toISOString().slice(0, 10)
 

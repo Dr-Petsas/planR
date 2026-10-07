@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import type { HkpPlan } from '../types'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
 import { markeLesen } from '../engine/bruecken'
+import { mk } from '../mandant'
 
-const PLAN_KEY = 'hkp.plan.v1'
+const PLAN_KEY = mk('hkp.plan.v1')
 
 export function leererPlan(): HkpPlan {
   return {

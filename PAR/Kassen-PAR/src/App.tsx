@@ -9,6 +9,7 @@ import { terminePlanen } from './engine/termine'
 import { fallMigrieren, neuerFall, useEinstellungen, useFall, useParAblage } from './store'
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { MandantKarte, MandantName } from './components/Mandant'
 import AntragReiter from './components/AntragReiter'
 import StreckeReiter from './components/StreckeReiter'
 import FormulareReiter from './components/FormulareReiter'
@@ -80,7 +81,7 @@ export default function App() {
     <div className="app">
       <header className="kopf keindruck">
         <div>
-          <h1>Kassen-PAR-Planer</h1>
+          <h1>Kassen-PAR-Planer <MandantName /></h1>
           <span className="kopf-unter">{name || 'ohne Namen'} · {fall.nummer} · eFormular 5 · BEMA Teil 4</span>
         </div>
         <div className="kopf-rechts">
@@ -124,7 +125,7 @@ export default function App() {
           </fieldset>
         )}
         {reiter === 'antrag' && <AblageListe ablage={ablage} aktuell={fall.nummer} onLaden={oeffnen} />}
-        {reiter === 'einstellungen' && <EinstellungenReiter einst={einst} setEinst={setEinst} punktwert={punktwert} />}
+        {reiter === 'einstellungen' && <><MandantKarte /><EinstellungenReiter einst={einst} setEinst={setEinst} punktwert={punktwert} /></>}
       </main>
     </div>
   )

@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { ALLE_ZAEHNE } from './engine/zahnschema'
 import { useAblage } from './ablage'
+import { mk } from './mandant'
 import type {
   Anamnese, Befund, BefundPhase, Einstellungen, ParFall, Planung, Termin, ZahnBefund, Zusatzformulare,
 } from './types'
 
-const K_FALL = 'kassen-par.fall.v2'
-const K_EINST = 'kassen-par.einstellungen.v2'
-const K_LISTE = 'kassen-par.liste.v1'
+const K_FALL = mk('kassen-par.fall.v2')
+const K_EINST = mk('kassen-par.einstellungen.v2')
+const K_LISTE = mk('kassen-par.liste.v1')
 // Alt-Schluessel (v1) zur einmaligen Uebernahme
-const K_FALL_ALT = 'kassen-par.plan.v1'
+const K_FALL_ALT = mk('kassen-par.plan.v1')
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   praxis: {

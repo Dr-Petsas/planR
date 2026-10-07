@@ -31,7 +31,9 @@ const MAS_PROXY: Record<string, ProxyOptions> = {
   '/mas/planr': {
     target: 'http://127.0.0.1:4000', changeOrigin: true, rewrite: (p: string) => p.replace(/^\/mas/, ''),
     configure: (proxy) => proxy.on('proxyReq', (proxyReq, req) => {
-      if (SCHLUESSEL && amPraxisPc(req)) proxyReq.setHeader('X-PlanR-Key', SCHLUESSEL)
+      // Weitere Mandanten tragen ihren eigenen Schlüssel ein – sonst landeten ihre HKPs im Register dieser Praxis
+      if (SCHLUESSEL && amPraxisPc(req) && !req.headers['x-planr-mandant']) proxyReq.setHeader('X-PlanR-Key', SCHLUESSEL)
+      proxyReq.removeHeader('X-PlanR-Mandant')
     }),
   },
 }

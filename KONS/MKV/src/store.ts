@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan, Regler } from './types'
 import { STANDARD_LABOR } from './data/katalog'
 import { useAblage } from './ablage'
+import { mk } from './mandant'
 
-const KEY_PLAN = 'kons-mkv.plan.v1'
-const KEY_EINST = 'kons-mkv.einstellungen.v1'
-const KEY_LISTE = 'kons-mkv.liste.v1'
+const KEY_PLAN = mk('kons-mkv.plan.v1')
+const KEY_EINST = mk('kons-mkv.einstellungen.v1')
+const KEY_LISTE = mk('kons-mkv.liste.v1')
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   praxis: { name: 'Zahnarztpraxis', zahnarzt: '', strasse: '', plz: '', ort: '', telefon: '', email: '' },

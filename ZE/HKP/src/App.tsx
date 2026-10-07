@@ -23,6 +23,7 @@ import { euro } from './format'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useRegisterAbgleich } from './store/registerAbgleich'
 import { MasVerbindung } from './components/MasVerbindung'
+import { MandantKarte, MandantName } from './components/Mandant'
 import { aktivSetzen, registerLesenPerLink, registerStatusSetzen, verbindungBereit, verbunden, type HkpStatus } from './store/register'
 
 /** Breite des A4-Vordrucks (210 mm) in CSS-Pixeln */
@@ -181,7 +182,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="kopfleiste">
-        <h1>HKP-Planer <span>Zahnersatz · BEMA · GOZ · BEL II · BEB</span></h1>
+        <h1>HKP-Planer <span>Zahnersatz · BEMA · GOZ · BEL II · BEB</span><MandantName /></h1>
         <nav>
           {([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([t, n]) => (
             <button key={t} className={tab === t ? 'aktiv' : ''} onClick={() => setTab(t)}>{n}</button>
@@ -272,6 +273,7 @@ export default function App() {
         )}
         {tab === 'einstellungen' && (
           <div className="einstellungen es-seite">
+            <MandantKarte />
             <EinstellungenSeite plan={plan} setEinstellung={setEinstellung} alle={alle} listen={listen} />
             <MasVerbindung alle={alle} eigen={eigenlabor} einstellungen={e} />
           </div>

@@ -13,6 +13,7 @@ import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { neuerPlan, planMigrieren, useEinstellungen, usePlan, useZeAblage } from './store'
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { MandantKarte, MandantName } from './components/Mandant'
 import type { Einstellungen, Patient, Plan, Praxis } from './types'
 
 const patientName = (p: Plan) => [p.patient.vorname, p.patient.name].filter(Boolean).join(' ')
@@ -81,7 +82,7 @@ export default function App() {
           <div className="marke">
             <span className="logo">ZE</span>
             <div>
-              <div className="titel">Privat-ZE-Planer</div>
+              <div className="titel">Privat-ZE-Planer <MandantName /></div>
               <div className="sub">Kostenvoranschlag Zahnersatz · GOZ &amp; BEB</div>
             </div>
           </div>
@@ -159,7 +160,7 @@ export default function App() {
             </fieldset>
           )}
 
-          {reiter === 'praxis' && <PraxisForm einst={einst} onChange={setEinst} />}
+          {reiter === 'praxis' && <><MandantKarte /><PraxisForm einst={einst} onChange={setEinst} /></>}
         </section>
 
         <section className="vorschau">

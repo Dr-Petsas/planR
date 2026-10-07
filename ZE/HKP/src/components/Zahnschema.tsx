@@ -49,6 +49,7 @@ function Zelle({ zahn, zeile, daten, lage, onChange }: { zahn: string; zeile: Ze
     `zs-zelle zs-${zeile}`,
     imVerblendbereich(zahn) && 'verblend',
     lage && 'br',
+    lage && (zahn[0] === '3' || zahn[0] === '4') && 'br-uk',
     lage?.anfang && 'br-anfang',
     lage?.ende && 'br-ende',
     lage && !lage.explizit && 'br-auto',

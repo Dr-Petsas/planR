@@ -12,6 +12,7 @@
 
 import { kzvNachNr, regionalkennzeichen } from './kzv'
 import type { Einstellungen, Kassenart, Patient } from '../types'
+import { mk } from '../mandant'
 
 export const PUNKTWERT_STAND = '2025 (Richtwerte, bitte pruefen)'
 export const PUNKTWERT_QUELLE = 'KZV-Rundschreiben / KZBV Punktwertuebersicht'
@@ -45,7 +46,7 @@ export const PUNKTWERTE: Record<string, ParPunktwert> = {
 /** Fallback, wenn keine KZV bestimmbar ist. */
 export const PUNKTWERT_FALLBACK = 1.1900
 
-const K_IMPORT = 'kassen-par.punktwerte-import.v1'
+const K_IMPORT = mk('kassen-par.punktwerte-import.v1')
 
 /** Praxiseigene, importierte Punktwerte (localStorage). Vorrang vor Richtwerten. */
 export function ladeImport(): Record<string, ParPunktwert> {

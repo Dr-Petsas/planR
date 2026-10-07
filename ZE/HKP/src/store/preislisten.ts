@@ -5,8 +5,9 @@ import { kzvAusPlz, kzvNachNr } from '../data/kzv'
 import goz from '../data/goz-2012.json'
 import beb from '../data/beb-itz-2024.json'
 import { bebErgaenzen } from '../engine/beb-standard'
+import { mk } from '../mandant'
 
-const SPEICHER_KEY = 'hkp.preislisten.v1'
+const SPEICHER_KEY = mk('hkp.preislisten.v1')
 
 /** Jahres- und KZV-Listen, die der Aktualisierungsdienst (tools/listen-aktualisieren.ts) in src/data ablegt */
 const DATEIEN = import.meta.glob<Preisliste>(['../data/bel/*.json', '../data/fz/*.json', '../data/bema/*.json'], { eager: true, import: 'default' })

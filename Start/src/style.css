@@ -1,0 +1,80 @@
+:root {
+  --akzent: #2f7f8f;
+  --akzent-dunkel: #266a78;
+  --akzent-hell: #e4f0f1;
+  --kasse: #34506e;
+  --kasse-hell: #e6ecf3;
+  --text: #1f2a30;
+  --grau: #6b767d;
+  --linie: #e6e8eb;
+  --rot: #b0413a;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #fff; }
+
+.kopf {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: 1180px; margin: 0 auto; padding: 32px 28px 8px;
+}
+.marke { display: flex; align-items: center; gap: 14px; }
+.logo {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px;
+  background: var(--akzent); color: #fff; font-weight: 700; font-size: 16px; letter-spacing: .5px;
+}
+.kopf h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -.2px; }
+.kopf p { margin: 2px 0 0; color: var(--grau); font-size: 14px; }
+.kopf-info { color: var(--grau); font-size: 13px; }
+.kopf-info b { color: var(--akzent-dunkel); font-weight: 600; }
+
+main { max-width: 1180px; margin: 0 auto; padding: 28px 28px 32px; }
+
+.bereich-name { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--grau); margin-bottom: 3px; }
+
+.kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+
+.kachel {
+  display: flex; flex-direction: column; min-height: 196px; padding: 18px 20px 16px;
+  background: #fff; border: 1px solid var(--linie); border-radius: 14px;
+  color: inherit; text-decoration: none;
+  box-shadow: 0 1px 2px rgba(20, 30, 40, .04);
+  transition: box-shadow .15s, transform .15s, border-color .15s;
+}
+a.kachel:hover { border-color: #cfd8de; box-shadow: 0 8px 24px rgba(20, 40, 60, .09); transform: translateY(-2px); }
+a.kachel:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+.art-rand-kasse { border-top: 3px solid var(--kasse); }
+.art-rand-privat { border-top: 3px solid var(--akzent); }
+.kachel-aus { background: #fafbfb; border-style: dashed; color: var(--grau); }
+
+.kachel-kopf { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.kuerzel {
+  min-width: 42px; padding: 5px 8px; border-radius: 8px; text-align: center;
+  background: var(--akzent-hell); color: var(--akzent-dunkel); font-weight: 700; font-size: 12px; letter-spacing: .5px;
+}
+.art-rand-kasse .kuerzel { background: var(--kasse-hell); color: var(--kasse); }
+.kachel-aus .kuerzel { background: #eef0f2; color: var(--grau); }
+.art { font-size: 11.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--linie); color: var(--grau); }
+.art-kasse { color: var(--kasse); border-color: #c9d5e2; }
+.art-privat { color: var(--akzent-dunkel); border-color: #c4dfe2; }
+
+.kachel h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.zweck { margin: 3px 0 8px; font-size: 13.5px; color: var(--text); }
+.text { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--grau); }
+
+.kachel-fuss {
+  display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 14px; font-size: 12px;
+}
+.status { color: var(--grau); }
+.status::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #c8ced3; vertical-align: 1px; }
+.status.an::before { background: #3c9a6b; }
+.status.aus { color: var(--rot); }
+.status.aus::before { background: var(--rot); }
+.status.vorbereitung::before { background: transparent; border: 1px solid #c8ced3; }
+.pfeil { color: var(--akzent-dunkel); font-weight: 600; opacity: .75; transition: opacity .15s; }
+a.kachel:hover .pfeil { opacity: 1; }
+
+footer { max-width: 1180px; margin: 0 auto; padding: 18px 28px 36px; color: var(--grau); font-size: 12px; border-top: 1px solid var(--linie); }

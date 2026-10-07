@@ -216,3 +216,18 @@ fieldset.sperre:disabled { opacity: .62; }
 .ablage-status.freigegeben { background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); }
 .ablage-zeit { color: var(--grau, #6b767d); font-size: 12px; white-space: nowrap; }
 .ablage-offen { font-size: 12px; color: var(--akzent-dunkel, #266a78); }
+
+/* Mandant */
+.mandant-chip { display: inline-block; font-style: normal; letter-spacing: 0; text-transform: none; line-height: 1.5; margin-left: 8px; padding: 1px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); border: 1px solid #c4dfe2; vertical-align: middle; white-space: nowrap; }
+.mandant-karte { background: #fff; border: 1px solid var(--linie, #e3ddd3); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.mandant-karte h3 { margin: 0 0 4px; font-size: 15px; }
+.mandant-hilfe { margin: 0 0 10px; font-size: 12.5px; color: var(--grau, #6b767d); }
+.mandant-hilfe code { font-size: 12px; background: #f3f1ec; padding: 0 4px; border-radius: 4px; }
+.mandant-zeile { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 8px; }
+.mandant-feld { display: flex; flex-direction: column; gap: 3px; flex: 1 1 220px; font-size: 12px; color: var(--grau, #6b767d); }
+.mandant-feld input, .mandant-feld select { font: inherit; font-size: 13.5px; color: #1f2a30; padding: 6px 8px; border: 1px solid var(--linie, #d8d2c6); border-radius: 6px; background: #fff; }
+.mandant-karte button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--akzent, #2f7f8f); background: #fff; color: var(--akzent-dunkel, #266a78); cursor: pointer; }
+.mandant-karte button:hover:not(:disabled) { background: var(--akzent-hell, #e4f0f1); }
+.mandant-karte button:disabled { opacity: .45; cursor: default; }
+.mandant-karte button.mandant-loeschen { color: var(--rot, #b0413a); border-color: #e7b9b5; }
+.mandant-karte button.mandant-loeschen:hover { background: var(--rot-hell, #fbeceb); }

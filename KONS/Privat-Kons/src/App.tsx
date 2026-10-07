@@ -10,6 +10,7 @@ import Einstellungen from './components/Einstellungen'
 import Regler from './components/Regler'
 import Dokument from './components/Dokument'
 import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { MandantKarte, MandantName } from './components/Mandant'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -53,7 +54,7 @@ export default function App() {
           <div className="marke">
             <div className="logo">PK</div>
             <div>
-              <div className="titel">Privat-Kons</div>
+              <div className="titel">Privat-Kons <MandantName /></div>
               <div className="sub">Füllung, Endo, Vitalerhaltung und mehr – rein nach GOZ</div>
             </div>
           </div>
@@ -102,7 +103,7 @@ export default function App() {
             </fieldset>
           )}
 
-          {reiter === 'einstellungen' && <Einstellungen einst={einst} setEinst={setEinst} />}
+          {reiter === 'einstellungen' && <><MandantKarte /><Einstellungen einst={einst} setEinst={setEinst} /></>}
         </div>
 
         <div className="vorschau">

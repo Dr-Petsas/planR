@@ -3,10 +3,11 @@ import type { Einstellungen, Plan, Regler } from './types'
 import { STANDARD_IMPLANTAT } from './engine/planung'
 import { markeLesen } from './engine/bruecken'
 import { useAblage } from './ablage'
+import { mk } from './mandant'
 
-const PLAN_KEY = 'privat-kv.plan.v1'
-const EINST_KEY = 'privat-kv.einstellungen.v1'
-const LISTE_KEY = 'privat-kv.liste.v1'
+const PLAN_KEY = mk('privat-kv.plan.v1')
+const EINST_KEY = mk('privat-kv.einstellungen.v1')
+const LISTE_KEY = mk('privat-kv.liste.v1')
 
 export const heute = () => new Date().toISOString().slice(0, 10)
 

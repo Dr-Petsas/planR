@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import type { EigenPosition } from '../engine/eigenlabor'
+import { mk } from '../mandant'
 
-const SPEICHER_KEY = 'hkp.eigenlabor.v1'
+const SPEICHER_KEY = mk('hkp.eigenlabor.v1')
 
 function laden(): EigenPosition[] {
   try {

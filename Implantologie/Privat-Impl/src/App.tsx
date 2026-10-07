@@ -13,6 +13,7 @@ import { importAusZe } from './engine/bruecke'
 import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } from './store'
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { MandantKarte, MandantName } from './components/Mandant'
 import type { Patient, Plan } from './types'
 
 const patientName = (p: Plan) => [p.patient.vorname, p.patient.name].filter(Boolean).join(' ')
@@ -73,7 +74,7 @@ export default function App() {
           <div className="marke">
             <span className="logo">IMPL</span>
             <div>
-              <div className="titel">Privat-Implantologie-Planer</div>
+              <div className="titel">Privat-Implantologie-Planer <MandantName /></div>
               <div className="sub">Kostenvoranschlag Implantologie · GOZ, GOÄ &amp; Analog</div>
             </div>
           </div>
@@ -147,7 +148,7 @@ export default function App() {
             </fieldset>
           )}
 
-          {reiter === 'praxis' && <PraxisPreise einst={einst} onChange={setEinst} />}
+          {reiter === 'praxis' && <><MandantKarte /><PraxisPreise einst={einst} onChange={setEinst} /></>}
         </section>
 
         <section className="vorschau">

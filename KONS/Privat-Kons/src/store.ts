@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan } from './types'
 import { STANDARD_LABOR, STANDARD_MATERIAL } from './data/katalog'
 import { useAblage } from './ablage'
+import { mk } from './mandant'
 
-const KEY_PLAN = 'privat-kons.plan.v2'
-const KEY_EINST = 'privat-kons.einstellungen.v2'
-const KEY_LISTE = 'privat-kons.liste.v2'
+const KEY_PLAN = mk('privat-kons.plan.v2')
+const KEY_EINST = mk('privat-kons.einstellungen.v2')
+const KEY_LISTE = mk('privat-kons.liste.v2')
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   praxis: { name: 'Zahnarztpraxis', zahnarzt: '', strasse: '', plz: '', ort: '', telefon: '', email: '' },

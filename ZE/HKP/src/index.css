@@ -491,13 +491,17 @@ main { padding: 16px 20px 60px; max-width: 1320px; margin: 0 auto; }
 .zahnschema { border-collapse: collapse; width: 100%; table-layout: fixed; }
 .zahnschema td, .zahnschema th { border: 1px solid var(--hb-m); padding: 0; text-align: center; height: 6.4mm; }
 .zahnschema td.zs-zelle { background: #fff; }
-.zahnschema td.br { position: relative; }
+/* Brücke: Hinterlegung + Spannlinie auf der Außenkante (OK oben, UK unten), weg von Zeile B und den Kürzeln */
+.zahnschema td.br { position: relative; background: #fdeef5; }
+.zahnschema td.br input { background: transparent; }
 .zahnschema td.br::after {
-  content: ''; position: absolute; top: 1px; left: -1px; right: -1px; height: 35%;
-  border-top: 2px solid var(--pink-dunkel); pointer-events: none;
+  content: ''; position: absolute; top: -1px; left: -1px; right: -1px; height: 4px;
+  border: 0 solid var(--pink-dunkel); border-top-width: 2px; pointer-events: none;
 }
-.zahnschema td.br-anfang::after { left: 2px; border-left: 2px solid var(--pink-dunkel); }
-.zahnschema td.br-ende::after { right: 2px; border-right: 2px solid var(--pink-dunkel); }
+.zahnschema td.br-uk::after { top: auto; bottom: -1px; border-top-width: 0; border-bottom-width: 2px; }
+.zahnschema td.br-anfang::after { left: 3px; border-left-width: 2px; }
+.zahnschema td.br-ende::after { right: 3px; border-right-width: 2px; }
+.zahnschema td.br-auto { background: #fef5f9; }
 .zahnschema td.br-auto::after { border-color: #e9a6c6; border-style: dashed; }
 .zahnschema .zs-art { width: 6mm; border: none; font-weight: 700; font-size: 7.5pt; }
 .zahnschema .zs-art span, .zahnschema .zs-hinweis span { writing-mode: vertical-rl; transform: rotate(180deg); display: inline-block; white-space: normal; }
@@ -834,3 +838,18 @@ button.link { border: none; background: none; padding: 0; color: var(--text); fo
 .hm-dialog-karte dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 12px 0; font-size: 16px; }
 .hm-dialog-karte dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .hm-dialog-karte dd b { color: var(--rot); font-size: 19px; }
+
+/* Mandant */
+.mandant-chip { display: inline-block; font-style: normal; letter-spacing: 0; text-transform: none; line-height: 1.5; margin-left: 8px; padding: 1px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); border: 1px solid #c4dfe2; vertical-align: middle; white-space: nowrap; }
+.mandant-karte { background: #fff; border: 1px solid var(--linie, #e3ddd3); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.mandant-karte h3 { margin: 0 0 4px; font-size: 15px; }
+.mandant-hilfe { margin: 0 0 10px; font-size: 12.5px; color: var(--grau, #6b767d); }
+.mandant-hilfe code { font-size: 12px; background: #f3f1ec; padding: 0 4px; border-radius: 4px; }
+.mandant-zeile { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 8px; }
+.mandant-feld { display: flex; flex-direction: column; gap: 3px; flex: 1 1 220px; font-size: 12px; color: var(--grau, #6b767d); }
+.mandant-feld input, .mandant-feld select { font: inherit; font-size: 13.5px; color: #1f2a30; padding: 6px 8px; border: 1px solid var(--linie, #d8d2c6); border-radius: 6px; background: #fff; }
+.mandant-karte button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--akzent, #2f7f8f); background: #fff; color: var(--akzent-dunkel, #266a78); cursor: pointer; }
+.mandant-karte button:hover:not(:disabled) { background: var(--akzent-hell, #e4f0f1); }
+.mandant-karte button:disabled { opacity: .45; cursor: default; }
+.mandant-karte button.mandant-loeschen { color: var(--rot, #b0413a); border-color: #e7b9b5; }
+.mandant-karte button.mandant-loeschen:hover { background: var(--rot-hell, #fbeceb); }
