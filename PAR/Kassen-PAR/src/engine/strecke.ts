@@ -7,9 +7,12 @@ export const euro = (n: number) => `${n.toFixed(2).replace('.', ',')} \u20ac`
 export const behandelbare = (b: Befund): [string, ZahnBefund][] =>
   ALLE_ZAEHNE.filter((z) => b.zaehne[z] && istBehandelbar(b.zaehne[z].zs)).map((z) => [z, b.zaehne[z]])
 
-/** Befund einer Phase aus dem Fall holen (letzter passender). */
+/** Angelegt UND gemessen: ein leerer Folgebefund heisst "noch nicht erhoben", nicht "keine Taschen". */
+export const gemessen = (b: Befund) => Object.values(b.zaehne).some((z) => z.st.some((w) => w != null))
+
+/** Befund einer Phase aus dem Fall holen (letzter passender; Folgebefunde nur gemessen). */
 export function befundFuer(fall: ParFall, phase: BefundPhase): Befund | undefined {
-  const treffer = fall.befunde.filter((b) => b.phase === phase)
+  const treffer = fall.befunde.filter((b) => b.phase === phase && (phase === 'initial' || gemessen(b)))
   return treffer.length ? treffer[treffer.length - 1] : undefined
 }
 
@@ -17,9 +20,11 @@ export function initialBefund(fall: ParFall): Befund {
   return befundFuer(fall, 'initial') ?? fall.befunde[0]
 }
 
-/** Juengster Befund (nach Datum, sonst Listenreihenfolge). */
+/** Juengster gemessener Befund (nach Datum, sonst Listenreihenfolge). */
 export function letzterBefund(fall: ParFall): Befund {
-  return [...fall.befunde].sort((a, b) => (a.datum || '').localeCompare(b.datum || '')).at(-1) ?? fall.befunde[0]
+  const kandidaten = fall.befunde.filter(gemessen)
+  return [...(kandidaten.length ? kandidaten : fall.befunde)]
+    .sort((a, b) => (a.datum || '').localeCompare(b.datum || '')).at(-1) ?? fall.befunde[0]
 }
 
 export interface ZahnTeilung { ein: string[]; mehr: string[] }

@@ -145,6 +145,18 @@ describe('Begleitleistungen', () => {
   it('Periimplantitis-Leistungen zaehlen die Implantate, nicht die Zaehne', () => {
     expect(menge('implantate', { alle: ['11'], behandelt: ['11'], roentgen: [], implantate: ['36', '46'] })).toBe(2)
   })
+  it('CPT plant mit dem Initialbefund, solange die BEV a leer ist', () => {
+    const f = { ...fallMit(befundMit({ '16': 7, '11': 5 })), mitCPT: true }
+    f.termine = terminePlanen(f, diagGrad('B'))
+    const bev = { ...leererBefund('beva', 'BEV a'), datum: '2026-03-01' }
+    f.befunde = [...f.befunde, bev]
+    const preise = preiseAus(STANDARD_EINSTELLUNGEN, 1.19)
+    const cpt = f.termine.find((t) => t.art === 'cpt')!
+    const wert = (id: string) => terminRechnen(f, cpt, preise).kacheln.find((k) => k.kachel.id === id)!.wert
+    expect(wert('cptb')).toBeGreaterThan(0)
+    for (const z of Object.keys(bev.zaehne)) bev.zaehne[z].st = [3, 3]
+    expect(wert('cptb')).toBe(0)
+  })
 })
 
 describe('Regler', () => {

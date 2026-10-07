@@ -416,8 +416,10 @@ function Kachelknopf({ s, t, r, onKlick, onRoentgen }: {
       title={titel} onClick={onKlick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onKlick() } }}>
       <span className="ts-tile-label">{s.auto && '★ '}{k.label}</span>
       <span className="ts-tile-wert">
-        {euro(s.wert)}
-        <small>{s.positionen.map((p) => `${p.menge}× ${p.nr}`).join(' · ')}</small>
+        {s.positionen.length ? <>
+          {euro(s.wert)}
+          <small>{s.positionen.map((p) => `${p.menge}× ${p.nr}`).join(' · ')}</small>
+        </> : <small>fällt in diesem Termin nicht an</small>}
       </span>
       {istRoentgen && (
         <select className="ts-tile-wahl" value={t.roentgen} disabled={t.erbracht}

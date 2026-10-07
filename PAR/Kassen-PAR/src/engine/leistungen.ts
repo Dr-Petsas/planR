@@ -7,7 +7,7 @@ import { ANALOG, GOAE, GOAE_PUNKTWERT, GOZ_PUNKTWERT, gozPunkte, gozText } from 
 import { KATALOG, type Kachel, type KachelPos, type MengenRegel, type Stufe } from '../data/kacheln'
 import type { AbrechnungsModus, Befund, Einstellungen, ParFall, Termin } from '../types'
 import {
-  aitZaehne, behandelbare, betroffeneZaehne, cptZaehne, initialBefund, letzterBefund,
+  aitZaehne, behandelbare, betroffeneZaehne, cptZaehne, gemessen, initialBefund, letzterBefund,
   subgingivalZaehne, zaehneAus,
 } from './strecke'
 import { ALLE_ZAEHNE, OBERKIEFER, istMehrwurzelig, kieferVon, quadrant } from './zahnschema'
@@ -34,15 +34,15 @@ const teilIndex = (t: Termin) => Math.max(0, Number(t.schluessel.split('-')[1] ?
 
 /** Befund, aus dem ein Termin seine Zaehne nimmt. */
 function befundFuerTermin(fall: ParFall, t: Termin): Befund {
-  const vorTermin = fall.befunde.filter((b) => !t.datum || !b.datum || b.datum <= t.datum)
-  const juengster = vorTermin.length
+  if (t.art === 'ait') return initialBefund(fall)
+  const befunde = fall.befunde.filter(gemessen)
+  if (t.art === 'cpt' || t.art === 'nachbehandlung') {
+    return befunde.filter((b) => b.phase === 'beva').at(-1) ?? initialBefund(fall)
+  }
+  const vorTermin = befunde.filter((b) => !t.datum || !b.datum || b.datum <= t.datum)
+  return vorTermin.length
     ? [...vorTermin].sort((a, b) => (a.datum || '').localeCompare(b.datum || '')).at(-1)!
     : letzterBefund(fall)
-  if (t.art === 'ait') return initialBefund(fall)
-  if (t.art === 'cpt' || t.art === 'nachbehandlung') {
-    return fall.befunde.filter((b) => b.phase === 'beva').at(-1) ?? initialBefund(fall)
-  }
-  return juengster
 }
 
 export function terminKontext(fall: ParFall, t: Termin): TerminKontext {
