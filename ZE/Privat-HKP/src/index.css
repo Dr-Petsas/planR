@@ -4,10 +4,19 @@
   --linie: #e3ddd3;
   --papier: #fffdf9;
   --grund: #f2eee7;
-  --akzent: #0f6e6a;
-  --akzent-hell: #e3f1ef;
+  --akzent: #2f7f8f;
+  --akzent-dunkel: #266a78;
+  --akzent-hell: #e4f0f1;
+  --stahl: #4a6f8f;
+  --stahl-hell: #e4edf4;
+  --kasse: #34506e;
+  --labor: #8a7a55;
+  --labor-dunkel: #6d5c33;
+  --labor-hell: #f3eedf;
   --warn: #9a5b00;
   --warn-hell: #fff4e0;
+  --rot: #b0413a;
+  --rot-hell: #fbeceb;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--tinte);
   background: var(--grund);
@@ -22,8 +31,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .r { text-align: right; }
 
 /* ---------- Kopfleiste ---------- */
+.kopfbereich { position: sticky; top: 0; z-index: 5; background: var(--grund); box-shadow: 0 2px 10px rgba(60, 40, 10, .08); }
 .kopfleiste {
-  position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 24px;
   padding: 10px 24px;
   background: var(--papier);
@@ -32,20 +41,20 @@ input, select, textarea { font: inherit; color: inherit; }
 .marke { display: flex; align-items: center; gap: 12px; }
 .logo {
   display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
-  background: var(--akzent); color: white; font-weight: 700; letter-spacing: .5px;
+  background: var(--akzent); color: white; font-weight: 700; font-size: 12px; letter-spacing: .5px;
 }
 .titel { font-size: 18px; font-weight: 600; }
 .sub { color: var(--grau); font-size: 12px; }
 .kopf-summe { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
 .kopf-summe span { color: var(--grau); font-size: 12px; }
-.kopf-summe b { font-size: 20px; color: var(--akzent); }
+.kopf-summe b { font-size: 20px; color: var(--akzent-dunkel); }
 .aktionen { display: flex; gap: 8px; }
 .primaer, .sekundaer {
   border-radius: 999px; padding: 7px 16px; border: 1px solid var(--akzent);
 }
 .primaer { background: var(--akzent); color: white; }
-.primaer:hover { filter: brightness(1.1); }
-.sekundaer { background: transparent; color: var(--akzent); }
+.primaer:hover { background: var(--akzent-dunkel); }
+.sekundaer { background: transparent; color: var(--akzent-dunkel); }
 .sekundaer:hover { background: var(--akzent-hell); }
 .klein-btn { padding: 3px 12px; font-size: 12px; margin-left: auto; }
 
@@ -55,7 +64,7 @@ input, select, textarea { font: inherit; color: inherit; }
   gap: 24px; padding: 20px 24px; align-items: start;
 }
 .editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.vorschau { position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow: auto; border-radius: 4px; box-shadow: 0 6px 24px rgba(60, 40, 10, .12); }
+.vorschau { position: sticky; top: 210px; max-height: calc(100vh - 230px); overflow: auto; border-radius: 4px; box-shadow: 0 6px 24px rgba(60, 40, 10, .12); }
 
 .reiter { display: flex; gap: 4px; border-bottom: 1px solid var(--linie); }
 .reiter button {
@@ -89,28 +98,28 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .block .hinweise { margin-top: 14px; }
 
 /* ---------- Kostenleiste mit Reglern (wie im HKP) ---------- */
-.kostenleiste { display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 10px; align-items: stretch; }
+.kostenleiste { display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 10px; align-items: stretch; padding: 10px 24px; }
 .kl-block {
   background: var(--papier); border: 1px solid var(--linie); border-top: 4px solid var(--grau); border-radius: 8px;
   padding: 8px 12px; display: flex; flex-direction: column; gap: 5px; min-width: 0;
 }
 .kl-block h4 { margin: 0; font-size: 13px; display: flex; align-items: baseline; gap: 6px; }
 .kl-block h4 span { font-size: 11px; font-weight: 400; color: var(--grau); }
-.kl-zahnarzt { border-top-color: #8a2be2; }
-.kl-labor { border-top-color: #2f855a; }
+.kl-zahnarzt { border-top-color: var(--stahl); }
+.kl-labor { border-top-color: var(--labor); }
 .kl-summenblock { border-top-color: var(--akzent); }
 .regler { display: grid; gap: 1px; font-size: 12px; }
 .regler-kopf b { color: var(--tinte); }
 .regler-kopf small { color: var(--grau); }
-.regler input[type=range] { width: 100%; accent-color: #8a2be2; cursor: pointer; margin: 0; }
-.kl-labor .regler input[type=range] { accent-color: #2f855a; }
+.regler input[type=range] { width: 100%; accent-color: var(--stahl); cursor: pointer; margin: 0; }
+.kl-labor .regler input[type=range] { accent-color: var(--labor); }
 .regler input[type=range]:disabled { opacity: .35; cursor: not-allowed; }
-.regler-stufe { font-size: 10.5px; color: #6b3fa0; }
-.kl-labor .regler-stufe { color: #1e6b35; }
+.regler-stufe { font-size: 10.5px; color: var(--kasse); }
+.kl-labor .regler-stufe { color: var(--labor-dunkel); }
 .kl-werte { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; margin: 2px 0 0; font-size: 12px; }
 .kl-werte dt { color: #555; }
 .kl-werte dd { margin: 0; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.kl-werte i { color: #1a7f37; font-style: normal; font-weight: 600; font-size: 11px; }
+.kl-werte i { color: var(--akzent-dunkel); font-style: normal; font-weight: 600; font-size: 11px; }
 .kl-werte .kl-summe { font-weight: 700; color: var(--tinte); border-top: 1px solid var(--linie); padding-top: 1px; }
 .regler-info { font-size: 11px; color: var(--grau); margin: auto 0 0; }
 .regler-info.begruendung { color: var(--warn); }
@@ -118,16 +127,16 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .zusatz-liste { display: flex; flex-wrap: wrap; gap: 3px; max-height: 66px; overflow-y: auto; }
 .zusatz-chip {
   display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; padding: 0 2px 0 5px;
-  background: #f3ecfb; border: 1px solid #d9c6f0; border-radius: 10px; white-space: nowrap; cursor: help;
+  background: var(--stahl-hell); border: 1px solid #c3d3e2; border-radius: 10px; white-space: nowrap; cursor: help;
 }
-.zusatz-chip b { font-weight: 600; color: #6b3fa0; }
+.zusatz-chip b { font-weight: 600; color: var(--kasse); }
 .zusatz-chip button { border: 0; background: none; padding: 0 3px; cursor: pointer; color: #888; font-size: 12px; line-height: 1; }
-.zusatz-chip button:hover { color: #d0443a; }
-.zusatz-chip.chip-labor { background: #e9f5ec; border-color: #9fd0ad; color: #1e6b35; }
-.zusatz-chip.chip-labor b { color: #1e6b35; }
+.zusatz-chip button:hover { color: var(--rot); }
+.zusatz-chip.chip-labor { background: var(--labor-hell); border-color: #d9cfb3; color: var(--labor-dunkel); }
+.zusatz-chip.chip-labor b { color: var(--labor-dunkel); }
 .zusatz-wieder { font-size: 10.5px; padding: 0 6px; border-radius: 10px; border: 1px solid var(--linie); background: white; }
-.edit-tabelle tr.zeile-zusatz td { background: #faf6fe; }
-@media (max-width: 1500px) { .kostenleiste { grid-template-columns: 1fr 1fr; } .kl-summenblock { grid-column: span 2; } }
+.edit-tabelle tr.zeile-zusatz td { background: #f3f7fa; }
+@media (max-width: 900px) { .kopfbereich { position: static; } .kostenleiste { grid-template-columns: 1fr; } }
 
 /* ---------- Abformung ---------- */
 .offen { border: 1px solid #f0d9ae; background: var(--warn-hell); color: var(--warn); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
@@ -172,7 +181,7 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .km-block .km-offen select { border-color: var(--warn); color: var(--warn); }
 .km-block .klein { font-size: 12px; color: var(--grau); }
 .km-block .be-hinweis { margin: 6px 0 0; font-size: 12px; color: var(--grau); }
-.tag.material { background: #b8860b; color: #fff; }
+.tag.material { background: var(--labor-hell); color: var(--labor-dunkel); }
 .impl-block h4, .dialog h4 { margin: 0 0 8px; font-size: 13px; }
 .impl-block h4 small, .dialog h4 small { font-weight: 400; color: var(--grau); }
 .impl-felder { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; align-items: start; }
@@ -204,7 +213,7 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .zs-zelle.br-unten.br-ende::after { border-radius: 0 0 4px 0; }
 .zs-zelle.br-anfang.br-ende::after { border-radius: 4px 4px 0 0; }
 .zs-zelle.br-unten.br-anfang.br-ende::after { border-radius: 0 0 4px 4px; }
-.zs-zelle.br-auto::after { border-color: #9cc9c1; border-style: dashed; }
+.zs-zelle.br-auto::after { border-color: #a9cdd4; border-style: dashed; }
 .zs-feld {
   width: 100%; min-width: 0; height: 30px; text-align: center; padding: 0;
   border: 1px solid var(--linie); border-radius: 6px; background: white; font-size: 12px;
@@ -213,7 +222,7 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .zs-B .zs-feld { background: #faf8f4; }
 .zs-B .zs-feld.belegt { background: #f3eadb; border-color: #d8c4a0; }
 .zs-TP .zs-feld.belegt { background: var(--akzent-hell); border-color: var(--akzent); color: var(--akzent); font-weight: 600; }
-.zs-feld.unbekannt { border-color: #d0443a !important; color: #d0443a !important; }
+.zs-feld.unbekannt { border-color: var(--rot) !important; color: var(--rot) !important; }
 .zs-feld:focus { outline: 2px solid var(--akzent); }
 .zs-trenner {
   display: flex; justify-content: space-between; margin: 6px 0 6px 62px;
@@ -237,7 +246,7 @@ input.klein { width: 58px; }
 input.mittel { width: 90px; }
 .begruendung { margin-top: 4px; font-size: 12px; }
 .x { border: none; background: none; color: var(--grau); font-size: 18px; line-height: 1; }
-.x:hover { color: #d0443a; }
+.x:hover { color: var(--rot); }
 
 .hinzufuegen .zeile { display: flex; gap: 8px; }
 .hinzufuegen input { padding: 7px 10px; border: 1px solid var(--linie); border-radius: 6px; background: white; }
@@ -246,10 +255,10 @@ input.mittel { width: 90px; }
 .treffer button { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; background: white; border: none; border-bottom: 1px solid #f1ece4; padding: 7px 10px; }
 .treffer button:hover { background: var(--akzent-hell); }
 .treffer .preis { margin-left: auto; color: var(--grau); white-space: nowrap; }
-.tag { font-size: 10px; border-radius: 4px; padding: 1px 5px; color: white; }
-.tag.GOZ { background: var(--akzent); }
-.tag.BEB { background: #8a6d3b; }
-.tag.eigen { background: #8a2be2; margin-left: 6px; white-space: nowrap; }
+.tag { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
+.tag.GOZ { background: var(--akzent-hell); color: var(--akzent-dunkel); }
+.tag.BEB { background: var(--labor-hell); color: var(--labor-dunkel); }
+.tag.eigen { background: var(--stahl-hell); color: var(--kasse); margin-left: 6px; }
 
 .eigenlabor-katalog { margin-top: 18px; border-top: 1px solid var(--linie); padding-top: 14px; }
 .el-kopf { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
@@ -274,8 +283,8 @@ input.mittel { width: 90px; }
 .el-nr { width: 9ch; }
 .el-text { width: 100%; min-width: 240px; }
 .el-preis { width: 10ch; }
-.el-fehler { border-color: #d0443a !important; background: #fdecea !important; }
-.el-fehler-text { color: #d0443a; }
+.el-fehler { border-color: var(--rot) !important; background: var(--rot-hell) !important; }
+.el-fehler-text { color: var(--rot); }
 .el-klein { font-size: 11px; color: var(--grau); }
 .el-leer { color: var(--grau); font-style: italic; margin: 8px 0 0; }
 .el-digital { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #ddd; }
@@ -283,7 +292,7 @@ input.mittel { width: 90px; }
 .el-mono { font-family: ui-monospace, monospace; white-space: nowrap; }
 .el-suche { width: 260px; margin: 4px 0 8px; padding: 6px 9px; border: 1px solid var(--linie); border-radius: 6px; }
 .el-x { border: none; background: none; color: var(--grau); font-size: 18px; line-height: 1; }
-.el-x:hover { color: #d0443a; }
+.el-x:hover { color: var(--rot); }
 
 /* ---------- Kostenvoranschlag (Brief) ---------- */
 .kv-blatt {

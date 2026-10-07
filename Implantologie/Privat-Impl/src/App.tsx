@@ -52,27 +52,28 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="kopfleiste">
-        <div className="marke">
-          <span className="logo">Impl</span>
-          <div>
-            <div className="titel">Privat-Implantologie-Planer</div>
-            <div className="sub">Kostenvoranschlag Implantologie · GOZ, GOÄ &amp; Analog</div>
+      <div className="kopfbereich">
+        <header className="kopfleiste">
+          <div className="marke">
+            <span className="logo">IMPL</span>
+            <div>
+              <div className="titel">Privat-Implantologie-Planer</div>
+              <div className="sub">Kostenvoranschlag Implantologie · GOZ, GOÄ &amp; Analog</div>
+            </div>
           </div>
-        </div>
-        <div className="kopf-summe">
-          <span>{plan.nummer}</span>
-          <b>{euro(kalk.gesamt)}</b>
-        </div>
-        <div className="aktionen">
-          <button className="sekundaer" onClick={neu}>Neuer Kostenvoranschlag</button>
-          <button className="primaer" onClick={() => window.print()}>Drucken / PDF</button>
-        </div>
-      </header>
+          <div className="kopf-summe">
+            <span>{plan.nummer}</span>
+            <b>{euro(kalk.gesamt)}</b>
+          </div>
+          <div className="aktionen">
+            <button className="primaer" onClick={neu}>Neuer Kostenvoranschlag</button>
+          </div>
+        </header>
+        <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+      </div>
 
       <main className="arbeitsflaeche">
         <section className="editor">
-          <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
           <nav className="reiter">
             {REITER.map(([id, label], i) => (
               <button key={id} className={reiter === id ? 'aktiv' : ''} onClick={() => setReiter(id)}>
