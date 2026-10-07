@@ -61,7 +61,9 @@ export interface Diagnose {
 export interface Anamnese {
   diabetesMellitus: boolean
   tabakkonsum: boolean
-  sonstiges: string
+  sonstigesAn: boolean // Kreuz "Sonstiges"
+  sonstiges: string // Stichwort neben dem Kreuz
+  sonstigesFortsetzung: string // Feld "Fortsetzung Anamnese Sonstiges"
   fruehereParTherapie: boolean
   fruehereParJahr: string
 }

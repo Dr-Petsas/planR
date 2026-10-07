@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ALLE_ZAEHNE } from './engine/zahnschema'
 import type {
-  Befund, BefundPhase, Einstellungen, ParFall, Planung, Termin, ZahnBefund, Zusatzformulare,
+  Anamnese, Befund, BefundPhase, Einstellungen, ParFall, Planung, Termin, ZahnBefund, Zusatzformulare,
 } from './types'
 
 const K_FALL = 'kassen-par.fall.v2'
@@ -110,7 +110,7 @@ export function neuerFall(nummer: number): ParFall {
       logVersion: '2.1.0',
     },
     anamnese: {
-      diabetesMellitus: false, tabakkonsum: false, sonstiges: '',
+      diabetesMellitus: false, tabakkonsum: false, sonstigesAn: false, sonstiges: '', sonstigesFortsetzung: '',
       fruehereParTherapie: false, fruehereParJahr: '',
     },
     diagnose: {
@@ -187,6 +187,12 @@ export function zweiMessstellen(z: ZahnBefund): ZahnBefund {
   return { ...z, st, bop }
 }
 
+/** Vor dem Sonstiges-Kreuz stand der ganze Freitext in `sonstiges`: er ist die Fortsetzung. */
+function anamneseMigrieren(a: Anamnese, alt: Partial<Anamnese> | undefined): Anamnese {
+  if (!alt || alt.sonstigesAn != null) return a
+  return { ...a, sonstigesAn: !!alt.sonstiges?.trim(), sonstiges: '', sonstigesFortsetzung: alt.sonstiges ?? '' }
+}
+
 function fixBefund(b: Partial<Befund> | undefined, vorgabe: Befund): Befund {
   if (!b) return vorgabe
   const zaehne: Record<string, ZahnBefund> = {}
@@ -228,7 +234,7 @@ export function fallMigrieren(roh: unknown): ParFall {
     ...p,
     patient: { ...v.patient, ...p.patient },
     antrag: { ...v.antrag, ...p.antrag },
-    anamnese: { ...v.anamnese, ...p.anamnese },
+    anamnese: anamneseMigrieren({ ...v.anamnese, ...p.anamnese }, p.anamnese),
     diagnose: { ...v.diagnose, ...p.diagnose },
     befunde,
     termine: Array.isArray(p.termine) ? p.termine.map(fixTermin) : [],

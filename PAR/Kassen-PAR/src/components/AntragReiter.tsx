@@ -107,11 +107,15 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
       <div className="b1-block zwei">
         <div>
           <h4>Allgemeine und parodontitisspezifische Anamnese</h4>
-          <div className="b1-reihe">
-            <X an={an.diabetesMellitus} onClick={() => setAn({ diabetesMellitus: !an.diabetesMellitus })} /> Diabetes mellitus
-            <X an={!!an.sonstiges} /> Sonstiges
+          <div className="b1-raster">
+            <span className="b1-option"><X an={an.diabetesMellitus} onClick={() => setAn({ diabetesMellitus: !an.diabetesMellitus })} /> Diabetes mellitus</span>
+            <span className="b1-option">
+              <X an={an.sonstigesAn} onClick={() => setAn({ sonstigesAn: !an.sonstigesAn })} /> Sonstiges
+              <Fi value={an.sonstiges} breite="34mm" placeholder="welche?"
+                onChange={(v) => setAn({ sonstiges: v, sonstigesAn: an.sonstigesAn || !!v.trim() })} />
+            </span>
+            <span className="b1-option"><X an={an.tabakkonsum} onClick={() => setAn({ tabakkonsum: !an.tabakkonsum })} /> Tabakkonsum</span>
           </div>
-          <div className="b1-reihe"><X an={an.tabakkonsum} onClick={() => setAn({ tabakkonsum: !an.tabakkonsum })} /> Tabakkonsum</div>
         </div>
         <div>
           <h4>Spezielle Vorgeschichte</h4>
@@ -123,13 +127,12 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
       </div>
 
       <div className="b1-block diagnose">
-        <div className="b1-reihe"><h4>Diagnose</h4>
-          <X an={d.diagnoseTyp === 'parodontitis'} onClick={() => setD({ diagnoseTyp: 'parodontitis' })} /> Parodontitis
-          <X an={d.diagnoseTyp === 'sonstige_vergroesserung'} onClick={() => setD({ diagnoseTyp: 'sonstige_vergroesserung' })} />
+        <h4>Diagnose</h4>
+        <div className="b1-option"><X an={d.diagnoseTyp === 'parodontitis'} onClick={() => setD({ diagnoseTyp: 'parodontitis' })} /> Parodontitis</div>
+        <div className="b1-option"><X an={d.diagnoseTyp === 'sonstige_vergroesserung'} onClick={() => setD({ diagnoseTyp: 'sonstige_vergroesserung' })} />
           Andere das Parodont betreffende Zustände: generalisierte gingivale Vergrößerungen</div>
-        <div className="b1-reihe">
-          <X an={d.diagnoseTyp === 'systemisch'} onClick={() => setD({ diagnoseTyp: 'systemisch' })} /> Parodontitis als Manifestation systemischer Erkrankungen
-        </div>
+        <div className="b1-option"><X an={d.diagnoseTyp === 'systemisch'} onClick={() => setD({ diagnoseTyp: 'systemisch' })} />
+          Parodontitis als Manifestation systemischer Erkrankungen</div>
       </div>
 
       <div className="b1-block">
@@ -209,7 +212,7 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
       <div className="b1-fuss">
         <div>
           <h4>Fortsetzung Anamnese Sonstiges</h4>
-          <textarea className="textbox fi-text" value={an.sonstiges} onChange={(e) => setAn({ sonstiges: e.target.value })} />
+          <textarea className="textbox fi-text" value={an.sonstigesFortsetzung} onChange={(e) => setAn({ sonstigesFortsetzung: e.target.value })} />
         </div>
         <div>
           <h4>Entscheidung der Krankenkasse</h4>
