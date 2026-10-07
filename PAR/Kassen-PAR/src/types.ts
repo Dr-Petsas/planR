@@ -148,6 +148,8 @@ export interface Termin {
   auto: string[] // vom Regler zugeschaltete Kachel-IDs (Stern)
   mengen: Record<string, number> // Mengen-Override je Positionsschluessel "SYS|Nr"
   faktoren: Record<string, number> // Steigerungsfaktor je Positionsschluessel (GOZ/GOAE)
+  /** Roentgen von Hand gewaehlt (BEMA-Nr.); '' = nach Befund */
+  roentgen: string
   bemerkung: string
 }
 
@@ -160,6 +162,7 @@ export interface Planung {
   cptSitzungen: 1 | 2 | 4
   einstieg: 'komplett' | 'ait' | 'bev' | 'upt' // Uebernahmefall
   uptAb: number // Uebernahme: Einstieg ab UPT Nr.
+  uptStart: string // Datum der ersten UPT; '' = nach der Befundevaluation
   verlaengerungMonate: number // 0-6
   par22a: boolean // Versorgung nach § 22a SGB V
   werktage: 5 | 6

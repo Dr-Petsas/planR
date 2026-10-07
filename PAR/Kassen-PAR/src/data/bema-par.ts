@@ -38,6 +38,10 @@ export const BEMA_PAR: Record<string, BemaPos> = {
  * KCH-Punktwert.
  */
 export const BEMA_BEGLEIT: Record<string, BemaPos> = {
+  '01': { nr: '01', titel: 'Eingehende Untersuchung (1× je Kalenderhalbjahr, frühestens nach 4 Monaten)', punkte: 18, einheit: 'sitzung', kurz: 'Untersuchung' },
+  'Ä1': { nr: 'Ä1', titel: 'Beratung eines Kranken, auch fernmündlich (nicht neben 01)', punkte: 9, einheit: 'sitzung', kurz: 'Beratung' },
+  '105': { nr: '105', titel: 'Lokale medikamentöse Behandlung von Schleimhauterkrankungen, je Sitzung', punkte: 8, einheit: 'sitzung', kurz: 'Schleimhautbehandlung' },
+  '107': { nr: '107', titel: 'Entfernen harter Zahnbeläge (Zahnstein), je Sitzung, 1× je Kalenderjahr', punkte: 16, einheit: 'sitzung', kurz: 'Zahnstein' },
   '40': { nr: '40', titel: 'Infiltrationsanästhesie (I)', punkte: 8, einheit: 'zahn', kurz: 'Infiltration' },
   '41a': { nr: '41a', titel: 'Leitungsanästhesie, intraoral (L1)', punkte: 12, einheit: 'sitzung', kurz: 'Leitung' },
   'Ä925a': { nr: 'Ä925a', titel: 'Röntgen Zähne, bis zwei Aufnahmen (Rö2)', punkte: 12, einheit: 'sitzung', kurz: 'Rö2' },

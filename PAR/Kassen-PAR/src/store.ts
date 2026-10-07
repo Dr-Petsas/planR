@@ -38,6 +38,7 @@ export const STANDARD_PLANUNG: Planung = {
   cptSitzungen: 2,
   einstieg: 'komplett',
   uptAb: 1,
+  uptStart: '',
   verlaengerungMonate: 0,
   par22a: false,
   werktage: 5,
@@ -149,6 +150,7 @@ function fixTermin(t: Partial<Termin>): Termin {
     auto: t.auto ?? [],
     mengen: t.mengen ?? {},
     faktoren: t.faktoren ?? {},
+    roentgen: t.roentgen ?? '',
     bemerkung: t.bemerkung ?? '',
   }
 }

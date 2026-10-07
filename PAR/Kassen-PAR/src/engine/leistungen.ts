@@ -149,12 +149,12 @@ export interface Position {
 function positionBauen(p: KachelPos, kachelId: string, ctx: TerminKontext, t: Termin, preise: Preise): Position | null {
   let nr = p.nr
   if (p.sys === 'BEMA' && nr === 'ROE') {
-    const w = roentgenWahl(ctx.roentgen)
+    const w = t.roentgen || roentgenWahl(ctx.roentgen)
     if (!w) return null
     nr = w
   }
   const schluessel = `${p.sys}|${nr}`
-  const m = t.mengen[schluessel] ?? menge(p.menge, ctx)
+  const m = t.mengen[schluessel] ?? (p.menge === 'roentgen' ? 1 : menge(p.menge, ctx))
   let punkte = 0
   let titel = nr
   let faktor: number | null = null
@@ -196,11 +196,17 @@ function positionBauen(p: KachelPos, kachelId: string, ctx: TerminKontext, t: Te
 export function kachelnFuer(t: Termin, modus: AbrechnungsModus): Kachel[] {
   return (KATALOG[t.art] ?? []).filter((k) => {
     if (k.modul && !t.module.includes(k.modul)) return false
-    if (k.nurMitModul && !t.module.includes(k.nurMitModul)) return false
     if (modus === 'bema' && k.stufe === 'zusatz') return false
     return true
   })
 }
+
+const istStandard = (k: Kachel, t: Termin) =>
+  k.standard || (!!k.standardModul && t.module.includes(k.standardModul))
+
+/** Schliessen sich zwei Kacheln gegenseitig aus (z. B. 01 und Ä1)? */
+export const schliessenAus = (a: Kachel, b: Kachel) =>
+  !!a.nichtNeben?.includes(b.id) || !!b.nichtNeben?.includes(a.id)
 
 export function kachelPositionen(k: Kachel, ctx: TerminKontext, t: Termin, preise: Preise): Position[] {
   return k.pos.map((p) => positionBauen(p, k.id, ctx, t, preise)).filter((p): p is Position => !!p && p.menge > 0)
@@ -213,7 +219,7 @@ export const kachelWert = (k: Kachel, ctx: TerminKontext, t: Termin, preise: Pre
 export function grundIds(t: Termin, kacheln: Kachel[]): Set<string> {
   const ids = new Set<string>()
   for (const k of kacheln) {
-    if ((k.standard && !t.abgewaehlt.includes(k.id)) || t.auswahl.includes(k.id)) ids.add(k.id)
+    if ((istStandard(k, t) && !t.abgewaehlt.includes(k.id)) || t.auswahl.includes(k.id)) ids.add(k.id)
   }
   return ids
 }
@@ -230,6 +236,8 @@ export interface KachelStand {
   aktiv: boolean
   auto: boolean
   positionen: Position[]
+  /** aktive Kachel, mit der diese sich ausschliesst */
+  konflikt: string | null
 }
 
 export interface TerminRechnung {
@@ -244,6 +252,15 @@ export interface TerminRechnung {
   punkteKasse: number
 }
 
+/** Aktive zuerst, dann der Reihe nach alles, was sich nicht ausschliesst. */
+function vertraeglich(stand: KachelStand[]): KachelStand[] {
+  const out: KachelStand[] = []
+  for (const s of [...stand.filter((x) => x.aktiv), ...stand.filter((x) => !x.aktiv)]) {
+    if (!out.some((o) => schliessenAus(o.kachel, s.kachel))) out.push(s)
+  }
+  return out
+}
+
 export function terminRechnen(fall: ParFall, t: Termin, preise: Preise): TerminRechnung {
   const ctx = terminKontext(fall, t)
   const kacheln = kachelnFuer(t, fall.modus)
@@ -251,9 +268,11 @@ export function terminRechnen(fall: ParFall, t: Termin, preise: Preise): TerminR
   const aktiv = aktiveIds(t, kacheln)
   const stand: KachelStand[] = kacheln.map((k) => {
     const positionen = kachelPositionen(k, ctx, t, preise)
+    const gegen = kacheln.find((x) => x.id !== k.id && aktiv.has(x.id) && schliessenAus(k, x))
     return {
       kachel: k, positionen, wert: positionen.reduce((s, p) => s + p.euro, 0),
       aktiv: aktiv.has(k.id), auto: aktiv.has(k.id) && !grund.has(k.id),
+      konflikt: gegen ? gegen.label : null,
     }
   })
   const gesehen = new Set<string>()
@@ -271,7 +290,7 @@ export function terminRechnen(fall: ParFall, t: Termin, preise: Preise): TerminR
   return {
     ctx, kacheln: stand, positionen, summe, privat, kasse: summe - privat,
     basis: stand.filter((s) => grund.has(s.kachel.id)).reduce((x, s) => x + s.wert, 0),
-    potential: stand.reduce((x, s) => x + s.wert, 0),
+    potential: vertraeglich(stand).reduce((x, s) => x + s.wert, 0),
     punkteKasse: positionen.filter((p) => !p.privat).reduce((s, p) => s + p.punkte * p.menge, 0),
   }
 }
@@ -299,9 +318,12 @@ export function reglerTermin(fall: ParFall, t: Termin, preise: Preise, ziel: num
   const r = terminRechnen(fall, { ...t, auto: [] }, preise)
   let summe = r.basis
   const auto: string[] = []
+  const aktiv = r.kacheln.filter((s) => s.aktiv).map((s) => s.kachel)
   for (const s of kandidaten(r, t)) {
     if (summe >= ziel - 0.005) break
+    if (aktiv.some((a) => schliessenAus(a, s.kachel))) continue
     auto.push(s.kachel.id)
+    aktiv.push(s.kachel)
     summe += s.wert
   }
   return { ...t, auto }
@@ -316,16 +338,19 @@ export function reglerGesamt(fall: ParFall, preise: Preise, ziel: number): Termi
   const termine = fall.termine.map((t) => (t.erbracht ? t : { ...t, auto: [] as string[] }))
   const rechnungen = termine.map((t) => terminRechnen(fall, t, preise))
   let summe = rechnungen.reduce((s, r) => s + r.summe, 0)
+  const aktiv = rechnungen.map((r) => r.kacheln.filter((s) => s.aktiv).map((s) => s.kachel))
   for (const stufe of ['begleit', 'zusatz'] as Stufe[]) {
     const queues = termine.map((t, i) => (t.erbracht ? [] : kandidaten(rechnungen[i], t).filter((s) => s.kachel.stufe === stufe)))
     let weiter = true
     while (weiter && summe < ziel - 0.005) {
       weiter = false
       for (let i = 0; i < termine.length && summe < ziel - 0.005; i++) {
-        const s = queues[i].shift()
+        let s = queues[i].shift()
+        while (s && aktiv[i].some((a) => schliessenAus(a, s!.kachel))) s = queues[i].shift()
         if (!s) continue
         weiter = true
         termine[i].auto = [...termine[i].auto, s.kachel.id]
+        aktiv[i].push(s.kachel)
         summe += s.wert
       }
     }

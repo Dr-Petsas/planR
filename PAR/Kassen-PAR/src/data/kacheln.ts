@@ -3,17 +3,18 @@
 // Tabelle).
 //
 // stufe:  kern    = Kassenleistung des Termins, standardmaessig an
-//         begleit = Kassen-Begleitleistung (Anaesthesie, Roentgen, 108)
-//         zusatz  = private Zusatzleistung (GOZ/GOAE, nur Modus "BEMA + Zusatz")
+//         begleit = Kassen-Begleitleistung (Anaesthesie, Roentgen, 01, 108 ...)
+//         zusatz  = private Zusatzleistung (GOZ/GOAE, nur Modus "BEMA + privat")
 // Der Regler schaltet erst Begleit-, dann Zusatz-Kacheln zu, jeweils die
-// wertvollste zuerst.
+// wertvollste zuerst. Kacheln mit "nichtNeben" werden nicht zugeschaltet,
+// solange eine ausschliessende Kachel aktiv ist.
 
 import type { TerminArt, UptModul } from '../types'
 
 /** Wie oft eine Position im Termin anfaellt (Grundlage: Zaehne des Termins). */
 export type MengenRegel =
-  | 'eins' // einmal je Sitzung (nur wenn der Termin Zaehne hat bzw. immer bei Sitzungsleistungen)
-  | 'sitzung' // einmal je Sitzung, unabhaengig von Zaehnen
+  | 'eins' // einmal, wenn der Termin Zaehne hat
+  | 'sitzung' // einmal je Sitzung
   | 'alle' // je vorhandenem Zahn
   | 'behandelt' // je behandeltem Zahn
   | 'ein' // je behandeltem einwurzeligen Zahn
@@ -32,142 +33,224 @@ export interface KachelPos { sys: GebSystem; nr: string; menge: MengenRegel }
 
 export type Stufe = 'kern' | 'begleit' | 'zusatz'
 
+export const KATEGORIEN = [
+  'Kassenleistung',
+  'Röntgen',
+  'Anästhesie',
+  'Begleitleistung Kasse',
+  'Diagnostik privat',
+  'Prophylaxe privat',
+  'Adjuvante Therapie privat',
+  'Chirurgie privat',
+  'Beratung privat',
+] as const
+export type Kategorie = (typeof KATEGORIEN)[number]
+
 export interface Kachel {
   id: string
   label: string
   stufe: Stufe
+  kategorie: Kategorie
   /** standardmaessig an (Kern immer; Begleit z. B. Anaesthesie bei AIT) */
   standard: boolean
+  /** standardmaessig an, wenn das UPT-Modul im Termin vorgesehen ist */
+  standardModul?: UptModul
   pos: KachelPos[]
   modul?: UptModul // UPT-Kernleistung nur, wenn das Modul im Termin vorgesehen ist
-  nurMitModul?: UptModul // Kachel nur anbieten, wenn Modul im Termin
+  /** nicht neben diesen Kacheln (IDs) im selben Termin */
+  nichtNeben?: string[]
   hinweis?: string
 }
 
 const k = (
-  id: string, label: string, stufe: Stufe, pos: KachelPos[], extra: Partial<Kachel> = {},
-): Kachel => ({ id, label, stufe, standard: stufe === 'kern', pos, ...extra })
+  id: string, label: string, stufe: Stufe, kategorie: Kategorie, pos: KachelPos[], extra: Partial<Kachel> = {},
+): Kachel => ({ id, label, stufe, kategorie, standard: stufe === 'kern', pos, ...extra })
 
 const B = (nr: string, menge: MengenRegel = 'sitzung'): KachelPos => ({ sys: 'BEMA', nr, menge })
 const G = (nr: string, menge: MengenRegel = 'sitzung'): KachelPos => ({ sys: 'GOZ', nr, menge })
 const A = (nr: string, menge: MengenRegel = 'sitzung'): KachelPos => ({ sys: 'GOÄ', nr, menge })
 const AN = (nr: string, menge: MengenRegel = 'sitzung'): KachelPos => ({ sys: 'ANALOG', nr, menge })
+const kasse = (id: string, label: string, pos: KachelPos[], extra: Partial<Kachel> = {}) =>
+  k(id, label, 'kern', 'Kassenleistung', pos, extra)
 
-// Gemeinsame Kacheln -----------------------------------------------------------
+// Kassen-Begleitleistungen ----------------------------------------------------
 
+const roentgen = (label = 'Röntgen nach Befund', extra: Partial<Kachel> = {}) =>
+  k('roentgen', label, 'begleit', 'Röntgen', [B('ROE', 'roentgen')], {
+    hinweis: 'Rö2 / Rö5 / Rö8 / Status / OPG – automatisch nach Zahl der betroffenen Zähne oder von Hand',
+    ...extra,
+  })
 const infiltration = (standard: boolean) =>
-  k('infiltration', 'Infiltrationsanästhesie', 'begleit', [B('40', 'infiltration')], {
+  k('infiltration', 'Infiltrationsanästhesie (40)', 'begleit', 'Anästhesie', [B('40', 'infiltration')], {
     standard, hinweis: 'Oberkiefer: jeder zweite Zahn je zusammenhängender Gruppe',
   })
 const leitung = (standard: boolean) =>
-  k('leitung', 'Leitungsanästhesie', 'begleit', [B('41a', 'leitung')], {
+  k('leitung', 'Leitungsanästhesie (41a)', 'begleit', 'Anästhesie', [B('41a', 'leitung')], {
     standard, hinweis: 'Unterkiefer: eine je Seite mit behandelten Zähnen',
   })
-const einschleifen = k('einschleifen', 'Einschleifen (108)', 'begleit', [B('108')], {
-  hinweis: 'nicht neben konservierenden, prothetischen oder chirurgischen Leistungen',
-})
-const roentgen = (id: string, label: string, standard = false, extra: Partial<Kachel> = {}) =>
-  k(id, label, 'begleit', [B('ROE', 'roentgen')], {
-    standard, hinweis: 'Rö2 / Rö5 / Rö8 / Status / OPG nach Zahl der betroffenen Zähne', ...extra,
-  })
-const oberflaeche = k('oberflaeche', 'Oberflächenanästhesie', 'zusatz', [G('0080', 'haelften')], {
+const oberflaeche = k('oberflaeche', 'Oberflächenanästhesie (GOZ 0080)', 'zusatz', 'Anästhesie', [G('0080', 'haelften')], {
   hinweis: 'privat, je Kieferhälfte bzw. Frontzahnbereich',
 })
-const spuelung = k('spuelung', 'Antiseptische Taschenspülung', 'zusatz', [G('4020')])
+const untersuchung = k('u01', 'Eingehende Untersuchung (01)', 'begleit', 'Begleitleistung Kasse', [B('01')], {
+  nichtNeben: ['ae1'], hinweis: '1× je Kalenderhalbjahr, frühestens nach 4 Monaten',
+})
+const beratungKasse = k('ae1', 'Beratung (Ä1)', 'begleit', 'Begleitleistung Kasse', [B('Ä1')], {
+  nichtNeben: ['u01', 'uptb'], hinweis: 'nicht neben 01 und nicht neben UPT b',
+})
+const einschleifen = k('einschleifen', 'Einschleifen (108)', 'begleit', 'Begleitleistung Kasse', [B('108')], {
+  hinweis: 'nicht neben konservierenden, prothetischen oder chirurgischen Leistungen',
+})
+const zahnstein = k('zahnstein', 'Zahnstein entfernen (107)', 'begleit', 'Begleitleistung Kasse', [B('107')], {
+  hinweis: '1× je Kalenderjahr, vor Beginn der PAR-Behandlung',
+})
+const schleimhaut = k('schleimhaut', 'Schleimhautbehandlung (105)', 'begleit', 'Begleitleistung Kasse', [B('105')])
+
+// Private Zusatzleistungen ----------------------------------------------------
+
+const keimtest = k('keimtest', 'Keimbestimmung (Abstrich)', 'zusatz', 'Diagnostik privat', [A('298')], { hinweis: 'Laborkosten gesondert' })
+const mmp8 = k('mmp8', 'aMMP-8-Test', 'zusatz', 'Diagnostik privat', [AN('mmp8')])
+const speicheltest = k('speicheltest', 'Speicheltest / Risikoanalyse', 'zusatz', 'Diagnostik privat', [AN('speicheltest')])
+const fluorid = k('fluorid', 'Fluoridierung', 'zusatz', 'Prophylaxe privat', [G('1020')])
+const zunge = k('zunge', 'Zungenreinigung', 'zusatz', 'Prophylaxe privat', [AN('zungenreinigung')])
+const sensibel = k('sensibel', 'Überempfindliche Zahnflächen', 'zusatz', 'Prophylaxe privat', [G('2010', 'kiefer')])
+const kanten = k('kanten', 'Scharfe Zahnkanten beseitigen', 'zusatz', 'Prophylaxe privat', [G('4030', 'haelften')])
+const spuelung = k('spuelung', 'Antiseptische Taschenspülung', 'zusatz', 'Adjuvante Therapie privat', [G('4020')])
 const medikament = (anteil: number) =>
-  k('medikament', 'Lokale Medikamentenapplikation', 'zusatz', [G('4025', { anteil })], {
+  k('medikament', 'Lokale Medikamentenapplikation', 'zusatz', 'Adjuvante Therapie privat', [G('4025', { anteil })], {
     hinweis: `je Zahn, vorgeschlagen für ${Math.round(anteil * 100)} % der behandelten Zähne`,
   })
-const keimtest = k('keimtest', 'Keimbestimmung (Abstrich)', 'zusatz', [A('298')], { hinweis: 'Laborkosten gesondert' })
-const mmp8 = k('mmp8', 'aMMP-8-Test', 'zusatz', [AN('mmp8')])
-const fluorid = k('fluorid', 'Fluoridierung', 'zusatz', [G('1020')])
-const zunge = k('zunge', 'Zungenreinigung', 'zusatz', [AN('zungenreinigung')])
-const gewohnheiten = k('gewohnheiten', 'Beratung schädliche Gewohnheiten (Rauchstopp)', 'zusatz', [G('6190')])
-const pdt = [
-  k('pdt', 'Photodynamische Therapie', 'zusatz', [AN('pdt1', 'eins'), AN('pdtw', 'ohneErsten')]),
-]
+const pdt = k('pdt', 'Photodynamische Therapie', 'zusatz', 'Adjuvante Therapie privat', [AN('pdt1', 'eins'), AN('pdtw', 'ohneErsten')], {
+  hinweis: 'erster Zahn + je weiterer Zahn',
+})
+const laser = k('laser', 'Laser-Dekontamination', 'zusatz', 'Adjuvante Therapie privat', [AN('laser', 'behandelt')], { hinweis: 'je behandeltem Zahn' })
+const schienung = k('schienung', 'Parodontale Schienung (adhäsiv)', 'zusatz', 'Adjuvante Therapie privat', [AN('schienung', 'eins')], {
+  hinweis: 'je Interdentalraum – Menge eintragen',
+})
+const gewohnheiten = k('gewohnheiten', 'Beratung schädliche Gewohnheiten (Rauchstopp)', 'zusatz', 'Beratung privat', [G('6190')])
+const beratungPrivat = k('beratung', 'Eingehende Beratung (Ernährung, Risiko)', 'zusatz', 'Beratung privat', [A('3')], {
+  hinweis: 'GOÄ 3, mind. 10 Minuten',
+})
 
 // Katalog --------------------------------------------------------------------
 
 export const KATALOG: Record<TerminArt, Kachel[]> = {
   befund: [
-    k('par4', 'Parodontalstatus (4)', 'kern', [B('4')]),
-    roentgen('roentgen', 'Röntgen nach Befund', true),
+    kasse('par4', 'Parodontalstatus (4)', [B('4')]),
+    roentgen('Röntgen nach Befund', { standard: true }),
+    untersuchung,
+    zahnstein,
     keimtest,
     mmp8,
+    speicheltest,
   ],
   atg: [
-    k('atg', 'Aufklärungs- und Therapiegespräch', 'kern', [B('ATG')]),
-    k('mhu', 'Mundhygieneunterweisung', 'kern', [B('MHU')]),
+    kasse('atg', 'Aufklärungs- und Therapiegespräch', [B('ATG')]),
+    kasse('mhu', 'Mundhygieneunterweisung', [B('MHU')]),
     einschleifen,
-    k('beratung', 'Eingehende Risikoberatung', 'zusatz', [A('3')], { hinweis: 'Ernährung, Allgemeinerkrankung, privat' }),
+    zahnstein,
+    beratungPrivat,
     gewohnheiten,
   ],
   pzr: [
-    k('pzr', 'Professionelle Zahnreinigung', 'zusatz', [G('1040', 'alle')]),
+    k('pzr', 'Professionelle Zahnreinigung', 'zusatz', 'Prophylaxe privat', [G('1040', 'alle')], { standard: true }),
     fluorid,
-    k('sensibel', 'Behandlung überempfindlicher Zahnflächen', 'zusatz', [G('2010', 'kiefer')]),
-    k('kanten', 'Beseitigung scharfer Zahnkanten', 'zusatz', [G('4030', 'haelften')]),
+    sensibel,
+    kanten,
     zunge,
     oberflaeche,
   ],
   ait: [
-    k('aita', 'AIT einwurzelig', 'kern', [B('AIT a', 'ein')]),
-    k('aitb', 'AIT mehrwurzelig', 'kern', [B('AIT b', 'mehr')]),
+    kasse('aita', 'AIT einwurzelig', [B('AIT a', 'ein')]),
+    kasse('aitb', 'AIT mehrwurzelig', [B('AIT b', 'mehr')]),
     infiltration(true),
     leitung(true),
-    einschleifen,
     oberflaeche,
+    einschleifen,
     spuelung,
     medikament(0.3),
-    ...pdt,
-    k('schienung', 'Parodontale Schienung', 'zusatz', [AN('schienung', 'eins')], { hinweis: 'je Interdentalraum – Menge eintragen' }),
+    pdt,
+    laser,
+    schienung,
   ],
   bev: [
-    k('beva', 'Befundevaluation nach AIT', 'kern', [B('BEV a')]),
-    roentgen('roentgen', 'Röntgen-Kontrolle'),
+    kasse('beva', 'Befundevaluation nach AIT', [B('BEV a')]),
+    roentgen('Röntgen-Kontrolle'),
+    untersuchung,
+    beratungKasse,
     keimtest,
     mmp8,
+    speicheltest,
+    gewohnheiten,
   ],
   cpt: [
-    k('cpta', 'CPT einwurzelig', 'kern', [B('CPT a', 'ein')]),
-    k('cptb', 'CPT mehrwurzelig', 'kern', [B('CPT b', 'mehr')]),
+    kasse('cpta', 'CPT einwurzelig', [B('CPT a', 'ein')]),
+    kasse('cptb', 'CPT mehrwurzelig', [B('CPT b', 'mehr')]),
     infiltration(true),
     leitung(true),
     oberflaeche,
-    k('knochen', 'Auffüllen von Knochendefekten', 'zusatz', [G('4110', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
-    k('membran', 'Membran (GTR)', 'zusatz', [G('4138', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
-    k('bgt', 'Bindegewebstransplantat', 'zusatz', [G('4133', 'eins')]),
+    k('mikroskop', 'OP-Mikroskop (Zuschlag 0110)', 'zusatz', 'Chirurgie privat', [G('0110', 'eins')]),
+    k('knochen', 'Knochendefekte auffüllen (4110)', 'zusatz', 'Chirurgie privat', [G('4110', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
+    k('membran', 'Membran / GTR (4138)', 'zusatz', 'Chirurgie privat', [G('4138', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
+    k('osteoplastik', 'Osteoplastik (4136)', 'zusatz', 'Chirurgie privat', [G('4136', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
+    k('lappen', 'Gestielter Schleimhautlappen (4120)', 'zusatz', 'Chirurgie privat', [G('4120', 'eins')], { hinweis: 'je Kieferhälfte' }),
+    k('fst', 'Schleimhauttransplantat (4130)', 'zusatz', 'Chirurgie privat', [G('4130', 'eins')]),
+    k('bgt', 'Bindegewebstransplantat (4133)', 'zusatz', 'Chirurgie privat', [G('4133', 'eins')]),
+    k('prf', 'PRF aus Eigenblut', 'zusatz', 'Chirurgie privat', [A('250'), AN('prf')], { hinweis: 'Blutentnahme GOÄ 250 + Aufbereitung' }),
     medikament(0.25),
   ],
   nachbehandlung: [
-    k('nb111', 'Nachbehandlung (111)', 'kern', [B('111')]),
+    kasse('nb111', 'Nachbehandlung (111)', [B('111')]),
+    schleimhaut,
     spuelung,
   ],
   bevb: [
-    k('bevb', 'Befundevaluation nach CPT', 'kern', [B('BEV b')]),
-    roentgen('roentgen', 'Röntgen-Kontrolle'),
+    kasse('bevb', 'Befundevaluation nach CPT', [B('BEV b')]),
+    roentgen('Röntgen-Kontrolle'),
+    untersuchung,
+    beratungKasse,
+    mmp8,
   ],
   upt: [
-    k('upta', 'UPT a Mundhygienekontrolle', 'kern', [B('UPT a')], { modul: 'a' }),
-    k('uptb', 'UPT b Mundhygieneunterweisung', 'kern', [B('UPT b')], { modul: 'b' }),
-    k('uptc', 'UPT c Reinigung aller Zähne', 'kern', [B('UPT c', 'alle')], { modul: 'c' }),
-    k('uptd', 'UPT d ST-/BOP-Messung', 'kern', [B('UPT d')], { modul: 'd' }),
-    k('upte', 'UPT e subgingival einwurzelig', 'kern', [B('UPT e', 'ein')], { modul: 'e' }),
-    k('uptf', 'UPT f subgingival mehrwurzelig', 'kern', [B('UPT f', 'mehr')], { modul: 'f' }),
-    k('uptg', 'UPT g Parodontal-Untersuchung', 'kern', [B('UPT g')], { modul: 'g' }),
-    roentgen('roentgen', 'Röntgen zu UPT g', false, { nurMitModul: 'g' }),
+    kasse('upta', 'UPT a Mundhygienekontrolle', [B('UPT a')], { modul: 'a' }),
+    kasse('uptb', 'UPT b Mundhygieneunterweisung', [B('UPT b')], { modul: 'b' }),
+    kasse('uptc', 'UPT c Reinigung aller Zähne', [B('UPT c', 'alle')], { modul: 'c' }),
+    kasse('uptd', 'UPT d ST-/BOP-Messung', [B('UPT d')], { modul: 'd' }),
+    kasse('upte', 'UPT e subgingival einwurzelig', [B('UPT e', 'ein')], { modul: 'e' }),
+    kasse('uptf', 'UPT f subgingival mehrwurzelig', [B('UPT f', 'mehr')], { modul: 'f' }),
+    kasse('uptg', 'UPT g Parodontal-Untersuchung', [B('UPT g')], { modul: 'g' }),
+    roentgen('Röntgen', { standardModul: 'g' }),
     infiltration(false),
     leitung(false),
+    oberflaeche,
+    untersuchung,
+    beratungKasse,
     einschleifen,
     fluorid,
     zunge,
+    sensibel,
     medikament(0.2),
     spuelung,
-    oberflaeche,
+    pdt,
+    laser,
     mmp8,
+    keimtest,
     gewohnheiten,
-    ...pdt,
   ],
-  kontrolle: [],
+  kontrolle: [
+    untersuchung,
+    beratungKasse,
+    roentgen('Röntgen'),
+    schleimhaut,
+    spuelung,
+    fluorid,
+  ],
 }
+
+/** Roentgen-Varianten zur Auswahl von Hand. */
+export const ROENTGEN_WAHL: { nr: string; label: string }[] = [
+  { nr: 'Ä925a', label: 'Rö2 (bis 2 Aufnahmen)' },
+  { nr: 'Ä925b', label: 'Rö5 (bis 5 Aufnahmen)' },
+  { nr: 'Ä925c', label: 'Rö8 (bis 8 Aufnahmen)' },
+  { nr: 'Ä925d', label: 'Röntgenstatus' },
+  { nr: 'Ä935d', label: 'OPG' },
+]

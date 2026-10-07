@@ -135,7 +135,7 @@ function leererTermin(schluessel: string, art: TerminArt, titel: string, datum: 
   return {
     id: schluessel + '-' + Math.random().toString(36).slice(2, 8), schluessel, art, titel, datum,
     datumManuell: false, erbracht: false, zaehne: null, module: [], verlaengerung: false,
-    auswahl: [], abgewaehlt: [], auto: [], mengen: {}, faktoren: {}, bemerkung: '',
+    auswahl: [], abgewaehlt: [], auto: [], mengen: {}, faktoren: {}, roentgen: '', bemerkung: '',
   }
 }
 
@@ -220,7 +220,9 @@ export function terminePlanen(fall: ParFall, diag: DiagnoseErgebnis): Termin[] {
   for (const z of schema) {
     if (z.nr < abNr) continue
     const abstand = p.par22a ? 5 : f.abstandMon
-    let vorschlag: string = vorige == null ? (einstieg === 'upt' ? start : uptStartVorschlag) : plusMonate(vorige, abstand)
+    let vorschlag: string = vorige == null
+      ? p.uptStart || (einstieg === 'upt' ? start : uptStartVorschlag)
+      : plusMonate(vorige, abstand)
     if (ersteUpt && z.verlaengerung) {
       const nachSchema = plusMonate(ersteUpt, z.monat - ersteMonat)
       if (nachSchema > vorschlag) vorschlag = nachSchema

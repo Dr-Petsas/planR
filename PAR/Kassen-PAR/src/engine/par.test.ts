@@ -185,6 +185,33 @@ describe('Regler', () => {
     const r = terminRechnen({ ...f, modus: 'bema' }, ait, preise)
     expect(r.kacheln.every((k) => k.kachel.stufe !== 'zusatz')).toBe(true)
   })
+  it('01 und Ä1 schließen sich aus, auch beim Regler', () => {
+    const upt = f.termine.find((t) => t.schluessel === 'upt-1')!
+    const r = terminRechnen(f, { ...upt, auswahl: ['u01'] }, preise)
+    expect(r.kacheln.find((k) => k.kachel.id === 'ae1')!.konflikt).not.toBeNull()
+    const voll = terminRechnen(f, reglerTermin(f, upt, preise, 100000), preise)
+    const nrs = voll.positionen.map((p) => p.nr)
+    expect(nrs.includes('01') && nrs.includes('Ä1')).toBe(false)
+  })
+  it('UPT: Röntgen ist Standard nur mit UPT g, von Hand wählbar', () => {
+    const upt1 = f.termine.find((t) => t.schluessel === 'upt-1')!
+    const upt3 = f.termine.find((t) => t.schluessel === 'upt-3')!
+    expect(upt3.module).toContain('g')
+    const nrs = (t: typeof upt1) => terminRechnen(f, t, preise).positionen.map((p) => p.nr)
+    expect(nrs(upt1).some((n) => n.startsWith('Ä9'))).toBe(false)
+    expect(nrs(upt3).some((n) => n.startsWith('Ä9'))).toBe(true)
+    expect(nrs({ ...upt3, roentgen: 'Ä925a' })).toContain('Ä925a')
+  })
+})
+
+describe('UPT-Startdatum', () => {
+  it('erste UPT am gewählten Start, Folge-UPT im Gradabstand', () => {
+    const f = fallMit(befundMit({ '16': 5, '11': 5 }), 'B')
+    f.planung = { ...f.planung, uptStart: '2027-09-01' }
+    const upt = terminePlanen(f, diagGrad('B')).filter((t) => t.art === 'upt')
+    expect(upt[0].datum).toBe('2027-09-01')
+    expect(upt[1].datum >= plusMonate('2027-09-01', 5)).toBe(true)
+  })
 })
 
 describe('Diagnose-Grenzen (Blatt 1)', () => {

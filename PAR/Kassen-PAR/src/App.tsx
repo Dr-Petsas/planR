@@ -7,22 +7,24 @@ import { pruefeFall, zaehlMeldungen } from './engine/pruefung'
 import { euro, initialBefund } from './engine/strecke'
 import { terminePlanen } from './engine/termine'
 import { neuerFall, useEinstellungen, useFall } from './store'
-import PatientReiter from './components/PatientReiter'
-import Blatt1Reiter from './components/Blatt1Reiter'
-import Blatt2Reiter from './components/Blatt2Reiter'
+import AntragReiter from './components/AntragReiter'
 import StreckeReiter from './components/StreckeReiter'
-import UptReiter from './components/UptReiter'
-import VerlaufReiter from './components/VerlaufReiter'
 import FormulareReiter from './components/FormulareReiter'
-import PruefungReiter from './components/PruefungReiter'
 import EinstellungenReiter from './components/EinstellungenReiter'
 
-type ReiterId = 'patient' | 'blatt1' | 'blatt2' | 'strecke' | 'upt' | 'verlauf' | 'formulare' | 'pruefung' | 'einstellungen'
+type ReiterId = 'antrag' | 'strecke' | 'formulare' | 'einstellungen'
+
+const REITER: { id: ReiterId; label: string }[] = [
+  { id: 'antrag', label: 'Antrag (Blatt 1 + 2)' },
+  { id: 'strecke', label: 'Strecke & UPT' },
+  { id: 'formulare', label: 'Weitere Formulare' },
+  { id: 'einstellungen', label: 'Einstellungen' },
+]
 
 export default function App() {
   const [fall, setFall] = useFall()
   const [einst, setEinst] = useEinstellungen()
-  const [reiter, setReiter] = useState<ReiterId>('patient')
+  const [reiter, setReiter] = useState<ReiterId>('antrag')
 
   const initial = initialBefund(fall)
   const diag = useMemo(() => diagnostizieren(fall.diagnose, initial), [fall.diagnose, initial])
@@ -51,27 +53,17 @@ export default function App() {
     if (!confirm('Neuen PAR-Fall beginnen? Der aktuelle Fall wird ersetzt.')) return
     setFall(neuerFall(einst.naechsteNummer))
     setEinst({ ...einst, naechsteNummer: einst.naechsteNummer + 1 })
-    setReiter('patient')
+    setReiter('antrag')
   }
 
-  const REITER: { id: ReiterId; label: string }[] = [
-    { id: 'patient', label: 'Patient' },
-    { id: 'blatt1', label: 'Blatt 1' },
-    { id: 'blatt2', label: 'Blatt 2 / Befunde' },
-    { id: 'strecke', label: 'Strecke' },
-    { id: 'upt', label: 'UPT-Rechner' },
-    { id: 'verlauf', label: 'Verlauf' },
-    { id: 'formulare', label: 'Formulare' },
-    { id: 'pruefung', label: `Prüfung${zahl.fehler + zahl.warnung ? ` (${zahl.fehler + zahl.warnung})` : ''}` },
-    { id: 'einstellungen', label: 'Einstellungen' },
-  ]
+  const name = [fall.patient.vorname, fall.patient.name].filter(Boolean).join(' ')
 
   return (
     <div className="app">
       <header className="kopf keindruck">
         <div>
           <h1>Kassen-PAR-Planer</h1>
-          <span className="kopf-unter">{fall.nummer} · eFormular 5 v2.1.0 · BEMA Teil 4</span>
+          <span className="kopf-unter">{name || 'ohne Namen'} · {fall.nummer} · eFormular 5 · BEMA Teil 4</span>
         </div>
         <div className="kopf-rechts">
           <span className="kopf-diag">
@@ -80,7 +72,7 @@ export default function App() {
           <span className="kopf-diag" title={punktwert.hinweis}>
             PW {punktwert.wert.toFixed(4).replace('.', ',')} €{punktwert.richtwert ? ' (Richtwert)' : ''}
           </span>
-          <span className="kopf-diag">{euro(summe)}</span>
+          <span className="kopf-summe">{euro(summe)}</span>
           <button onClick={neu}>Neuer Fall</button>
         </div>
       </header>
@@ -91,15 +83,23 @@ export default function App() {
         ))}
       </nav>
 
+      {reiter !== 'einstellungen' && meldungen.length > 0 && (
+        <details className="hinweise keindruck" open={zahl.fehler > 0}>
+          <summary>
+            Prüfhinweise ({meldungen.length}{zahl.fehler ? `, davon ${zahl.fehler} Fehler` : ''}{zahl.warnung ? `, ${zahl.warnung} Warnungen` : ''})
+          </summary>
+          {meldungen.map((m, i) => (
+            <p key={i} className={`hinweis ${m.art === 'hinweis' ? 'info' : m.art}`}>
+              <b>{m.bereich}:</b> {m.text}
+            </p>
+          ))}
+        </details>
+      )}
+
       <main className="inhalt">
-        {reiter === 'patient' && <PatientReiter fall={fall} setFall={setFall} />}
-        {reiter === 'blatt1' && <Blatt1Reiter fall={fall} setFall={setFall} diag={diag} />}
-        {reiter === 'blatt2' && <Blatt2Reiter fall={fall} setFall={setFall} />}
-        {reiter === 'strecke' && <StreckeReiter fall={fall} setFall={setFall} diag={diag} preise={preise} />}
-        {reiter === 'upt' && <UptReiter fall={fall} diag={diag} einst={einst} />}
-        {reiter === 'verlauf' && <VerlaufReiter fall={fall} />}
+        {reiter === 'antrag' && <AntragReiter fall={fall} setFall={setFall} einst={einst} diag={diag} />}
+        {reiter === 'strecke' && <StreckeReiter fall={fall} setFall={setFall} diag={diag} preise={preise} einst={einst} />}
         {reiter === 'formulare' && <FormulareReiter fall={fall} setFall={setFall} einst={einst} diag={diag} />}
-        {reiter === 'pruefung' && <PruefungReiter meldungen={meldungen} />}
         {reiter === 'einstellungen' && <EinstellungenReiter einst={einst} setEinst={setEinst} punktwert={punktwert} />}
       </main>
     </div>

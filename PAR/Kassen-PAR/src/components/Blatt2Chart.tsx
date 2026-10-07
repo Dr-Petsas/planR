@@ -170,7 +170,7 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
         <div className="gitter-reihe"><span className="gitter-label">ZS</span>{UNTERKIEFER.map((z) => <div key={z}>{zsZelle(z)}</div>)}<span className="gitter-label">ZS</span></div>
       </div>
       {!readOnly && (
-        <p className="chart-hilfe">
+        <p className="chart-hilfe keindruck">
           Segment anklicken, dann Zahl tippen (0-15). <b>*</b> oder Leertaste = Sondierungsbluten,
           <b> Tab</b>/Pfeile = naechste Messstelle, <b>Entf</b> = loeschen.
           ZS/AIT/FB-Felder und das Lockerungsfeld in der Zahnmitte durch Klick weiterschalten.

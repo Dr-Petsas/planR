@@ -25,6 +25,7 @@ export const GOAE: Record<string, { titel: string; punkte: number; roentgen?: bo
   '1': { titel: 'Beratung, auch telefonisch', punkte: 80 },
   '3': { titel: 'Eingehende Beratung (mind. 10 Minuten)', punkte: 150 },
   '5': { titel: 'Symptombezogene Untersuchung', punkte: 80 },
+  '250': { titel: 'Blutentnahme mittels Spritze oder Kanüle', punkte: 40 },
   '298': { titel: 'Entnahme und Aufbereitung von Abstrichmaterial zur mikrobiologischen Untersuchung', punkte: 40 },
   '5000': { titel: 'Zähne, je Projektion (Röntgen)', punkte: 50, roentgen: true },
   '5004': { titel: 'Panoramaschichtaufnahme der Kiefer', punkte: 400, roentgen: true },
@@ -41,4 +42,7 @@ export const ANALOG: Record<string, { titel: string; bezug: string; punkte: numb
   pdt1: { titel: 'Photodynamische Therapie, erster Zahn (analog)', bezug: 'GOZ 4070', punkte: 100 },
   pdtw: { titel: 'Photodynamische Therapie, je weiterer Zahn (analog)', bezug: 'GOZ 4025', punkte: 15 },
   schienung: { titel: 'Parodontale Schienung je Interdentalraum (analog)', bezug: 'GOZ 2197', punkte: 130 },
+  speicheltest: { titel: 'Speicheltest / Risikoanalyse (analog)', bezug: 'GOZ 4005', punkte: 80 },
+  laser: { titel: 'Laser-Dekontamination der Tasche, je Zahn (analog)', bezug: 'GOZ 4025', punkte: 15 },
+  prf: { titel: 'Aufbereitung von Eigenblut (PRF), je Sitzung (analog)', bezug: 'GOZ 4110', punkte: 180 },
 }
