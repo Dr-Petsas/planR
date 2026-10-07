@@ -12,11 +12,11 @@ export type ZahnStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
 export type Grad0123 = 0 | 1 | 2 | 3
 
-/** Befund eines einzelnen Zahns (6 Messstellen). */
+/** Befund eines einzelnen Zahns (2 Messstellen: mesial, distal). */
 export interface ZahnBefund {
   zs: ZahnStatus
-  st: (number | null)[] // 6 Sondierungstiefen in mm: [v.mesial, v.mittig, v.distal, o.mesial, o.mittig, o.distal]
-  bop: boolean[] // 6 Blutungsflags (Sondierungsbluten, "*")
+  st: (number | null)[] // 2 Sondierungstiefen in mm: [mesial, distal]
+  bop: boolean[] // 2 Blutungsflags (Sondierungsbluten, "*")
   lockerung: Grad0123 // zentrales Feld der Krone
   fb: Grad0123 // Furkationsbefall
   aitOverride: boolean | null // AIT-Zeile: null = automatisch (ST>=4mm), sonst manuell

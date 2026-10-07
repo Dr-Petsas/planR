@@ -73,8 +73,8 @@ export function id(): string {
 export function leererZahnBefund(): ZahnBefund {
   return {
     zs: 0,
-    st: [null, null, null, null, null, null],
-    bop: [false, false, false, false, false, false],
+    st: [null, null],
+    bop: [false, false],
     lockerung: 0,
     fb: 0,
     aitOverride: null,
@@ -164,12 +164,35 @@ function lade(key: string): unknown {
   }
 }
 
+/**
+ * Alte Befunde mit 6 Messstellen [mb, b, db, mo, o, do] auf mesial/distal
+ * zusammenlegen: je Seite der tiefere Wert; ein tieferer Wert der Mittelstellen
+ * geht an die flachere Seite, damit Diagnose und AIT-Zaehne gleich bleiben.
+ */
+export function zweiMessstellen(z: ZahnBefund): ZahnBefund {
+  if (z.st.length === 2 && z.bop.length === 2) return z
+  const max = (...w: (number | null | undefined)[]) => {
+    const n = w.filter((x): x is number => x != null)
+    return n.length ? Math.max(...n) : null
+  }
+  const [mb, b, db, mo, o, dd] = z.st
+  const st: (number | null)[] = [max(mb, mo), max(db, dd)]
+  const bop = [!!(z.bop[0] || z.bop[3]), !!(z.bop[2] || z.bop[5])]
+  const mitte = max(b, o)
+  if (mitte != null && mitte > (max(st[0], st[1]) ?? -1)) {
+    const i = (st[0] ?? -1) <= (st[1] ?? -1) ? 0 : 1
+    st[i] = mitte
+    bop[i] = bop[i] || !!(z.bop[1] || z.bop[4])
+  }
+  return { ...z, st, bop }
+}
+
 function fixBefund(b: Partial<Befund> | undefined, vorgabe: Befund): Befund {
   if (!b) return vorgabe
   const zaehne: Record<string, ZahnBefund> = {}
   for (const z of ALLE_ZAEHNE) {
     const alt = b.zaehne?.[z]
-    zaehne[z] = alt ? { ...leererZahnBefund(), ...alt } : leererZahnBefund()
+    zaehne[z] = alt ? zweiMessstellen({ ...leererZahnBefund(), ...alt }) : leererZahnBefund()
   }
   return {
     id: b.id ?? id(),

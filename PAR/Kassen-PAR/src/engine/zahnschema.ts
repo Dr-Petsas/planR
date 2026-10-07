@@ -27,16 +27,10 @@ export const istBehandelbar = (zs: number) => zs === 0 || zs === 3 || zs === 4
 /** Quadrant 1-4 eines FDI-Zahns. */
 export const quadrant = (zahn: string) => Number(zahn[0])
 
-/** Die sechs Messstellen je Zahn (3 vestibulär, 3 oral) in Formular-Reihenfolge. */
-export const MESSSTELLEN = ['mb', 'b', 'db', 'mo', 'o', 'do'] as const
+/** Die zwei Messstellen je Zahn (mesial, distal) – Index wie in ZahnBefund.st. */
+export const MESSSTELLEN = ['m', 'd'] as const
 export type Messstelle = (typeof MESSSTELLEN)[number]
 export const MESSSTELLE_LABEL: Record<Messstelle, string> = {
-  mb: 'mesio-vestibulär',
-  b: 'vestibulär',
-  db: 'disto-vestibulär',
-  mo: 'mesio-oral',
-  o: 'oral',
-  do: 'disto-oral',
+  m: 'mesial',
+  d: 'distal',
 }
-/** Die beiden Pflicht-Approximalstellen (mind. zwei ST je Zahn). */
-export const APPROXIMAL: Messstelle[] = ['mb', 'db']

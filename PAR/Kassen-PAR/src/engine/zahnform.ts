@@ -1,8 +1,7 @@
 // Zahngeometrie fuer das grafische Blatt 2 (KZBV eFormular 5, V2.1.0).
 // Die Proportionen stammen aus tools/zahnform-extrahieren.py (Spalte ~33pt,
-// Krone ~28pt, zentrales Lockerungsfeld ~10pt). Die Krone wird deterministisch
-// aus Kronenviereck + zentralem Feld + 4 Diagonalen + Mittellinie gebildet =
-// 6 Mess-Segmente, wie im amtlichen Vordruck.
+// Krone ~28pt, zentrales Lockerungsfeld ~10pt). Gemessen wird nur mesial und
+// distal: die Krone ist in zwei Haelften links/rechts des Lockerungsfelds geteilt.
 
 // --- Kronen-Konstanten (lokales Koordinatensystem, Ursprung Kronen-Ecke oben links)
 export const KW = 28; // Kronenbreite
@@ -24,32 +23,25 @@ export const lockerungsFeld = { x: BX0, y: BY0, w: BW, h: BH };
 type Punkt = [number, number];
 const p = (pts: Punkt[]) => pts.map(([x, y]) => `${x},${y}`).join(' ');
 
-// Die sechs Mess-Segmente der Krone als Polygon-Punkte (SVG points-Attribut).
-type Region = 'UL' | 'UC' | 'UR' | 'LL' | 'LC' | 'LR';
+// Zwei Mess-Haelften der Krone (links/rechts am Bildschirm), getrennt durch
+// die senkrechte Mittellinie und das zentrale Lockerungsfeld.
+type Region = 'L' | 'R';
+const MX = KW / 2; // 14
 
 const REGION_POLY: Record<Region, string> = {
-  UL: p([[0, 0], [BX0, BY0], [BX0, MY], [0, MY]]),
-  UC: p([[0, 0], [KW, 0], [BX1, BY0], [BX0, BY0]]),
-  UR: p([[KW, 0], [KW, MY], [BX1, MY], [BX1, BY0]]),
-  LL: p([[0, MY], [BX0, MY], [BX0, BY1], [0, KH]]),
-  LC: p([[BX0, BY1], [BX1, BY1], [KW, KH], [0, KH]]),
-  LR: p([[KW, MY], [KW, KH], [BX1, BY1], [BX1, MY]]),
+  L: p([[0, 0], [MX, 0], [MX, BY0], [BX0, BY0], [BX0, BY1], [MX, BY1], [MX, KH], [0, KH]]),
+  R: p([[MX, 0], [KW, 0], [KW, KH], [MX, KH], [MX, BY1], [BX1, BY1], [BX1, BY0], [MX, BY0]]),
 };
 
-const REGION_MITTE: Record<Region, Punkt> = {
-  UL: [4.5, 7], UC: [14, 4], UR: [23.5, 7],
-  LL: [4.5, 23], LC: [14, 26], LR: [23.5, 23],
-};
+const REGION_MITTE: Record<Region, Punkt> = { L: [4.5, MY], R: [23.5, MY] };
 
-// Linien im Kronenbild: Mittellinie (zwei Stuecke) + vier Diagonalen.
+// Linien im Kronenbild: senkrechte Mittellinie ober- und unterhalb des Lockerungsfelds.
 export const KRONEN_LINIEN: Array<[number, number, number, number]> = [
-  [0, MY, BX0, MY], [BX1, MY, KW, MY], // Mittellinie
-  [BX0, BY0, 0, 0], [BX1, BY0, KW, 0], // obere Diagonalen
-  [BX0, BY1, 0, KH], [BX1, BY1, KW, KH], // untere Diagonalen
+  [MX, 0, MX, BY0], [MX, BY1, MX, KH],
 ];
 
 // --- Mess-Segment-Zuordnung je Quadrant -------------------------------------
-// st-Index: 0=vest.mesial 1=vest.mittig 2=vest.distal 3=oral.mesial 4=oral.mittig 5=oral.distal
+// st-Index: 0 = mesial, 1 = distal
 export interface Segment {
   stIndex: number;
   region: Region;
@@ -58,8 +50,7 @@ export interface Segment {
   label: string;
 }
 
-const LABELS = ['mesio-vestibulaer', 'vestibulaer', 'disto-vestibulaer',
-  'mesio-oral', 'oral', 'disto-oral'];
+const LABELS = ['mesial', 'distal'];
 
 /** FDI-Quadrant (erste Ziffer) bestimmt, ob mesial auf der Bildschirm-Rechtsseite liegt. */
 export function mesialRechts(fdi: number): boolean {
@@ -67,24 +58,14 @@ export function mesialRechts(fdi: number): boolean {
   return q === 1 || q === 4; // Quadrant 1 und 4 liegen bild-links, mesial zeigt nach rechts
 }
 
-/** Oberkiefer (Quadrant 1/2): Wurzel oben, vestibulaer = obere Kronenhaelfte. */
+/** Oberkiefer (Quadrant 1/2): Wurzel oben. */
 export function istOberkiefer(fdi: number): boolean {
   const q = Math.floor(fdi / 10);
   return q === 1 || q === 2;
 }
 
 export function segmente(fdi: number): Segment[] {
-  const ok = istOberkiefer(fdi);
-  const mr = mesialRechts(fdi);
-  // vestibulaere Halbregionen (links/mitte/rechts am Bildschirm)
-  const vest: [Region, Region, Region] = ok ? ['UL', 'UC', 'UR'] : ['LL', 'LC', 'LR'];
-  const oral: [Region, Region, Region] = ok ? ['LL', 'LC', 'LR'] : ['UL', 'UC', 'UR'];
-  // Reihenfolge mesial/mittig/distal auf links->rechts abbilden
-  const vestMesial = mr ? vest[2] : vest[0];
-  const vestDistal = mr ? vest[0] : vest[2];
-  const oralMesial = mr ? oral[2] : oral[0];
-  const oralDistal = mr ? oral[0] : oral[2];
-  const order: Region[] = [vestMesial, vest[1], vestDistal, oralMesial, oral[1], oralDistal];
+  const order: Region[] = mesialRechts(fdi) ? ['R', 'L'] : ['L', 'R'];
   return order.map((region, stIndex) => ({
     stIndex,
     region,

@@ -43,8 +43,8 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
       if (!a) return { zahn: ALLE[0], seg: 0 }
       let ti = ALLE.indexOf(a.zahn)
       let seg = a.seg + dSeg
-      if (seg > 5) { seg = 0; ti += 1 }
-      if (seg < 0) { seg = 5; ti -= 1 }
+      if (seg > 1) { seg = 0; ti += 1 }
+      if (seg < 0) { seg = 1; ti -= 1 }
       ti += dTooth
       ti = Math.max(0, Math.min(ALLE.length - 1, ti))
       return { zahn: ALLE[ti], seg }
@@ -171,8 +171,8 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
       </div>
       {!readOnly && (
         <p className="chart-hilfe keindruck">
-          Segment anklicken, dann Zahl tippen (0-15). <b>*</b> oder Leertaste = Sondierungsbluten,
-          <b> Tab</b>/Pfeile = naechste Messstelle, <b>Entf</b> = loeschen.
+          Je Zahn zwei Messstellen: mesiale bzw. distale Kronenhälfte anklicken, dann Zahl tippen (0-15).
+          <b> *</b> oder Leertaste = Sondierungsbluten, <b>Tab</b>/Pfeile = nächste Messstelle, <b>Entf</b> = löschen.
           ZS/AIT/FB-Felder und das Lockerungsfeld in der Zahnmitte durch Klick weiterschalten.
         </p>
       )}

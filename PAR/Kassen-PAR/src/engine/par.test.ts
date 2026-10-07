@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { csvParsen, ermittlePunktwert } from '../data/punktwerte'
-import { STANDARD_EINSTELLUNGEN, leererBefund, neuerFall } from '../store'
+import { STANDARD_EINSTELLUNGEN, leererBefund, neuerFall, zweiMessstellen } from '../store'
 import type { Befund, DiagnoseErgebnis, ParFall } from '../types'
 import { diagnostizieren } from './diagnose'
 import {
@@ -19,10 +19,10 @@ const diagGrad = (grad: 'A' | 'B' | 'C'): DiagnoseErgebnis => ({
 /** Befund mit ST-Werten an den genannten Zaehnen (alle Stellen gleich). */
 function befundMit(werte: Record<string, number>, bop = false): Befund {
   const b = leererBefund('initial', 'Initialbefund', '2026-01-05')
-  for (const z of Object.keys(b.zaehne)) b.zaehne[z].st = [3, 2, 3, 3, 2, 3]
+  for (const z of Object.keys(b.zaehne)) b.zaehne[z].st = [3, 3]
   for (const [z, w] of Object.entries(werte)) {
-    b.zaehne[z].st = [w, 3, w, w, 3, w]
-    b.zaehne[z].bop = [bop, false, bop, false, false, false]
+    b.zaehne[z].st = [w, w]
+    b.zaehne[z].bop = [bop, false]
   }
   return b
 }
@@ -252,19 +252,28 @@ describe('Prüfregeln Blatt 2', () => {
   })
   it('Weniger als zwei Messstellen', () => {
     const b = befundMit({})
-    b.zaehne['11'].st = [3, null, null, null, null, null]
+    b.zaehne['11'].st = [3, null]
     expect(pruefeBefund(b).some((m) => m.text.includes('weniger als 2 Messstellen'))).toBe(true)
   })
 })
 
 describe('Segment-Zuordnung', () => {
-  it('Quadrant 1: mesial rechts, vestibulär oben; Quadrant 3: mesial links, vestibulär unten', () => {
-    expect(segmente(16)[0].region).toBe('UR')
-    expect(segmente(16)[3].region).toBe('LR')
-    expect(segmente(26)[0].region).toBe('UL')
-    expect(segmente(36)[0].region).toBe('LL')
-    expect(segmente(36)[3].region).toBe('UL')
-    expect(segmente(46)[0].region).toBe('LR')
+  it('zwei Messhälften; mesial zeigt zur Mitte des Kiefers', () => {
+    expect(segmente(16)).toHaveLength(2)
+    expect(segmente(16).map((s) => s.region)).toEqual(['R', 'L'])
+    expect(segmente(26).map((s) => s.region)).toEqual(['L', 'R'])
+    expect(segmente(36).map((s) => s.region)).toEqual(['L', 'R'])
+    expect(segmente(46).map((s) => s.region)).toEqual(['R', 'L'])
+    expect(segmente(11)[0].label).toBe('mesial')
+  })
+  it('alte 6-Punkt-Befunde werden auf mesial/distal zusammengelegt', () => {
+    const z = { ...leererBefund('initial', 'x').zaehne['16'] }
+    const neu = zweiMessstellen({ ...z, st: [3, 2, 4, 5, 2, 3], bop: [false, false, true, false, false, false] })
+    expect(neu.st).toEqual([5, 4])
+    expect(neu.bop).toEqual([false, true])
+    const mitte = zweiMessstellen({ ...z, st: [3, 6, 4, null, null, null], bop: [false, true, false, false, false, false] })
+    expect(mitte.st).toEqual([6, 4])
+    expect(mitte.bop).toEqual([true, false])
   })
 })
 

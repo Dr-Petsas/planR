@@ -14,7 +14,7 @@ interface Props {
   onLockerung: () => void
 }
 
-/** Ein Zahn als SVG: Wurzel, Krone mit 6 Mess-Segmenten, zentrales Lockerungsfeld. */
+/** Ein Zahn als SVG: Wurzel, Krone mit Messhälften mesial/distal, zentrales Lockerungsfeld. */
 function ZahnSvgInner({ fdi, befund, aktivSeg, onSeg, onLockerung }: Props) {
   const ok = istOberkiefer(fdi)
   const segs = segmente(fdi)

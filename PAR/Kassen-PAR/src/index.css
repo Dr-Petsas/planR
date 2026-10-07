@@ -161,7 +161,7 @@ select.fi { padding: 0; }
 .zahn-seg:hover { fill: rgba(99, 102, 241, .14); }
 .zahn-seg.aktiv { fill: rgba(99, 102, 241, .3); }
 .zahn-seg.tief { fill: rgba(185, 28, 28, .1); }
-.zahn-st { font-size: 6.5px; font-weight: 700; }
+.zahn-st { font-size: 8px; font-weight: 700; }
 .zahn-st.tief { fill: #b91c1c; }
 .zahn-fehlt line, .zahn-nichterh line { stroke: #000; stroke-width: 1.2; }
 .chart-hilfe { font-size: 12px; color: var(--grau); margin: 8px 0 0; }

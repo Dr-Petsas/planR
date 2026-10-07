@@ -38,7 +38,7 @@ export function pruefeBefund(b: Befund): Pruefmeldung[] {
     if (z.bop.some((x, i) => x && z.st[i] == null)) w(`Zahn ${zahn}: Sondierungsbluten ohne Sondierungstiefe an derselben Stelle.`, 'hinweis')
   }
   if (ohneMessung > 0) w(`${ohneMessung} vorhandene Zähne ohne Sondierungstiefen.`, 'hinweis')
-  if (zuWenig > 0) w(`${zuWenig} Zähne mit weniger als 2 Messstellen (mind. mesio- und distoapproximal).`)
+  if (zuWenig > 0) w(`${zuWenig} Zähne mit weniger als 2 Messstellen (mesial und distal).`)
   return m
 }
 
