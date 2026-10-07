@@ -1,51 +1,33 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Einstellungen, Plan, Regler } from './types'
-import { STANDARD_MATERIAL } from './data/material'
-import { STANDARD_KASSENANTEILE } from './data/bema-kons'
+import type { Einstellungen, Plan } from './types'
+import { STANDARD_LABOR, STANDARD_MATERIAL } from './data/katalog'
 
-const KEY_PLAN = 'privat-kons.plan.v1'
-const KEY_EINST = 'privat-kons.einstellungen.v1'
-const KEY_LISTE = 'privat-kons.liste.v1'
-
-export const STANDARD_REGLER: Regler = {
-  fuellungModell: 'pauschal',
-  fuellungPauschale: 100,
-  fuellungProFlaeche: 35,
-  gozFaktor: 2.3,
-  materialKlasse: 1,
-}
+const KEY_PLAN = 'privat-kons.plan.v2'
+const KEY_EINST = 'privat-kons.einstellungen.v2'
+const KEY_LISTE = 'privat-kons.liste.v2'
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
-  praxis: {
-    name: 'Zahnarztpraxis',
-    strasse: '',
-    plz: '',
-    ort: '',
-    telefon: '',
-    email: '',
-    zahnarzt: '',
-  },
-  gozFaktor: 2.3,
+  praxis: { name: 'Zahnarztpraxis', zahnarzt: '', strasse: '', plz: '', ort: '', telefon: '', email: '' },
+  faktor: 2.3,
+  stufe: 2,
   gueltigMonate: 6,
   naechsteNummer: 1,
-  stundensatz: 180,
+  laborPreise: STANDARD_LABOR.map((l) => ({ ...l })),
   materialPreise: STANDARD_MATERIAL.map((m) => ({ ...m })),
-  bemaPunktwert: 1.1,
-  kassenanteile: { ...STANDARD_KASSENANTEILE },
 }
 
-export const nummerFormat = (n: number) => `MKV-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => `PK-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
 
 export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {
     nummer,
     datum: new Date().toISOString().slice(0, 10),
-    patient: { name: '', geburtsdatum: '', kasse: '', versichertennr: '' },
+    patient: { name: '', geburtsdatum: '', versicherung: '', versichertennr: '' },
+    vereinbarung: 'pkv',
+    behandlungstage: 0,
     zaehne: {},
-    regler: { ...STANDARD_REGLER, gozFaktor: einst.gozFaktor },
-    anpassungen: [],
-    manuell: [],
-    entfernt: [],
+    frei: [],
+    regler: { faktor: einst.faktor, stufe: einst.stufe, materialKlasse: 1 },
     bemerkung: '',
   }
 }
@@ -60,9 +42,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     patient: { ...basis.patient, ...p.patient },
     regler: { ...basis.regler, ...p.regler },
     zaehne: p.zaehne ?? {},
-    anpassungen: p.anpassungen ?? [],
-    manuell: p.manuell ?? [],
-    entfernt: p.entfernt ?? [],
+    frei: p.frei ?? [],
     bemerkung: p.bemerkung ?? '',
   }
 }
@@ -74,8 +54,8 @@ function einstMigrieren(roh: unknown): Einstellungen {
     ...STANDARD_EINSTELLUNGEN,
     ...e,
     praxis: { ...STANDARD_EINSTELLUNGEN.praxis, ...e.praxis },
+    laborPreise: e.laborPreise?.length ? e.laborPreise : STANDARD_EINSTELLUNGEN.laborPreise,
     materialPreise: e.materialPreise?.length ? e.materialPreise : STANDARD_EINSTELLUNGEN.materialPreise,
-    kassenanteile: { ...STANDARD_EINSTELLUNGEN.kassenanteile, ...e.kassenanteile },
   }
 }
 

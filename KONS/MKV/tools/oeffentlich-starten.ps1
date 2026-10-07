@@ -5,7 +5,7 @@
 # leitet mkv.pickadoc-tunnel.com dorthin.
 #
 # Aktualisieren: im Projekt "npm run build" - preview liefert danach die neuen Dateien aus.
-# Idempotent: laeuft der Server schon, passiert nichts.
+# Start bei der Anmeldung: Autostart\mkv-oeffentlich.cmd. Idempotent: laeuft der Server schon, passiert nichts.
 
 $ErrorActionPreference = 'Continue'
 $Root = Split-Path $PSScriptRoot -Parent

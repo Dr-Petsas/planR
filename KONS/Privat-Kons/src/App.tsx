@@ -1,21 +1,19 @@
 import { useMemo, useState } from 'react'
-import { kalkulieren, euro } from './engine/berechnung'
+import { euro, rechnen } from './engine/kons'
 import { neuerPlan, nummerFormat, useEinstellungen, useGespeichert, usePlan } from './store'
 import Patient from './components/Patient'
 import Zahnschema from './components/Zahnschema'
-import Behandlungstabelle from './components/Behandlungstabelle'
-import Leistungen from './components/Leistungen'
-import PraxisPreise from './components/PraxisPreise'
-import Kostenleiste from './components/Kostenleiste'
-import Kostenvoranschlag from './components/Kostenvoranschlag'
+import Zahnkarten from './components/Zahnkarten'
+import Einstellungen from './components/Einstellungen'
+import Regler from './components/Regler'
+import Dokument from './components/Dokument'
 
-type Reiter = 'patient' | 'planung' | 'leistungen' | 'praxis'
+type Reiter = 'patient' | 'planung' | 'einstellungen'
 
 const REITER: { id: Reiter; label: string }[] = [
   { id: 'patient', label: 'Patient' },
   { id: 'planung', label: 'Planung' },
-  { id: 'leistungen', label: 'Leistungen' },
-  { id: 'praxis', label: 'Praxis & Preise' },
+  { id: 'einstellungen', label: 'Einstellungen' },
 ]
 
 export default function App() {
@@ -24,49 +22,41 @@ export default function App() {
   const gespeichert = useGespeichert()
   const [reiter, setReiter] = useState<Reiter>('planung')
 
-  const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
+  const rechnung = useMemo(() => rechnen(plan, einst), [plan, einst])
 
+  const speichern = () => gespeichert.speichern(plan, rechnung.summe)
   const neu = () => {
-    gespeichert.speichern(plan, kalk.mehrkostenGesamt)
-    const nummer = nummerFormat(einst.naechsteNummer)
-    setPlan(neuerPlan(nummer, einst))
+    speichern()
+    setPlan(neuerPlan(nummerFormat(einst.naechsteNummer), einst))
     setEinst({ ...einst, naechsteNummer: einst.naechsteNummer + 1 })
     setReiter('patient')
   }
 
-  const speichern = () => gespeichert.speichern(plan, kalk.mehrkostenGesamt)
-
   return (
     <>
-      <header className="kopfleiste">
-        <div className="marke">
-          <div className="logo">MKV</div>
-          <div>
-            <div className="titel">Kons-MKV-Planer</div>
-            <div className="sub">Mehrkostenvereinbarung · konservierende Zahnheilkunde</div>
+      <div className="kopfbereich">
+        <header className="kopfleiste">
+          <div className="marke">
+            <div className="logo">PK</div>
+            <div>
+              <div className="titel">Privat-Kons</div>
+              <div className="sub">Füllung, Endo, Vitalerhaltung und mehr – rein nach GOZ</div>
+            </div>
           </div>
-        </div>
-        <div className="kopf-summe">
-          <span>Mehrkosten (Patient)</span>
-          <b>{euro(kalk.mehrkostenGesamt)}</b>
-        </div>
-        <div className="aktionen">
-          <button className="sekundaer" onClick={speichern}>
-            Speichern
-          </button>
-          <button className="sekundaer" onClick={neu}>
-            Neuer Plan
-          </button>
-          <button className="primaer" onClick={() => window.print()}>
-            Drucken / PDF
-          </button>
-        </div>
-      </header>
+          <div className="kopf-summe">
+            <span>Gesamt (privat)</span>
+            <b>{euro(rechnung.summe)}</b>
+          </div>
+          <div className="aktionen">
+            <button className="sekundaer" onClick={speichern}>Speichern</button>
+            <button className="primaer" onClick={neu}>Neuer Plan</button>
+          </div>
+        </header>
+        {reiter === 'planung' && <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />}
+      </div>
 
       <div className="arbeitsflaeche">
         <div className="editor">
-          {(reiter === 'planung' || reiter === 'leistungen') && <Kostenleiste plan={plan} setPlan={setPlan} kalk={kalk} />}
-
           <div className="reiter">
             {REITER.map((r, i) => (
               <button key={r.id} className={reiter === r.id ? 'aktiv' : ''} onClick={() => setReiter(r.id)}>
@@ -82,7 +72,7 @@ export default function App() {
               {gespeichert.liste.length > 0 && (
                 <div className="block">
                   <h3>Gespeicherte Pläne</h3>
-                  <table className="impl-tabelle">
+                  <table className="preis-tabelle">
                     <tbody>
                       {gespeichert.liste.slice(0, 12).map((e) => (
                         <tr key={e.nummer}>
@@ -103,11 +93,7 @@ export default function App() {
                               laden
                             </button>
                           </td>
-                          <td>
-                            <button className="x" onClick={() => gespeichert.loeschen(e.nummer)} title="löschen">
-                              ×
-                            </button>
-                          </td>
+                          <td><button className="x" onClick={() => gespeichert.loeschen(e.nummer)} title="löschen">×</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -120,17 +106,18 @@ export default function App() {
           {reiter === 'planung' && (
             <>
               <Zahnschema plan={plan} setPlan={setPlan} />
-              <Behandlungstabelle plan={plan} setPlan={setPlan} einst={einst} />
+              <Zahnkarten plan={plan} setPlan={setPlan} einst={einst} rechnung={rechnung} />
+              {rechnung.hinweise.length > 0 && (
+                <ul className="hinweise">{rechnung.hinweise.map((h) => <li key={h}>{h}</li>)}</ul>
+              )}
             </>
           )}
 
-          {reiter === 'leistungen' && <Leistungen plan={plan} setPlan={setPlan} kalk={kalk} />}
-
-          {reiter === 'praxis' && <PraxisPreise einst={einst} setEinst={setEinst} />}
+          {reiter === 'einstellungen' && <Einstellungen einst={einst} setEinst={setEinst} />}
         </div>
 
         <div className="vorschau">
-          <Kostenvoranschlag plan={plan} einst={einst} kalk={kalk} />
+          <Dokument plan={plan} einst={einst} rechnung={rechnung} />
         </div>
       </div>
     </>

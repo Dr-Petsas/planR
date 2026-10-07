@@ -8,6 +8,7 @@ interface Props {
 export default function Patient({ plan, setPlan }: Props) {
   const pat = plan.patient
   const setPat = (patch: Partial<Plan['patient']>) => setPlan({ ...plan, patient: { ...pat, ...patch } })
+  const kasse = plan.vereinbarung !== 'pkv'
 
   return (
     <div className="block">
@@ -22,8 +23,8 @@ export default function Patient({ plan, setPlan }: Props) {
           <input type="date" value={pat.geburtsdatum} onChange={(e) => setPat({ geburtsdatum: e.target.value })} />
         </label>
         <label className="feld">
-          Krankenkasse
-          <input value={pat.kasse} onChange={(e) => setPat({ kasse: e.target.value })} placeholder="z. B. AOK" />
+          {kasse ? 'Krankenkasse' : 'Versicherung / Beihilfe'}
+          <input value={pat.versicherung} onChange={(e) => setPat({ versicherung: e.target.value })} placeholder={kasse ? 'z. B. AOK' : 'z. B. Debeka, Beihilfe'} />
         </label>
         <label className="feld">
           Versicherten-Nr.
