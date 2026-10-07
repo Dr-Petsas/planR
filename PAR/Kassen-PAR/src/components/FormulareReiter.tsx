@@ -89,7 +89,6 @@ export default function FormulareReiter({ fall, setFall, einst, setEinst, diag }
         {FORMULARE.map((f) => (
           <button key={f.id} className={form === f.id ? 'aktiv' : ''} onClick={() => setForm(f.id)}>{f.label}</button>
         ))}
-        <button onClick={() => window.print()}>Drucken</button>
         {eigene.length > 0 && <button onClick={zuruecksetzen}>Einträge zurücksetzen</button>}
         <span className="form-leiste-hilfe">Alles direkt im Formular eintragen. Blau kursiv = Vorschlag aus dem Fall, wird beim Überschreiben zum eigenen Eintrag.</span>
       </div>
@@ -110,6 +109,11 @@ export default function FormulareReiter({ fall, setFall, einst, setEinst, diag }
 
 interface FormProps { fall: ParFall; ein: Ein; kopf: ReactNode }
 
+/** Formularkopf: Versichertenfeld links, rechts Titel und darunter der Antragskopf (im Fluss, keine Ueberlappung). */
+function Kopf({ kopf, titel, rechts }: { kopf: ReactNode; titel: ReactNode; rechts?: ReactNode }) {
+  return <div className="a4-kopf">{kopf}<div className="a4-kopf-rechts titel-fluss">{titel}{rechts}</div></div>
+}
+
 function Linie({ label, wert }: { label: string; wert: ReactNode }) {
   return <div className="linie"><span>{label}</span><span className="linie-wert">{wert}</span></div>
 }
@@ -121,8 +125,8 @@ function ZusatzForm({ fall, ein, kopf }: FormProps) {
   const v = z.vorherLeistungen
   const nr = (k: keyof typeof v, label: string) => <Linie label={`Anzahl Gebührennummer ${label}`} wert={ein.feld(`zusatz.anzahl${k}`, zahl(v[k]), { breite: '20mm' })} />
   return (
-    <Seite titel={<h2>Informationen zum<br />Krankenkassenwechsel / Zahnarztwechsel<br /><span className="mono">PAR Zusatzseite</span></h2>}>
-      <div className="a4-kopf">{kopf}</div>
+    <Seite titel={null}>
+      <Kopf kopf={kopf} titel={<h2>Informationen zum<br />Krankenkassenwechsel / Zahnarztwechsel<br /><span className="mono">PAR Zusatzseite</span></h2>} />
       <div className="zusatzseite">
         <Linie label="Antragsnummer" wert={ein.feld('zusatz.antragsnummer', fall.antrag.antragsnummer)} />
         <Linie label="Krankenkassenwechsel / Zahnarztwechsel" wert={ein.feld('zusatz.wechselText', z.wechselText)} />
@@ -150,8 +154,10 @@ function F5dForm({ fall, ein, kopf, diag }: FormProps & { diag: DiagnoseErgebnis
   }, 'upt_verlaengerung')
   const zeitraum = z.verlaengerungUeber6 ? 'laenger' : 'regel'
   return (
-    <Seite titel={<h2>Antrag auf Verlängerung<br />der Unterstützenden Parodontitistherapie (UPT)<br />gemäß § 13 Abs. 4 PAR-Richtlinie</h2>}>
-      <div className="a4-kopf">{kopf}<div className="a4-kopf-rechts unter-titel"><Antragsbox a={a} set={set} art="UPT-Verlängerung" /></div></div>
+    <Seite titel={null}>
+      <Kopf kopf={kopf}
+        titel={<h2>Antrag auf Verlängerung<br />der Unterstützenden Parodontitistherapie (UPT)<br />gemäß § 13 Abs. 4 PAR-Richtlinie</h2>}
+        rechts={<Antragsbox a={a} set={set} art="UPT-Verlängerung" />} />
       <div className="f5d">
         <div className="b1-reihe">Parodontalstatus vom: {ein.feld('5d.parStatusVom', initialBefund(fall).datum, { type: 'date' })}
           <span className="rechts">Grad (Progression) nach PAR-Status:{' '}
@@ -159,8 +165,8 @@ function F5dForm({ fall, ein, kopf, diag }: FormProps & { diag: DiagnoseErgebnis
         <div className="b1-reihe">Datum der ersten UPT-Leistung: {ein.feld('5d.ersteUpt', ersteUpt?.datum ?? '', { type: 'date' })}</div>
         <p>An den folgenden Zähnen liegen noch behandlungsbedürftige Parodontien mit Sondierungstiefen ≥ 4 mm und Sondierungsbluten oder mit Sondierungstiefen ≥ 5 mm vor:</p>
         {ein.text('5d.zaehne', sub.join(', '))}
-        <div className="b1-reihe">{ein.wahl('5d.zeitraum', 'regel', zeitraum)}<span>Es wird eine Verlängerung der UPT um den Regelzeitraum von 6 Monaten beantragt.</span></div>
-        <div className="b1-reihe f5d-zeile">{ein.wahl('5d.zeitraum', 'laenger', zeitraum)}<span>Es wird beantragt, den Verlängerungszeitraum über den Regelzeitraum von 6 Monaten hinaus
+        <div className="b1-reihe kreuz-zeile">{ein.wahl('5d.zeitraum', 'regel', zeitraum)}<span>Es wird eine Verlängerung der UPT um den Regelzeitraum von 6 Monaten beantragt.</span></div>
+        <div className="b1-reihe kreuz-zeile">{ein.wahl('5d.zeitraum', 'laenger', zeitraum)}<span>Es wird beantragt, den Verlängerungszeitraum über den Regelzeitraum von 6 Monaten hinaus
           auf insgesamt {ein.feld('5d.monate', z.verlaengerungUeber6 ? String(z.verlaengerungMonateGesamt) : '', { breite: '12mm' })} Monate festzusetzen. Dies wird wie folgt begründet:</span></div>
         {ein.text('5d.begruendung', z.verlaengerungBegruendung)}
         <div className="drei-spalten">
@@ -197,14 +203,14 @@ function F5eForm({ fall, ein, kopf }: FormProps) {
     </tr>
   )
   return (
-    <Seite titel={<h2>Anzeige einer Behandlung von Parodontitis<br />bei anspruchsberechtigten Versicherten<br />nach § 22a SGB V<br />gemäß Abschnitt B V. Ziffer 2<br />der Behandlungsrichtlinie</h2>}>
-      <div className="a4-kopf">{kopf}</div>
+    <Seite titel={null}>
+      <Kopf kopf={kopf} titel={<h2>Anzeige einer Behandlung von Parodontitis<br />bei anspruchsberechtigten Versicherten<br />nach § 22a SGB V<br />gemäß Abschnitt B V. Ziffer 2<br />der Behandlungsrichtlinie</h2>} />
       <div className="f5e">
         <h3>Begründung</h3>
-        <div className="b1-reihe">{ein.kreuz('5e.mundhygiene', z.par22aMundhygiene)} Eingeschränkte oder nicht vorhandene Fähigkeit zur Aufrechterhaltung der Mundhygiene</div>
-        <div className="b1-reihe">{ein.kreuz('5e.kooperation', z.par22aKooperation)} Eingeschränkte oder nicht vorhandene Kooperationsfähigkeit</div>
-        <div className="b1-reihe">{ein.kreuz('5e.narkoseGeschlossen', z.par22aNarkoseGeschlossen)} Behandlung in Allgemeinnarkose notwendig - geschlossenes Vorgehen</div>
-        <div className="b1-reihe">{ein.kreuz('5e.narkoseOffen', z.par22aNarkoseOffen)} Ausnahmefall: Behandlung in Allgemeinnarkose notwendig - offenes Vorgehen an Zähnen mit ST ≥ 6 mm (an den Zähnen, bei denen ein offenes Vorgehen erforderlich ist, erfolgt dieses anstelle der AIT)</div>
+        <div className="b1-reihe kreuz-zeile">{ein.kreuz('5e.mundhygiene', z.par22aMundhygiene)} Eingeschränkte oder nicht vorhandene Fähigkeit zur Aufrechterhaltung der Mundhygiene</div>
+        <div className="b1-reihe kreuz-zeile">{ein.kreuz('5e.kooperation', z.par22aKooperation)} Eingeschränkte oder nicht vorhandene Kooperationsfähigkeit</div>
+        <div className="b1-reihe kreuz-zeile">{ein.kreuz('5e.narkoseGeschlossen', z.par22aNarkoseGeschlossen)} Behandlung in Allgemeinnarkose notwendig - geschlossenes Vorgehen</div>
+        <div className="b1-reihe kreuz-zeile">{ein.kreuz('5e.narkoseOffen', z.par22aNarkoseOffen)} Ausnahmefall: Behandlung in Allgemeinnarkose notwendig - offenes Vorgehen an Zähnen mit ST ≥ 6 mm (an den Zähnen, bei denen ein offenes Vorgehen erforderlich ist, erfolgt dieses anstelle der AIT)</div>
         <h3>Folgende Leistungen werden angezeigt:</h3>
         <table className="f5e-tab">
           <thead><tr><th>Geb.-Nr.</th><th>Zahnangabe</th><th>Anzahl</th></tr></thead>

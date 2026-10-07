@@ -58,7 +58,6 @@ export default function AntragReiter({ fall, setFall, einst, setEinst, diag }: P
         <label className="schalter"><input type="checkbox" checked={fall.mitCPT} onChange={(e) => setFall({ ...fall, mitCPT: e.target.checked })} /><span>CPT vorgesehen</span></label>
         <label className="schalter"><input type="checkbox" checked={fall.uebernahmefall} onChange={(e) => setFall({ ...fall, uebernahmefall: e.target.checked })} /><span>Übernahmefall</span></label>
         <span className="leiste-diag">{diagnoseText(diag)}</span>
-        <button className="primaer" onClick={() => window.print()}>Drucken</button>
       </div>
 
       <Blatt1 fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />
@@ -244,8 +243,9 @@ function Blatt1({ fall, setFall, einst, setEinst, diag }: Props) {
         <div>
           <h4>Entscheidung der Krankenkasse</h4>
           <div>Die Kosten der vorgesehenen systematischen PAR-Behandlung</div>
-          <div className="b1-reihe">werden übernommen <X an={fall.kkEntscheidung === 'uebernommen'} onClick={() => kk('uebernommen')} />
-            werden nicht übernommen <X an={fall.kkEntscheidung === 'nicht_uebernommen'} onClick={() => kk('nicht_uebernommen')} /></div>
+          <div className="b1-reihe">
+            <span className="kreuz-paar">werden übernommen <X an={fall.kkEntscheidung === 'uebernommen'} onClick={() => kk('uebernommen')} /></span>
+            <span className="kreuz-paar">werden nicht übernommen <X an={fall.kkEntscheidung === 'nicht_uebernommen'} onClick={() => kk('nicht_uebernommen')} /></span></div>
           <Unterschrift text={<>Datum, Unterschrift und Stempel der <b>Krankenkasse</b></>} />
         </div>
       </div>
@@ -281,8 +281,8 @@ function Blatt2({ fall, setFall, einst, setEinst, befund, setBefund }: {
       <div className="b2-fuss">
         <div>
           <div className="b1-reihe"><h4>Leistungen</h4>
-            <X an={!fall.uebernahmefall} onClick={() => setFall({ ...fall, uebernahmefall: false })} /> geplant
-            <X an={fall.uebernahmefall} onClick={() => setFall({ ...fall, uebernahmefall: true })} /> ab Behandlungseinstieg</div>
+            <span className="kreuz-paar"><X an={!fall.uebernahmefall} onClick={() => setFall({ ...fall, uebernahmefall: false })} /> geplant</span>
+            <span className="kreuz-paar"><X an={fall.uebernahmefall} onClick={() => setFall({ ...fall, uebernahmefall: true })} /> ab Behandlungseinstieg</span></div>
           <div className="lb-tabellen">
             <table className="lb"><thead><tr><th>Geb.-Nr.</th><th>Anzahl</th></tr></thead>
               <tbody>{zelle('4', lb['4'])}{zelle('ATG', lb.ATG)}{zelle('MHU', lb.MHU)}</tbody></table>

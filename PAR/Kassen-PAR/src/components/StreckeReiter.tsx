@@ -9,21 +9,20 @@ import {
   ART_LABEL, datumDe, fristenPruefen, terminePlanen, wochentag, type Fristmeldung,
 } from '../engine/termine'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
-import type { DiagnoseErgebnis, Einstellungen, ParFall, Planung, Termin, TerminArt, UptModul } from '../types'
+import type { DiagnoseErgebnis, ParFall, Planung, Termin, TerminArt, UptModul } from '../types'
 
 interface Props {
   fall: ParFall
   setFall: (f: ParFall) => void
   diag: DiagnoseErgebnis
   preise: Preise
-  einst: Einstellungen
 }
 
 const FAKTOREN = [1.0, 1.8, 2.3, 3.5]
 const MODULE: UptModul[] = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
 const zahlDe = (n: number) => n.toFixed(1).replace('.', ',')
 
-export default function StreckeReiter({ fall, setFall, diag, preise, einst }: Props) {
+export default function StreckeReiter({ fall, setFall, diag, preise }: Props) {
   const neuPlanen = (f: ParFall) => setFall({ ...f, termine: terminePlanen(f, diag) })
   const setPlanung = (patch: Partial<Planung>) => neuPlanen({ ...fall, planung: { ...fall.planung, ...patch } })
   const p = fall.planung
@@ -84,7 +83,6 @@ export default function StreckeReiter({ fall, setFall, diag, preise, einst }: Pr
         <div className="knopf-spalte">
           <button onClick={() => setFall({ ...fall, zielGesamt: 0, termine: fall.termine.map((t) => (t.erbracht ? t : { ...t, auto: [] })) })}>Regler zurücksetzen</button>
           <button onClick={() => setOffen(alleOffen ? new Set() : new Set(fall.termine.map((t) => t.id)))}>{alleOffen ? 'Alle zuklappen' : 'Alle aufklappen'}</button>
-          <button onClick={() => window.print()}>Terminzettel drucken</button>
         </div>
       </section>
 
@@ -186,7 +184,6 @@ export default function StreckeReiter({ fall, setFall, diag, preise, einst }: Pr
         </div>
       </div>
 
-      <TerminZettel fall={fall} einst={einst} />
     </div>
     </div>
   )
@@ -429,26 +426,6 @@ function Kachelknopf({ s, t, r, onKlick, onRoentgen }: {
           {ROENTGEN_WAHL.map((w) => <option key={w.nr} value={w.nr}>{w.label}</option>)}
         </select>
       )}
-    </div>
-  )
-}
-
-function TerminZettel({ fall, einst }: { fall: ParFall; einst: Einstellungen }) {
-  return (
-    <div className="nur-druck termin-zettel">
-      <h2>Ihre Termine zur Parodontitis-Behandlung</h2>
-      <p>{einst.praxis.name}{einst.praxis.telefon ? ` · Tel. ${einst.praxis.telefon}` : ''}</p>
-      <p>Patient: {[fall.patient.vorname, fall.patient.name].filter(Boolean).join(' ') || '–'}</p>
-      <table className="tabelle">
-        <thead><tr><th>Datum</th><th>Behandlung</th></tr></thead>
-        <tbody>
-          {[...fall.termine].sort((a, b) => a.datum.localeCompare(b.datum)).map((t) => (
-            <tr key={t.id}><td>{wochentag(t.datum)} {datumDe(t.datum)}</td><td>{t.titel}</td></tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="hinweis-klein">Die Abstände der Nachsorge (UPT) sind von der Krankenkasse vorgegeben. Bitte halten Sie
-        die Termine ein oder verschieben Sie rechtzeitig.</p>
     </div>
   )
 }
