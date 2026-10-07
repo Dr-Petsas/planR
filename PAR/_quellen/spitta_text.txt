@@ -1,0 +1,77 @@
+﻿--- S 1
+Fallbeispiele Abrechnung
+® by Spitta GmbH ò 11/2021
+Teil 5 | Kap. 4.1 | Seite 1
+Fallbeispiele mit GKV-Leistungen Fall 1: Richtlinienkonforme PAR-Behandlung
+Schnittstelle BEMA/GOZ
+5/4	
+Fallbeispiele Abrechnung
+5/4.1	
+Fallbeispiele mit GKV-Leistungen
+Fall 1: Richtlinienkonforme PAR-Behandlung
+Erlõuterung: Es erfolgt eine richtlinienkonforme PAR-
+Behandlung bei einem gesetzlich versicherten Patien-
+ten (Tab. 1û6).
+Teil 1
+Datum
+Leistung
+Abrechnung 
+(BEMA)
+20.09.2021
+Patientin stellt sich zur eingehenden Unter-
+suchung in der Praxis vor
+01
+Entfernen harter Zahnbelõge
+107
+Erhebung Parodontaler Screening-Index
+Dokumentation der Ergebnisse PSI auf 
+Vordruck 11, Erlõuterung des Behandlungs-
+bedarfs, Aushõndigung des Vordrucks an 
+Patientin
+04
+Orthopantomogramm
+─935d
+Terminvergabe f³r die Erstellung eines Paro-
+dontalstatus in einem separaten Termin
+04.10.2021
+Befunderhebung und Erstellung eines Paro-
+dontalstatus
+4
+Einreichung des Parodontalstatus bei der 
+Krankenkasse zur Genehmigung
+Tab. 1: Richtlinienkonforme PAR-Behandlung, Teil 1
+
+--- S 2
+Fallbeispiele Abrechnung
+Teil 5 | Kap. 4.1 | Seite 2
+Fall 1: Richtlinienkonforme PAR-Behandlung  Fallbeispiele mit GKV-Leistungen
+Schnittstelle BEMA/GOZ
+Bei den am 20.09. durchgef³hrten Leistungen handelt 
+es sich um nicht genehmigungspflichtige Leistungen. 
+Die BEMA-Nr. 04 ist 1áx innerhalb von zwei Jahren (nach 
+Ablauf von sieben Leerquartalen) abrechenbar, die BE-
+MA-Nr. 107 1áx im Kalenderjahr. Die erbrachten Leis-
+tungen stellen keine zwingende Voraussetzung f³r die 
+Beantragung einer PAR-Behandlung dar, werden aber 
+hõufig im Zusammenhang mit der Eingangsdiagnostik 
+erbracht.
+Die BEMA-Nr. 4 (Befunderhebung und Erstellung eines 
+Parodontalstatus) wird hõufig aus organisatorischen 
+Gr³nden in einer separaten Sitzung durchgef³hrt. So 
+hat der Patient dar³ber hinaus die M÷glichkeit, die er-
+halten Informationen zu verarbeiten und sich auf die an-
+stehende Behandlung einzustellen.
+Bei der BEMA-Nr. 4 selbst handelt es sich nicht um eine 
+genehmigungspflichtige Leistung. Die Erbringung die-
+ser Leistung bildet aber ihrerseits die Grundlage f³r die 
+Beantragung aller weiteren im Zusammenhang mit der 
+Behandlung geplanten BEMA-Leistungen.
+Damit die geplanten Leistungen von der Krankenkasse 
+genehmigt werden k÷nnen, m³ssen die beiden Blõtter 
+des Parodontalstatus vollstõndig ausgef³llt werden und 
+es m³ssen sich ein richtlinienkonformer Behandlungs-
+bedarf und eine richtlinienkonforme Beantragung der 
+Leistungen daraus ergeben.
+Die Leistungen ATG und MHU sind beide genehmi-
+gung
+--- S 3
