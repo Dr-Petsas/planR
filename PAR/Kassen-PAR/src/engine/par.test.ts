@@ -140,7 +140,10 @@ describe('Begleitleistungen', () => {
     expect(leitungen(['36', '11'])).toBe(1)
   })
   it('Anteil-Regel rundet auf und gibt mindestens 1', () => {
-    expect(menge({ anteil: 0.3 }, { alle: [], behandelt: ['11', '12', '13', '14'], roentgen: [] })).toBe(2)
+    expect(menge({ anteil: 0.3 }, { alle: [], behandelt: ['11', '12', '13', '14'], roentgen: [], implantate: [] })).toBe(2)
+  })
+  it('Periimplantitis-Leistungen zaehlen die Implantate, nicht die Zaehne', () => {
+    expect(menge('implantate', { alle: ['11'], behandelt: ['11'], roentgen: [], implantate: ['36', '46'] })).toBe(2)
   })
 })
 

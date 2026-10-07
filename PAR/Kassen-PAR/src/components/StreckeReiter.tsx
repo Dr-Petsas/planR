@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { ANALOG } from '../data/gebuehren'
 import { KATEGORIEN, ROENTGEN_WAHL, type Kachel } from '../data/kacheln'
 import {
   reglerGesamt, reglerTermin, roentgenWahl, streckeRechnen, terminKontext, type KachelStand, type Preise, type TerminRechnung,
@@ -58,6 +59,35 @@ export default function StreckeReiter({ fall, setFall, diag, preise, einst }: Pr
   const alleOffen = fall.termine.length > 0 && fall.termine.every((t) => offen.has(t.id))
 
   return (
+    <div className="strecke-seite">
+      <section className="umsatz-leiste keindruck">
+        <div className="umsatz-kopf">
+          <div className="karte-titel">Umsatz</div>
+          <div className="badge-gruppe">
+            <button className={fall.modus === 'bema' ? 'aktiv' : ''} onClick={() => setFall({ ...fall, modus: 'bema' })}>nur BEMA</button>
+            <button className={fall.modus === 'bemaplus' ? 'aktiv' : ''} onClick={() => setFall({ ...fall, modus: 'bemaplus' })}>BEMA + privat</button>
+          </div>
+        </div>
+        <div className="summen">
+          <div><span>Kasse</span><b>{euro(summen.kasse)}</b></div>
+          <div><span>Privat</span><b>{euro(summen.privat)}</b></div>
+          <div className="gross"><span>Gesamt</span><b>{euro(summen.summe)}</b></div>
+          <div><span>erbracht</span><b>{euro(summen.erbracht)}</b></div>
+        </div>
+        <div className="umsatz-regler">
+          <Regler min={summen.basis} max={summen.potential} wert={summen.summe}
+            onChange={(v) => setFall({ ...fall, zielGesamt: v, termine: reglerGesamt(fall, preise, v) })} />
+          <p className="hinweis-klein">Der Regler verteilt den Zielumsatz reihum auf alle offenen Termine: erst
+            Kassen-Begleitleistungen, dann private Zusatzleistungen, je Termin die wertvollste zuerst.
+            Von Hand Gewähltes bleibt, ★ = vom Regler.</p>
+        </div>
+        <div className="knopf-spalte">
+          <button onClick={() => setFall({ ...fall, zielGesamt: 0, termine: fall.termine.map((t) => (t.erbracht ? t : { ...t, auto: [] })) })}>Regler zurücksetzen</button>
+          <button onClick={() => setOffen(alleOffen ? new Set() : new Set(fall.termine.map((t) => t.id)))}>{alleOffen ? 'Alle zuklappen' : 'Alle aufklappen'}</button>
+          <button onClick={() => window.print()}>Terminzettel drucken</button>
+        </div>
+      </section>
+
     <div className="strecke">
       <aside className="strecke-links keindruck">
         <section className="karte">
@@ -129,29 +159,6 @@ export default function StreckeReiter({ fall, setFall, diag, preise, einst }: Pr
           <p className="hinweis-klein">{uptText(diag.grad)}{p.par22a ? ' · § 22a: 4 UPT im Abstand von 5 Monaten (Prototyp, vor Abrechnung prüfen).' : ''}</p>
         </section>
 
-        <section className="karte">
-          <div className="karte-titel">Umsatz</div>
-          <div className="badge-gruppe voll">
-            <button className={fall.modus === 'bema' ? 'aktiv' : ''} onClick={() => setFall({ ...fall, modus: 'bema' })}>nur BEMA</button>
-            <button className={fall.modus === 'bemaplus' ? 'aktiv' : ''} onClick={() => setFall({ ...fall, modus: 'bemaplus' })}>BEMA + privat</button>
-          </div>
-          <div className="summen">
-            <div><span>Kasse</span><b>{euro(summen.kasse)}</b></div>
-            <div><span>Privat</span><b>{euro(summen.privat)}</b></div>
-            <div className="gross"><span>Gesamt</span><b>{euro(summen.summe)}</b></div>
-            <div><span>erbracht</span><b>{euro(summen.erbracht)}</b></div>
-          </div>
-          <Regler min={summen.basis} max={summen.potential} wert={summen.summe}
-            onChange={(v) => setFall({ ...fall, zielGesamt: v, termine: reglerGesamt(fall, preise, v) })} />
-          <p className="hinweis-klein">Der Regler verteilt den Zielumsatz reihum auf alle offenen Termine: erst
-            Kassen-Begleitleistungen, dann private Zusatzleistungen, je Termin die wertvollste zuerst.
-            Von Hand Gewähltes bleibt, ★ = vom Regler.</p>
-          <div className="knopf-reihe">
-            <button onClick={() => setFall({ ...fall, zielGesamt: 0, termine: fall.termine.map((t) => (t.erbracht ? t : { ...t, auto: [] })) })}>Regler zurücksetzen</button>
-            <button onClick={() => setOffen(alleOffen ? new Set() : new Set(fall.termine.map((t) => t.id)))}>{alleOffen ? 'Alle zuklappen' : 'Alle aufklappen'}</button>
-            <button onClick={() => window.print()}>Terminzettel drucken</button>
-          </div>
-        </section>
       </aside>
 
       <div className="timeline keindruck">
@@ -181,7 +188,15 @@ export default function StreckeReiter({ fall, setFall, diag, preise, einst }: Pr
 
       <TerminZettel fall={fall} einst={einst} />
     </div>
+    </div>
   )
+}
+
+/** Kurzform der Gebuehrennummer fuer Badges: Analogleistungen als "4005a". */
+function kurzNr(sys: string, nr: string): string {
+  if (sys !== 'ANALOG') return nr
+  const bezug = ANALOG[nr]?.bezug
+  return bezug ? `${bezug.replace(/^GOZ /, '')}a` : nr
 }
 
 function uptText(g: 'A' | 'B' | 'C') {
@@ -258,6 +273,19 @@ function TerminKarte({ fall, termin: t, r, preise, fristen, offen, onUmschalten,
             {t.datumManuell && !extra && <span className="sch-badge hell">Datum von Hand</span>}
             {t.erbracht && <span className="sch-badge gruen">erbracht</span>}
           </div>
+          {!offen && r.positionen.length > 0 && (
+            <div className="pos-badges">
+              {r.positionen.map((p) => {
+                const auto = kachelVon(p.kachelId)?.auto
+                return (
+                  <span key={`${p.schluessel}-${p.menge}`} className={`pos-badge${auto ? ' auto' : ''}`} data-sys={p.sys}
+                    title={`${p.titel} – ${euro(p.euro)}`}>
+                    {kurzNr(p.sys, p.nr)}{p.menge > 1 && <small>×{p.menge}</small>}{auto && <i>★</i>}
+                  </span>
+                )
+              })}
+            </div>
+          )}
         </div>
         <div className="ts-cockpit" onClick={(e) => e.stopPropagation()}>
           <label className="schalter klein" title="Termin erbracht"><input type="checkbox" checked={t.erbracht}
@@ -337,7 +365,7 @@ function TerminKarte({ fall, termin: t, r, preise, fristen, offen, onUmschalten,
                   <li key={p.schluessel} className="ts-item" data-sys={p.sys} title={p.titel}>
                     <div className="ts-left">
                       <span className="ts-tag">{p.sys === 'ANALOG' ? 'GOZ analog' : p.sys}</span>
-                      <span className="ts-code">{p.nr}</span>
+                      <span className="ts-code">{kurzNr(p.sys, p.nr)}</span>
                       <span className="ts-titel">{p.titel}</span>
                     </div>
                     <div className="ts-menge">

@@ -25,6 +25,7 @@ export type MengenRegel =
   | 'haelften' // je Kieferhaelfte (Quadrant) mit behandelten Zaehnen
   | 'kiefer' // je Kiefer mit behandelten Zaehnen
   | 'roentgen' // Roentgen-Wahl nach Zahl der betroffenen Zaehne
+  | 'implantate' // je Implantat im Befund (ZS 6)
   | { anteil: number } // Anteil der behandelten Zaehne (aufgerundet, mind. 1)
 
 export type GebSystem = 'BEMA' | 'GOZ' | 'GOÄ' | 'ANALOG'
@@ -42,6 +43,7 @@ export const KATEGORIEN = [
   'Prophylaxe privat',
   'Adjuvante Therapie privat',
   'Chirurgie privat',
+  'Periimplantitis privat',
   'Beratung privat',
 ] as const
 export type Kategorie = (typeof KATEGORIEN)[number]
@@ -127,6 +129,31 @@ const schienung = k('schienung', 'Parodontale Schienung (adhäsiv)', 'zusatz', '
   hinweis: 'je Interdentalraum – Menge eintragen',
 })
 const gewohnheiten = k('gewohnheiten', 'Beratung schädliche Gewohnheiten (Rauchstopp)', 'zusatz', 'Beratung privat', [G('6190')])
+const psi = k('psi', 'PSI / Gingivalindex (3. und 4. Mal im Jahr)', 'zusatz', 'Diagnostik privat', [AN('psi')], {
+  hinweis: 'BZÄK 08/2026: 3210a, erst ab der dritten Erhebung im Jahr',
+})
+const zungenindex = k('zungenindex', 'Zungenbelag-Index / Halitosis-Messung', 'zusatz', 'Diagnostik privat', [AN('zungenindex')])
+const hba1c = k('hba1c', 'Diabetes-Screening (HbA1c-Schnelltest)', 'zusatz', 'Diagnostik privat', [AN('hba1c')], {
+  hinweis: 'Parodontitis und Diabetes: Schnelltest in der Praxis, Material gesondert',
+})
+const biofilm = k('biofilm', 'Subgingivale Biofilmentfernung (Pulverstrahl)', 'zusatz', 'Prophylaxe privat', [AN('biofilm', { anteil: 0.3 })], {
+  hinweis: 'nicht in GOZ 1040 enthalten; je Zahn mit Taschen, vorgeschlagen für 30 %',
+})
+const hyaluron = (anteil: number) =>
+  k('hyaluron', 'Hyaluronsäure subgingival', 'zusatz', 'Adjuvante Therapie privat', [AN('hyaluron', { anteil })], {
+    hinweis: `je Zahn inkl. Material, vorgeschlagen für ${Math.round(anteil * 100)} % der behandelten Zähne`,
+  })
+const hypochlorit = k('hypochlorit', 'Hypochlorit-Gel (z. B. Perisolv)', 'zusatz', 'Adjuvante Therapie privat', [AN('hypochlorit', { anteil: 0.3 })], {
+  hinweis: 'Taschenkonditionierung vor der Instrumentierung, je Zahn',
+})
+const ozon = k('ozon', 'Ozon-Desinfektion der Taschen', 'zusatz', 'Adjuvante Therapie privat', [AN('ozon', 'behandelt')], { hinweis: 'je behandeltem Zahn' })
+const implReinigung = k('implreinigung', 'Periimplantitis: Reinigung je Implantat (4070)', 'zusatz', 'Periimplantitis privat', [G('4070', 'implantate')], {
+  hinweis: 'Implantate sind keine PAR-Kassenleistung; Menge = Implantate im Befund (ZS 6)',
+})
+const implMed = k('implmed', 'Periimplantitis: Lokalantibiotikum je Implantat', 'zusatz', 'Periimplantitis privat', [AN('implMed', 'implantate')])
+const implPdt = k('implpdt', 'Periimplantitis: aPDT je Implantat', 'zusatz', 'Periimplantitis privat', [AN('implPdt', 'implantate')])
+const periimplantitis = [implReinigung, implMed, implPdt]
+
 const beratungPrivat = k('beratung', 'Eingehende Beratung (Ernährung, Risiko)', 'zusatz', 'Beratung privat', [A('3')], {
   hinweis: 'GOÄ 3, mind. 10 Minuten',
 })
@@ -142,6 +169,8 @@ export const KATALOG: Record<TerminArt, Kachel[]> = {
     keimtest,
     mmp8,
     speicheltest,
+    hba1c,
+    zungenindex,
   ],
   atg: [
     kasse('atg', 'Aufklärungs- und Therapiegespräch', [B('ATG')]),
@@ -157,6 +186,8 @@ export const KATALOG: Record<TerminArt, Kachel[]> = {
     sensibel,
     kanten,
     zunge,
+    biofilm,
+    zungenindex,
     oberflaeche,
   ],
   ait: [
@@ -168,9 +199,13 @@ export const KATALOG: Record<TerminArt, Kachel[]> = {
     einschleifen,
     spuelung,
     medikament(0.3),
+    hyaluron(0.3),
+    hypochlorit,
+    ozon,
     pdt,
     laser,
     schienung,
+    ...periimplantitis,
   ],
   bev: [
     kasse('beva', 'Befundevaluation nach AIT', [B('BEV a')]),
@@ -180,6 +215,7 @@ export const KATALOG: Record<TerminArt, Kachel[]> = {
     keimtest,
     mmp8,
     speicheltest,
+    hba1c,
     gewohnheiten,
   ],
   cpt: [
@@ -195,6 +231,10 @@ export const KATALOG: Record<TerminArt, Kachel[]> = {
     k('lappen', 'Gestielter Schleimhautlappen (4120)', 'zusatz', 'Chirurgie privat', [G('4120', 'eins')], { hinweis: 'je Kieferhälfte' }),
     k('fst', 'Schleimhauttransplantat (4130)', 'zusatz', 'Chirurgie privat', [G('4130', 'eins')]),
     k('bgt', 'Bindegewebstransplantat (4133)', 'zusatz', 'Chirurgie privat', [G('4133', 'eins')]),
+    k('emdogain', 'Schmelzmatrixproteine (Emdogain)', 'zusatz', 'Chirurgie privat', [AN('emdogain', { anteil: 0.25 })], { hinweis: 'regenerative Therapie, je Zahn' }),
+    k('kollagen', '3D-Kollagenmatrix (z. B. Mucograft)', 'zusatz', 'Chirurgie privat', [AN('kollagen', 'eins')], { hinweis: 'Gingivaverdickung statt Bindegewebstransplantat' }),
+    k('papille', 'Papillenaufbau mit Hyaluronsäure', 'zusatz', 'Chirurgie privat', [AN('papille', 'eins')], { hinweis: 'je Papille – Menge eintragen' }),
+    hyaluron(0.25),
     k('prf', 'PRF aus Eigenblut', 'zusatz', 'Chirurgie privat', [A('250'), AN('prf')], { hinweis: 'Blutentnahme GOÄ 250 + Aufbereitung' }),
     medikament(0.25),
   ],
@@ -229,12 +269,18 @@ export const KATALOG: Record<TerminArt, Kachel[]> = {
     zunge,
     sensibel,
     medikament(0.2),
+    hyaluron(0.2),
     spuelung,
     pdt,
     laser,
+    ozon,
+    psi,
     mmp8,
     keimtest,
+    hba1c,
+    zungenindex,
     gewohnheiten,
+    ...periimplantitis,
   ],
   kontrolle: [
     untersuchung,

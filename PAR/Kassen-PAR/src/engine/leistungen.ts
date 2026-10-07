@@ -20,6 +20,7 @@ export interface TerminKontext {
   alle: string[] // vorhandene natuerliche Zaehne
   behandelt: string[] // in diesem Termin behandelte Zaehne
   roentgen: string[] // Zaehne, nach denen sich das Roentgen richtet
+  implantate: string[] // Implantate im Befund (ZS 6)
 }
 
 /** Zaehne einer Teilsitzung: 1 = alle, 2 = OK/UK, 4 = Quadranten. */
@@ -56,7 +57,8 @@ export function terminKontext(fall: ParFall, t: Termin): TerminKontext {
     case 'befund': case 'atg': case 'pzr': auto = alle; break
     default: auto = []
   }
-  return { alle, behandelt: t.zaehne ?? auto, roentgen }
+  const implantate = Object.entries(b.zaehne).filter(([, z]) => z.zs === 6).map(([z]) => z)
+  return { alle, behandelt: t.zaehne ?? auto, roentgen, implantate }
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +110,7 @@ export function menge(regel: MengenRegel, ctx: TerminKontext): number {
     case 'haelften': return new Set(b.map(quadrant)).size
     case 'kiefer': return new Set(b.map(kieferVon)).size
     case 'roentgen': return roentgenWahl(ctx.roentgen) ? 1 : 0
+    case 'implantate': return ctx.implantate.length
   }
 }
 

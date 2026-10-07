@@ -172,9 +172,33 @@ textarea.textbox { display: block; width: 100%; box-sizing: border-box; }
 .chart-hilfe { font-size: 12px; color: var(--grau); margin: 8px 0 0; }
 
 /* Strecke: links Planung, rechts Zeitleiste (Stil UPT-Prototyp) */
+.strecke-seite { --umsatz-h: 132px; display: flex; flex-direction: column; gap: 12px; }
+.umsatz-leiste {
+  position: sticky; top: 0; z-index: 5; min-height: calc(var(--umsatz-h) - 20px); box-sizing: border-box;
+  display: grid; grid-template-columns: auto minmax(330px, auto) minmax(280px, 1fr) auto; gap: 16px; align-items: center;
+  background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px;
+  box-shadow: 0 4px 14px rgba(30, 41, 99, .1); border-top: 3px solid var(--accent-pink);
+}
+.umsatz-kopf { display: flex; flex-direction: column; gap: 6px; }
+.umsatz-kopf .karte-titel { margin: 0; }
+.umsatz-leiste .summen { grid-template-columns: repeat(4, 1fr); margin: 0; }
+.umsatz-leiste .summen .gross b { font-size: 19px; }
+.umsatz-regler .regler { margin: 0; }
+.umsatz-regler .regler input[type=range] { height: 22px; }
+.umsatz-regler .hinweis-klein { margin: 2px 0 0; }
+.knopf-spalte { display: flex; flex-direction: column; gap: 4px; }
+.knopf-spalte button { white-space: nowrap; }
+.umsatz-leiste .summen b { white-space: nowrap; }
+@media (max-width: 1250px) {
+  .strecke-seite { --umsatz-h: 194px; }
+  .umsatz-leiste { grid-template-columns: auto 1fr; gap: 8px 16px; }
+  .umsatz-regler { grid-column: 1 / -1; }
+  .umsatz-regler .hinweis-klein { display: none; }
+  .knopf-spalte { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+}
 .strecke { display: flex; gap: 18px; align-items: flex-start; }
 .strecke-links {
-  width: 360px; flex-shrink: 0; position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto;
+  width: 360px; flex-shrink: 0; position: sticky; top: var(--umsatz-h); max-height: calc(100vh - var(--umsatz-h) - 10px); overflow-y: auto;
   display: flex; flex-direction: column; gap: 12px; padding-right: 2px;
 }
 .timeline { flex: 1; min-width: 0; background: #f0f2f8; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
@@ -211,6 +235,17 @@ textarea.textbox { display: block; width: 100%; box-sizing: border-box; }
 .sch-badge.stark { background: var(--accent-pink); color: #fff; }
 .sch-badge.hell { background: #f1f5f9; color: var(--text-light); }
 .sch-badge.gruen { background: var(--gruen-hell); color: var(--gruen); }
+.pos-badges { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
+.pos-badge {
+  font: 700 10.5px/1.5 ui-monospace, Consolas, monospace; padding: 0 6px; border-radius: 5px; white-space: nowrap;
+  background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; animation: pos-rein .35s ease-out;
+}
+.pos-badge[data-sys=GOZ], .pos-badge[data-sys=ANALOG] { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.pos-badge[data-sys=GOÄ] { background: #e0f2fe; color: #075985; border-color: #bae6fd; }
+.pos-badge small { font-size: 9.5px; margin-left: 1px; opacity: .8; }
+.pos-badge i { font-style: normal; color: var(--accent-pink); margin-left: 2px; }
+.pos-badge.auto { box-shadow: 0 0 0 1px rgba(216, 58, 195, .35); }
+@keyframes pos-rein { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .ts-cockpit { display: flex; align-items: center; gap: 8px; }
 .ts-chip { background: linear-gradient(90deg, #d83ac3, #c730b1); color: #fff; border: none; border-radius: 8px; font-size: .8rem; font-weight: 700; padding: 5px 12px; }
 .ts-chip:hover:not(:disabled) { filter: brightness(1.08); }

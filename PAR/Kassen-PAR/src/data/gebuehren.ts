@@ -45,4 +45,18 @@ export const ANALOG: Record<string, { titel: string; bezug: string; punkte: numb
   speicheltest: { titel: 'Speicheltest / Risikoanalyse (analog)', bezug: 'GOZ 4005', punkte: 80 },
   laser: { titel: 'Laser-Dekontamination der Tasche, je Zahn (analog)', bezug: 'GOZ 4025', punkte: 15 },
   prf: { titel: 'Aufbereitung von Eigenblut (PRF), je Sitzung (analog)', bezug: 'GOZ 4110', punkte: 180 },
+  // Recherche 10/2026: BZAEK-Analogverzeichnis (Neubewertung 08/2026) und
+  // PKV-Kommentierung der Analogabrechnungen (Stand 08.07.2026).
+  psi: { titel: 'PSI / Gingivalindex, mehr als zweimal im Jahr (analog)', bezug: 'GOZ 3210', punkte: 140 },
+  zungenindex: { titel: 'Zungenbelag-Index (WTCI) / Halitosis-Messung (analog)', bezug: 'GOZ 4005', punkte: 80 },
+  hba1c: { titel: 'Diabetes-Screening, HbA1c-Schnelltest (analog)', bezug: 'GOZ 4005', punkte: 80 },
+  biofilm: { titel: 'Subgingivale Biofilmentfernung (Pulverstrahl), je Zahn (analog)', bezug: 'GOZ 2000', punkte: 90 },
+  hyaluron: { titel: 'Hyaluronsäure subgingival inkl. Material, je Zahn (analog)', bezug: 'GOZ 4020', punkte: 45 },
+  hypochlorit: { titel: 'Hypochlorit-Gel-Konditionierung der Tasche, je Zahn (analog)', bezug: 'GOZ 4020', punkte: 45 },
+  ozon: { titel: 'Ozon-Desinfektion der Tasche, je Zahn (analog)', bezug: 'GOZ 4025', punkte: 15 },
+  emdogain: { titel: 'Schmelzmatrixproteine (z. B. Emdogain), je Zahn (analog)', bezug: 'GOZ 4138', punkte: 220 },
+  kollagen: { titel: '3D-Kollagenmatrix zur Gingivaverdickung (analog)', bezug: 'GOZ 4133', punkte: 880 },
+  papille: { titel: 'Hyaluronsäure-Papillenaufbau, je Papille (analog)', bezug: 'GOZ 4020', punkte: 45 },
+  implMed: { titel: 'Antibakterielle Lokalapplikation am Implantat, je Implantat (analog)', bezug: 'GOZ 4025', punkte: 15 },
+  implPdt: { titel: 'aPDT bei Periimplantitis, je Implantat (analog)', bezug: 'GOZ 4070', punkte: 100 },
 }
