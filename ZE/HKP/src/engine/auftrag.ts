@@ -231,7 +231,10 @@ function einzelAuftrag(text: string): HkpAuftrag {
     pfeilerDavor = false
     if (/entfern|extrah|ziehen|gezogen|raus/.test(teil)) auftrag.entfernen.push(...zs)
     else if (/bleib|erhalt|behalt|stehen/.test(teil)) auftrag.erhalten.push(...zs)
-    else if (/teleskop|konus|doppelkrone|pfeiler|krone|anker|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil)) {
+    else if (/teleskop|konus|doppelkrone|pfeiler|krone|anker|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil)
+      // Einzelzahn: „Implantat am Zahn 26“, „in Region 26“ (Anruf 07.10.2026 19:36)
+      || ((auftrag.versorgung === 'implantatkronen' || auftrag.versorgung === 'kronen')
+        && /implantat|\b(?:am|an|bei|f(?:ü|ue)r) (?:zahn )?[1-4][1-8]\b|\bzahn [1-4][1-8]\b|\bregion?\b/.test(teil))) {
       // „Teleskop auf 13 und 23 ersetzte Zähne 14 …“: ab dem Befund-Wort sind es keine Pfeiler mehr
       const vorBefund = teil.split(BEFUND_BEGINN)[0]
       const pf = vorBefund === teil ? zs : zaehneIn(vorBefund, auftrag.kiefer)
@@ -282,8 +285,8 @@ const BEFUND_BEGINN = /\b(?:ersetzt\w*|(?:es )?fehl\w*|vorhanden|extrah\w*|entfe
 
 const BEFUND_WORTE: [RegExp, string][] = [
   [/nicht erhaltungsw(ü|ue)rdig|zerst(ö|oe)rt|extrah|entfern|ziehen/, 'x'],
-  [/erneuerungsbed(ü|ue)rftig|krone (ist )?(kaputt|defekt|insuffizient)/, 'kw'],
-  [/(ü|ue)berkronungsbed(ü|ue)rftig|krone n(ö|oe)tig|braucht? (eine )?krone|kariös|karies/, 'ww'],
+  [/erneuerungsbed(ü|ue)rftig|krone (ist )?(kaputt|defekt|insuffizient)|\b(?:k ?w|ka ?weh)\b/, 'kw'],
+  [/(ü|ue)berkronungsbed(ü|ue)rftig|krone n(ö|oe)tig|braucht? (eine )?krone|kariös|karies|\b(?:w ?w ?w?|weh ?weh)\b/, 'ww'],
   [/fehl|ohne zahn|l(ü|ue)cke|ersetzt/, 'f'],
   [/vorhanden|gesund|intakt|da\b|steh|bleib|erhalt/, ''],
 ]
@@ -325,10 +328,15 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
     letztes = code
   })
   for (const k of nurKiefer) for (const z of REIHE[k]) if (!(z in befund)) befund[z] = 'f'
+  if (ALLE_DA.test(norm(text)))
+    for (const k of kiefer ? [kiefer] : (['OK', 'UK'] as Kiefer[])) for (const z of REIHE[k]) if (!(z in befund) && !istWeisheitszahn(z)) befund[z] = ''
   if (kiefer && /alle (anderen|übrigen|uebrigen|restlichen) fehlen|sonst (fehlt|fehlen) alle|rest fehlt|(anderen|übrigen|uebrigen|restlichen) z(ä|ae)hne (sind |werden )?(ersetzt|fehlen)/.test(norm(text)))
     for (const z of REIHE[kiefer]) if (!(z in befund)) befund[z] = 'f'
   return befund
 }
+
+/** „Alle Zähne sind gesund“, „es fehlt keiner“: Antwort auf die Befundfrage – die übrigen Zähne sind vorhanden */
+const ALLE_DA = /\balle (?:anderen |(?:ü|ue)brigen )?z(?:ä|ae)hne (?:sind )?(?:noch )?(?:gesund|vorhanden|da|intakt|in ordnung|erhalten)\b|\bes fehlt (?:kein zahn|keiner|nichts)\b|\bnichts fehlt\b|\bkeine z(?:ä|ae)hne fehlen\b|\bvoll ?bezahnt\b/
 
 const ALLE_FEHLEN = /\b(fehlen|fehlt) (ihm |ihr )?(schon )?alle z(ä|ae)hne\b|\balle z(ä|ae)hne (fehlen|sind (weg|raus|gezogen))\b|\bzahnlos\b|\bkeine z(ä|ae)hne mehr\b/
 
