@@ -124,6 +124,10 @@ textarea { width: 100%; }
 .fi:focus { box-shadow: none; border-bottom: 1px solid var(--indigo); background: #eef2ff; }
 select.fi { padding: 0; }
 .fi-text { border: 1px dashed #93a4c3; background: #f5f8ff; border-radius: 0; font: inherit; min-height: 22mm; resize: vertical; }
+.fi.vorschlag, .fi-text.vorschlag { color: #4f46e5; font-style: italic; }
+textarea.textbox { display: block; width: 100%; box-sizing: border-box; }
+.linie .fi, .f5e-tab td:nth-child(2) .fi { width: 100%; }
+.form-leiste-hilfe { font-size: 12px; color: var(--text-light); }
 .vf-name { display: flex; gap: 2px; align-items: baseline; }
 .vf-zeile > .fi:only-of-type { width: 100%; }
 .vf-zeile.hoch .vf-geb { position: static; display: flex; justify-content: flex-end; gap: 2mm; margin-top: 1mm; }
@@ -299,6 +303,7 @@ select.fi { padding: 0; }
 .a4-kopf-titel h2 { text-align: left; }
 .a4-kopf { display: flex; justify-content: space-between; gap: 6mm; margin-bottom: 6mm; }
 .a4-kopf-rechts { width: 85mm; margin-top: 10mm; }
+.a4-kopf-rechts.unter-titel { margin-top: 24mm; }
 .vf { width: 76mm; border: .5pt solid #000; font-size: 8pt; }
 .vf small { display: block; color: #333; }
 .vf-zeile { border-bottom: .5pt solid #000; padding: 1px 3px; min-height: 9mm; position: relative; }
@@ -318,6 +323,7 @@ select.fi { padding: 0; }
 .b1-block.diagnose { min-height: 28mm; }
 .b1-reihe { display: flex; flex-wrap: wrap; align-items: center; gap: 1mm 3mm; margin: 1mm 0; }
 .b1-reihe .rechts { margin-left: auto; }
+.f5d-zeile { flex-wrap: nowrap; align-items: flex-start; }
 .b1-raster { display: grid; grid-template-columns: auto 1fr; gap: 1.5mm 6mm; margin-top: 1mm; }
 .b1-option { display: flex; align-items: center; gap: 1.5mm; margin: 1.2mm 0; }
 .b1-raster .b1-option { margin: 0; }
@@ -372,6 +378,7 @@ select.fi { padding: 0; }
   .karte { border: none; box-shadow: none; padding: 0; }
   .a4 { box-shadow: none; margin: 0; break-after: page; }
   .fi, .fi-text { border: none; background: none; resize: none; }
+  .fi.vorschlag, .fi-text.vorschlag { color: inherit; font-style: normal; }
   select.fi { appearance: none; }
   .kreuz.klickbar { background: none; }
   .zahn-seg.tief, .zahn-seg.aktiv { fill: transparent; }

@@ -13,13 +13,16 @@ export function X({ an, onClick, title }: { an: boolean; onClick?: () => void; t
 }
 
 /** Eingabe direkt im Vordruck (im Druck nur Text). */
-export function Fi({ value, onChange, type = 'text', breite, placeholder, mono }: {
+export function Fi({ value, onChange, type = 'text', breite, placeholder, mono, vorschlag }: {
   value: string | number; onChange?: (v: string) => void; type?: 'text' | 'date' | 'number'
   breite?: string; placeholder?: string; mono?: boolean
+  /** Wert ist nur aus dem Fall vorgeschlagen, noch nicht im Formular eingetragen */
+  vorschlag?: boolean
 }) {
   if (!onChange) return <span className={mono ? 'mono' : ''}>{type === 'date' ? datumDe(String(value)) : value}</span>
   return (
-    <input className={`fi${mono ? ' mono' : ''}`} type={type} value={value} placeholder={placeholder}
+    <input className={`fi${mono ? ' mono' : ''}${vorschlag ? ' vorschlag' : ''}`} type={type} value={value} placeholder={placeholder}
+      title={vorschlag ? 'Vorschlag aus dem Fall – überschreiben zum Ändern' : undefined}
       style={breite ? { width: breite } : undefined} onChange={(e) => onChange(e.target.value)} />
   )
 }
@@ -60,9 +63,8 @@ export function Versichertenfeld({ fall, einst, setFall, setEinst }: {
 const artText = (a: Antragskopf['artBehandlungsplan']) =>
   a === 'initial' ? 'PAR' : a === 'bev' ? 'BEV' : a === 'cpt' ? 'CPT' : 'UPT-Verlängerung'
 
-export function Antragsbox({ fall, art, setFall }: { fall: ParFall; art?: string; setFall?: (f: ParFall) => void }) {
-  const a = fall.antrag
-  const set = setFall ? (patch: Partial<Antragskopf>) => setFall({ ...fall, antrag: { ...a, ...patch } }) : null
+/** Antragskopf rechts oben; `art` ersetzt die Auswahl "Art des Behandlungsplans" durch festen Text. */
+export function Antragsbox({ a, set, art }: { a: Antragskopf; set?: (patch: Partial<Antragskopf>) => void; art?: string }) {
   const f = (key: keyof Antragskopf) => (
     <Fi value={a[key]} onChange={set ? (v) => set({ [key]: v } as Partial<Antragskopf>) : undefined} />
   )

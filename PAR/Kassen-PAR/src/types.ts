@@ -221,6 +221,12 @@ export interface Zusatzformulare {
   // MIT 8 – Mitteilung CPT
   mitteilungsnummer: string
   cptUeberweisung: boolean
+  /**
+   * Eigene Eintraege der Zusatzformulare je Feld ("5d.grad", "mit8.cptA" ...).
+   * Fehlt ein Schluessel, zeigt das Formular den Vorschlag aus dem Fall;
+   * Kreuze sind 'x' oder ''.
+   */
+  werte: Record<string, string>
 }
 
 // ---------------------------------------------------------------------------

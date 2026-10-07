@@ -22,7 +22,12 @@ export default function AntragReiter({ fall, setFall, einst, setEinst, diag }: P
   const befund = fall.befunde.find((b) => b.id === befundId) ?? fall.befunde[0]
   const setBefund = (b: Befund) => setFall({ ...fall, befunde: fall.befunde.map((x) => (x.id === b.id ? b : x)) })
 
+  /** BEV a/b gibt es je einmal, UPT g einmal je Tag: vorhandene werden nur ausgewaehlt. */
+  const vorhanden = (phase: BefundPhase) =>
+    fall.befunde.find((b) => b.phase === phase && (phase !== 'upt' || b.datum === heute()))
   const neuerBefund = (phase: BefundPhase) => {
+    const da = vorhanden(phase)
+    if (da) { setBefundId(da.id); return }
     const b: Befund = { ...structuredClone(befund), id: id(), phase, datum: heute(), bezeichnung: PHASE_LABEL[phase] }
     for (const z of Object.values(b.zaehne)) { z.st = z.st.map(() => null); z.bop = z.bop.map(() => false); z.aitOverride = null }
     setFall({ ...fall, befunde: [...fall.befunde, b] })
@@ -65,9 +70,9 @@ export default function AntragReiter({ fall, setFall, einst, setEinst, diag }: P
             <b>{b.bezeichnung}</b><span>{datumDe(b.datum)}</span>
           </button>
         ))}
-        <button onClick={() => neuerBefund('beva')}>+ BEV a</button>
-        <button onClick={() => neuerBefund('bevb')}>+ BEV b</button>
-        <button onClick={() => neuerBefund('upt')}>+ UPT g</button>
+        {!vorhanden('beva') && <button onClick={() => neuerBefund('beva')}>+ BEV a</button>}
+        {!vorhanden('bevb') && <button onClick={() => neuerBefund('bevb')}>+ BEV b</button>}
+        {!vorhanden('upt') && <button onClick={() => neuerBefund('upt')}>+ UPT g</button>}
         {fall.befunde.length > 1 && <button className="gefahr" onClick={befundLoeschen}>Befund löschen</button>}
         <span className="leiste-hilfe">Neue Befunde übernehmen ZS, FB und Lockerung, die Messwerte bleiben leer.</span>
       </div>
@@ -112,7 +117,7 @@ function Blatt1({ fall, setFall, einst, setEinst, diag }: Props) {
         <Versichertenfeld fall={fall} einst={einst} setFall={setFall} setEinst={setEinst} />
         <div className="a4-kopf-rechts">
           <div className="vom">vom <Fi type="date" value={initial.datum} onChange={setInitialDatum} /></div>
-          <Antragsbox fall={fall} setFall={setFall} />
+          <Antragsbox a={fall.antrag} set={(patch) => setFall({ ...fall, antrag: { ...fall.antrag, ...patch } })} />
         </div>
       </div>
 

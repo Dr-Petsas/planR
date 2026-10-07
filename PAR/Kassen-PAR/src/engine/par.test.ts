@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { csvParsen, ermittlePunktwert } from '../data/punktwerte'
-import { STANDARD_EINSTELLUNGEN, leererBefund, neuerFall, zweiMessstellen } from '../store'
+import { STANDARD_EINSTELLUNGEN, befundeBereinigen, leererBefund, neuerFall, zweiMessstellen } from '../store'
 import type { Befund, DiagnoseErgebnis, ParFall } from '../types'
 import { diagnostizieren } from './diagnose'
 import {
@@ -298,5 +298,24 @@ describe('Punktwert', () => {
     const t = csvParsen('KZV;Primaer;Ersatz\n13;1,2000;1,2500\nxx;1;1')
     expect(t['13']).toEqual({ primaer: 1.2, ersatz: 1.25 })
     expect(Object.keys(t)).toEqual(['13'])
+  })
+})
+
+describe('Befunde je Phase', () => {
+  it('mehrfach angelegte leere BEV a fallen weg, der mit Messwerten bleibt', () => {
+    const init = leererBefund('initial', 'Initialbefund')
+    const leer1 = leererBefund('beva', 'BEV a')
+    const gemessen = leererBefund('beva', 'BEV a')
+    gemessen.zaehne['16'].st = [5, 3]
+    const leer2 = leererBefund('beva', 'BEV a')
+    const bevb = leererBefund('bevb', 'BEV b')
+    const rest = befundeBereinigen([init, leer1, gemessen, leer2, bevb])
+    expect(rest.map((b) => b.id)).toEqual([init.id, gemessen.id, bevb.id])
+  })
+  it('UPT-Befunde an verschiedenen Tagen bleiben', () => {
+    const a = { ...leererBefund('upt', 'UPT g'), datum: '2026-01-10' }
+    const b = { ...leererBefund('upt', 'UPT g'), datum: '2026-07-10' }
+    const c = { ...leererBefund('upt', 'UPT g'), datum: '2026-07-10' }
+    expect(befundeBereinigen([a, b, c]).map((x) => x.id)).toEqual([a.id, b.id])
   })
 })

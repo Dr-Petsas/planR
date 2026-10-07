@@ -59,6 +59,7 @@ export const STANDARD_ZUSATZ: Zusatzformulare = {
   par22aNarkoseOffen: false,
   mitteilungsnummer: '',
   cptUeberweisung: false,
+  werte: {},
 }
 
 export function heute(): string {
@@ -129,7 +130,7 @@ export function neuerFall(nummer: number): ParFall {
     uebernahmefall: false,
     kkEntscheidung: 'offen',
     gutachten: 'offen',
-    zusatz: { ...STANDARD_ZUSATZ, vorherLeistungen: { ...STANDARD_ZUSATZ.vorherLeistungen } },
+    zusatz: { ...STANDARD_ZUSATZ, vorherLeistungen: { ...STANDARD_ZUSATZ.vorherLeistungen }, werte: {} },
     bemerkung: '',
   }
 }
@@ -210,6 +211,23 @@ function fixBefund(b: Partial<Befund> | undefined, vorgabe: Befund): Befund {
   }
 }
 
+const hatMesswerte = (b: Befund) => Object.values(b.zaehne).some((z) => z.st.some((w) => w != null))
+
+/**
+ * Je Phase nur EIN Befund (UPT: einer je Datum). Bleibt der erste mit
+ * Messwerten, sonst der erste; mehrfach angeklickte leere Kopien fallen weg.
+ */
+export function befundeBereinigen(befunde: Befund[]): Befund[] {
+  const gewaehlt = new Map<string, Befund>()
+  for (const b of befunde) {
+    const k = b.phase === 'upt' ? `upt:${b.datum}` : b.phase
+    const da = gewaehlt.get(k)
+    if (!da || (!hatMesswerte(da) && hatMesswerte(b))) gewaehlt.set(k, b)
+  }
+  const behalten = new Set(gewaehlt.values())
+  return befunde.filter((b) => behalten.has(b))
+}
+
 /** Fehlende Felder nach einem Schema-Update ergaenzen. */
 export function fallMigrieren(roh: unknown): ParFall {
   const v = neuerFall(1)
@@ -237,7 +255,7 @@ export function fallMigrieren(roh: unknown): ParFall {
     antrag: { ...v.antrag, ...p.antrag },
     anamnese: anamneseMigrieren({ ...v.anamnese, ...p.anamnese }, p.anamnese),
     diagnose: { ...v.diagnose, ...p.diagnose },
-    befunde,
+    befunde: befundeBereinigen(befunde),
     termine: Array.isArray(p.termine) ? p.termine.map(fixTermin) : [],
     planung: { ...v.planung, ...p.planung },
     modus: p.modus ?? v.modus,
@@ -245,6 +263,7 @@ export function fallMigrieren(roh: unknown): ParFall {
     zusatz: {
       ...v.zusatz, ...p.zusatz,
       vorherLeistungen: { ...v.zusatz.vorherLeistungen, ...p.zusatz?.vorherLeistungen },
+      werte: { ...p.zusatz?.werte },
     },
   }
 }
