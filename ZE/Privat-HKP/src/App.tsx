@@ -14,7 +14,7 @@ import { KronenmaterialFelder } from './components/Kronenmaterial'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { neuerPlan, planMigrieren, useEinstellungen, usePlan, useZeAblage } from './store'
 import { ungespeichert } from './ablage'
-import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
 import type { Einstellungen, Plan } from './types'
 import { patientName } from './stammdaten'
@@ -93,7 +93,7 @@ export default function App() {
             <b>{euro(kalk.gesamt)}</b>
           </div>
           {implantate.length > 0 && <button className="sekundaer" onClick={implantologieExport} title="Implantatpositionen als Datei für den Implantologie-Planer exportieren">Für Implantologie exportieren</button>}
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
         </header>
         <fieldset className="sperre" disabled={gesperrt}>
           <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
@@ -115,7 +115,6 @@ export default function App() {
           {reiter === 'patient' && (
             <>
               <fieldset className="sperre" disabled={gesperrt}><PatientForm plan={plan} onChange={setPlan} /></fieldset>
-              <AblageListe ablage={ablage} aktuell={plan.nummer} onLaden={oeffnen} />
             </>
           )}
 

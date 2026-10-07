@@ -1,3 +1,4 @@
+import { useRef, type CSSProperties } from 'react'
 import { datumZeit, type Ablage, type AblageDaten, type AblageEintrag } from '../ablage'
 
 const betragText = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
@@ -9,13 +10,44 @@ interface KnoepfeProps<P> {
   offen: boolean
   onNeu: () => void
   neuText: string
+  /** Öffnet einen gespeicherten Plan; ohne diese Angabe gibt es keinen Ablage-Knopf. */
+  onLaden?: (plan: P) => void
 }
 
-/** Speichern · Freigeben · Neu – gleiche Knöpfe in allen Planern */
-export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText }: KnoepfeProps<P>) {
+const FENSTER: CSSProperties = {
+  width: 'min(860px, 94vw)', maxHeight: '82vh', padding: 0, border: '1px solid #ddd', borderRadius: 12,
+  boxShadow: '0 18px 50px rgba(0,0,0,.18)',
+}
+const FENSTER_KOPF: CSSProperties = {
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+  padding: '12px 16px', borderBottom: '1px solid #eee', position: 'sticky', top: 0, background: 'white',
+}
+
+/** Speichern · Freigeben · Ablage · Neu – gleiche Knöpfe in allen Planern */
+export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText, onLaden }: KnoepfeProps<P>) {
   const frei = eintrag?.status === 'freigegeben'
+  const fenster = useRef<HTMLDialogElement>(null)
+  const zu = () => fenster.current?.close()
   return (
     <div className="aktionen">
+      {onLaden && (
+        <>
+          <button className="sekundaer" title="Gespeicherte und freigegebene Pläne" onClick={() => fenster.current?.showModal()}>
+            Ablage{ablage.liste.length ? ` (${ablage.liste.length})` : ''}
+          </button>
+          <dialog ref={fenster} style={FENSTER} onClick={(e) => e.target === fenster.current && zu()}>
+            <div style={FENSTER_KOPF}>
+              <b>Gespeicherte Pläne</b>
+              <button className="sekundaer klein-btn" onClick={zu}>Schließen</button>
+            </div>
+            <div style={{ padding: '4px 16px 16px' }}>
+              {ablage.liste.length
+                ? <AblageTabelle ablage={ablage} aktuell={daten.nummer} onLaden={(p) => { onLaden(p); zu() }} />
+                : <p className="leer">Noch nichts gespeichert – „Speichern“ legt den aktuellen Plan hier ab.</p>}
+            </div>
+          </dialog>
+        </>
+      )}
       <span className={`ablage-stand ${frei ? 'frei' : offen ? 'ungespeichert' : ''}`}>
         {frei ? 'freigegeben' : offen ? 'nicht gespeichert' : 'gespeichert'}
       </span>
@@ -46,6 +78,13 @@ export function AblageListe<P>({ ablage, aktuell, onLaden }: ListeProps<P>) {
   return (
     <div className="block ablage">
       <h3>Gespeicherte Pläne <small>{ablage.liste.length}</small></h3>
+      <AblageTabelle ablage={ablage} aktuell={aktuell} onLaden={onLaden} />
+    </div>
+  )
+}
+
+function AblageTabelle<P>({ ablage, aktuell, onLaden }: ListeProps<P>) {
+  return (
       <table className="ablage-tabelle">
         <thead>
           <tr><th>Nummer</th><th>Patient</th><th className="r">Betrag</th><th>Status</th><th>Geändert</th><th /><th /></tr>
@@ -75,7 +114,6 @@ export function AblageListe<P>({ ablage, aktuell, onLaden }: ListeProps<P>) {
           ))}
         </tbody>
       </table>
-    </div>
   )
 }
 

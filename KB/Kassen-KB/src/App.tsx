@@ -10,7 +10,7 @@ import Leistungen from './components/Leistungen'
 import Einstellungen from './components/Einstellungen'
 import Regler from './components/Regler'
 import Dokument from './components/Dokument'
-import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
@@ -64,7 +64,7 @@ export default function App() {
             <span>{plan.nummer} · Kassenanteil</span>
             <b>{euro(rechnung.gesamt)}</b>
           </div>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Plan" />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Plan" onLaden={oeffnen} />
         </header>
         {reiter === 'planung' && (
           <fieldset className="sperre" disabled={gesperrt}>
@@ -91,7 +91,6 @@ export default function App() {
               <fieldset className="sperre" disabled={gesperrt}>
                 <Patient plan={plan} setPlan={setPlan} />
               </fieldset>
-              <AblageListe ablage={ablage} aktuell={plan.nummer} onLaden={oeffnen} />
             </>
           )}
 

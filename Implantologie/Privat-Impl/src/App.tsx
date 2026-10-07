@@ -12,7 +12,7 @@ import { geplanteRegionen, implantatZaehne } from './engine/planung'
 import { importAusZe } from './engine/bruecke'
 import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } from './store'
 import { ungespeichert } from './ablage'
-import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
@@ -83,7 +83,7 @@ export default function App() {
             <span>{plan.nummer}</span>
             <b>{euro(kalk.gesamt)}</b>
           </div>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
         </header>
         <fieldset className="sperre" disabled={gesperrt}>
           <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
@@ -107,7 +107,6 @@ export default function App() {
               <fieldset className="sperre" disabled={gesperrt}>
                 <PatientForm plan={plan} onChange={setPlan} onZeImport={() => fileRef.current?.click()} />
               </fieldset>
-              <AblageListe ablage={ablage} aktuell={plan.nummer} onLaden={oeffnen} />
             </>
           )}
 

@@ -9,7 +9,7 @@ import { euro, initialBefund } from './engine/strecke'
 import { terminePlanen } from './engine/termine'
 import { fallMigrieren, neuerFall, useEinstellungen, useFall, useParAblage } from './store'
 import { ungespeichert } from './ablage'
-import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
+import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
 import AntragReiter from './components/AntragReiter'
 import StreckeReiter from './components/StreckeReiter'
@@ -99,7 +99,7 @@ export default function App() {
             PW {punktwert.wert.toFixed(4).replace('.', ',')} €{punktwert.geprueft ? '' : ' (ungeprüft)'}
           </span>
           <span className="kopf-summe">{euro(summe)}</span>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Fall" />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Fall" onLaden={oeffnen} />
         </div>
       </header>
 
@@ -131,7 +131,6 @@ export default function App() {
             {reiter === 'formulare' && <FormulareReiter fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />}
           </fieldset>
         )}
-        {reiter === 'antrag' && <AblageListe ablage={ablage} aktuell={fall.nummer} onLaden={oeffnen} />}
         {reiter === 'einstellungen' && <><MandantKarte /><EinstellungenReiter einst={einst} setEinst={setEinst} /></>}
       </main>
     </div>
