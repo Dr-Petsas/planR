@@ -141,9 +141,10 @@ Ein am Handy zuletzt zurückgeklappter Plan steht dort ganz oben
   Ausführungs-Rückfrage, Token (Zweck `plan-link:<planer>`), Rückgängig.
 - Karte `kind: "plan"`, `planer: "impl"`, `planId`, `url`, `version`,
   `items` (Gesamt / Kasse / Eigenanteil bzw. Mehrkosten).
-- Kasse vs. privat: MAS kennt die Kassenart aus der Kartei. "HKP" bei
-  Kassenpatient = Kassen-HKP (bestehend), bei Privatpatient = Privat-ZE.
-  Fehlt die Angabe: eine Rückfrage "Kasse oder privat?".
+- Kasse vs. privat: Clara fragt bei jedem neuen ZE-/Implantat-/Kons-Plan
+  "Kasse oder privat?" (Entscheidung 8.2). Die Kassenart aus der Kartei
+  steht nur als Vorschlag in der Frage. Antwort "Kasse" bei ZE = Kassen-HKP
+  (bestehend), "privat" = Privat-ZE.
 
 ### 3.5 Clara: fünf generische Werkzeuge, Gruppe `plan`
 
@@ -300,21 +301,31 @@ Privat-ZE-Entwurf desselben Patienten)
 **P5 – Kassen-PAR** (Fall anlegen, Strecke vorlesen, Regler; Messwerte über
 Lena-Paket)
 
+**P5b – PAR-Messwerte per Telefon-Diktat** (Taschentiefen mesial/distal,
+Blutung, Lockerung, Furkation je Zahn; zahnweise Kontrolle vor dem Anlegen)
+
 **P6 – Feinschliff**: Nachtlauf-Prüfliste um Planer-Gespräche erweitern,
 Morgenmeldung "3 Entwürfe von Clara warten auf Freigabe".
 
 ---
 
-## 8. Offene Entscheidungen für den Chef
+## 8. Entscheidungen des Chefs (07.10.2026)
 
-1. **Regler per Sprache**: Soll Clara Preise auch auf Zuruf ändern ("Faktor
-   2,8") oder nur die Regler aufs Handy legen? (Plan oben: beides, Änderung
-   immer mit Vorschlag + Ja.)
-2. **Kasse/privat**: reicht die Kassenart aus der Kartei, oder soll Clara
-   immer nachfragen?
-3. **Nach "mach ich am PC"**: nur zurückklappen und warten (so geplant) —
-   oder zusätzlich nach 3 Minuten Stille fragen "Soll ich auflegen?"
-4. **PAR per Sprache**: reicht "Fall anlegen + vorlesen", oder sollen
-   Messwerte auch am Telefon diktiert werden können?
-5. **Reihenfolge**: MKV als Pilot (einfachster Auftrag) oder Implantologie
-   zuerst (höchster Betrag)?
+1. **Regler per Sprache: beides.** Clara ändert Preise auf Zuruf ("Faktor
+   2,8") immer mit Vorschlag + Ja, und legt zusätzlich die Regler aufs Handy.
+2. **Kasse/privat: immer nachfragen.** Die Kassenart aus der Kartei wird
+   NICHT stillschweigend übernommen. Clara fragt bei jedem neuen Plan
+   "Kasse oder privat?" — die Kartei-Angabe darf nur als Vorschlag in der
+   Frage stehen ("Laut Kartei gesetzlich versichert — Kassen-HKP?").
+   Ausnahme: MKV und Kassen-PAR sind per Definition Kasse, Privat-Kons
+   fragt stattdessen die Vereinbarungsart.
+3. **Nach "mach ich am PC":** zurückklappen, warten; nach 3 Minuten Stille
+   fragt Clara "Brauchen Sie noch etwas?" und legt erst nach der normalen
+   Abschiedslogik auf.
+4. **PAR: beides ermöglichen.** Fall anlegen + Strecke vorlesen, Messwerte
+   aus Befund/Lena — UND Messwerte am Telefon diktieren
+   ("17 mesial fünf, distal vier, Blutung"). Das Diktat nutzt die
+   Befund-Diktat-Regeln (lange VAD-Grenze, ziffernweise Zahnnummern) und wird
+   vor dem Anlegen zahnweise zur Kontrolle vorgelesen. Eigenes Paket P5b.
+5. **Reihenfolge:** P0 (Zurückklappen beim bestehenden HKP), dann P1 mit
+   Füllungs-MKV als Pilot.
