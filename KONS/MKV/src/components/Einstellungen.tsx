@@ -1,44 +1,36 @@
-import type { Einstellungen as EinstT, MkvModell, Praxis } from '../types'
-import { KZVEN, kzvAusPlz } from '../data/kzv'
-import { PUNKTWERTE, PUNKTWERT_STAND } from '../data/punktwerte'
+import type { Einstellungen as EinstT, MkvModell } from '../types'
 import { BEMA_13 } from '../data/katalog'
+import { PraxisFelder } from './Stammdaten'
+import { PunktwertKarte } from './Punktwerte'
+import { ListenKarte } from './Listen'
+import { GENUTZTE_LISTEN } from '../engine/listen'
 
 interface Props {
   einst: EinstT
   setEinst: (e: EinstT) => void
 }
 
-const PRAXIS_FELDER: { key: keyof Praxis; label: string; breit?: boolean }[] = [
-  { key: 'name', label: 'Praxisname', breit: true },
-  { key: 'zahnarzt', label: 'Zahnärztin / Zahnarzt' },
-  { key: 'strasse', label: 'Straße' },
-  { key: 'plz', label: 'PLZ' },
-  { key: 'ort', label: 'Ort' },
-  { key: 'telefon', label: 'Telefon' },
-  { key: 'email', label: 'E-Mail' },
-]
-
 const zahl = (v: string, fallback: number) => (v === '' || Number.isNaN(+v) ? fallback : +v)
 
 export default function Einstellungen({ einst, setEinst }: Props) {
   const set = (patch: Partial<EinstT>) => setEinst({ ...einst, ...patch })
-  const plzKzv = kzvAusPlz(einst.praxis.plz)
-  const kzvName = KZVEN.find((k) => k.nr === (einst.kzvNr || plzKzv))?.name
-  const richtwert = PUNKTWERTE[einst.kzvNr || plzKzv]
 
   return (
     <>
       <div className="block">
         <h3>Praxis</h3>
-        <div className="formular">
-          {PRAXIS_FELDER.map((f) => (
-            <label key={f.key} className={`feld ${f.breit ? 'breit' : ''}`}>
-              {f.label}
-              <input value={einst.praxis[f.key]} onChange={(e) => set({ praxis: { ...einst.praxis, [f.key]: e.target.value } })} />
-            </label>
-          ))}
-        </div>
+        <PraxisFelder art="kasse" praxis={einst.praxis} onChange={(praxis) => set({ praxis })} />
       </div>
+
+      <PunktwertKarte
+        bereiche={['KCH']} praxis={einst.praxis} setPraxis={(praxis) => set({ praxis })}
+        fest={einst.punktwertFest} setFest={(punktwertFest) => set({ punktwertFest })}
+      />
+      <p className="hilfe">
+        Kassenanteil: die Kasse zahlt die vergleichbare plastische Füllung,{' '}
+        {BEMA_13.map((b) => `${b.nr} = ${b.punkte} Punkte`).join(', ')} (Stand 01.01.2025), mal Punktwert der KZV.
+      </p>
+      <ListenKarte listen={GENUTZTE_LISTEN} />
 
       <div className="block">
         <h3>Mehrkosten plastischer Füllungen</h3>
@@ -76,39 +68,6 @@ export default function Einstellungen({ einst, setEinst }: Props) {
             Vereinbarung gültig (Monate)
             <input type="number" min={1} max={24} value={einst.gueltigMonate} onChange={(e) => set({ gueltigMonate: zahl(e.target.value, 6) })} />
           </label>
-        </div>
-      </div>
-
-      <div className="block">
-        <h3>Kassenanteil (BEMA 13a–d)</h3>
-        <p className="hilfe">
-          Die Kasse zahlt die vergleichbare plastische Füllung:{' '}
-          {BEMA_13.map((b) => `${b.nr} = ${b.punkte} Punkte`).join(', ')} (Stand 01.01.2025). Den Punktwert legt Ihre KZV fest.
-        </p>
-        <div className="formular">
-          <label className="feld">
-            KZV
-            <select value={einst.kzvNr} onChange={(e) => set({ kzvNr: e.target.value })}>
-              <option value="">aus der Praxis-PLZ{plzKzv ? ` (${KZVEN.find((k) => k.nr === plzKzv)?.name})` : ''}</option>
-              {KZVEN.map((k) => <option key={k.nr} value={k.nr}>{k.name}</option>)}
-            </select>
-          </label>
-          <label className="feld">
-            Punktwert fest (€)
-            <input
-              type="number" min={0} step={0.0001}
-              value={einst.punktwertOverride ?? ''}
-              placeholder={richtwert ? `${richtwert.primaer} / ${richtwert.ersatz}` : 'Richtwert'}
-              onChange={(e) => set({ punktwertOverride: e.target.value ? +e.target.value : null })}
-            />
-          </label>
-          <div className="feld">
-            Richtwert {kzvName ?? '—'}
-            <span className="wert">
-              {richtwert ? `Primärkassen ${richtwert.primaer.toFixed(4)} € · Ersatzkassen ${richtwert.ersatz.toFixed(4)} €` : 'keine KZV bestimmbar'}
-            </span>
-            <small>{PUNKTWERT_STAND}</small>
-          </div>
         </div>
       </div>
 

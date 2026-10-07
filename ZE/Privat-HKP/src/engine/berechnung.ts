@@ -1,5 +1,7 @@
-import gozDaten from '../data/goz-2012.json'
-import bebDaten from '../data/beb-itz-2024.json'
+import gozMitgeliefert from '../data/goz-2012.json'
+import bebMitgeliefert from '../data/beb-itz-2024.json'
+import { aktuell } from '../daten'
+import type { GenutzteListe } from '../components/Listen'
 import type { Anpassung, Einstellungen, ListenEintrag, Plan, Position } from '../types'
 import { planen } from './planung'
 import { standardBegruendung } from './begruendung'
@@ -7,6 +9,15 @@ import { LABOR_AUFSCHLAG_MAX, LABOR_AUFSCHLAG_MIN, zusatzleistungen } from './zu
 import { eigenFinden } from './eigenlabor'
 import { mitDigital } from './digital'
 import { materialErmitteln } from './material'
+
+const gozDaten = aktuell('goz-2012.json', gozMitgeliefert)
+const bebDaten = aktuell('beb-itz-2024.json', bebMitgeliefert)
+
+/** Listen, die "Preislisten aktualisieren" erneuert. */
+export const GENUTZTE_LISTEN: GenutzteListe[] = [
+  { datei: 'goz-2012.json', name: 'GOZ (Privathonorar)', mitgeliefert: gozMitgeliefert, aktuell: gozDaten },
+  { datei: 'beb-itz-2024.json', name: 'BEB (Privat-Labor)', mitgeliefert: bebMitgeliefert, aktuell: bebDaten },
+]
 
 export const GOZ_PUNKTWERT = gozDaten.punktwert
 export const GOZ: Map<string, ListenEintrag> = new Map((gozDaten.eintraege as ListenEintrag[]).map((e) => [e.nr, e]))

@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import { rechnen } from './mkv'
 import { BEMA_13, bemaFuer } from '../data/katalog'
 import { neuerPlan, STANDARD_EINSTELLUNGEN } from '../store'
 import { ausKuerzel } from '../components/Zahnschema'
 import type { Einstellungen, MkvModell, Plan, ZahnLeistung } from '../types'
 
-const einst: Einstellungen = { ...STANDARD_EINSTELLUNGEN, punktwertOverride: 1.2 }
+const einst: Einstellungen = { ...STANDARD_EINSTELLUNGEN, punktwertFest: { KCH: 1.2 } }
 
 function plan(zaehne: Record<string, ZahnLeistung>, modell: MkvModell = 'gozDifferenz', patch: Partial<Plan['regler']> = {}): Plan {
   const p = neuerPlan('T-1', einst)
@@ -50,7 +50,7 @@ describe('Mehrkosten = GOZ minus Kassenanteil', () => {
   })
 
   it('Betrag unter dem Einfachsatz: Faktor 1,0 und Warnung', () => {
-    const niedrig = { ...einst, punktwertOverride: 0.3 }
+    const niedrig = { ...einst, punktwertFest: { KCH: 0.3 } }
     const r = rechnen(plan({ '36': { therapie: 'komposit', flaechen: 2 } }, 'proZahn', { proZahn: 0 }), niedrig)
     expect(r.zaehne[0].faktor).toBe(1)
     expect(r.zaehne[0].warnungen.join()).toMatch(/Einfachsatz/)

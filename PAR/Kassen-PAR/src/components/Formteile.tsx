@@ -47,8 +47,8 @@ export function Versichertenfeld({ fall, einst, setFall, setEinst }: {
         <small className="vf-geb">geb. am {f('geburtsdatum', { type: 'date', breite: '30mm' })}</small>
       </div>
       <div className="vf-drei">
-        <div><small>Kostenträgerkennung</small>{f('kostentraegerkennung', { placeholder: 'IK' })}</div>
-        <div><small>Versicherten-Nr.</small>{f('versichertennr')}</div>
+        <div><small>Kostenträgerkennung</small>{f('kassenNr', { placeholder: 'IK' })}</div>
+        <div><small>Versicherten-Nr.</small>{f('versichertenNr')}</div>
         <div><small>Status</small>{f('status', { breite: '14mm' })}</div>
       </div>
       <div className="vf-drei">

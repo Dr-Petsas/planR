@@ -1,7 +1,18 @@
-import gozDaten from '../data/goz-2012.json'
-import goaeDaten from '../data/goae-zahnarzt.json'
+import gozMitgeliefert from '../data/goz-2012.json'
+import goaeMitgeliefert from '../data/goae-zahnarzt.json'
+import { aktuell } from '../daten'
+import type { GenutzteListe } from '../components/Listen'
 import type { ListenEintrag } from '../types'
 import { GOZ_ERGAENZUNG } from '../data/goz-sonderregeln'
+
+const gozDaten = aktuell('goz-2012.json', gozMitgeliefert)
+const goaeDaten = aktuell('goae-zahnarzt.json', goaeMitgeliefert)
+
+/** Listen, die "Preislisten aktualisieren" erneuert. */
+export const GENUTZTE_LISTEN: GenutzteListe[] = [
+  { datei: 'goz-2012.json', name: 'GOZ (Privathonorar)', mitgeliefert: gozMitgeliefert, aktuell: gozDaten },
+  { datei: 'goae-zahnarzt.json', name: 'GOÄ (für Zahnärzte geöffnete Abschnitte)', mitgeliefert: goaeMitgeliefert, aktuell: goaeDaten },
+]
 
 export const GOZ_PUNKTWERT = gozDaten.punktwert
 export const GOAE_PUNKTWERT = goaeDaten.punktwert

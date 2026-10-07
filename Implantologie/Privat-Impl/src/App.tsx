@@ -14,10 +14,11 @@ import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } fr
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
-import type { Patient, Plan } from './types'
+import { PatientFelder } from './components/Stammdaten'
+import type { Plan } from './types'
+import { patientName } from './stammdaten'
 
-const patientName = (p: Plan) => [p.patient.vorname, p.patient.name].filter(Boolean).join(' ')
-const hatInhalt = (p: Plan) => Boolean(patientName(p).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP))
+const hatInhalt = (p: Plan) => Boolean(patientName(p.patient).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP))
 
 type Reiter = 'patient' | 'planung' | 'leistungen' | 'praxis'
 
@@ -36,7 +37,7 @@ export default function App() {
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
 
   const ablage = useImplAblage()
-  const daten = { nummer: plan.nummer, patient: patientName(plan), betrag: kalk.gesamt, plan }
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
@@ -176,25 +177,10 @@ function Feld({ label, wert, onChange, typ = 'text', breit }: { label: string; w
 }
 
 function PatientForm({ plan, onChange, onZeImport }: { plan: Plan; onChange: (p: Plan) => void; onZeImport: () => void }) {
-  const p = plan.patient
-  const set = (f: keyof Patient) => (v: string) => onChange({ ...plan, patient: { ...p, [f]: v } })
   return (
     <div className="block">
       <h3>Patient</h3>
-      <div className="formular">
-        <label className="feld">
-          <span>Anrede</span>
-          <select value={p.anrede} onChange={(e) => set('anrede')(e.target.value)}>
-            <option value="">–</option><option>Frau</option><option>Herr</option>
-          </select>
-        </label>
-        <Feld label="Vorname" wert={p.vorname} onChange={set('vorname')} />
-        <Feld label="Name" wert={p.name} onChange={set('name')} />
-        <Feld label="Geburtsdatum" typ="date" wert={p.geburtsdatum} onChange={set('geburtsdatum')} />
-        <Feld label="Straße, Nr." wert={p.strasse} onChange={set('strasse')} breit />
-        <Feld label="PLZ Ort" wert={p.plzOrt} onChange={set('plzOrt')} breit />
-        <Feld label="Versicherung (optional)" wert={p.kostentraeger} onChange={set('kostentraeger')} breit />
-      </div>
+      <PatientFelder art="privat" patient={plan.patient} onChange={(patient) => onChange({ ...plan, patient })} />
       <h3>Kostenvoranschlag</h3>
       <div className="formular">
         <Feld label="Nummer" wert={plan.nummer} onChange={(v) => onChange({ ...plan, nummer: v })} />

@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import type { Einstellungen, Plan, Rechnung } from '../types'
 import { euro, faktorText } from '../engine/mkv'
+import { anschrift, patientName, plzOrt } from '../stammdaten'
 
 interface Props {
   plan: Plan
@@ -25,15 +26,16 @@ function Kopf({ plan, einst }: Omit<Props, 'rechnung'>) {
         <div className="kv-praxis">
           <div className="kv-praxisname">{p.name}</div>
           {p.zahnarzt && <div>{p.zahnarzt}</div>}
-          <div>{[p.strasse, [p.plz, p.ort].filter(Boolean).join(' ')].filter(Boolean).join(' · ')}</div>
+          <div>{[p.strasse, plzOrt(p)].filter(Boolean).join(' · ')}</div>
           <div>{[p.telefon, p.email].filter(Boolean).join(' · ')}</div>
         </div>
       </div>
       <div className="kv-meta">
-        <div><span>Patient/in</span>{pat.name || '—'}</div>
+        <div><span>Patient/in</span>{patientName(pat) || '—'}</div>
         <div><span>geboren</span>{datum(pat.geburtsdatum)}</div>
+        {anschrift(pat) && <div><span>Anschrift</span>{anschrift(pat)}</div>}
         <div><span>Krankenkasse</span>{pat.kasse || '—'}</div>
-        <div><span>Versicherten-Nr.</span>{pat.versichertennr || '—'}</div>
+        <div><span>Versicherten-Nr.</span>{pat.versichertenNr || '—'}</div>
         <div><span>Nr.</span>{plan.nummer}</div>
         <div><span>Datum</span>{datum(plan.datum)}</div>
       </div>

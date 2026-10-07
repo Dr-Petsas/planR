@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ALLE_ZAEHNE } from './engine/zahnschema'
 import { useAblage } from './ablage'
 import { mk } from './mandant'
+import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 import type {
   Anamnese, Befund, BefundPhase, Einstellungen, ParFall, Planung, Termin, ZahnBefund, Zusatzformulare,
 } from './types'
@@ -13,19 +14,8 @@ const K_LISTE = mk('kassen-par.liste.v1')
 const K_FALL_ALT = mk('kassen-par.plan.v1')
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
-  praxis: {
-    name: 'Zahnarztpraxis',
-    strasse: '',
-    plz: '',
-    ort: '',
-    telefon: '',
-    zahnarztNr: '',
-    abrechnungsNr: '',
-    behandler: '',
-  },
-  kzvNr: '',
-  bemaPunktwertOverride: null,
-  kchPunktwertOverride: null,
+  praxis: standardPraxis(),
+  punktwertFest: {},
   gozFaktor: 2.3,
   roentgenFaktor: 1.8,
   analogPunkte: {},
@@ -104,10 +94,7 @@ export function neuerFall(nummer: number): ParFall {
   return {
     nummer: nummerFormat(nummer),
     datum: heute(),
-    patient: {
-      name: '', vorname: '', geburtsdatum: '', kasse: '', versichertennr: '',
-      kostentraegerkennung: '', kassennummer: '', kassenart: 'primaer', status: '',
-    },
+    patient: leererPatient(),
     antrag: {
       antragsnummer: '', antragsnummerUrspruenglich: '', verarbeitungskennzeichen: '',
       artBehandlungsplan: 'initial', wechselkennzeichen: '', aktenzeichenPVS: '',
@@ -254,7 +241,7 @@ export function fallMigrieren(roh: unknown): ParFall {
   return {
     ...v,
     ...p,
-    patient: { ...v.patient, ...p.patient },
+    patient: patientMigrieren(p.patient),
     antrag: { ...v.antrag, ...p.antrag },
     anamnese: anamneseMigrieren({ ...v.anamnese, ...p.anamnese }, p.anamnese),
     diagnose: { ...v.diagnose, ...p.diagnose },
@@ -272,13 +259,19 @@ export function fallMigrieren(roh: unknown): ParFall {
 }
 
 export function einstMigrieren(roh: unknown): Einstellungen {
-  const e = (roh ?? {}) as Partial<Einstellungen> & { bemaPunktwert?: number }
+  // kzvNr / bemaPunktwertOverride / kchPunktwertOverride: Stand vor den einheitlichen Anmeldedaten
+  const { kzvNr, bemaPunktwertOverride, kchPunktwertOverride, bemaPunktwert: _alt, ...e } = (roh ?? {}) as Partial<Einstellungen> & {
+    bemaPunktwert?: number; kzvNr?: string; bemaPunktwertOverride?: number | null; kchPunktwertOverride?: number | null
+  }
+  void _alt
   return {
     ...STANDARD_EINSTELLUNGEN,
     ...e,
-    praxis: { ...STANDARD_EINSTELLUNGEN.praxis, ...e.praxis },
-    bemaPunktwertOverride: e.bemaPunktwertOverride ?? null,
-    kchPunktwertOverride: e.kchPunktwertOverride ?? null,
+    praxis: praxisMigrieren(e.praxis, kzvNr),
+    punktwertFest: e.punktwertFest ?? {
+      ...(bemaPunktwertOverride ? { PAR: bemaPunktwertOverride } : {}),
+      ...(kchPunktwertOverride ? { KCH: kchPunktwertOverride } : {}),
+    },
     analogPunkte: { ...e.analogPunkte },
   }
 }

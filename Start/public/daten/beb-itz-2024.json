@@ -1,0 +1,1469 @@
+{
+ "typ": "beb",
+ "name": "BEB Preisliste ITZ GmbH (Stand 23.01.2024)",
+ "gueltigAb": "2024-01-23",
+ "quelle": "https://itzgmbh.de/wp-content/uploads/BEB-2024.pdf",
+ "hinweis": "Per Texterkennung aus einem Scan übernommen – Preise vor Verwendung prüfen.",
+ "eintraege": [
+  {
+   "nr": "0001",
+   "text": "Modell aus Hartgips",
+   "preis": 10.4
+  },
+  {
+   "nr": "0002",
+   "text": "Modell aus Superhartgips",
+   "preis": 10.4
+  },
+  {
+   "nr": "0004",
+   "text": "Modell nach Überabformung",
+   "preis": 23.64
+  },
+  {
+   "nr": "0007",
+   "text": "Kontrollmodell",
+   "preis": 10.4
+  },
+  {
+   "nr": "0009",
+   "text": "Modell aus Kunststoff",
+   "preis": 23.0
+  },
+  {
+   "nr": "0010",
+   "text": "Spezialmodell",
+   "preis": 23.0
+  },
+  {
+   "nr": "0018",
+   "text": "Modell bei Implantatversorgung",
+   "preis": 10.4
+  },
+  {
+   "nr": "0019",
+   "text": "Frässmodell",
+   "preis": 16.0
+  },
+  {
+   "nr": "0020",
+   "text": "Remontage-Modell",
+   "preis": 10.4
+  },
+  {
+   "nr": "0021",
+   "text": "Sägemodell",
+   "preis": 23.0
+  },
+  {
+   "nr": "0023",
+   "text": "Modell für Einzelstümpfe",
+   "preis": 10.4
+  },
+  {
+   "nr": "0024",
+   "text": "Verwendung Kunststoff",
+   "preis": 19.64
+  },
+  {
+   "nr": "0029",
+   "text": "Keramikstufe",
+   "preis": 40.0
+  },
+  {
+   "nr": "0033",
+   "text": "Bissgabel nach Gauge",
+   "preis": 15.0
+  },
+  {
+   "nr": "0036",
+   "text": "Versandkosten bei Datenlieferung",
+   "preis": 8.52
+  },
+  {
+   "nr": "0037",
+   "text": "Konstruieren und Fräsen einer Basis aus Kunststoff",
+   "preis": 102.0
+  },
+  {
+   "nr": "0039",
+   "text": "Interimsprothese aus Polyamid",
+   "preis": 199.0
+  },
+  {
+   "nr": "0040",
+   "text": "Interimsprothese aus Polyamid",
+   "preis": 249.0
+  },
+  {
+   "nr": "0042",
+   "text": "Fräsen eines Sekundärteils NEM",
+   "preis": 138.0
+  },
+  {
+   "nr": "0105",
+   "text": "Stumpf aus Kunststoff",
+   "preis": 8.5
+  },
+  {
+   "nr": "0217",
+   "text": "Stumpf unter Mikroskop vorbereiten",
+   "preis": 5.5
+  },
+  {
+   "nr": "0221",
+   "text": "Hilfsteil in Abdruck",
+   "preis": 9.0
+  },
+  {
+   "nr": "0223",
+   "text": "Zahnfleischmaske, abnehmbar je Kieferhälfte",
+   "preis": 31.0
+  },
+  {
+   "nr": "0224",
+   "text": "Modellimplantat repositionieren",
+   "preis": 11.0
+  },
+  {
+   "nr": "0225",
+   "text": "Implantatpfosten auf Modellierimplantat aufschrauben",
+   "preis": 6.2
+  },
+  {
+   "nr": "0241",
+   "text": "Dublieren eines Modelles oder Modellteiles",
+   "preis": 21.33
+  },
+  {
+   "nr": "0243",
+   "text": "Dublieren eines Einzelstumpfes",
+   "preis": 13.66
+  },
+  {
+   "nr": "0251",
+   "text": "Angeliefertes Modell untersockeln",
+   "preis": 10.4
+  },
+  {
+   "nr": "0252",
+   "text": "Angeliefertes Modell oder Zahnkranz bearbeiten",
+   "preis": 10.4
+  },
+  {
+   "nr": "0253",
+   "text": "Split-Cast Sockel an Modell: Erklärung und Preis",
+   "preis": 10.4
+  },
+  {
+   "nr": "0301",
+   "text": "Zahn vermessen",
+   "preis": 5.0
+  },
+  {
+   "nr": "0302",
+   "text": "Modell vermessen",
+   "preis": 7.0
+  },
+  {
+   "nr": "0307",
+   "text": "Radieren des Abschlussrandes",
+   "preis": 11.0
+  },
+  {
+   "nr": "0401",
+   "text": "Montage eines Modellpaares in Fixator",
+   "preis": 13.07
+  },
+  {
+   "nr": "0402",
+   "text": "Modellmontage in Mittelwertartikulator I",
+   "preis": 14.75
+  },
+  {
+   "nr": "0403",
+   "text": "Modellmontage in Mittelwertartikulator II",
+   "preis": 16.2
+  },
+  {
+   "nr": "0404",
+   "text": "Modellmontage in Mittelwert nach Gesichtsbogen",
+   "preis": 26.5
+  },
+  {
+   "nr": "0405",
+   "text": "Modellmontage in individuellen Artikulator II",
+   "preis": 16.2
+  },
+  {
+   "nr": "0408",
+   "text": "Montage eines Gegenkiefermodelles",
+   "preis": 7.7
+  },
+  {
+   "nr": "0511",
+   "text": "Mehraufwand für Einstellen nach Zentrikregistrat",
+   "preis": 7.7
+  },
+  {
+   "nr": "0521",
+   "text": "Auswerten eines Registrates",
+   "preis": 25.5
+  },
+  {
+   "nr": "0522",
+   "text": "Frontzahnführungsteller individuell",
+   "preis": 26.5
+  },
+  {
+   "nr": "0523",
+   "text": "Pfeilwinkel auf Frontzahnführungsteller übertragen",
+   "preis": 26.5
+  },
+  {
+   "nr": "0601",
+   "text": "Modellpaar trimmen, okklusionsbezogen",
+   "preis": 11.0
+  },
+  {
+   "nr": "0602",
+   "text": "Modellpaar sockeln, dreidimensional",
+   "preis": 11.0
+  },
+  {
+   "nr": "0701",
+   "text": "Versand je Versandgang",
+   "preis": 8.52
+  },
+  {
+   "nr": "0702",
+   "text": "Sonderversand oder Fahrtkosten",
+   "preis": 25.0
+  },
+  {
+   "nr": "0703",
+   "text": "Versand UPS Express bis 12:00",
+   "preis": 14.0
+  },
+  {
+   "nr": "0705",
+   "text": "nachträgliche Farbanpassung im Labor",
+   "preis": 58.0
+  },
+  {
+   "nr": "0706",
+   "text": "Foto oder Video Dokumentation",
+   "preis": 10.0
+  },
+  {
+   "nr": "0710",
+   "text": "Eilterminzuschlag",
+   "preis": 1.0
+  },
+  {
+   "nr": "0721",
+   "text": "Zeiteinheit, Zahntechniker-Meister je 15 Min",
+   "preis": 28.5
+  },
+  {
+   "nr": "0722",
+   "text": "Zeiteinheit, Zahntechniker je 15 Min",
+   "preis": 20.0
+  },
+  {
+   "nr": "0723",
+   "text": "Zahnfarbenbestimmung im Labor",
+   "preis": 30.0
+  },
+  {
+   "nr": "0724",
+   "text": "Zahnfarbenbestimmung in der Praxis incl. Anfahrt",
+   "preis": 45.0
+  },
+  {
+   "nr": "0731",
+   "text": "Individuelle Namenskennzeichnung",
+   "preis": 35.0
+  },
+  {
+   "nr": "0732",
+   "text": "Desinfektion",
+   "preis": 1.8
+  },
+  {
+   "nr": "0801",
+   "text": "Prothetische Planung",
+   "preis": 15.0
+  },
+  {
+   "nr": "0802",
+   "text": "Prothetische Alternativplanung",
+   "preis": 10.0
+  },
+  {
+   "nr": "0811",
+   "text": "Modellanalyse für Prothetik",
+   "preis": 15.0
+  },
+  {
+   "nr": "0821",
+   "text": "Kostenvoranschlag",
+   "preis": 15.0
+  },
+  {
+   "nr": "0833",
+   "text": "Set-Up/WaxUp/MockUp - je Zahn",
+   "preis": 19.0
+  },
+  {
+   "nr": "1002",
+   "text": "Basis für Bissregistrierung",
+   "preis": 31.68
+  },
+  {
+   "nr": "1003",
+   "text": "Basis für Stützstiftregistrat",
+   "preis": 31.68
+  },
+  {
+   "nr": "1005",
+   "text": "Funktionslöffel aus Kunststoff",
+   "preis": 31.68
+  },
+  {
+   "nr": "1006",
+   "text": "Individueller Löffel aus Kunststoff",
+   "preis": 31.68
+  },
+  {
+   "nr": "1007",
+   "text": "Basis für Aufstellung",
+   "preis": 31.68
+  },
+  {
+   "nr": "1019",
+   "text": "Basis für neue Abdrucknahme vorbereiten",
+   "preis": 12.0
+  },
+  {
+   "nr": "1108",
+   "text": "Löffel für Implantatversorgung",
+   "preis": 31.68
+  },
+  {
+   "nr": "1111",
+   "text": "Bisswall aus Wachs, auf Basis",
+   "preis": 9.9
+  },
+  {
+   "nr": "1113",
+   "text": "Bisswall aus Kunststoff, auf Basis",
+   "preis": 9.9
+  },
+  {
+   "nr": "1115",
+   "text": "Registrierplatte und -stift auf Basen",
+   "preis": 39.0
+  },
+  {
+   "nr": "1122",
+   "text": "Wachsplatte für zentrische Bissnahme im Artikulator vorbereiten",
+   "preis": 35.0
+  },
+  {
+   "nr": "1201",
+   "text": "Übertragungskappe aus Kunststoff",
+   "preis": 12.0
+  },
+  {
+   "nr": "1223",
+   "text": "Basis für Bohrschablone bei Implantat",
+   "preis": 31.68
+  },
+  {
+   "nr": "1225",
+   "text": "Implantat-Kontrollschablone",
+   "preis": 25.0
+  },
+  {
+   "nr": "1251",
+   "text": "Vorwall",
+   "preis": 8.0
+  },
+  {
+   "nr": "1311",
+   "text": "Röntgenkugel oder Bohrhülse positionieren",
+   "preis": 7.0
+  },
+  {
+   "nr": "1341",
+   "text": "Walkhoffsche Tastkugel an Bißschablone",
+   "preis": 12.0
+  },
+  {
+   "nr": "1401",
+   "text": "Provisorische Krone, Brückenglied, Stiftzahn, Onlay, Inlay aus Kunststoff",
+   "preis": 35.0
+  },
+  {
+   "nr": "1402",
+   "text": "Provisorische Krone, Brückenglied, Stiftzahn, Onlay, Inlay aus Metall",
+   "preis": 35.0
+  },
+  {
+   "nr": "1403",
+   "text": "Metallarmierung für provisorische Versorgung",
+   "preis": 48.0
+  },
+  {
+   "nr": "1404",
+   "text": "Formteil für provisorische Versorgung",
+   "preis": 35.0
+  },
+  {
+   "nr": "1405",
+   "text": "Formteil Kunststoff (Schleifkäppchen)",
+   "preis": 19.2
+  },
+  {
+   "nr": "1406",
+   "text": "Reiseprothese aus PMMA (monochrome)",
+   "preis": 190.0
+  },
+  {
+   "nr": "1601",
+   "text": "Allergietestplättchen",
+   "preis": 11.0
+  },
+  {
+   "nr": "1902",
+   "text": "Aufwand bei Suprastruktur",
+   "preis": 28.5
+  },
+  {
+   "nr": "2001",
+   "text": "Wurzelstift gegossen",
+   "preis": 108.67
+  },
+  {
+   "nr": "2011",
+   "text": "Wurzelkappe",
+   "preis": 108.67
+  },
+  {
+   "nr": "2012",
+   "text": "Wurzelstiftkappe",
+   "preis": 108.67
+  },
+  {
+   "nr": "2033",
+   "text": "Individuelles Abutment",
+   "preis": 95.31
+  },
+  {
+   "nr": "2035",
+   "text": "Gusstufenkrone oder Stegkappe auf Implantataufbau nach",
+   "preis": 115.8
+  },
+  {
+   "nr": "2101",
+   "text": "Krone gegossen/gefräst",
+   "preis": 115.8
+  },
+  {
+   "nr": "2104",
+   "text": "Dreiviertelkrone gegossen/gefräst",
+   "preis": 115.8
+  },
+  {
+   "nr": "2121",
+   "text": "Krone gegossen / gefräst für Keramik/Kompositverblendung",
+   "preis": 95.0
+  },
+  {
+   "nr": "2126",
+   "text": "Dreiviertelkrone gegossen/gefräst für Keramik/Kompositverblendung",
+   "preis": 85.1
+  },
+  {
+   "nr": "2154",
+   "text": "Dreiviertelkrone gefräst",
+   "preis": 80.0
+  },
+  {
+   "nr": "2155",
+   "text": "Anker gegossen/gefräst, für Klebebrücke",
+   "preis": 114.38
+  },
+  {
+   "nr": "2181",
+   "text": "Stegkappe",
+   "preis": 115.8
+  },
+  {
+   "nr": "2251",
+   "text": "Seitenzahnkrone aus Keramik gefräst (vollanatomisch)",
+   "preis": 110.0
+  },
+  {
+   "nr": "2252",
+   "text": "Frontzahnkrone aus Keramik gefräst (vollanatomisch)",
+   "preis": 135.0
+  },
+  {
+   "nr": "2281",
+   "text": "Krone aus Keramik gefräst",
+   "preis": 110.0
+  },
+  {
+   "nr": "2301",
+   "text": "Inlay einflächig",
+   "preis": 90.0
+  },
+  {
+   "nr": "2302",
+   "text": "Inlay zweiflächig",
+   "preis": 90.0
+  },
+  {
+   "nr": "2303",
+   "text": "Inlay dreiflächig",
+   "preis": 90.0
+  },
+  {
+   "nr": "2304",
+   "text": "Inlay mehrflächig",
+   "preis": 115.8
+  },
+  {
+   "nr": "2351",
+   "text": "Brückenglied gefräßt Seitenzahn (vollanatomisch)",
+   "preis": 110.0
+  },
+  {
+   "nr": "2352",
+   "text": "Brückenglied gefräßt Frontzahn (vollanatomisch)",
+   "preis": 135.0
+  },
+  {
+   "nr": "2361",
+   "text": "Brückenglied gegossen/gefräst Metall",
+   "preis": 98.0
+  },
+  {
+   "nr": "2534",
+   "text": "Teilkrone Keramik",
+   "preis": 116.8
+  },
+  {
+   "nr": "2551",
+   "text": "Inlay aus Keramik, gefräst, einflächig",
+   "preis": 78.0
+  },
+  {
+   "nr": "2552",
+   "text": "Inlay aus Keramik, gefräst, zweiflächig",
+   "preis": 87.0
+  },
+  {
+   "nr": "2553",
+   "text": "Inlay aus Keramik, gefräst, dreiflächig",
+   "preis": 98.0
+  },
+  {
+   "nr": "2554",
+   "text": "Inlay aus Keramik, gefräst, mehrflächig",
+   "preis": 115.8
+  },
+  {
+   "nr": "2601",
+   "text": "Teil-Verblendungaus Komposite",
+   "preis": 103.4
+  },
+  {
+   "nr": "2602",
+   "text": "mehrflachige Verblendungaus Komposite",
+   "preis": 105.4
+  },
+  {
+   "nr": "2603",
+   "text": "Verblendschale aus Kunststoff",
+   "preis": 72.0
+  },
+  {
+   "nr": "2611",
+   "text": "Teil-Verblendung aus Keramik",
+   "preis": 132.2
+  },
+  {
+   "nr": "2612",
+   "text": "Mehrflächige Verblendung aus Keramik",
+   "preis": 135.21
+  },
+  {
+   "nr": "2653",
+   "text": "Veneer aus Keramik",
+   "preis": 135.21
+  },
+  {
+   "nr": "2663",
+   "text": "Verblendschale aus Komposit",
+   "preis": 105.4
+  },
+  {
+   "nr": "2671",
+   "text": "Papille aus Komposite",
+   "preis": 29.0
+  },
+  {
+   "nr": "2672",
+   "text": "Zahnfleisch aus Komposite",
+   "preis": 29.0
+  },
+  {
+   "nr": "2676",
+   "text": "Papille aus Keramik",
+   "preis": 52.5
+  },
+  {
+   "nr": "2677",
+   "text": "Zahnfleisch aus Keramik",
+   "preis": 52.5
+  },
+  {
+   "nr": "2678",
+   "text": "Wurzelpontic aus Keramik",
+   "preis": 52.5
+  },
+  {
+   "nr": "2682",
+   "text": "Papille aus Komposit",
+   "preis": 29.0
+  },
+  {
+   "nr": "2901",
+   "text": "Stiftaufbau in vorhandene Krone einarbeiten",
+   "preis": 35.0
+  },
+  {
+   "nr": "2904",
+   "text": "Angelieferte Modellation gießen/pressen",
+   "preis": 29.0
+  },
+  {
+   "nr": "2907",
+   "text": "Brückenteilungsgeschiebe, individuell",
+   "preis": 260.0
+  },
+  {
+   "nr": "2909",
+   "text": "Individuelles Charakterisieren eines Kunststoffzahnes",
+   "preis": 20.0
+  },
+  {
+   "nr": "2911",
+   "text": "Krone/Brückenglied für Klammer vorbereiten",
+   "preis": 21.13
+  },
+  {
+   "nr": "2912",
+   "text": "Krone/Brückenglied, Inlay passend für vorhandene Prothese arbeiten",
+   "preis": 21.13
+  },
+  {
+   "nr": "2913",
+   "text": "Umgehungsbügel bei Diastema",
+   "preis": 15.0
+  },
+  {
+   "nr": "2918",
+   "text": "Krone/Brückenglied für Klammer vorbereiten",
+   "preis": 21.13
+  },
+  {
+   "nr": "2922",
+   "text": "Krone/Inlay/Brückenglied aufpassen",
+   "preis": 7.0
+  },
+  {
+   "nr": "2941",
+   "text": "Individuell charakterisieren, Kunststoff",
+   "preis": 15.0
+  },
+  {
+   "nr": "2945",
+   "text": "Individuell charakterisieren, Komposit",
+   "preis": 15.0
+  },
+  {
+   "nr": "2951",
+   "text": "Individuell charakterisieren, Keramik",
+   "preis": 21.0
+  },
+  {
+   "nr": "2953",
+   "text": "Fräsen je Glied bei Datenlieferung Material Katana YML",
+   "preis": 39.0
+  },
+  {
+   "nr": "2954",
+   "text": "Fräsen je Glied bei Datenanlieferung - Material Katana MLo.ä.",
+   "preis": 21.5
+  },
+  {
+   "nr": "2955",
+   "text": "Fräsen je Glied bei Datenanlieferung - Material NEM",
+   "preis": 21.5
+  },
+  {
+   "nr": "2956",
+   "text": "Fräsen je Glied bei Datenanlieferung - Material PMMA",
+   "preis": 21.5
+  },
+  {
+   "nr": "2957",
+   "text": "Fräsen einer Aufbisschiene bei Datenanlieferung (PMMA)",
+   "preis": 53.0
+  },
+  {
+   "nr": "2958",
+   "text": "Fräsen einer Aufbisschiene bei Datenlieferung (Nylon)",
+   "preis": 63.0
+  },
+  {
+   "nr": "2959",
+   "text": "Konst. und Fräsen einer Aufbisschiene bei Modellanlieferung (Nylon)",
+   "preis": 73.0
+  },
+  {
+   "nr": "2960",
+   "text": "Konst. und Fräsen einer Aufbisschiene bei Modellanlieferung (PMMA)",
+   "preis": 83.0
+  },
+  {
+   "nr": "2961",
+   "text": "Konst. und Fräsen KuB (NEM)",
+   "preis": 32.0
+  },
+  {
+   "nr": "2962",
+   "text": "Konst. und Fräsen KuB aus (PMMA)",
+   "preis": 29.0
+  },
+  {
+   "nr": "2963",
+   "text": "Krone/Inlay/Brückenglied aufpassen",
+   "preis": 7.0
+  },
+  {
+   "nr": "2964",
+   "text": "Konst. und Fräsen KuB aus (ZrO2 Mono)",
+   "preis": 29.0
+  },
+  {
+   "nr": "2965",
+   "text": "Konst. und Fräsen KuB aus (ZrO2 Multi)",
+   "preis": 49.0
+  },
+  {
+   "nr": "2966",
+   "text": "Konst. und Fräsen KuB aus (Li2Silikat)",
+   "preis": 69.0
+  },
+  {
+   "nr": "2967",
+   "text": "Fräsen je Glied bei Datenlieferung - Material (e.max)",
+   "preis": 59.0
+  },
+  {
+   "nr": "2972",
+   "text": "Aufwandzu Suprastrukturbeiverschraubbarem Implantat",
+   "preis": 28.0
+  },
+  {
+   "nr": "2981",
+   "text": "NEM Zuschlag",
+   "preis": 20.46
+  },
+  {
+   "nr": "2983",
+   "text": "Titan verarbeiten bei festsitzendem Zahnersatz",
+   "preis": 20.46
+  },
+  {
+   "nr": "2984",
+   "text": "Wax UP je Zahn",
+   "preis": 13.0
+  },
+  {
+   "nr": "3001",
+   "text": "Teleskopkrone, primär/Sekundär",
+   "preis": 210.0
+  },
+  {
+   "nr": "3004",
+   "text": "Teleskopkrone",
+   "preis": 320.0
+  },
+  {
+   "nr": "3021",
+   "text": "Individuelles Geschiebe",
+   "preis": 290.0
+  },
+  {
+   "nr": "3023",
+   "text": "Konfektioniertes Geschiebe, Gelenk, Anker einarbeiten",
+   "preis": 135.0
+  },
+  {
+   "nr": "3024",
+   "text": "Lager für Raste",
+   "preis": 35.0
+  },
+  {
+   "nr": "3025",
+   "text": "Umlaufraste für Schubverteilungsarm",
+   "preis": 35.0
+  },
+  {
+   "nr": "3027",
+   "text": "Locator/Kugelanker in proth. einarbeiten",
+   "preis": 130.0
+  },
+  {
+   "nr": "3031",
+   "text": "Individueller Steg, Grundeinheit",
+   "preis": 95.0
+  },
+  {
+   "nr": "3032",
+   "text": "Individueller Steg, Längeneinheit",
+   "preis": 15.0
+  },
+  {
+   "nr": "3104",
+   "text": "Stegfräsung",
+   "preis": 110.0
+  },
+  {
+   "nr": "3105",
+   "text": "gefrästes Lager",
+   "preis": 70.0
+  },
+  {
+   "nr": "3215",
+   "text": "Schubverteilungsarm",
+   "preis": 59.0
+  },
+  {
+   "nr": "3221",
+   "text": "Individuelles Steggeschiebe",
+   "preis": 260.0
+  },
+  {
+   "nr": "3322",
+   "text": "Steggeschiebe individuell, an/in Metallbasis",
+   "preis": 54.96
+  },
+  {
+   "nr": "3401",
+   "text": "Drehriegel",
+   "preis": 235.0
+  },
+  {
+   "nr": "3403",
+   "text": "Schwenkriegel",
+   "preis": 235.0
+  },
+  {
+   "nr": "3405",
+   "text": "Schub- oder Steckriegel",
+   "preis": 235.0
+  },
+  {
+   "nr": "3521",
+   "text": "Konfektionssteg Grundeinheit",
+   "preis": 89.0
+  },
+  {
+   "nr": "3523",
+   "text": "Konfektionssteg Längeneinheit",
+   "preis": 19.0
+  },
+  {
+   "nr": "3621",
+   "text": "Konfektions-Steglasche an/in Kunststoffbasis",
+   "preis": 65.0
+  },
+  {
+   "nr": "3623",
+   "text": "Konfektions-Steglasche an/in Metallbasis",
+   "preis": 75.0
+  },
+  {
+   "nr": "3903",
+   "text": "Friktionsstift einarbeiten",
+   "preis": 32.5
+  },
+  {
+   "nr": "3905",
+   "text": "Verschraubung/Verbolzung",
+   "preis": 102.0
+  },
+  {
+   "nr": "3906",
+   "text": "Verschraubung Implantat",
+   "preis": 33.0
+  },
+  {
+   "nr": "3931",
+   "text": "Lösungsknopf für Verbindungselement",
+   "preis": 31.0
+  },
+  {
+   "nr": "4001",
+   "text": "Metallbasis",
+   "preis": 175.0
+  },
+  {
+   "nr": "4007",
+   "text": "Gitter total",
+   "preis": 110.0
+  },
+  {
+   "nr": "4008",
+   "text": "Bügel",
+   "preis": 110.0
+  },
+  {
+   "nr": "4101",
+   "text": "Einarmige Klammer gebogen",
+   "preis": 12.8
+  },
+  {
+   "nr": "4103",
+   "text": "Kralle gebogen",
+   "preis": 12.8
+  },
+  {
+   "nr": "4106",
+   "text": "Fortlaufende Klammer je Zahn gebogen",
+   "preis": 12.8
+  },
+  {
+   "nr": "4107",
+   "text": "Gegenlager gebogen",
+   "preis": 12.8
+  },
+  {
+   "nr": "4111",
+   "text": "Zweiarmige gefräste Klammer (Valplast)",
+   "preis": 63.0
+  },
+  {
+   "nr": "4112",
+   "text": "Zweiarmige Klammer mit Auflage gebogen",
+   "preis": 25.22
+  },
+  {
+   "nr": "4119",
+   "text": "Bonwill-Klammer gebogen",
+   "preis": 25.22
+  },
+  {
+   "nr": "4121",
+   "text": "Ney Stiel gebogen",
+   "preis": 15.0
+  },
+  {
+   "nr": "4122",
+   "text": "Auflage gegossen",
+   "preis": 18.33
+  },
+  {
+   "nr": "4201",
+   "text": "gossene Retention",
+   "preis": 69.0
+  },
+  {
+   "nr": "4202",
+   "text": "Gegossenes Basisteil",
+   "preis": 96.54
+  },
+  {
+   "nr": "4203",
+   "text": "Retention an Sekundärteil",
+   "preis": 49.0
+  },
+  {
+   "nr": "4208",
+   "text": "Retention gebogen",
+   "preis": 50.44
+  },
+  {
+   "nr": "4401",
+   "text": "Einarmige Klammer gegossen",
+   "preis": 18.33
+  },
+  {
+   "nr": "4411",
+   "text": "Zweiarmige Klammer gegossen",
+   "preis": 21.0
+  },
+  {
+   "nr": "4412",
+   "text": "Zweiarmige Klammer mit Auflage gegossen",
+   "preis": 30.97
+  },
+  {
+   "nr": "4413",
+   "text": "Bonwillkammer gegossen",
+   "preis": 76.32
+  },
+  {
+   "nr": "4421",
+   "text": "Bearbeiten eines Implantataufbaus",
+   "preis": 41.0
+  },
+  {
+   "nr": "4431",
+   "text": "Federarm inklusive Federarmlager",
+   "preis": 17.9
+  },
+  {
+   "nr": "4902",
+   "text": "Rückenschutzplatte",
+   "preis": 55.24
+  },
+  {
+   "nr": "4903",
+   "text": "Ruckenschutzplatte",
+   "preis": 55.24
+  },
+  {
+   "nr": "4905",
+   "text": "Metallzahn",
+   "preis": 55.24
+  },
+  {
+   "nr": "4907",
+   "text": "Metallfläche als Tuberabdeckung",
+   "preis": 24.0
+  },
+  {
+   "nr": "4941",
+   "text": "Lösungsknopf für Friktionsprothese",
+   "preis": 13.0
+  },
+  {
+   "nr": "4951",
+   "text": "Klammer einzeln gegossen",
+   "preis": 27.2
+  },
+  {
+   "nr": "5211",
+   "text": "Lötvergoldung",
+   "preis": 30.0
+  },
+  {
+   "nr": "5307",
+   "text": "Konditionieren je Zahn / Flügel",
+   "preis": 20.9
+  },
+  {
+   "nr": "6001",
+   "text": "Aufstellen Grundeinheit",
+   "preis": 41.6
+  },
+  {
+   "nr": "6002",
+   "text": "Aufstellen je Zahneinheit auf Wachs oder Kunststoffbasis",
+   "preis": 2.69
+  },
+  {
+   "nr": "6003",
+   "text": "Aufstellen je Zahneinheit auf Metallbasis",
+   "preis": 3.26
+  },
+  {
+   "nr": "6021",
+   "text": "Übertragen einer Wachsaufstellung auf Metallbasis",
+   "preis": 2.22
+  },
+  {
+   "nr": "6121",
+   "text": "Zuschlag für Aufstellung bei Anwesenheit des Patienten",
+   "preis": 60.5
+  },
+  {
+   "nr": "6301",
+   "text": "Grundeinheit Fertigstellung mit Kunststoffbasis",
+   "preis": 69.84
+  },
+  {
+   "nr": "6302",
+   "text": "Fertigstellen mit Kunststoffbasis, je Zahneinheit",
+   "preis": 4.86
+  },
+  {
+   "nr": "6311",
+   "text": "Grundeinheit Fertigstellung auf Metallbasis",
+   "preis": 69.84
+  },
+  {
+   "nr": "6312",
+   "text": "Fertigstellen auf Metallbasis, je Zahneinheit",
+   "preis": 4.86
+  },
+  {
+   "nr": "6401",
+   "text": "Transparente Gaumenplatte",
+   "preis": 52.54
+  },
+  {
+   "nr": "6405",
+   "text": "Verarbeitung Weichkunststoff",
+   "preis": 75.72
+  },
+  {
+   "nr": "6412",
+   "text": "Sonderkunststoff verarbeiten",
+   "preis": 75.72
+  },
+  {
+   "nr": "6414",
+   "text": "Unterfütterbarer Abschlussrand",
+   "preis": 27.62
+  },
+  {
+   "nr": "6431",
+   "text": "Befestigung eines Zahnes mit zahnfarbenem Kunststoff, Pontic",
+   "preis": 12.5
+  },
+  {
+   "nr": "6432",
+   "text": "Herstellen eines Zahnes aus zahnfarbenem Kunststoff",
+   "preis": 21.5
+  },
+  {
+   "nr": "6433",
+   "text": "Kauflacheauszahnfarbenem Kunststoff",
+   "preis": 12.5
+  },
+  {
+   "nr": "6451",
+   "text": "Zahnfleischklammer",
+   "preis": 23.0
+  },
+  {
+   "nr": "6452",
+   "text": "Pelottenklammer",
+   "preis": 23.0
+  },
+  {
+   "nr": "6501",
+   "text": "Netz einarbeiten",
+   "preis": 90.0
+  },
+  {
+   "nr": "6502",
+   "text": "Gußgitter einarbeiten",
+   "preis": 90.0
+  },
+  {
+   "nr": "6503",
+   "text": "Konfektioniertes Metallgitter anpassen und einarbeiten",
+   "preis": 70.0
+  },
+  {
+   "nr": "6504",
+   "text": "Draht einarbeiten",
+   "preis": 36.54
+  },
+  {
+   "nr": "6505",
+   "text": "Bügel einarbeiten",
+   "preis": 70.0
+  },
+  {
+   "nr": "6506",
+   "text": "Individuelle Beschwerungseinlage einarbeiten",
+   "preis": 70.0
+  },
+  {
+   "nr": "6509",
+   "text": "Retention für Einzelzahn einarbeiten",
+   "preis": 26.39
+  },
+  {
+   "nr": "6521",
+   "text": "Metallfacette einarbeiten",
+   "preis": 36.54
+  },
+  {
+   "nr": "6905",
+   "text": "Primärteleskop aus Keramik Zuschlag je Teleskop",
+   "preis": 35.99
+  },
+  {
+   "nr": "6906",
+   "text": "Individueller Implantataufbau Keramik",
+   "preis": 70.91
+  },
+  {
+   "nr": "6907",
+   "text": "Veneer/Inlay aus Keramik",
+   "preis": 115.0
+  },
+  {
+   "nr": "6908",
+   "text": "Provisorische Krone/Brücke je Glied (PMMA)",
+   "preis": 33.0
+  },
+  {
+   "nr": "6912",
+   "text": "Versand UPS Express",
+   "preis": 14.0
+  },
+  {
+   "nr": "7001",
+   "text": "Basis für Einzelkiefergerät",
+   "preis": 64.94
+  },
+  {
+   "nr": "7002",
+   "text": "Basis für bimaxiläres Gerät",
+   "preis": 129.0
+  },
+  {
+   "nr": "7090",
+   "text": "BetterSmile-Schiene Planungspauschale",
+   "preis": 90.0
+  },
+  {
+   "nr": "7091",
+   "text": "BetterSmile-Modell und Regulierung-Schiene (Paar)",
+   "preis": 75.0
+  },
+  {
+   "nr": "7104",
+   "text": "Dreiecksklammer",
+   "preis": 12.45
+  },
+  {
+   "nr": "7105",
+   "text": "Pfeilklammer",
+   "preis": 11.6
+  },
+  {
+   "nr": "7106",
+   "text": "Adams-Klammer",
+   "preis": 16.17
+  },
+  {
+   "nr": "7122",
+   "text": "Auflage",
+   "preis": 12.45
+  },
+  {
+   "nr": "7201",
+   "text": "Frontaler oder lateraler Aufbiß, hart",
+   "preis": 15.67
+  },
+  {
+   "nr": "7202",
+   "text": "Frontaler oder lateraler Aufbiß, weich",
+   "preis": 15.67
+  },
+  {
+   "nr": "7301",
+   "text": "Labialbogen",
+   "preis": 27.47
+  },
+  {
+   "nr": "7501",
+   "text": "Trennen einer Basis und Funktionsfähigmachen der Schraube",
+   "preis": 12.0
+  },
+  {
+   "nr": "7503",
+   "text": "Trennen einer Basis ohne Schraube",
+   "preis": 8.0
+  },
+  {
+   "nr": "7504",
+   "text": "Funktionsfähigmachen einer Schraube ohne Trennen der Basis",
+   "preis": 8.0
+  },
+  {
+   "nr": "7601",
+   "text": "Aufbisschiene adjustiert",
+   "preis": 110.7
+  },
+  {
+   "nr": "7602",
+   "text": "Aufbisschiene nicht adjustiert",
+   "preis": 80.19
+  },
+  {
+   "nr": "7606",
+   "text": "Bleaching Schiene",
+   "preis": 52.95
+  },
+  {
+   "nr": "7607",
+   "text": "Fluoridierungsschiene",
+   "preis": 59.69
+  },
+  {
+   "nr": "7621",
+   "text": "Aufbissschiene adjustiert",
+   "preis": 110.7
+  },
+  {
+   "nr": "7801",
+   "text": "Sportschutz aus Weichkunststoff",
+   "preis": 170.0
+  },
+  {
+   "nr": "8002",
+   "text": "Basis unterfüttern",
+   "preis": 79.14
+  },
+  {
+   "nr": "8003",
+   "text": "Basis erneuern",
+   "preis": 79.14
+  },
+  {
+   "nr": "8006",
+   "text": "Einarbeiten einer Modellgussbasis in vorhandene Kunststoffprothese",
+   "preis": 70.0
+  },
+  {
+   "nr": "8011",
+   "text": "Instandsetzen einer Prothese, Kunststoffbasis oder KFO/FKO Gerät, Grundeinheit",
+   "preis": 29.14
+  },
+  {
+   "nr": "8021",
+   "text": "Leistungseinheit, Sprung aus Kunststoff",
+   "preis": 12.55
+  },
+  {
+   "nr": "8022",
+   "text": "Leistungseinheit, Bruch aus Kunststoff",
+   "preis": 12.55
+  },
+  {
+   "nr": "8023",
+   "text": "Leistungseinheit, Wiederbefestigung Zahn",
+   "preis": 12.55
+  },
+  {
+   "nr": "8024",
+   "text": "Leistungseinheit, Erneuerung Zahn",
+   "preis": 12.55
+  },
+  {
+   "nr": "8025",
+   "text": "Leistungseinheit, Klammer einarbeiten",
+   "preis": 12.55
+  },
+  {
+   "nr": "8027",
+   "text": "Leistungseinheit, Basisteil aus Kunststoff",
+   "preis": 12.55
+  },
+  {
+   "nr": "8028",
+   "text": "Leistungseinheit, Sprung aus Metall",
+   "preis": 12.55
+  },
+  {
+   "nr": "8029",
+   "text": "Leistungseinheit, Bruch aus Metall",
+   "preis": 12.55
+  },
+  {
+   "nr": "8030",
+   "text": "Leistungseinheit, Kunststoffsattel lösen und wiederbefestigen",
+   "preis": 12.55
+  },
+  {
+   "nr": "8034",
+   "text": "Leistungseinheit, Sekundärteil",
+   "preis": 65.67
+  },
+  {
+   "nr": "8036",
+   "text": "Leistungseinheit Metallverbindung/Wiederherstellung",
+   "preis": 27.38
+  },
+  {
+   "nr": "8039",
+   "text": "Prothesensattel kürzen, ausschleifen und polieren",
+   "preis": 20.15
+  },
+  {
+   "nr": "8111",
+   "text": "Auswechseln von Konfektionsteil, einfach",
+   "preis": 18.39
+  },
+  {
+   "nr": "8112",
+   "text": "Auswechseln von Konfektionsteil, kompliziert",
+   "preis": 21.0
+  },
+  {
+   "nr": "8123",
+   "text": "Prothese/ABS/KFO-Gerät säubern und polieren",
+   "preis": 35.0
+  },
+  {
+   "nr": "8201",
+   "text": "Kronen- oder Brückenglied Reparatur, je Glied",
+   "preis": 49.8
+  },
+  {
+   "nr": "8211",
+   "text": "Leistungseinheit, Instandsetzen individueller Riegel",
+   "preis": 25.0
+  },
+  {
+   "nr": "8212",
+   "text": "Leistungseinheit, Aktivieren Teleskopkrone oder Steggeschiebe",
+   "preis": 25.0
+  },
+  {
+   "nr": "8999",
+   "text": "Rapid Prototyping Druck Pro Gramm inkl. Stützmaterial",
+   "preis": 1.9
+  },
+  {
+   "nr": "9029",
+   "text": "Gerustaus Zikon monolitisch",
+   "preis": 29.0
+  },
+  {
+   "nr": "9031",
+   "text": "Gerust vollanatomisch(glasiert)",
+   "preis": 75.0
+  },
+  {
+   "nr": "9034",
+   "text": "Gerust NEM",
+   "preis": 32.0
+  },
+  {
+   "nr": "9581",
+   "text": "Einarbeiten Sekundärteil",
+   "preis": 65.67
+  },
+  {
+   "nr": "9634",
+   "text": "Fräsen je Einheit ohne Material",
+   "preis": 10.0
+  }
+ ]
+}

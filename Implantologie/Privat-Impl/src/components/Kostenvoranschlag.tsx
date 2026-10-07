@@ -1,4 +1,5 @@
 import type { Einstellungen, Plan } from '../types'
+import { plzOrt, praxisZeile } from '../stammdaten'
 import { euro, type Kalkulation, type Zeile } from '../engine/berechnung'
 import { ALLE_ZAEHNE, BEFUND_KUERZEL, PLANUNG_KUERZEL } from '../engine/zahnschema'
 import { SITZUNG_NAME } from '../engine/planung'
@@ -53,17 +54,17 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
         <div className="kv-praxis">
           <div className="kv-praxisname">{praxis.name || 'Zahnarztpraxis'}</div>
           {praxis.zahnarzt && <div>{praxis.zahnarzt}</div>}
-          <div>{[praxis.strasse, praxis.plzOrt].filter(Boolean).join(' · ')}</div>
+          <div>{[praxis.strasse, plzOrt(praxis)].filter(Boolean).join(' · ')}</div>
           <div>{[praxis.telefon && `Tel. ${praxis.telefon}`, praxis.email].filter(Boolean).join(' · ')}</div>
         </div>
       </header>
 
       <div className="kv-adresse">
-        <div className="kv-absender">{[praxis.name, praxis.strasse, praxis.plzOrt].filter(Boolean).join(' · ')}</div>
+        <div className="kv-absender">{praxisZeile(praxis)}</div>
         <div>{patient.anrede}</div>
         <div>{[patient.vorname, patient.name].filter(Boolean).join(' ') || '(Patient)'}</div>
         <div>{patient.strasse}</div>
-        <div>{patient.plzOrt}</div>
+        <div>{plzOrt(patient)}</div>
       </div>
 
       <div className="kv-meta">

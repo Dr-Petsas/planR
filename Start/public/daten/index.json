@@ -1,0 +1,115 @@
+{
+ "stand": "2026-10-07",
+ "dateien": [
+  {
+   "datei": "punktwerte.json",
+   "name": "BEMA-Punktwerte je KZV",
+   "stand": "2026-10-07"
+  },
+  {
+   "datei": "goz-2012.json",
+   "name": "GOZ Gebührenverzeichnis (Anlage 1, Stand 2012)",
+   "stand": "2012-01-01"
+  },
+  {
+   "datei": "beb-itz-2024.json",
+   "name": "BEB Preisliste ITZ GmbH (Stand 23.01.2024)",
+   "stand": "2024-01-23"
+  },
+  {
+   "datei": "goae-zahnarzt.json",
+   "name": "GOÄ 1996 (für Zahnärzte geöffnete Abschnitte nach § 6 Abs. 2 GOZ)",
+   "stand": "2026-10"
+  },
+  {
+   "datei": "bema/bema-2026.json",
+   "name": "BEMA Teil 5 – Zahnersatz (KZBV, Stand 01.01.2026)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "fz/fz-2026.json",
+   "name": "Festzuschüsse ab 01.01.2026 (G-BA / GKV-SV)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-bayern-2026.json",
+   "name": "BEL II Bayern (KZVB)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-berlin-2026-02.json",
+   "name": "BEL II Berlin (KZV Berlin)",
+   "stand": "2026-02-01"
+  },
+  {
+   "datei": "bel/bel2-brandenburg-2026-02.json",
+   "name": "BEL II Brandenburg (KZVLB)",
+   "stand": "2026-02-01"
+  },
+  {
+   "datei": "bel/bel2-bw-2026.json",
+   "name": "BEL II Baden-Württemberg (KZV BW)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-hamburg-2026.json",
+   "name": "BEL II Hamburg (KZV Hamburg)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-hessen-2026.json",
+   "name": "BEL II Hessen (KZVH)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-lsa-2026.json",
+   "name": "BEL II Sachsen-Anhalt (KZV LSA)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-mv-2026.json",
+   "name": "BEL II Mecklenburg-Vorpommern (KZV M-V)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-niedersachsen-2026.json",
+   "name": "BEL II Niedersachsen (KZVN)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-nordrhein-2026.json",
+   "name": "BEL II Nordrhein (KZV Nordrhein)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-rlp-2026.json",
+   "name": "BEL II Rheinland-Pfalz (KZV RLP)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-saarland-2026.json",
+   "name": "BEL II Saarland (KZV Saarland)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-sachsen-2026.json",
+   "name": "BEL II Sachsen (KZVS)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-sh-2026.json",
+   "name": "BEL II Schleswig-Holstein (KZV S-H)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-thueringen-2026.json",
+   "name": "BEL II Thüringen (KZV Thüringen)",
+   "stand": "2026-01-01"
+  },
+  {
+   "datei": "bel/bel2-wl-2026.json",
+   "name": "BEL II Westfalen-Lippe (ZÄKWL/KZVWL)",
+   "stand": "2026-01-01"
+  }
+ ]
+}

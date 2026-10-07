@@ -50,10 +50,6 @@ export default function AntragReiter({ fall, setFall, einst, setEinst, diag }: P
             <option value="primaer">Primärkasse (AOK, BKK, IKK, LKK, KBS)</option>
             <option value="ersatz">Ersatzkasse (vdek)</option>
           </select>
-          {p.kassenart === 'ersatz' && (
-            <input placeholder="Kassennummer (Region = erste 2 Ziffern)" value={p.kassennummer}
-              onChange={(e) => setFall({ ...fall, patient: { ...p, kassennummer: e.target.value } })} />
-          )}
         </div>
         <label className="schalter"><input type="checkbox" checked={fall.mitCPT} onChange={(e) => setFall({ ...fall, mitCPT: e.target.checked })} /><span>CPT vorgesehen</span></label>
         <label className="schalter"><input type="checkbox" checked={fall.uebernahmefall} onChange={(e) => setFall({ ...fall, uebernahmefall: e.target.checked })} /><span>Übernahmefall</span></label>

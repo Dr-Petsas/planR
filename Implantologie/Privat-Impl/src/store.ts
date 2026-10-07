@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Einstellungen, GlobalOptionen, Plan, Regler } from './types'
 import { useAblage } from './ablage'
 import { mk } from './mandant'
+import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 
 const PLAN_KEY = mk('privat-impl.plan.v1')
 const EINST_KEY = mk('privat-impl.einstellungen.v1')
@@ -10,7 +11,7 @@ const LISTE_KEY = mk('privat-impl.liste.v1')
 export const heute = () => new Date().toISOString().slice(0, 10)
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
-  praxis: { name: 'Zahnarztpraxis', zahnarzt: '', strasse: '', plzOrt: '', telefon: '', email: '' },
+  praxis: standardPraxis(),
   gozFaktor: 2.3,
   goaeFaktor: 2.3,
   mwst: 19,
@@ -48,7 +49,7 @@ export function neuerPlan(nummer: number): Plan {
   return {
     nummer: `IMPL-${new Date().getFullYear()}-${String(nummer).padStart(3, '0')}`,
     datum: heute(),
-    patient: { anrede: '', vorname: '', name: '', geburtsdatum: '', strasse: '', plzOrt: '', kostentraeger: '' },
+    patient: leererPatient(),
     zaehne: {},
     implantate: {},
     regionen: {},
@@ -77,6 +78,7 @@ export function planMigrieren(p: Plan): Plan {
   return {
     ...neuerPlan(1),
     ...p,
+    patient: patientMigrieren(p.patient),
     global: { ...STANDARD_GLOBAL, ...(p.global ?? {}) },
     regler: { ...STANDARD_REGLER, ...(p.regler ?? {}) },
     regionen: p.regionen ?? {},
@@ -92,4 +94,4 @@ export function useGespeichert<T>(key: string, standard: () => T, migrieren: (w:
 
 export const usePlan = (nummer: number) => useGespeichert<Plan>(PLAN_KEY, () => neuerPlan(nummer), planMigrieren)
 export const useImplAblage = () => useAblage<Plan>(LISTE_KEY)
-export const useEinstellungen = () => useGespeichert<Einstellungen>(EINST_KEY, () => STANDARD_EINSTELLUNGEN, (e) => ({ ...STANDARD_EINSTELLUNGEN, ...e }))
+export const useEinstellungen = () => useGespeichert<Einstellungen>(EINST_KEY, () => STANDARD_EINSTELLUNGEN, (e) => ({ ...STANDARD_EINSTELLUNGEN, ...e, praxis: praxisMigrieren(e.praxis) }))

@@ -2,6 +2,9 @@
 // ohne Kassenanteil. Füllungs-Mehrkosten für Kassenpatienten rechnet der eigene
 // Füllungs-MKV-Planer (KONS/MKV).
 
+import type { Patient, Praxis } from './stammdaten'
+export type { Patient, Praxis } from './stammdaten'
+
 export type Therapie =
   | 'komposit' | 'inlay' | 'goldhaemmer'
   | 'endo' | 'revision' | 'vital'
@@ -47,13 +50,6 @@ export interface Regler {
   materialKlasse: number // 0 günstig · 1 Standard · 2 hochwertig (Labor und Material)
 }
 
-export interface Patient {
-  name: string
-  geburtsdatum: string
-  versicherung: string
-  versichertennr: string
-}
-
 export interface FreiePosition {
   key: string
   nr: string
@@ -72,16 +68,6 @@ export interface Plan {
   frei: FreiePosition[]
   regler: Regler
   bemerkung: string
-}
-
-export interface Praxis {
-  name: string
-  zahnarzt: string
-  strasse: string
-  plz: string
-  ort: string
-  telefon: string
-  email: string
 }
 
 export interface Preis {

@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import type { Einstellungen, Praxis } from '../types'
+import type { Einstellungen } from '../types'
 import { MATERIAL, materialPreis } from '../data/material'
 import { euro } from '../engine/berechnung'
+import { GENUTZTE_LISTEN } from '../engine/listen'
+import { PraxisFelder } from './Stammdaten'
+import { ListenKarte } from './Listen'
 
 interface Props {
   einst: Einstellungen
@@ -19,8 +22,6 @@ function Feld({ label, wert, onChange, typ = 'text', breit }: { label: string; w
 
 export function PraxisPreise({ einst, onChange }: Props) {
   const [suche, setSuche] = useState('')
-  const pr = einst.praxis
-  const setP = (f: keyof Praxis) => (v: string) => onChange({ ...einst, praxis: { ...pr, [f]: v } })
   const zahl = (v: string) => Number(v.replace(',', '.'))
   const preisSetzen = (id: string, v: string) => {
     const n = zahl(v)
@@ -37,14 +38,8 @@ export function PraxisPreise({ einst, onChange }: Props) {
   return (
     <div className="block">
       <h3>Praxis (Briefkopf)</h3>
-      <div className="formular">
-        <Feld label="Praxisname" wert={pr.name} onChange={setP('name')} breit />
-        <Feld label="Zahnärztin / Zahnarzt" wert={pr.zahnarzt} onChange={setP('zahnarzt')} breit />
-        <Feld label="Straße, Nr." wert={pr.strasse} onChange={setP('strasse')} />
-        <Feld label="PLZ Ort" wert={pr.plzOrt} onChange={setP('plzOrt')} />
-        <Feld label="Telefon" wert={pr.telefon} onChange={setP('telefon')} />
-        <Feld label="E-Mail" wert={pr.email} onChange={setP('email')} />
-      </div>
+      <PraxisFelder art="privat" praxis={einst.praxis} onChange={(praxis) => onChange({ ...einst, praxis })} />
+      <div style={{ marginTop: 14 }}><ListenKarte listen={GENUTZTE_LISTEN} /></div>
 
       <h3>Abrechnung</h3>
       <div className="formular">

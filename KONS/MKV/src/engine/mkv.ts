@@ -11,7 +11,7 @@
 // dem Einfachsatz geht es nicht.
 
 import { bemaFuer, LABOR_KLASSE_FAKTOR, THERAPIE } from '../data/katalog'
-import { ermittlePunktwert } from '../data/punktwerte'
+import { ermittlePunktwert } from '../punktwerte'
 import type { Einstellungen, Plan, Rechnung, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
 import { GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE, gozPunkte, gozText, runden } from './listen'
 import { ALLE_ZAEHNE, istFrontzahn, regionVon } from './zahnschema'
@@ -97,7 +97,7 @@ export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Ei
 }
 
 export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
-  const pw = ermittlePunktwert(einst, plan.patient)
+  const pw = ermittlePunktwert({ bereich: 'KCH', praxis: einst.praxis, kassenart: plan.patient.kassenart, fest: einst.punktwertFest.KCH })
   const zaehne = ALLE_ZAEHNE.filter((z) => plan.zaehne[z]).map((z) => zahnRechnen(z, plan.zaehne[z], plan, einst, pw.wert))
 
   const regionen = new Set(ALLE_ZAEHNE.filter((z) => plan.zaehne[z]?.kofferdam).map(regionVon))

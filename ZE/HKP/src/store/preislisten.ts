@@ -6,16 +6,37 @@ import goz from '../data/goz-2012.json'
 import beb from '../data/beb-itz-2024.json'
 import { bebErgaenzen } from '../engine/beb-standard'
 import { mk } from '../mandant'
+import { aktuell, zusaetzliche } from '../daten'
 
 const SPEICHER_KEY = mk('hkp.preislisten.v1')
 
 /** Jahres- und KZV-Listen, die der Aktualisierungsdienst (tools/listen-aktualisieren.ts) in src/data ablegt */
 const DATEIEN = import.meta.glob<Preisliste>(['../data/bel/*.json', '../data/fz/*.json', '../data/bema/*.json'], { eager: true, import: 'default' })
 
+/** Mitgelieferte Listen unter ihrem Dateinamen beim Datendienst (Start/public/daten) */
+const MITGELIEFERT: { datei: string; liste: Preisliste }[] = [
+  ...Object.entries(DATEIEN).map(([pfad, l]) => ({ datei: pfad.replace('../data/', ''), liste: l })),
+  { datei: 'goz-2012.json', liste: { ...(goz as Omit<Preisliste<'goz'>, 'id'>), id: 'goz-2012', typ: 'goz' } as Preisliste },
+  { datei: 'beb-itz-2024.json', liste: { ...(beb as Omit<Preisliste<'beb'>, 'id'>), id: 'beb-itz-2024', typ: 'beb' } as Preisliste },
+]
+
+const alsStandard = (datei: string, l: Preisliste): Preisliste => {
+  const liste = { ...l, id: l.id ?? datei.split('/').pop()!.replace(/\.json$/, ''), standard: true }
+  return liste.typ === 'beb' ? bebErgaenzen(liste as Preisliste<'beb'>) : liste
+}
+
+/** Listen, die "Punktwerte und Preislisten aktualisieren" abgleicht (inkl. BEMA-Punktwerte je Jahr) */
+export const GENUTZTE_LISTEN = MITGELIEFERT.map(({ datei, liste }) => {
+  const a = aktuell(datei, liste)
+  return { datei, name: liste.name, mitgeliefert: liste, aktuell: a }
+})
+
+/** Neue Jahreslisten (z. B. BEL II 2027) kommen ohne Programm-Update dazu – sie tragen ihre id selbst */
+export const LISTEN_ORDNER = ['bel/', 'bema/', 'fz/']
+
 export const STANDARD_LISTEN: Preisliste[] = [
-  ...Object.entries(DATEIEN).map(([pfad, l]) => ({ ...l, id: l.id ?? pfad.split('/').pop()!.replace(/\.json$/, ''), standard: true })),
-  { ...(goz as Omit<Preisliste<'goz'>, 'id'>), id: 'goz-2012', typ: 'goz', standard: true },
-  { ...bebErgaenzen(beb as Omit<Preisliste<'beb'>, 'id'>), id: 'beb-itz-2024', typ: 'beb', standard: true },
+  ...GENUTZTE_LISTEN.map((l) => alsStandard(l.datei, l.aktuell)),
+  ...LISTEN_ORDNER.flatMap((o) => zusaetzliche<Preisliste>(o, MITGELIEFERT.map((m) => m.datei)).map((l) => alsStandard(`${o}${l.id}.json`, l))),
 ]
 
 const ergaenzt = (l: Preisliste): Preisliste => (l.typ === 'beb' ? bebErgaenzen(l as Preisliste<'beb'>) : l)

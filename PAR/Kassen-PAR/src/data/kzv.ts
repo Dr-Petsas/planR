@@ -1,42 +1,116 @@
-// Die 17 Kassenzahnaerztlichen Vereinigungen und die PLZ-Zuordnung.
-// Uebernommen aus dem HKP-Planer (F:\PlanR\ZE\HKP\src\data\kzv.ts), hier auf
-// die fuer den PAR-Planer noetigen Felder reduziert. So lassen sich Plaene fuer
-// Kunden aus ganz Deutschland rechnen; die KZV ergibt sich aus der Praxis-PLZ
-// oder wird in den Einstellungen fest gesetzt.
-
+/**
+ * Die 17 Kassenzahnärztlichen Vereinigungen und ihre BEL-II-Höchstpreislisten.
+ * Die Listen erscheinen als CSV im VDDS-Format „<KZV-Nr>la<MMJJ>.csv“ (MMJJ = Gültigkeitsbeginn).
+ * Wird auch vom Aktualisierungsdienst tools/listen-aktualisieren.ts verwendet (keine Imports!).
+ */
 export interface Kzv {
-  nr: string // KZV-Nummer
+  /** KZV-Nummer (Präfix der VDDS-Datei) */
+  nr: string
+  /** Kurzname für IDs (bel2-<slug>-<jahr>) */
   slug: string
   name: string
   kurz: string
+  /** Abrechnungsbereich in der Labor-XML (KZBV/VDZI/VDDS) */
+  bereich: string
+  /** Seite, auf der die KZV die BEL-II-Liste veröffentlicht */
+  seite: string
+  /** Weitere Seiten, die nach dem CSV-Link durchsucht werden */
+  weitereSeiten?: string[]
+  /** Feste Dateiadressen mit {MM}/{JJ}/{JJJJ}, falls die Seite den Link nicht im HTML enthält */
+  muster?: string[]
+  /** Nur Praxislaborpreise in der CSV: Gewerbepreis = Praxis / 0,95 */
+  nurPraxis?: boolean
+  /** Liste nicht öffentlich (Login) */
+  login?: boolean
 }
 
 export const KZVEN: Kzv[] = [
-  { nr: '02', slug: 'bw', name: 'Baden-Wuerttemberg', kurz: 'KZV BW' },
-  { nr: '11', slug: 'bayern', name: 'Bayern', kurz: 'KZVB' },
-  { nr: '30', slug: 'berlin', name: 'Berlin', kurz: 'KZV Berlin' },
-  { nr: '53', slug: 'brandenburg', name: 'Brandenburg', kurz: 'KZVLB' },
-  { nr: '31', slug: 'bremen', name: 'Bremen', kurz: 'KZV Bremen' },
-  { nr: '32', slug: 'hamburg', name: 'Hamburg', kurz: 'KZV Hamburg' },
-  { nr: '20', slug: 'hessen', name: 'Hessen', kurz: 'KZVH' },
-  { nr: '52', slug: 'mv', name: 'Mecklenburg-Vorpommern', kurz: 'KZV M-V' },
-  { nr: '04', slug: 'niedersachsen', name: 'Niedersachsen', kurz: 'KZVN' },
-  { nr: '13', slug: 'nordrhein', name: 'Nordrhein', kurz: 'KZV Nordrhein' },
-  { nr: '06', slug: 'rlp', name: 'Rheinland-Pfalz', kurz: 'KZV RLP' },
-  { nr: '35', slug: 'saarland', name: 'Saarland', kurz: 'KZV Saarland' },
-  { nr: '56', slug: 'sachsen', name: 'Sachsen', kurz: 'KZVS' },
-  { nr: '54', slug: 'lsa', name: 'Sachsen-Anhalt', kurz: 'KZV LSA' },
-  { nr: '36', slug: 'sh', name: 'Schleswig-Holstein', kurz: 'KZV S-H' },
-  { nr: '55', slug: 'thueringen', name: 'Thueringen', kurz: 'KZV Thueringen' },
-  { nr: '37', slug: 'wl', name: 'Westfalen-Lippe', kurz: 'KZVWL' },
+  {
+    nr: '02', slug: 'bw', name: 'Baden-Württemberg', kurz: 'KZV BW', bereich: 'BW',
+    seite: 'https://www.kzvbw.de/zahnaerzte/abrechnung/punktwerte-formulare-vordrucke/bel-leistungen-download/',
+    muster: ['https://www.kzvbw.de/wp-content/uploads/02la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '11', slug: 'bayern', name: 'Bayern', kurz: 'KZVB', bereich: 'BY',
+    seite: 'https://www.kzvb.de/abrechnung/bel-preise',
+    muster: ['https://www.kzvb.de/fileadmin/user_upload/Abrechnung/BEL/11la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '30', slug: 'berlin', name: 'Berlin', kurz: 'KZV Berlin', bereich: 'BE',
+    seite: 'https://www.kzv-berlin.de/fuer-praxen/abrechnung/bel-ii-laborpreise',
+    muster: ['https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/1_Abrechnung/8_BEL_II__Laborpreise/30la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '53', slug: 'brandenburg', name: 'Brandenburg', kurz: 'KZVLB', bereich: 'BBG',
+    seite: 'https://www.kzvlb.de/service/downloadcenter',
+    muster: ['https://www.kzvlb.de/fileadmin/user_upload/sw/53la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '31', slug: 'bremen', name: 'Bremen', kurz: 'KZV Bremen', bereich: 'HB',
+    seite: 'https://www.kzv-bremen.de/mitglieder/abrechnung/bel', login: true,
+  },
+  {
+    nr: '32', slug: 'hamburg', name: 'Hamburg', kurz: 'KZV Hamburg', bereich: 'HH',
+    seite: 'https://www.zahnaerzte-hh.de/zahnaerzte-portal/praxis/abrechnung/kassenabrechnung-kzv/punktwerte-laborpreise-bel-materialkosten',
+    muster: ['https://www.zahnaerzte-hh.de/fileadmin/Redaktion/KZV/Abrechnung/32la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '20', slug: 'hessen', name: 'Hessen', kurz: 'KZVH', bereich: 'HS',
+    seite: 'https://www.kzvh.de/BEL-Preisliste/index.html',
+    muster: ['https://www.kzvh.de/wcm/idc/groups/public/documents/web/mdiw/bgew/~edisp/20la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '52', slug: 'mv', name: 'Mecklenburg-Vorpommern', kurz: 'KZV M-V', bereich: 'MVO',
+    seite: 'https://www.kzvmv.de/bkv-download/index.html',
+    muster: ['https://www.kzvmv.de/dokumente/52la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '04', slug: 'niedersachsen', name: 'Niedersachsen', kurz: 'KZVN', bereich: 'NS',
+    seite: 'https://www.kzvn.de/abrechnung/punktwerte-formulare/bel-ll/',
+  },
+  {
+    nr: '13', slug: 'nordrhein', name: 'Nordrhein', kurz: 'KZV Nordrhein', bereich: 'NR',
+    seite: 'https://www.kzvnr.de/praxis/abrechnung-honorar/bel-ii-listen', nurPraxis: true,
+    muster: ['https://www.kzvnr.de/fileadmin/user_upload/PDF/Zahnaerzteseite/BEL-II-Listen/13la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '06', slug: 'rlp', name: 'Rheinland-Pfalz', kurz: 'KZV RLP', bereich: 'RP',
+    seite: 'https://www.kzvrlp.de/mitglieder/abrechnung/bel-ii/',
+  },
+  {
+    nr: '35', slug: 'saarland', name: 'Saarland', kurz: 'KZV Saarland', bereich: 'SAA',
+    seite: 'https://www.kzv-saarland.de/praxen/abrechnung/zahntechnik-bel',
+  },
+  {
+    nr: '56', slug: 'sachsen', name: 'Sachsen', kurz: 'KZVS', bereich: 'SA',
+    seite: 'https://www.zahnaerzte-in-sachsen.de/zahnarztpraxis/abrechnung/bema-abrechnung/allgemeine-abrechnungsinformationen/',
+    muster: ['https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Abrechnung/BEL_II/{JJJJ}/56la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '54', slug: 'lsa', name: 'Sachsen-Anhalt', kurz: 'KZV LSA', bereich: 'SAN',
+    seite: 'https://www.kzv-lsa.de/f%C3%BCr-die-praxis/abrechnung/bel-liste.html',
+    muster: ['https://www.kzv-lsa.de/files/Inhalte/Abrechnung/BEL/{JJJJ}/54la{MM}{JJ}csv_mitU.csv'],
+  },
+  {
+    nr: '36', slug: 'sh', name: 'Schleswig-Holstein', kurz: 'KZV S-H', bereich: 'SH',
+    seite: 'https://www.kzv-sh.de/fuer-die-praxis/abrechnung/bel-csv/',
+  },
+  {
+    nr: '55', slug: 'thueringen', name: 'Thüringen', kurz: 'KZV Thüringen', bereich: 'TH',
+    seite: 'https://www.kzvth.de/bel-beb',
+    muster: ['https://www.kzvth.de/services/asset/KZVTh/Downloadbereich/BEL/BEL%20{JJJJ}/55la{MM}{JJ}.csv'],
+  },
+  {
+    nr: '37', slug: 'wl', name: 'Westfalen-Lippe', kurz: 'ZÄKWL/KZVWL', bereich: 'WL',
+    seite: 'https://zahnaerzte-wl.de/pages/aktuelle-abrechnungsinfos',
+  },
 ]
 
-export const kzvNachNr = (nr: string): Kzv | undefined => KZVEN.find((k) => k.nr === nr)
+export const kzvNachNr = (nr: string) => KZVEN.find((k) => k.nr === nr)
 
 /**
- * PLZ-Leitbereiche -> KZV-Nr. Zweistellig, mit dreistelligen Ausnahmen an
- * Landesgrenzen. Naeherung: PLZ folgen nicht exakt den Landesgrenzen - die KZV
- * laesst sich in den Einstellungen festlegen.
+ * PLZ-Leitbereiche → KZV-Nr. Zweistellig, mit dreistelligen Ausnahmen an Landesgrenzen.
+ * Näherung: Postleitzahlen folgen nicht exakt den Landesgrenzen – die KZV lässt sich in den Einstellungen festlegen.
  */
 const PLZ2: Record<string, string> = {
   '01': '56', '02': '56', '03': '53', '04': '56', '06': '54', '07': '55', '08': '56', '09': '56',
@@ -66,14 +140,4 @@ export function kzvAusPlz(plz: string): string {
   const p = plz.replace(/\D/g, '')
   if (p.length < 2) return ''
   return PLZ3[p.slice(0, 3)] ?? PLZ2[p.slice(0, 2)] ?? ''
-}
-
-/**
- * Regionalkennzeichen der Ersatzkassen = die ersten beiden Ziffern der
- * 7-stelligen Kassennummer (Abrechnungsgebiet nach vdek). Wird genutzt, um bei
- * Ersatzkassen den regionalen Punktwert zu bestimmen.
- */
-export function regionalkennzeichen(kassennummer: string): string {
-  const k = kassennummer.replace(/\D/g, '')
-  return k.length >= 2 ? k.slice(0, 2) : ''
 }

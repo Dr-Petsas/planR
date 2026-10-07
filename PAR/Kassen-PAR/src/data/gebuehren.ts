@@ -1,7 +1,16 @@
 // Private Gebuehren fuer Zusatzleistungen: GOZ 2012 (amtliche Tabelle, Kopie
 // aus dem HKP-Planer) und die wenigen hier gebrauchten GOAE-Nummern.
 
-import gozTabelle from './goz-2012.json'
+import gozMitgeliefert from './goz-2012.json'
+import { aktuell } from '../daten'
+import type { GenutzteListe } from '../components/Listen'
+
+const gozTabelle = aktuell('goz-2012.json', gozMitgeliefert)
+
+/** Listen, die "Preislisten aktualisieren" erneuert. */
+export const GENUTZTE_LISTEN: GenutzteListe[] = [
+  { datei: 'goz-2012.json', name: 'GOZ (Privathonorar)', mitgeliefert: gozMitgeliefert, aktuell: gozTabelle },
+]
 
 export const GOZ_PUNKTWERT = 0.0562421
 export const GOAE_PUNKTWERT = 0.0582873

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { kzvAusPlz } from './data/kzv'
-import { ermittlePunktwert } from './data/punktwerte'
+import { ermittlePunktwert } from './punktwerte'
+import { patientName } from './stammdaten'
+import { useDatenVersion } from './components/Listen'
 import { diagnostizieren } from './engine/diagnose'
 import { preiseAus, streckeRechnen } from './engine/leistungen'
 import { pruefeFall, zaehlMeldungen } from './engine/pruefung'
@@ -31,11 +32,17 @@ export default function App() {
 
   const initial = initialBefund(fall)
   const diag = useMemo(() => diagnostizieren(fall.diagnose, initial), [fall.diagnose, initial])
+  const datenVersion = useDatenVersion()
+  const kassenart = fall.patient.kassenart
   const punktwert = useMemo(
-    () => ermittlePunktwert(einst, fall.patient, kzvAusPlz(einst.praxis.plz)),
-    [einst, fall.patient],
+    () => ermittlePunktwert({ bereich: 'PAR', praxis: einst.praxis, kassenart, fest: einst.punktwertFest.PAR }),
+    [einst.praxis, einst.punktwertFest, kassenart, datenVersion], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const preise = useMemo(() => preiseAus(einst, punktwert.wert), [einst, punktwert.wert])
+  const kchPunktwert = useMemo(
+    () => ermittlePunktwert({ bereich: 'KCH', praxis: einst.praxis, kassenart, fest: einst.punktwertFest.KCH }),
+    [einst.praxis, einst.punktwertFest, kassenart, datenVersion], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const preise = useMemo(() => preiseAus(einst, punktwert.wert, kchPunktwert.wert), [einst, punktwert.wert, kchPunktwert.wert])
   const meldungen = useMemo(() => pruefeFall(fall, einst, diag), [fall, einst, diag])
   const zahl = zaehlMeldungen(meldungen)
   const summe = useMemo(() => streckeRechnen(fall, preise).summe, [fall, preise])
@@ -52,7 +59,7 @@ export default function App() {
     }
   }, [diag, letzterGrad, setFall])
 
-  const name = [fall.patient.vorname, fall.patient.name].filter(Boolean).join(' ')
+  const name = patientName(fall.patient)
   const ablage = useParAblage()
   const daten = { nummer: fall.nummer, patient: name, betrag: summe, plan: fall }
   const eintrag = ablage.eintrag(fall.nummer)
@@ -89,7 +96,7 @@ export default function App() {
             Stadium {['', 'I', 'II', 'III', 'IV'][diag.stadium]} · {diag.ausmass} · Grad {diag.grad}
           </span>
           <span className="kopf-diag" title={punktwert.hinweis}>
-            PW {punktwert.wert.toFixed(4).replace('.', ',')} €{punktwert.richtwert ? ' (Richtwert)' : ''}
+            PW {punktwert.wert.toFixed(4).replace('.', ',')} €{punktwert.geprueft ? '' : ' (ungeprüft)'}
           </span>
           <span className="kopf-summe">{euro(summe)}</span>
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Fall" />
@@ -125,7 +132,7 @@ export default function App() {
           </fieldset>
         )}
         {reiter === 'antrag' && <AblageListe ablage={ablage} aktuell={fall.nummer} onLaden={oeffnen} />}
-        {reiter === 'einstellungen' && <><MandantKarte /><EinstellungenReiter einst={einst} setEinst={setEinst} punktwert={punktwert} /></>}
+        {reiter === 'einstellungen' && <><MandantKarte /><EinstellungenReiter einst={einst} setEinst={setEinst} /></>}
       </main>
     </div>
   )

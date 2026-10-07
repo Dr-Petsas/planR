@@ -92,30 +92,9 @@ export type Gutachten = 'offen' | 'befuerwortet' | 'nicht_befuerwortet'
 // Stammdaten
 // ---------------------------------------------------------------------------
 
-export interface Patient {
-  name: string
-  vorname: string
-  geburtsdatum: string
-  kasse: string
-  versichertennr: string
-  kostentraegerkennung: string // 9-stellig (IK der Kasse)
-  kassennummer: string // Versichertenart/Regionalkennzeichen (erste 2 Ziffern = Regionalkennzeichen)
-  kassenart: Kassenart
-  status: string // Versichertenstatus der eGK
-}
-
-export type Kassenart = 'primaer' | 'ersatz'
-
-export interface Praxis {
-  name: string
-  strasse: string
-  plz: string
-  ort: string
-  telefon: string
-  zahnarztNr: string
-  abrechnungsNr: string
-  behandler: string
-}
+import type { Patient, Praxis } from './stammdaten'
+import type { Leistungsbereich } from './punktwerte'
+export type { Kassenart, Patient, Praxis } from './stammdaten'
 
 // ---------------------------------------------------------------------------
 // Behandlungsstrecke: Termine mit Leistungs-Kacheln (geplant + erbracht)
@@ -235,10 +214,8 @@ export interface Zusatzformulare {
 
 export interface Einstellungen {
   praxis: Praxis
-  kzvNr: string // feste Zuordnung (ueberschreibt PLZ-Ableitung); '' = aus PLZ
-  bemaPunktwertOverride: number | null // manueller Punktwert (EUR), null = aus Tabelle
-  /** Punktwert BEMA Teil 1 (Anaesthesie, Roentgen); null = wie PAR-Punktwert */
-  kchPunktwertOverride: number | null
+  /** Fest eingetragene Punktwerte (PAR = BEMA Teil 4, KCH = Teil 1 für Anästhesie und Röntgen); leer = Tabelle */
+  punktwertFest: Partial<Record<Leistungsbereich, number | null>>
   gozFaktor: number // Standardfaktor GOZ/GOAE (2,3)
   roentgenFaktor: number // Standardfaktor GOAE Abschnitt O (1,8)
   /** Punktzahlen der Analog-Positionen (§ 6 GOZ) – Praxis-Analogliste */

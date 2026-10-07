@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './gemeinsam.css'
 import App from './App.tsx'
 import { HkpMobil } from './components/HkpMobil'
 import { linkZugang, mobilGewuenscht } from './store/mobilLink'

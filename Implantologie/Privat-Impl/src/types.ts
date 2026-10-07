@@ -4,6 +4,9 @@
 // geöffnete GOÄ (§ 6 Abs. 2 GOZ), Analogpositionen (§ 6 Abs. 1 GOZ),
 // Eigenblut-/Laborprotokolle und Material.
 
+import type { Patient, Praxis } from './stammdaten'
+export type { Patient, Praxis } from './stammdaten'
+
 export type Ebene = 'GOZ' | 'GOAE' | 'MAT' | 'BEB'
 
 /** Die sechs Kieferregionen (Zahnschema OK/UK, rechts/Front/links). */
@@ -143,25 +146,6 @@ export interface Regler {
   laborAufschlag: number
   /** abgewählte Zusatzpositionen (Schlüssel ebene|nr|zahn) */
   aus: string[]
-}
-
-export interface Patient {
-  anrede: string
-  vorname: string
-  name: string
-  geburtsdatum: string
-  strasse: string
-  plzOrt: string
-  kostentraeger: string
-}
-
-export interface Praxis {
-  name: string
-  zahnarzt: string
-  strasse: string
-  plzOrt: string
-  telefon: string
-  email: string
 }
 
 /** Verweis auf einen zugehörigen Privat-ZE-Kostenvoranschlag (prothetische Fortsetzung). */

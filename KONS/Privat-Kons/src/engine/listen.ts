@@ -1,5 +1,14 @@
-import gozDaten from '../data/goz-2012.json'
+import gozMitgeliefert from '../data/goz-2012.json'
+import { aktuell } from '../daten'
+import type { GenutzteListe } from '../components/Listen'
 import type { ListenEintrag } from '../types'
+
+const gozDaten = aktuell('goz-2012.json', gozMitgeliefert)
+
+/** Listen, die "Preislisten aktualisieren" erneuert. */
+export const GENUTZTE_LISTEN: GenutzteListe[] = [
+  { datei: 'goz-2012.json', name: 'GOZ (Privathonorar)', mitgeliefert: gozMitgeliefert, aktuell: gozDaten },
+]
 
 export const GOZ_PUNKTWERT = gozDaten.punktwert
 

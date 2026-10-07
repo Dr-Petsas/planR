@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/kons'
-import { neuerPlan, nummerFormat, useEinstellungen, useKonsAblage, usePlan } from './store'
+import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, useKonsAblage, usePlan } from './store'
 import { ungespeichert } from './ablage'
 import type { Plan } from './types'
+import { patientName } from './stammdaten'
 import Patient from './components/Patient'
 import Zahnschema from './components/Zahnschema'
 import Zahnkarten from './components/Zahnkarten'
@@ -20,7 +21,7 @@ const REITER: { id: Reiter; label: string }[] = [
   { id: 'einstellungen', label: 'Einstellungen' },
 ]
 
-const hatInhalt = (p: Plan) => Boolean(p.patient.name.trim() || Object.keys(p.zaehne).length || p.frei.length)
+const hatInhalt = (p: Plan) => Boolean(patientName(p.patient) || Object.keys(p.zaehne).length || p.frei.length)
 
 export default function App() {
   const [einst, setEinst] = useEinstellungen()
@@ -29,7 +30,7 @@ export default function App() {
   const [reiter, setReiter] = useState<Reiter>('planung')
 
   const rechnung = useMemo(() => rechnen(plan, einst), [plan, einst])
-  const daten = { nummer: plan.nummer, patient: plan.patient.name, betrag: rechnung.summe, plan }
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: rechnung.summe, plan }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
@@ -43,7 +44,7 @@ export default function App() {
   }
   const oeffnen = (p: Plan) => {
     sichern()
-    setPlan(p)
+    setPlan(planMigrieren(p, einst))
     setReiter('planung')
   }
 

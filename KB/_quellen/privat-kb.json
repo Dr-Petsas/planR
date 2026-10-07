@@ -1,0 +1,613 @@
+{
+  "stand": "GOZ 2012 (Anlage 1, gesetze-im-internet.de, abgeglichen am 07.10.2026 – Texte/Punkte identisch mit F:\\PlanR\\ZE\\HKP\\src\\data\\goz-2012.json); Punktwert 0,0562421 EUR; BEB 97 (Gruppe 76 Schienen) mit Querverweis BEB Zahntechnik 2009 (7.15.xx.0).",
+  "punktwert": 0.0562421,
+  "quellen": [
+    "https://www.gesetze-im-internet.de/goz_1987/anlage_1.html",
+    "F:\\PlanR\\ZE\\HKP\\src\\data\\goz-2012.json",
+    "https://www.iww.de/pa/abrechnungswissen/laborabrechnung-so-vermeiden-sie-fehler-bei-der-abrechnung-von-aufbissbehelfen-und-schienen-nach-beb-f77362",
+    "https://www.abrechnung-dental.de/beb97/7601-schiene-tiefgezogen",
+    "https://www.abrechnung-dental.de/beb97/7602-schiene-tiefgezogen-zweiphasig",
+    "https://www.abrechnungswelt.com/abrechnungsportal/verzeichnisse/zahntechnik/beb-97/hg7-kfo-geraete-schienen-defektversorgung/beb-7602-schiene-tiefgezogen-zweiphasig/schiene-tiefgezogen-zweiphasig",
+    "F:\\PlanR\\ZE\\HKP\\_quellen\\beb97_planzeiten_2013.pdf / beb97_layout.txt (8015, 8016)",
+    "F:\\PlanR\\ZE\\HKP\\_quellen\\beb-liste.txt und beb_itz_2024.pdf (ITZ-Laborpreisliste 2024)",
+    "https://www.abrechnung-dental.de/goae/2702-wiederanbringung-einer-geloesten-apparatur-oder-kleine-aenderungen-teilweise-erneuerung"
+  ],
+  "goz": [
+    {
+      "nr": "7000",
+      "text": "Eingliederung eines Aufbissbehelfs ohne adjustierte Oberfläche",
+      "punkte": 270,
+      "euro": {
+        "1,0": 15.19,
+        "2,3": 34.93,
+        "3,5": 53.15
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert. BEB z. B. 7601/7606 (nicht adjustiert).",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K2"
+    },
+    {
+      "nr": "7010",
+      "text": "Eingliederung eines Aufbissbehelfs mit adjustierter Oberfläche",
+      "punkte": 800,
+      "euro": {
+        "1,0": 44.99,
+        "2,3": 103.49,
+        "3,5": 157.48
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert. BEB z. B. 7602–7604, 7621–7625 (adjustiert).",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K1"
+    },
+    {
+      "nr": "7020",
+      "text": "Umarbeitung einer vorhandenen Prothese zum Aufbissbehelf",
+      "punkte": 450,
+      "euro": {
+        "1,0": 25.31,
+        "2,3": 58.21,
+        "3,5": 88.58
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert.",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K3"
+    },
+    {
+      "nr": "7030",
+      "text": "Wiederherstellung der Funktion eines Aufbissbehelfs, z. B. durch Unterfütterung",
+      "punkte": 370,
+      "euro": {
+        "1,0": 20.81,
+        "2,3": 47.86,
+        "3,5": 72.83
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert. Labor: BEB 8015 (Instandsetzen Aufbissschiene) bzw. 8016 (Erweitern).",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K6"
+    },
+    {
+      "nr": "7040",
+      "text": "Kontrolle eines Aufbissbehelfs",
+      "punkte": 65,
+      "euro": {
+        "1,0": 3.66,
+        "2,3": 8.41,
+        "3,5": 12.8
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert.",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K7"
+    },
+    {
+      "nr": "7050",
+      "text": "Kontrolle eines Aufbissbehelfs mit adjustierter Oberfläche: subtraktive Maßnahmen, je Sitzung",
+      "punkte": 180,
+      "euro": {
+        "1,0": 10.12,
+        "2,3": 23.28,
+        "3,5": 35.43
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert.",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K8"
+    },
+    {
+      "nr": "7060",
+      "text": "Kontrolle eines Aufbissbehelfs mit adjustierter Oberfläche: additive Maßnahmen, je Sitzung",
+      "punkte": 410,
+      "euro": {
+        "1,0": 23.06,
+        "2,3": 53.04,
+        "3,5": 80.71
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert.",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K9"
+    },
+    {
+      "nr": "7070",
+      "text": "Semipermanente Schiene unter Anwendung der Ätztechnik, je Interdentalraum",
+      "punkte": 90,
+      "euro": {
+        "1,0": 5.06,
+        "2,3": 11.64,
+        "3,5": 17.72
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert. Entfernung der Schienung: GOÄ 2702 je Kiefer (Kommentar abrechnung-dental).",
+      "abschnitt": "H Aufbissbehelfe/Schienen",
+      "bemaGegenstueck": "K4"
+    },
+    {
+      "nr": "7080",
+      "text": "Versorgung eines Kiefers mit einem festsitzenden laborgefertigten Provisorium (einschließlich Vorpräparation) im indirekten Verfahren, je Zahn oder je Implantat, einschließlich Entfernung",
+      "punkte": 600,
+      "euro": {
+        "1,0": 33.75,
+        "2,3": 77.61,
+        "3,5": 118.11
+      },
+      "bestimmung": "Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert. Beträgt die Tragezeit unter drei Monaten, sind statt 7080/7090 die Nrn. 2260, 2270 oder 5120 und 5140 berechnungsfähig. Neben 7080/7090 sind 2230, 2240, 5050 oder 5060 nicht berechnungsfähig.",
+      "abschnitt": "H Aufbissbehelfe/Schienen"
+    },
+    {
+      "nr": "7090",
+      "text": "Versorgung eines Kiefers mit einem laborgefertigten Provisorium im indirekten Verfahren, je Brückenglied, einschließlich Entfernung",
+      "punkte": 270,
+      "euro": {
+        "1,0": 15.19,
+        "2,3": 34.93,
+        "3,5": 53.15
+      },
+      "bestimmung": "Die Berechnung der Leistungen nach den Nummern 7080 und 7090 setzt voraus, dass es sich bei dem festsitzenden laborgefertigten Provisorium um ein Langzeitprovisorium mit einer Tragezeit von mindestens drei Monaten handelt. Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert. Beträgt die Tragezeit unter drei Monaten, sind statt 7080/7090 die Nrn. 2260, 2270 oder 5120 und 5140 berechnungsfähig. Neben 7080/7090 sind 2230, 2240, 5050 oder 5060 nicht berechnungsfähig.",
+      "abschnitt": "H Aufbissbehelfe/Schienen"
+    },
+    {
+      "nr": "7100",
+      "text": "Maßnahmen zur Wiederherstellung der Funktion eines Langzeitprovisoriums, je Krone, Spanne oder Freiendbrückenglied",
+      "punkte": 200,
+      "euro": {
+        "1,0": 11.25,
+        "2,3": 25.87,
+        "3,5": 39.37
+      },
+      "bestimmung": "Die Wiedereingliederung desselben festsitzenden laborgefertigten Provisoriums nach den Nummern 7080 oder 7090, gegebenenfalls auch mehrmals, einschließlich Entfernung, ist mit den Gebühren nach den Nummern 7080 bis 7100 abgegolten. Abschnitt H: Endgültige Kronen, Brücken und Prothesen dürfen nicht als Aufbissbehelfe oder Schienen nach Abschnitt H berechnet werden. Laborkosten nach § 9 GOZ gesondert.",
+      "abschnitt": "H Aufbissbehelfe/Schienen"
+    },
+    {
+      "nr": "8000",
+      "text": "Klinische Funktionsanalyse einschließlich Dokumentation",
+      "punkte": 500,
+      "euro": {
+        "1,0": 28.12,
+        "2,3": 64.68,
+        "3,5": 98.42
+      },
+      "bestimmung": "Die Leistung nach der Nummer 8000 umfasst auch folgende zahnärztliche Leistungen: prophylaktische, prothetische, parodontologische und okklusale Befunderhebung, funktionsdiagnostische Auswertung von Röntgenaufnahmen des Schädels und der Halswirbelsäule, klinische Reaktionstests (z. B. Resilienztest, Provokationstest). Im Zusammenhang mit 1000/1010 nur berechnungsfähig, wenn anderen Zwecken dienend und in der Rechnung begründet.",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8010",
+      "text": "Registrieren der gelenkbezüglichen Zentrallage des Unterkiefers, auch Stützstiftregistrierung, je Registrat",
+      "punkte": 180,
+      "euro": {
+        "1,0": 10.12,
+        "2,3": 23.28,
+        "3,5": 35.43
+      },
+      "bestimmung": "Die Leistung nach der Nummer 8010 ist je Sitzung höchstens zweimal berechnungsfähig.Neben der Leistung nach der Nummer 8010 sind die Material- und Laborkosten für die Bissnahme und die Lieferung und Anbringung des Stützstiftbestecks gesondert berechnungsfähig.",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8020",
+      "text": "Arbiträre Scharnierachsenbestimmung (eingeschlossen sind die arbiträre Scharnierachsenbestimmung, das Anlegen eines Übertragungsbogens, das Koordinieren eines Übertragungsbogens mit einem Artikulator)",
+      "punkte": 300,
+      "euro": {
+        "1,0": 16.87,
+        "2,3": 38.81,
+        "3,5": 59.05
+      },
+      "bestimmung": "",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8030",
+      "text": "Kinematische Scharnierachsenbestimmung (eingeschlossen sind die kinematische Scharnierachsenbestimmung, das definitive Markieren der Referenzpunkte, das Anlegen eines Übertragungsbogens, das Koordinieren eines Übertragungsbogens mit einem Artikulator)",
+      "punkte": 550,
+      "euro": {
+        "1,0": 30.93,
+        "2,3": 71.15,
+        "3,5": 108.27
+      },
+      "bestimmung": "",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8035",
+      "text": "Kinematische Scharnierachsenbestimmung mittels elektronischer Aufzeichnung (eingeschlossen sind die kinematische Scharnierachsenbestimmung, das definitive Markieren der Referenzpunkte, gegebenenfalls das Anlegen eines Übertragungsbogens, gegebenenfalls das Koordinieren eines Übertragungsbogens mit einem Artikulator)",
+      "punkte": 550,
+      "euro": {
+        "1,0": 30.93,
+        "2,3": 71.15,
+        "3,5": 108.27
+      },
+      "bestimmung": "Neben den Leistungen nach den Nummern 8020 bis 8035 sind die Material- und Laborkosten für die Artikulation des Ober- und Unterkiefermodells im (halb) individuellen Artikulator gesondert berechnungsfähig.",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8050",
+      "text": "Registrieren von Unterkieferbewegungen zur Einstellung halbindividueller Artikulatoren und Einstellung nach den gemessenen Werten, je Sitzung",
+      "punkte": 500,
+      "euro": {
+        "1,0": 28.12,
+        "2,3": 64.68,
+        "3,5": 98.42
+      },
+      "bestimmung": "",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8060",
+      "text": "Registrieren von Unterkieferbewegungen zur Einstellung voll adjustierbarer Artikulatoren und Einstellung nach den gemessenen Werten, je Sitzung",
+      "punkte": 750,
+      "euro": {
+        "1,0": 42.18,
+        "2,3": 97.02,
+        "3,5": 147.64
+      },
+      "bestimmung": "",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8065",
+      "text": "Registrieren von Unterkieferbewegungen mittels elektronischer Aufzeichnung zur Einstellung voll adjustierbarer Artikulatoren und Einstellung nach den gemessenen Werten, je Sitzung",
+      "punkte": 850,
+      "euro": {
+        "1,0": 47.81,
+        "2,3": 109.95,
+        "3,5": 167.32
+      },
+      "bestimmung": "Neben den Leistungen nach den Nummern 8050 bis 8065 sind Material- und Laborkosten für die Einstellung des (halb) individuellen Artikulators nach den gemessenen Werten gesondert berechnungsfähig.",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8080",
+      "text": "Diagnostische Maßnahmen an Modellen im Artikulator einschließlich subtraktiver oder additiver Korrekturen, Befundauswertung und Behandlungsplanung, je Sitzung",
+      "punkte": 250,
+      "euro": {
+        "1,0": 14.06,
+        "2,3": 32.34,
+        "3,5": 49.21
+      },
+      "bestimmung": "",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8090",
+      "text": "Diagnostischer Aufbau von Funktionsflächen am natürlichen Gebiss, am festsitzenden und/oder herausnehmbaren Zahnersatz, je Sitzung",
+      "punkte": 250,
+      "euro": {
+        "1,0": 14.06,
+        "2,3": 32.34,
+        "3,5": 49.21
+      },
+      "bestimmung": "",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "8100",
+      "text": "Systematische subtraktive Maßnahmen am natürlichen Gebiss, am festsitzenden und/oder herausnehmbaren Zahnersatz, je Zahnpaar",
+      "punkte": 20,
+      "euro": {
+        "1,0": 1.12,
+        "2,3": 2.59,
+        "3,5": 3.94
+      },
+      "bestimmung": "",
+      "abschnitt": "J Funktionsanalyse"
+    },
+    {
+      "nr": "0040",
+      "text": "Aufstellung eines schriftlichen Heil- und Kostenplans bei kieferorthopädischer Behandlung oder bei funktionsanalytischen und funktionstherapeutischen Maßnahmen nach Befundaufnahme und Ausarbeitung einer Behandlungsplanung",
+      "punkte": 250,
+      "euro": {
+        "1,0": 14.06,
+        "2,3": 32.34,
+        "3,5": 49.21
+      },
+      "bestimmung": "Die Leistungen nach den Nummern 0030 und 0040 sind nicht nebeneinander berechnungsfähig.",
+      "abschnitt": "A Allgemeine Leistungen",
+      "verwandt": true
+    },
+    {
+      "nr": "0060",
+      "text": "Abformung beider Kiefer für Situationsmodelle und einfache Bissfixierung einschließlich Auswertung zur Diagnose oder Planung",
+      "punkte": 260,
+      "euro": {
+        "1,0": 14.62,
+        "2,3": 33.63,
+        "3,5": 51.18
+      },
+      "bestimmung": "Die Nebeneinanderberechnung der Leistungen nach den Nummern 0050 und 0060 ist in der Rechnung zu begründen.",
+      "abschnitt": "A Allgemeine Leistungen",
+      "verwandt": true
+    },
+    {
+      "nr": "0065",
+      "text": "Optisch-elektronische Abformung einschließlich vorbereitender Maßnahmen, einfache digitale Bissregistrierung und Archivierung, je Kieferhälfte oder Frontzahnbereich",
+      "punkte": 80,
+      "euro": {
+        "1,0": 4.5,
+        "2,3": 10.35,
+        "3,5": 15.75
+      },
+      "bestimmung": "Neben der Leistung nach der Nummer 0065 sind konventionelle Abformungen nach diesem Gebührenverzeichnis für dieselbe Kieferhälfte oder denselben Frontzahnbereich nicht berechnungsfähig.",
+      "abschnitt": "A Allgemeine Leistungen",
+      "verwandt": true
+    },
+    {
+      "nr": "4040",
+      "text": "Beseitigung grober Vorkontakte der Okklusion und Artikulation durch Einschleifen des natürlichen Gebisses oder bereits vorhandenen Zahnersatzes, je Sitzung",
+      "punkte": 45,
+      "euro": {
+        "1,0": 2.53,
+        "2,3": 5.82,
+        "3,5": 8.86
+      },
+      "bestimmung": "",
+      "abschnitt": "E Parodontium",
+      "verwandt": true
+    }
+  ],
+  "beb": [
+    {
+      "nr": "7601",
+      "text": "Schiene tiefgezogen",
+      "bebZahntechnik": "7.15.01.0",
+      "goz": "7000",
+      "beschreibung": "Okklusal nicht adjustiert, z. B. Miniplastschiene oder Parodontoseschiene, im Tiefziehverfahren; Folie als Material berechenbar. BEL-Gegenstück 402 0. Planzeit 6000 (min/100).",
+      "zusaetzlich": [
+        "0001",
+        "0002",
+        "0241"
+      ]
+    },
+    {
+      "nr": "7602",
+      "text": "Schiene tiefgezogen, zweiphasig",
+      "bebZahntechnik": "7.15.03.0",
+      "goz": "7010 (IWW) – BEL-Gegenstück laut abrechnung-dental 402 0",
+      "beschreibung": "Schiene mit Folie tiefgezogen aus verschiedenen Materialien (Hart-/Weichkunststoff); einmal je Schiene. Planzeit 9000 (min/100).",
+      "zusaetzlich": [
+        "0001",
+        "0002",
+        "0241",
+        "0732"
+      ],
+      "unsicher": true,
+      "unsicherGrund": "GOZ-Zuordnung widersprüchlich: IWW nennt 7010, abrechnung-dental/abrechnungswelt setzen BEL 402 0 (ohne adj. Oberfläche) gleich."
+    },
+    {
+      "nr": "7603",
+      "text": "Knirscherschiene aus Kunststoff",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "7010",
+      "beschreibung": "Okklusal gestaltete Oberfläche; Mittelwertartikulator und Duplikatmodell meist nötig; weitere Aufbisse über 7201/7202."
+    },
+    {
+      "nr": "7604",
+      "text": "Knirscherschiene aus Weichkunststoff",
+      "bebZahntechnik": "7.15.02.0",
+      "goz": "7010",
+      "beschreibung": "Wie 7603, aus Weichkunststoff; Weichkunststoff zusätzlich berechenbar."
+    },
+    {
+      "nr": "7605",
+      "text": "Retentionsschiene",
+      "bebZahntechnik": "7.15.07.0",
+      "goz": "7000 oder 7010 je nach Gestaltung",
+      "beschreibung": "Rezidivprophylaxe z. B. nach KFO; mit oder ohne adjustierte Oberfläche."
+    },
+    {
+      "nr": "7606",
+      "text": "Medikamententrägerschiene",
+      "bebZahntechnik": "keine eigene (Kommentare: 7.15.01.0)",
+      "goz": "1030 (Medikamententräger) bzw. 7000",
+      "beschreibung": "Therapeutischer Träger für Medikamente; Ausblocken nach 0303 je Zahn/Kieferteil. Für Bleaching eigene Position empfohlen."
+    },
+    {
+      "nr": "7611",
+      "text": "Schienungskappe aus Kunststoff",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "",
+      "beschreibung": "Je Zahn; temporär festsitzend, okklusal nicht adjustiert; Konditionierung 5309."
+    },
+    {
+      "nr": "7612",
+      "text": "Schienungskappe aus Metall",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "",
+      "beschreibung": "Je Zahn; Konditionierung 5307."
+    },
+    {
+      "nr": "7613",
+      "text": "Aufbisskappe aus Kunststoff",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "",
+      "beschreibung": "Je Zahn; okklusal adjustiert, z. B. temporäre Bisshebung; ggf. 5309."
+    },
+    {
+      "nr": "7614",
+      "text": "Aufbisskappe aus Metall",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "",
+      "beschreibung": "Je Zahn; okklusal adjustiert; ggf. 5307."
+    },
+    {
+      "nr": "7621",
+      "text": "Adjustierte Aufbissschiene",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "7010",
+      "beschreibung": "Okklusal gestaltet mit Front- und Eckzahnführung (Michigan-Typ); Mittelwertartikulator + Duplikatmodell meist nötig; weitere Aufbisse 7201/7202."
+    },
+    {
+      "nr": "7622",
+      "text": "Aufbissschiene nach Schöttl",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "7010",
+      "beschreibung": "Kunststoff; v. a. im Zusammenhang mit Funktionsanalyse/-therapie."
+    },
+    {
+      "nr": "7623",
+      "text": "Aufbissschiene nach Shore",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "7010",
+      "beschreibung": "Kunststoff; v. a. im Zusammenhang mit Funktionsanalyse/-therapie."
+    },
+    {
+      "nr": "7624",
+      "text": "Aufbissplatte nach Schulz-Bongert",
+      "bebZahntechnik": "keine eigene Nummer",
+      "goz": "7010",
+      "beschreibung": "Kunststoff; v. a. im Zusammenhang mit Funktionsanalyse/-therapie."
+    },
+    {
+      "nr": "7625",
+      "text": "Bissführungsplatte",
+      "bebZahntechnik": "7.15.05.0 oder 7.15.04.0",
+      "goz": "7010",
+      "beschreibung": "Schiene mit okklusalen Einbissen zur Führung der Antagonisten; häufig mit Zähnen und Halte-/Stützelementen."
+    },
+    {
+      "nr": "7201",
+      "text": "Frontaler oder lateraler Aufbiss, hart",
+      "begleit": true,
+      "beschreibung": "Zusätzlicher Aufbiss an Schiene, einmal je Kieferhälfte oder Frontzahngebiet."
+    },
+    {
+      "nr": "7202",
+      "text": "Frontaler oder lateraler Aufbiss, weich",
+      "begleit": true,
+      "beschreibung": "Zusätzlicher Aufbiss an Schiene, einmal je Kieferhälfte oder Frontzahngebiet."
+    },
+    {
+      "nr": "8015",
+      "text": "Instandsetzen einer Aufbissschiene, Grundeinheit",
+      "begleit": true,
+      "beschreibung": "Planzeit 2500 (min/100), zzgl. Leistungseinheiten 8021 ff. (BEB 97 Planzeiten 2013)."
+    },
+    {
+      "nr": "8016",
+      "text": "Erweitern einer Aufbissschiene, Grundeinheit",
+      "begleit": true,
+      "beschreibung": "Planzeit 2500 (min/100), zzgl. Leistungseinheiten 8021 ff."
+    },
+    {
+      "nr": "0001",
+      "text": "Modell aus Hartgips",
+      "begleit": true,
+      "beschreibung": "Nur Planungs-/Situationsmodell (IWW)."
+    },
+    {
+      "nr": "0002",
+      "text": "Modell aus Superhartgips",
+      "begleit": true,
+      "beschreibung": "Für Schienen i. d. R. 3 Modelle (OK, UK, Duplikat) – BEB Zahntechnik 1.01.02.0."
+    },
+    {
+      "nr": "0241",
+      "text": "Dublieren eines Modells oder Modellteils",
+      "begleit": true,
+      "beschreibung": "BEB Zahntechnik 1.04.01.0."
+    },
+    {
+      "nr": "0303",
+      "text": "Modell ausblocken",
+      "begleit": true,
+      "beschreibung": "Je Zahn oder Kieferteil (z. B. Medikamententrägerschiene)."
+    },
+    {
+      "nr": "0732",
+      "text": "Desinfektion",
+      "begleit": true,
+      "beschreibung": "1× Eingang, 1× Ausgang (abrechnungswelt zu 7602)."
+    },
+    {
+      "nr": "0402",
+      "text": "Modellmontage in Mittelwertartikulator I",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Nur aus Labor-Hausliste (ITZ), nicht gegen BEB-97-Original geprüft."
+    },
+    {
+      "nr": "0404",
+      "text": "Modellmontage in Mittelwert nach Gesichtsbogen",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Nur aus Labor-Hausliste (ITZ)."
+    },
+    {
+      "nr": "0405",
+      "text": "Modellmontage in individuellen Artikulator II",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Nur aus Labor-Hausliste (ITZ)."
+    },
+    {
+      "nr": "0511",
+      "text": "Mehraufwand für Einstellen nach Zentrikregistrat",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Nur aus Labor-Hausliste (ITZ)."
+    },
+    {
+      "nr": "0521",
+      "text": "Auswerten eines Registrates",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Nur aus Labor-Hausliste (ITZ)."
+    },
+    {
+      "nr": "1115",
+      "text": "Registrierplatte und -stift auf Basen",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Nur aus Labor-Hausliste (ITZ)."
+    },
+    {
+      "nr": "1122",
+      "text": "Wachsplatte für zentrische Bissnahme im Artikulator vorbereiten",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Nur aus Labor-Hausliste (ITZ)."
+    },
+    {
+      "nr": "2957",
+      "text": "Fräsen einer Aufbissschiene bei Datenanlieferung (PMMA)",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Labor-eigene Nummer (CAD/CAM), nicht in BEB 97 nachgewiesen."
+    },
+    {
+      "nr": "2958",
+      "text": "Fräsen einer Aufbissschiene bei Datenlieferung (Nylon)",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Labor-eigene Nummer (CAD/CAM)."
+    },
+    {
+      "nr": "2959",
+      "text": "Konstruktion und Fräsen einer Aufbissschiene bei Modellanlieferung (Nylon)",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Labor-eigene Nummer (CAD/CAM)."
+    },
+    {
+      "nr": "2960",
+      "text": "Konstruktion und Fräsen einer Aufbissschiene bei Modellanlieferung (PMMA)",
+      "begleit": true,
+      "quelle": "ITZ-Preisliste 2024 (lokal)",
+      "unsicher": true,
+      "unsicherGrund": "Labor-eigene Nummer (CAD/CAM)."
+    }
+  ],
+  "hinweise": [
+    "Euro-Werte = Punkte × 0,0562421 × Faktor, auf Cent gerundet. Über 2,3 schriftliche Begründung (§ 5 Abs. 2, § 10 Abs. 3 GOZ), über 3,5 nur mit Vereinbarung nach § 2 GOZ.",
+    "GOZ-Abschnitt H nennt keine 'je Kiefer'-Bestimmung: Aufbissbehelfe werden je Behelf berechnet; 7050/7060 je Sitzung, 7070 je Interdentalraum, 7080 je Zahn/Implantat, 7090 je Brückenglied, 7100 je Krone, Spanne oder Freiendbrückenglied.",
+    "Abschnitt J (8000–8100) hat keine Allgemeinen Bestimmungen; Einzelbestimmungen stehen bei 8000, 8010, 8035 und 8065. Es gibt keine Nrn. 8040, 8070 – die Nummerierung springt.",
+    "0040 (HKP bei funktionsanalytischen/-therapeutischen Maßnahmen, 250 P.) ist nicht neben 0030 berechnungsfähig.",
+    "BEB 97 hat keine Nummer 'Michigan-Schiene'; fachlich entspricht sie der adjustierten Aufbissschiene 7621 (Front-/Eckzahnführung) bzw. 7603. Die BEB Zahntechnik 2009 kennt für viele 76xx-Positionen keine eigene Nummer.",
+    "ACHTUNG Labor-Hauslisten: Die ITZ-Liste (lokal) benutzt 7601 = 'Aufbisschiene adjustiert' und 7602 = 'nicht adjustiert' – das weicht von BEB 97 (7601 tiefgezogen/nicht adjustiert, 7621 adjustiert) ab. Für den Planer BEB-97-Bedeutung verwenden und Laborpreise je Labor zuordnen.",
+    "Mittelwertartikulator und Duplikatmodell fallen bei Schienen i. d. R. an – außer die Leistung wird im Zusammenhang mit funktionsanalytischen Leistungen erbracht (IWW). Praxismaterial (Abformmaterial) nach § 4 Abs. 3 GOZ.",
+    "Labor-Material- und Laborkosten neben 8010 (Bissnahme, Stützstiftbesteck), 8020–8035 (Artikulation im (halb)individuellen Artikulator) und 8050–8065 (Einstellung nach Messwerten) gesondert berechnungsfähig."
+  ]
+}

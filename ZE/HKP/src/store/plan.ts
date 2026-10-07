@@ -3,12 +3,13 @@ import type { HkpPlan } from '../types'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
 import { markeLesen } from '../engine/bruecken'
 import { mk } from '../mandant'
+import { leererPatient, patientMigrieren } from '../stammdaten'
 
 const PLAN_KEY = mk('hkp.plan.v1')
 
 export function leererPlan(): HkpPlan {
   return {
-    patient: { name: '', vorname: '', geburtsdatum: '', kasse: '', kassenNr: '', versichertenNr: '', status: '', anschrift: '' },
+    patient: leererPatient(),
     verwaltung: {
       lfdNr: '', eingliederungsdatum: '', herstellungsortEingliederung: '',
       antragsnummer: '', art: 'HKP', therapieschritt: '', therapieschritteGesamt: '',
@@ -60,7 +61,7 @@ export function planNormalisieren(p: Partial<HkpPlan>): HkpPlan {
   return {
     ...leer,
     ...p,
-    patient: { ...leer.patient, ...p.patient },
+    patient: patientMigrieren(p.patient),
     verwaltung: { ...leer.verwaltung, ...p.verwaltung },
     zaehne: Object.fromEntries(ALLE_ZAEHNE.map((z) => {
       const d = { ...leer.zaehne[z], ...p.zaehne?.[z] }

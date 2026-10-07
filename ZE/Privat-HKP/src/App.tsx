@@ -6,7 +6,9 @@ import { Kostenleiste } from './components/Kostenleiste'
 import { AbformungSchalter } from './components/AbformungFrage'
 import { ImplantatFelder } from './components/ImplantatFelder'
 import { ALLE_ZAEHNE } from './engine/zahnschema'
-import { BEB, kalkulieren, euro, positionen } from './engine/berechnung'
+import { BEB, GENUTZTE_LISTEN, kalkulieren, euro, positionen } from './engine/berechnung'
+import { PatientFelder, PraxisFelder } from './components/Stammdaten'
+import { ListenKarte } from './components/Listen'
 import { kronenEinheiten, werkstoffVon } from './engine/material'
 import { KronenmaterialFelder } from './components/Kronenmaterial'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
@@ -14,10 +16,10 @@ import { neuerPlan, planMigrieren, useEinstellungen, usePlan, useZeAblage } from
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
-import type { Einstellungen, Patient, Plan, Praxis } from './types'
+import type { Einstellungen, Plan } from './types'
+import { patientName } from './stammdaten'
 
-const patientName = (p: Plan) => [p.patient.vorname, p.patient.name].filter(Boolean).join(' ')
-const hatInhalt = (p: Plan) => Boolean(patientName(p).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP) || p.manuell.length)
+const hatInhalt = (p: Plan) => Boolean(patientName(p.patient).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP) || p.manuell.length)
 
 type Reiter = 'patient' | 'planung' | 'leistungen' | 'praxis'
 
@@ -34,7 +36,7 @@ export default function App() {
   const [reiter, setReiter] = useState<Reiter>('planung')
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
   const ablage = useZeAblage()
-  const daten = { nummer: plan.nummer, patient: patientName(plan), betrag: kalk.gesamt, plan }
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
@@ -186,25 +188,10 @@ function Feld({ label, wert, onChange, typ = 'text', breit }: { label: string; w
 }
 
 function PatientForm({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => void }) {
-  const p = plan.patient
-  const set = (f: keyof Patient) => (v: string) => onChange({ ...plan, patient: { ...p, [f]: v } })
   return (
     <div className="block">
       <h3>Patient</h3>
-      <div className="formular">
-        <label className="feld">
-          <span>Anrede</span>
-          <select value={p.anrede} onChange={(e) => set('anrede')(e.target.value)}>
-            <option value="">–</option><option>Frau</option><option>Herr</option>
-          </select>
-        </label>
-        <Feld label="Vorname" wert={p.vorname} onChange={set('vorname')} />
-        <Feld label="Name" wert={p.name} onChange={set('name')} />
-        <Feld label="Geburtsdatum" typ="date" wert={p.geburtsdatum} onChange={set('geburtsdatum')} />
-        <Feld label="Straße, Nr." wert={p.strasse} onChange={set('strasse')} breit />
-        <Feld label="PLZ Ort" wert={p.plzOrt} onChange={set('plzOrt')} breit />
-        <Feld label="Versicherung (optional)" wert={p.kostentraeger} onChange={set('kostentraeger')} breit />
-      </div>
+      <PatientFelder art="privat" patient={plan.patient} onChange={(patient) => onChange({ ...plan, patient })} />
       <h3>Kostenvoranschlag</h3>
       <div className="formular">
         <Feld label="Nummer" wert={plan.nummer} onChange={(v) => onChange({ ...plan, nummer: v })} />
@@ -215,19 +202,11 @@ function PatientForm({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => vo
 }
 
 function PraxisForm({ einst, onChange }: { einst: Einstellungen; onChange: (e: Einstellungen) => void }) {
-  const pr = einst.praxis
-  const set = (f: keyof Praxis) => (v: string) => onChange({ ...einst, praxis: { ...pr, [f]: v } })
   return (
     <div className="block">
       <h3>Praxis (Briefkopf)</h3>
-      <div className="formular">
-        <Feld label="Praxisname" wert={pr.name} onChange={set('name')} breit />
-        <Feld label="Zahnärztin / Zahnarzt" wert={pr.zahnarzt} onChange={set('zahnarzt')} breit />
-        <Feld label="Straße, Nr." wert={pr.strasse} onChange={set('strasse')} />
-        <Feld label="PLZ Ort" wert={pr.plzOrt} onChange={set('plzOrt')} />
-        <Feld label="Telefon" wert={pr.telefon} onChange={set('telefon')} />
-        <Feld label="E-Mail" wert={pr.email} onChange={set('email')} />
-      </div>
+      <PraxisFelder art="privat" praxis={einst.praxis} onChange={(praxis) => onChange({ ...einst, praxis })} />
+      <div style={{ marginTop: 14 }}><ListenKarte listen={GENUTZTE_LISTEN} /></div>
       <EigenlaborKatalog
         katalog={einst.eigenlabor ?? []} onChange={(k) => onChange({ ...einst, eigenlabor: k })}
         bebText={(nr) => BEB.get(nr.trim().padStart(4, '0'))?.text}

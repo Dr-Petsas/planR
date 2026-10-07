@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/mkv'
-import { neuerPlan, nummerFormat, useEinstellungen, useMkvAblage, usePlan } from './store'
+import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, useMkvAblage, usePlan } from './store'
+import { patientName } from './stammdaten'
+import { useDatenVersion } from './components/Listen'
 import { ungespeichert } from './ablage'
 import type { Plan } from './types'
 import Patient from './components/Patient'
@@ -20,16 +22,17 @@ const REITER: { id: Reiter; label: string }[] = [
   { id: 'einstellungen', label: 'Einstellungen' },
 ]
 
-const hatInhalt = (p: Plan) => Boolean(p.patient.name.trim() || Object.keys(p.zaehne).length)
+const hatInhalt = (p: Plan) => Boolean(patientName(p.patient) || Object.keys(p.zaehne).length)
 
 export default function App() {
   const [einst, setEinst] = useEinstellungen()
   const [plan, setPlan] = usePlan(einst)
   const ablage = useMkvAblage()
   const [reiter, setReiter] = useState<Reiter>('planung')
+  const datenVersion = useDatenVersion()
 
-  const rechnung = useMemo(() => rechnen(plan, einst), [plan, einst])
-  const daten = { nummer: plan.nummer, patient: plan.patient.name, betrag: rechnung.mehrkosten, plan }
+  const rechnung = useMemo(() => rechnen(plan, einst), [plan, einst, datenVersion])
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: rechnung.mehrkosten, plan }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
@@ -43,7 +46,7 @@ export default function App() {
   }
   const oeffnen = (p: Plan) => {
     sichern()
-    setPlan(p)
+    setPlan(planMigrieren(p, einst))
     setReiter('planung')
   }
 

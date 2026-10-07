@@ -1,0 +1,838 @@
+{
+  "stand": "GOZ 2012 Anlage 1 (gesetze-im-internet.de, abgeglichen 07.10.2026; identisch mit lokaler goz-2012.json); Punktwert 0,0562421 EUR; Analogempfehlungen: Beratungsforum-Beschlüsse 54–59 und BZÄK-Neubewertung zm 18/2026 (16.09.2026); BEMA Teil 4 Stand 01.01.2026 (lokal bema-par.ts).",
+  "punktwert": 0.0562421,
+  "quellen": [
+    "https://www.gesetze-im-internet.de/goz_1987/anlage_1.html",
+    "F:\\PlanR\\ZE\\HKP\\src\\data\\goz-2012.json",
+    "F:\\PlanR\\PAR\\Kassen-PAR\\src\\data\\bema-par.ts",
+    "https://www.zm-online.de/artikel/2026/zm-2026-18/analoge-leistungen-der-parodontitistherapie-eine-reevaluation",
+    "https://www.bzaek.de/goz/goz-kommentar/berechnungsempfehlungen-analogbewertungen.html",
+    "https://www.bzaek.de/goz/stellungnahmen-zur-goz/stellungnahme/originaere-und-analoge-leistungen-der-parodontitisbehandlung.html",
+    "https://www.bzaek.de/goz/stellungnahmen-zur-goz/stellungnahme/rechnungslegung-analoger-leistungen-der-parodontitistherapie.html",
+    "https://www.bzaek.de/goz/merkblaetter-fuer-patientinnen-und-patienten/merkblatt/analoge-leistungen-der-parodontitistherapie.html",
+    "https://iai-test.de/images/Downloads/iai_beilage_a4_abrechnung_rev-3_v2026-01.pdf",
+    "https://www.zwp-online.info/zwpnews/wirtschaft-und-recht/abrechnung/zusatzleistungen-in-der-oralmedizin-mikrobiologische-markerkeimanalyse"
+  ],
+  "goz": [
+    {
+      "nr": "4000",
+      "text": "Erstellen und Dokumentieren eines Parodontalstatus",
+      "punkte": 160,
+      "euro": {
+        "1,0": 9.0,
+        "2,3": 20.7,
+        "3,5": 31.5
+      },
+      "bestimmung": "Die Leistung nach der Nummer 4000 ist innerhalb eines Jahres höchstens zweimal berechnungsfähig. Nicht neben PAR-Diagnostik analog (8000a/7080a) und Befundevaluation analog (5070a/3110a) – Beratungsforum.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4005",
+      "text": "Erhebung mindestens eines Gingivalindex und/oder eines Parodontalindex (z. B. des Parodontalen Screening-Index PSI)",
+      "punkte": 80,
+      "euro": {
+        "1,0": 4.5,
+        "2,3": 10.35,
+        "3,5": 15.75
+      },
+      "bestimmung": "Die Leistung nach der Nummer 4005 ist innerhalb eines Jahres höchstens zweimal berechnungsfähig. In einer Sitzung nur einmal. Mehr als 2× jährlich (UPT) analog 4005a bzw. 3210a (BZÄK 2026). Nicht neben der analogen Befundevaluation.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4020",
+      "text": "Lokalbehandlung von Mundschleimhauterkrankungen, gegebenenfalls einschließlich Taschenspülungen, je Sitzung",
+      "punkte": 45,
+      "euro": {
+        "1,0": 2.53,
+        "2,3": 5.82,
+        "3,5": 8.86
+      },
+      "bestimmung": "Taschenspülung, auch mit antibakteriellen Lösungen, und subgingivales Kortison hier (nicht 4025) – BZÄK.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4025",
+      "text": "Subgingivale medikamentöse antibakterielle Lokalapplikation, je Zahn",
+      "punkte": 15,
+      "euro": {
+        "1,0": 0.84,
+        "2,3": 1.94,
+        "3,5": 2.95
+      },
+      "bestimmung": "Die verwendeten antibakteriellen Materialien sind gesondert berechnungsfähig. Je Zahn und Sitzung (BZÄK).",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4030",
+      "text": "Beseitigung von scharfen Zahnkanten, störenden Prothesenrändern und Fremdreizen am Parodontium, je Kieferhälfte oder Frontzahnbereich",
+      "punkte": 35,
+      "euro": {
+        "1,0": 1.97,
+        "2,3": 4.53,
+        "3,5": 6.89
+      },
+      "bestimmung": "",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4040",
+      "text": "Beseitigung grober Vorkontakte der Okklusion und Artikulation durch Einschleifen des natürlichen Gebisses oder bereits vorhandenen Zahnersatzes, je Sitzung",
+      "punkte": 45,
+      "euro": {
+        "1,0": 2.53,
+        "2,3": 5.82,
+        "3,5": 8.86
+      },
+      "bestimmung": "",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4050",
+      "text": "Entfernung harter und weicher Zahnbeläge, gegebenenfalls einschließlich Polieren an einem einwurzeligen Zahn oder Implantat, auch Brückenglied",
+      "punkte": 10,
+      "euro": {
+        "1,0": 0.56,
+        "2,3": 1.29,
+        "3,5": 1.97
+      },
+      "bestimmung": "Nicht neben 1040 (zahn-/sitzungsgleich); nicht neben 4090/4100 in gleicher Sitzung.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4055",
+      "text": "Entfernung harter und weicher Zahnbeläge, gegebenenfalls einschließlich Polieren an einem mehrwurzeligen Zahn",
+      "punkte": 13,
+      "euro": {
+        "1,0": 0.73,
+        "2,3": 1.68,
+        "3,5": 2.56
+      },
+      "bestimmung": "Die Leistungen nach den Nummern 4050 und 4055 sind für denselben Zahn innerhalb von 30 Tagen nur einmal berechnungsfähig. Nicht neben 1040 (zahn-/sitzungsgleich); nicht neben 4090/4100 in gleicher Sitzung.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4060",
+      "text": "Kontrolle nach Entfernung harter und weicher Zahnbeläge oder professioneller Zahnreinigung nach der Nummer 1040 mit Nachreinigung einschließlich Polieren, je Zahn, oder Implantat, auch Brückenglied",
+      "punkte": 7,
+      "euro": {
+        "1,0": 0.39,
+        "2,3": 0.91,
+        "3,5": 1.38
+      },
+      "bestimmung": "Die Leistung nach der Nummer 4060 ist neben den Leistungen nach den Nummern 1040, 4050 und 4055 nicht berechnungsfähig. Nur einmal je Zahn auch nach PZR + subgingivaler Instrumentierung; neben 4150 möglich (BZÄK).",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4070",
+      "text": "Parodontalchirurgische Therapie (insbesondere Entfernung subgingivaler Konkremente und Wurzelglättung) an einem einwurzeligen Zahn oder Implantat, geschlossenes Vorgehen",
+      "punkte": 100,
+      "euro": {
+        "1,0": 5.62,
+        "2,3": 12.94,
+        "3,5": 19.68
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Nicht neben 1040, 4090, 4100 und nicht neben subgingivaler Instrumentierung analog (3010a/4138a bzw. 4000a/3130a) zahn-/sitzungsgleich; 4080 daneben möglich. Nicht neben 4090/4100 in gleicher Sitzung (Bestimmung zu 4100).",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4075",
+      "text": "Parodontalchirurgische Therapie (insbesondere Entfernung subgingivaler Konkremente und Wurzelglättung) an einem mehrwurzeligen Zahn, geschlossenes Vorgehen",
+      "punkte": 130,
+      "euro": {
+        "1,0": 7.31,
+        "2,3": 16.82,
+        "3,5": 25.59
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Wie 4070, mehrwurzelig.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4080",
+      "text": "Gingivektomie, Gingivoplastik, je Parodontium",
+      "punkte": 45,
+      "euro": {
+        "1,0": 2.53,
+        "2,3": 5.82,
+        "3,5": 8.86
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Je Parodontium, auch neben 4070/4075 und neben subgingivaler Instrumentierung (eigenständige Indikation); nicht neben 4090/4100. Laserzuschlag 0120 möglich.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4090",
+      "text": "Lappenoperation, offene Kürettage einschließlich Osteoplastik an einem Frontzahn, je Parodontium",
+      "punkte": 180,
+      "euro": {
+        "1,0": 10.12,
+        "2,3": 23.28,
+        "3,5": 35.43
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Frontzahn (GOZ unterscheidet Front-/Seitenzahn, nicht ein-/mehrwurzelig). OP-Zuschlag 0500, Laser 0120, Mikroskop 0110 möglich. Verlegung des Lappens = 4120 zusätzlich; Verbandplatte GOÄ 2700.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4100",
+      "text": "Lappenoperation, offene Kürettage einschließlich Osteoplastik an einem Seitenzahn, je Parodontium",
+      "punkte": 275,
+      "euro": {
+        "1,0": 15.47,
+        "2,3": 35.57,
+        "3,5": 54.13
+      },
+      "bestimmung": "Neben den Leistungen nach den Nummern 4090 und 4100 sind Leistungen nach den Nummern 4050 bis 4080 in der gleichen Sitzung nicht berechnungsfähig. Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Seitenzahn. OP-Zuschlag 0500 (275 P.), Laser 0120, Mikroskop 0110 möglich.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4110",
+      "text": "Auffüllen von parodontalen Knochendefekten mit Aufbaumaterial (Knochen- und/oder Knochenersatzmaterial), auch Einbringen von Proteinen, zur regenerativen Behandlung parodontaler Defekte, gegebenenfalls einschließlich Materialentnahme im Aufbaugebiet, je Zahn oder Parodontium oder Implantat",
+      "punkte": 180,
+      "euro": {
+        "1,0": 10.12,
+        "2,3": 23.28,
+        "3,5": 35.43
+      },
+      "bestimmung": "Die Leistung nach der Nummer 4110 ist auch im Rahmen einer chirurgischen Behandlung berechnungsfähig.Die Kosten eines einmal verwendbaren Knochenkollektors oder -schabers sind gesondert berechnungsfähig. Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Konfluierende Defekte zweier Zähne im Approximalraum = 2×; Knochenentnahme außerhalb Aufbaugebiet 9140.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4120",
+      "text": "Verlegen eines gestielten Schleimhautlappens, je Kieferhälfte oder Frontzahnbereich",
+      "punkte": 275,
+      "euro": {
+        "1,0": 15.47,
+        "2,3": 35.57,
+        "3,5": 54.13
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Nur Verlegen eines vorhandenen gestielten Lappens (apikal/koronal/lateral), einmal je Kieferhälfte/Frontzahnbereich unabhängig vom Umfang. OP-Zuschlag: amtlich nicht zuordenbar (BZÄK nennt 0500 – unsicher).",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4130",
+      "text": "Gewinnung und Transplantation von Schleimhaut, gegebenenfalls einschließlich Versorgung der Entnahmestelle, je Transplantat",
+      "punkte": 180,
+      "euro": {
+        "1,0": 10.12,
+        "2,3": 23.28,
+        "3,5": 35.43
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Je Transplantat (bis ca. eine Zahnbreite; größere: GOÄ 2386). OP-Zuschlag 0500, Laser 0120, Mikroskop 0110 möglich.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4133",
+      "text": "Gewinnung und Transplantation von Bindegewebe einschließlich Versorgung der Entnahmestelle, je Zahnzwischenraum",
+      "punkte": 880,
+      "euro": {
+        "1,0": 49.49,
+        "2,3": 113.83,
+        "3,5": 173.23
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Je versorgtem Approximalraum, nicht je Transplantat. OP-Zuschlag (bei 880 P. = 0520), Laser 0120, Mikroskop 0110 möglich.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4136",
+      "text": "Osteoplastik auch Kronenverlängerung, Tunnelierung oder Ähnliches je Zahn oder Parodontium, auch Implantat, als selbstständige Leistung",
+      "punkte": 200,
+      "euro": {
+        "1,0": 11.25,
+        "2,3": 25.87,
+        "3,5": 39.37
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Nicht für Osteoplastik im Rahmen von 4090/4100.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4138",
+      "text": "Verwendung einer Membran zur Behandlung eines Knochendefektes einschließlich Fixierung, je Zahn, je Implantat",
+      "punkte": 220,
+      "euro": {
+        "1,0": 12.37,
+        "2,3": 28.46,
+        "3,5": 43.31
+      },
+      "bestimmung": "Abschnitt E: primäre Wundversorgung ist Leistungsbestandteil; Knochenersatz-, Regenerations- (z. B. Membranen), Blutstillungsmaterialien, atraumatisches Nahtmaterial und Membranfixierung gesondert berechnungsfähig. Material gesondert.",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "4150",
+      "text": "Kontrolle/Nachbehandlung nach parodontalchirurgischen Maßnahmen, je Zahn, Implantat oder Parodontium",
+      "punkte": 7,
+      "euro": {
+        "1,0": 0.39,
+        "2,3": 0.91,
+        "3,5": 1.38
+      },
+      "bestimmung": "In getrennten Sitzungen nach PA-chirurgischen Leistungen; Wundkontrolle, -reinigung, Nahtentfernung; neben 4060 möglich (BZÄK).",
+      "abschnitt": "E Parodontium"
+    },
+    {
+      "nr": "1000",
+      "text": "Erstellung eines Mundhygienestatus und eingehende Unterweisung zur Vorbeugung gegen Karies und parodontale Erkrankungen, Dauer mindestens 25 Minuten",
+      "punkte": 200,
+      "euro": {
+        "1,0": 11.25,
+        "2,3": 25.87,
+        "3,5": 39.37
+      },
+      "bestimmung": "",
+      "abschnitt": "B Prophylaxe",
+      "verwandt": true
+    },
+    {
+      "nr": "1010",
+      "text": "Kontrolle des Übungserfolges einschließlich weiterer Unterweisung, Dauer mindestens 15 Minuten",
+      "punkte": 100,
+      "euro": {
+        "1,0": 5.62,
+        "2,3": 12.94,
+        "3,5": 19.68
+      },
+      "bestimmung": "",
+      "abschnitt": "B Prophylaxe",
+      "verwandt": true
+    },
+    {
+      "nr": "1040",
+      "text": "Professionelle Zahnreinigung",
+      "punkte": 28,
+      "euro": {
+        "1,0": 1.57,
+        "2,3": 3.62,
+        "3,5": 5.51
+      },
+      "bestimmung": "Die Leistung umfasst das Entfernen der supragingivalen/gingivalen Beläge auf Zahn- und Wurzeloberflächen einschließlich Reinigung der Zahnzwischenräume, das Entfernen des Biofilms, die Oberflächenpolitur und geeignete Fluoridierungsmaßnahmen, je Zahn oder Implantat oder Brückenglied.Die Leistung nach der Nummer 1040 ist neben den Leistungen nach den Nummern 1020, 4050, 4055, 4060, 4070, 4075, 4090 und 4100 nicht berechnungsfähig. Nicht neben 1020, 4050, 4055, 4060, 4070, 4075, 4090, 4100 (zahn-/sitzungsgleich); NEBEN subgingivaler Instrumentierung (AIT/UPT analog) berechnungsfähig (BZÄK).",
+      "abschnitt": "B Prophylaxe",
+      "verwandt": true
+    },
+    {
+      "nr": "6190",
+      "text": "Beratendes und belehrendes Gespräch mit Anweisungen zur Beseitigung von schädlichen Gewohnheiten und Dysfunktionen",
+      "punkte": 140,
+      "euro": {
+        "1,0": 7.87,
+        "2,3": 18.11,
+        "3,5": 27.56
+      },
+      "bestimmung": "Neben der Leistung nach der Nummer 6190 ist die Leistung nach der Nummer 0010 in derselben Sitzung nicht berechnungsfähig. Neben der Befundevaluation (analog) nicht berechnungsfähig (BZÄK).",
+      "abschnitt": "G Kieferorthopädie",
+      "verwandt": true
+    },
+    {
+      "nr": "0030",
+      "text": "Aufstellung eines schriftlichen Heil- und Kostenplans nach Befundaufnahme und gegebenenfalls Auswertung von Modellen",
+      "punkte": 200,
+      "euro": {
+        "1,0": 11.25,
+        "2,3": 25.87,
+        "3,5": 39.37
+      },
+      "bestimmung": "Schriftlicher HKP zur PAR-Behandlung; Anforderung durch Patient keine Voraussetzung (BZÄK).",
+      "abschnitt": "A Allgemeine Leistungen",
+      "verwandt": true
+    },
+    {
+      "nr": "0110",
+      "text": "Zuschlag für die Anwendung eines Operationsmikroskops bei den Leistungen nach den Nummern 2195, 2330, 2340, 2360, 2410, 2440, 3020, 3030, 3040, 3045, 3060, 3110, 3120, 3190, 3200, 4090, 4100, 4130, 4133, 9100, 9110, 9120, 9130 und 9170",
+      "punkte": 400,
+      "euro": {
+        "1,0": 22.5
+      },
+      "bestimmung": "Der Zuschlag nach der Nummer 0110 ist je Behandlungstag nur einmal und nur mit dem einfachen Gebührensatz berechnungsfähig. Zuschlag nur mit einfachem Gebührensatz (0110) bzw. 100 % des einfachen Satzes der Bezugsleistung, max. 68 EUR (0120); je Behandlungstag einmal.",
+      "abschnitt": "A Allgemeine Leistungen",
+      "verwandt": true
+    },
+    {
+      "nr": "0120",
+      "text": "Zuschlag für die Anwendung eines Lasers bei den Leistungen nach den Nummern 2410, 3070, 3080, 3210, 3240, 4080, 4090, 4100, 4130, 4133 und 9160",
+      "punkte": null,
+      "euro": {},
+      "bestimmung": "Der Zuschlag nach der Nummer 0120 beträgt 100 v. H. des einfachen Gebührensatzes der betreffenden Leistung, jedoch nicht mehr als 68 Euro. Der Zuschlag nach der Nummer 0120 ist je Behandlungstag nur einmal berechnungsfähig. Keine eigene Punktzahl: Betrag = 1,0-facher Satz der begleiteten PAR-Leistung (4080, 4090, 4100, 4130, 4133), max. 68 €. Zuschlag nur mit einfachem Gebührensatz (0110) bzw. 100 % des einfachen Satzes der Bezugsleistung, max. 68 EUR (0120); je Behandlungstag einmal.",
+      "abschnitt": "A",
+      "verwandt": true
+    },
+    {
+      "nr": "0500",
+      "text": "Zuschlag bei nichtstationärer Durchführung von zahnärztlich-chirurgischen Leistungen, die mit Punktzahlen von 250 bis 499 Punkten bewertet sind, oder zu den Leistungen nach den Nummern 4090 oder 4130",
+      "punkte": 400,
+      "euro": {
+        "1,0": 22.5
+      },
+      "bestimmung": "Nur einfacher Gebührensatz; je Behandlungstag einmal.",
+      "abschnitt": "L Zuschläge",
+      "verwandt": true
+    },
+    {
+      "nr": "0510",
+      "text": "Zuschlag bei nichtstationärer Durchführung von zahnärztlich-chirurgischen Leistungen, die mit Punktzahlen von 500 bis 799 Punkten bewertet sind",
+      "punkte": 750,
+      "euro": {
+        "1,0": 42.18
+      },
+      "bestimmung": "Nur einfacher Gebührensatz; je Behandlungstag einmal.",
+      "abschnitt": "L Zuschläge",
+      "verwandt": true
+    },
+    {
+      "nr": "0520",
+      "text": "Zuschlag bei nichtstationärer Durchführung von zahnärztlich-chirurgischen Leistungen, die mit Punktzahlen von 800 bis 1199 Punkten bewertet sind",
+      "punkte": 1300,
+      "euro": {
+        "1,0": 73.11
+      },
+      "bestimmung": "Nur einfacher Gebührensatz; je Behandlungstag einmal.",
+      "abschnitt": "L Zuschläge",
+      "verwandt": true
+    }
+  ],
+  "analog": [
+    {
+      "nr": "7080a",
+      "text": "PAR-Diagnostik, Staging/Grading, Dokumentation",
+      "vorschlag": "entsprechend GOZ 7080 Versorgung eines Kiefers mit einem festsitzenden laborgefertigten Provisorium (einschließlich Vorpräparation) im indirekten Verfahren, je Zahn oder je Implantat, einschließlich Entfernung",
+      "referenzPunkte": 600,
+      "euro": {
+        "1,0": 33.75,
+        "2,3": 77.61,
+        "3,5": 118.11
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "S3-Leitlinie Stadium I–III; Diagnostik inkl. Staging/Grading nicht in der GOZ beschrieben. Einmal je Behandlungsstrecke; nicht neben 4000 (BF-Regel bleibt). Dokumentation auf anerkanntem Formblatt (z. B. Vordruck 5a/b Anl. 14a BMV-Z).",
+      "bemaGegenstueck": "4",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "8000a",
+      "text": "PAR-Diagnostik, Staging/Grading, Dokumentation",
+      "vorschlag": "entsprechend GOZ 8000 Klinische Funktionsanalyse einschließlich Dokumentation",
+      "referenzPunkte": 500,
+      "euro": {
+        "1,0": 28.12,
+        "2,3": 64.68,
+        "3,5": 98.42
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss; weiter zulässig (BZÄK 2026 ausdrücklich).",
+      "bemaGegenstueck": "4",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "3290a",
+      "text": "Ausfertigung PAR-Formblatt",
+      "vorschlag": "entsprechend GOZ 3290 Kontrolle nach chirurgischem Eingriff, als selbstständige Leistung, je Kieferhälfte oder Frontzahnbereich",
+      "referenzPunkte": 55,
+      "euro": {
+        "1,0": 3.09,
+        "2,3": 7.11,
+        "3,5": 10.83
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Aushändigung einer Ausfertigung des Diagnostik-Formblatts an den Zahlungspflichtigen, zusätzlich zur PAR-Diagnostik.",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "4030a",
+      "text": "Ausfertigung PAR-Formblatt",
+      "vorschlag": "entsprechend GOZ 4030 Beseitigung von scharfen Zahnkanten, störenden Prothesenrändern und Fremdreizen am Parodontium, je Kieferhälfte oder Frontzahnbereich",
+      "referenzPunkte": 35,
+      "euro": {
+        "1,0": 1.97,
+        "2,3": 4.53,
+        "3,5": 6.89
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "9090a",
+      "text": "Parodontologisches Aufklärungs- und Therapiegespräch (ATG)",
+      "vorschlag": "entsprechend GOZ 9090 Knochengewinnung (z. B. Knochenkollektor oder Knochenschaber), Knochenaufbereitung und -implantation, auch zur Weichteilunterfütterung",
+      "referenzPunkte": 400,
+      "euro": {
+        "1,0": 22.5,
+        "2,3": 51.74,
+        "3,5": 78.74
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Einmal je Behandlungsstrecke; andere Gesprächs-/Beratungsleistungen daneben nicht berechnungsfähig.",
+      "bemaGegenstueck": "ATG",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "2110a",
+      "text": "Parodontologisches Aufklärungs- und Therapiegespräch (ATG)",
+      "vorschlag": "entsprechend GOZ 2110 Präparieren einer Kavität und Restauration mit plastischem Füllungsmaterial einschließlich Unterfüllung, Anlegen einer Matrize oder Benutzen anderer Hilfsmittel zur Formung der Füllung, mehr als dreiflächig",
+      "referenzPunkte": 319,
+      "euro": {
+        "1,0": 17.94,
+        "2,3": 41.26,
+        "3,5": 62.79
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "bemaGegenstueck": "ATG",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "4000a",
+      "text": "Subgingivale Instrumentierung – PAR (AIT), einwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 4000 Erstellen und Dokumentieren eines Parodontalstatus",
+      "referenzPunkte": 160,
+      "euro": {
+        "1,0": 9.0,
+        "2,3": 20.7,
+        "3,5": 31.5
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Leitliniengerechte nichtchirurgische Biofilm-/Konkremententfernung unterscheidet sich von 4070 (Instrumentierung/Leistungsvornahme) → analog. Je Zahn, in Stufe 2 und 3 je bis 2× pro Strecke. Daneben 1040 und 4080; nicht 4070/4075/4090/4100 zahn-/sitzungsgleich.",
+      "bemaGegenstueck": "AIT a",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "3010a",
+      "text": "Subgingivale Instrumentierung – PAR (AIT), einwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 3010 Entfernung eines mehrwurzeligen Zahnes",
+      "referenzPunkte": 110,
+      "euro": {
+        "1,0": 6.19,
+        "2,3": 14.23,
+        "3,5": 21.65
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "bemaGegenstueck": "AIT a",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "3130a",
+      "text": "Subgingivale Instrumentierung – PAR (AIT), mehrwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 3130 Hemisektion und Teilextraktion eines mehrwurzeligen Zahnes",
+      "referenzPunkte": 280,
+      "euro": {
+        "1,0": 15.75,
+        "2,3": 36.22,
+        "3,5": 55.12
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Wie 4000a, mehrwurzelig.",
+      "bemaGegenstueck": "AIT b",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "4138a",
+      "text": "Subgingivale Instrumentierung – PAR (AIT), mehrwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 4138 Verwendung einer Membran zur Behandlung eines Knochendefektes einschließlich Fixierung, je Zahn, je Implantat",
+      "referenzPunkte": 220,
+      "euro": {
+        "1,0": 12.37,
+        "2,3": 28.46,
+        "3,5": 43.31
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "bemaGegenstueck": "AIT b",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "3110a",
+      "text": "Befundevaluation – PAR",
+      "vorschlag": "entsprechend GOZ 3110 Resektion einer Wurzelspitze an einem Frontzahn",
+      "referenzPunkte": 460,
+      "euro": {
+        "1,0": 25.87,
+        "2,3": 59.5,
+        "3,5": 90.55
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Erneute Befunddokumentation (ST, BOP, Lockerung, Furkation, Röntgen-Knochenabbau, %/Alter) nach Stufe 2/3 und in der UPT inkl. Aufklärung über weitere Interventionen. Max. 3× pro Jahr; nicht neben 4000, 4005(a) und anderen Gesprächs-/Beratungsleistungen.",
+      "bemaGegenstueck": "BEV a / BEV b / UPT g",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "5070a",
+      "text": "Befundevaluation – PAR",
+      "vorschlag": "entsprechend GOZ 5070 Versorgung eines Lückengebisses durch eine Brücke oder Prothese: Verbindung von Kronen oder Einlagefüllungen durch Brückenglieder, Prothesenspannen oder Stege, je zu überbrückende Spanne oder Freiendsattel",
+      "referenzPunkte": 400,
+      "euro": {
+        "1,0": 22.5,
+        "2,3": 51.74,
+        "3,5": 78.74
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "bemaGegenstueck": "BEV a / BEV b / UPT g",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "2000a",
+      "text": "Subgingivale Instrumentierung – UPT, einwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 2000 Versiegelung von kariesfreien Zahnfissuren mit aushärtenden Kunststoffen, auch Glattflächenversiegelung, je Zahn",
+      "referenzPunkte": 90,
+      "euro": {
+        "1,0": 5.06,
+        "2,3": 11.64,
+        "3,5": 17.72
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Nichtchirurgische subgingivale Belagsentfernung an Resttaschen in der UPT; mehrfach berechnungsfähig; 1040 daneben gesondert; 4080 bei eigenständiger Indikation.",
+      "bemaGegenstueck": "UPT e",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "0090a",
+      "text": "Subgingivale Instrumentierung – UPT, einwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 0090 Intraorale Infiltrationsanästhesie",
+      "referenzPunkte": 60,
+      "euro": {
+        "1,0": 3.37,
+        "2,3": 7.76,
+        "3,5": 11.81
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "bemaGegenstueck": "UPT e",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "2380a",
+      "text": "Subgingivale Instrumentierung – UPT, mehrwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 2380 Amputation und endgültige Versorgung der avitalen Milchzahnpulpa",
+      "referenzPunkte": 160,
+      "euro": {
+        "1,0": 9.0,
+        "2,3": 20.7,
+        "3,5": 31.5
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Wie 2000a, mehrwurzelig.",
+      "bemaGegenstueck": "UPT f",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "2197a",
+      "text": "Subgingivale Instrumentierung – UPT, mehrwurzeliger Zahn",
+      "vorschlag": "entsprechend GOZ 2197 Adhäsive Befestigung (plastischer Aufbau, Stift, Inlay, Krone, Teilkrone, Veneer etc.)",
+      "referenzPunkte": 130,
+      "euro": {
+        "1,0": 7.31,
+        "2,3": 16.82,
+        "3,5": 25.59
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "bemaGegenstueck": "UPT f",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "3210a",
+      "text": "Erhebung mindestens eines Gingivalindex und/oder eines Parodontalindex (z. B. PSI), mehr als zweimal innerhalb eines Jahres",
+      "vorschlag": "entsprechend GOZ 3210 Beseitigung störender Schleimhautbänder, je Kieferhälfte oder Frontzahnbereich",
+      "referenzPunkte": 140,
+      "euro": {
+        "1,0": 7.87,
+        "2,3": 18.11,
+        "3,5": 27.56
+      },
+      "quelle": "BZÄK-Neubewertung (zm 18/2026 vom 16.09.2026; BZÄK Berechnungsempfehlungen Analogbewertungen)",
+      "begruendung": "Wenn in der UPT der Inhalt von 4005 mehr als 2× jährlich erbracht wird; einmal je Sitzung.",
+      "bemaGegenstueck": "UPT d (teilweise)",
+      "variante": "aktuell"
+    },
+    {
+      "nr": "4005a",
+      "text": "Erhebung mindestens eines Gingivalindex und/oder eines Parodontalindex (z. B. PSI), mehr als zweimal innerhalb eines Jahres",
+      "vorschlag": "entsprechend GOZ 4005 Erhebung mindestens eines Gingivalindex und/oder eines Parodontalindex (z. B. des Parodontalen Screening-Index PSI)",
+      "referenzPunkte": 80,
+      "euro": {
+        "1,0": 4.5,
+        "2,3": 10.35,
+        "3,5": 15.75
+      },
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 (BZÄK-Stellungnahme 'Originäre und analoge Leistungen der Parodontitisbehandlung')",
+      "begruendung": "Ursprünglicher Beschluss.",
+      "bemaGegenstueck": "UPT d (teilweise)",
+      "variante": "beratungsforum"
+    },
+    {
+      "nr": "GOÄ 298",
+      "text": "Entnahme und gegebenenfalls Aufbereitung von Abstrichmaterial zur mikrobiologischen Untersuchung – gegebenenfalls einschließlich Fixierung",
+      "vorschlag": "Direkt aus der GOÄ (für Zahnärzte geöffneter Abschnitt), 40 GOÄ-Punkte, Punktwert GOÄ 0,0582873 EUR (2,3 = 5,36 EUR)",
+      "referenzPunkte": 40,
+      "euro": {
+        "1,0": 2.33,
+        "2,3": 5.36,
+        "3,5": 8.16
+      },
+      "quelle": "Liebold/Raff/Wissing GOÄ 297/298; iai-Abrechnungsbeilage 01/2026; IWW AAZ",
+      "begruendung": "Markerkeim-/mikrobiologischer Test: je Entnahmestelle (auch bei Poolprobe je Stelle); Papierspitzen abgegolten. Laborauswertung rechnet das Speziallabor ab (oder 1:1 weiterberechnet); Versandkosten gesondert. Kein GOZ-Analogwert nötig. Bei GKV-Patienten Privatleistung mit Vereinbarung.",
+      "kein_analog": true,
+      "unsicher": true,
+      "unsicherGrund": "Rechtsgrundlage unterschiedlich zitiert (iai: § 6 Abs. 1 GOZ; Kommentar: geöffneter GOÄ-Abschnitt). Euro-Werte mit GOÄ-Punktwert 0,0582873 gerechnet."
+    },
+    {
+      "nr": "GOÄ 70",
+      "text": "Kurze Bescheinigung oder kurzes Zeugnis",
+      "vorschlag": "Original-GOÄ",
+      "quelle": "Beratungsforum BZÄK/PKV/Beihilfe, Beschlüsse Nr. 54–59 / BZÄK",
+      "begruendung": "Schriftliche Information an den Patienten über das Ergebnis von 4005/4005a und weiteren Diagnostikbedarf.",
+      "kein_analog": true,
+      "unsicher": true,
+      "unsicherGrund": "Punktzahl der GOÄ 70 nicht recherchiert – vor Verwendung prüfen."
+    },
+    {
+      "nr": "1040",
+      "text": "Professionelle Zahnreinigung",
+      "vorschlag": "Originalleistung GOZ 1040 (28 P. je Zahn/Implantat/Brückenglied), kein Analog",
+      "referenzPunkte": 28,
+      "euro": {
+        "1,0": 1.57,
+        "2,3": 3.62,
+        "3,5": 5.51
+      },
+      "quelle": "GOZ Anlage 1; BZÄK",
+      "begruendung": "Supragingival/gingival; NEBEN subgingivaler Instrumentierung (AIT/UPT analog) berechnungsfähig, nicht neben 4050–4100 zahn-/sitzungsgleich. Entspricht UPT c.",
+      "kein_analog": true,
+      "bemaGegenstueck": "UPT c"
+    },
+    {
+      "nr": "0120",
+      "text": "Laserzuschlag",
+      "vorschlag": "Original GOZ 0120 nur bei 4080, 4090, 4100, 4130, 4133 (in Abschnitt E)",
+      "quelle": "GOZ Anlage 1",
+      "begruendung": "100 % des einfachen Satzes der Bezugsleistung, max. 68 EUR, 1× je Behandlungstag. Für laserunterstützte Taschendekontamination/aPDT bei AIT/UPT gibt es KEINEN Zuschlag; ein eigener Analogwert ist nicht konsentiert.",
+      "kein_analog": true
+    },
+    {
+      "nr": "(frei) a",
+      "text": "Laserunterstützte Taschendekontamination bzw. antimikrobielle photodynamische Therapie (aPDT)",
+      "vorschlag": "Analog nach § 6 Abs. 1 GOZ nach Praxiskalkulation – keine BZÄK-/Beratungsforum-Empfehlung gefunden",
+      "quelle": "—",
+      "begruendung": "Nicht in GOZ beschrieben; nur als selbständige Leistung analog möglich.",
+      "unsicher": true,
+      "unsicherGrund": "Keine verbindliche Referenzleistung recherchiert – im Planer nur als frei wählbare Analogposition anbieten."
+    }
+  ],
+  "bemaVergleich": [
+    {
+      "bema": "04",
+      "goz": "4005",
+      "hinweis": "PSI; GOZ 2× pro Jahr, darüber 3210a (BZÄK 2026) bzw. 4005a (Beratungsforum)."
+    },
+    {
+      "bema": "4",
+      "goz": "7080a (BZÄK 2026) / 8000a (Beratungsforum); alternativ 4000",
+      "hinweis": "Parodontalstatus/Diagnostik inkl. Staging/Grading; 4000 nicht neben der analogen PAR-Diagnostik. Ausfertigung Formblatt 3290a bzw. 4030a."
+    },
+    {
+      "bema": "ATG",
+      "goz": "9090a (BZÄK 2026) / 2110a (Beratungsforum)",
+      "hinweis": "Einmal je Behandlungsstrecke, keine weiteren Beratungen daneben."
+    },
+    {
+      "bema": "MHU",
+      "goz": "1000 (+1010)",
+      "hinweis": "1000 mind. 25 min, 1× pro Jahr; 1010 mind. 15 min, 3× pro Jahr. 6190 für Risikofaktor-/Gewohnheitsgespräch.",
+      "unsicher": true,
+      "unsicherGrund": "Zuordnung fachlich, kein Beschlusstext 'MHU = 1000'."
+    },
+    {
+      "bema": "AIT a",
+      "goz": "4000a (BZÄK 2026) / 3010a (Beratungsforum); original 4070",
+      "hinweis": "Laut Beratungsforum ist leitliniengerechte AIT analog zu berechnen, nicht als 4070. 4070 (geschlossenes Vorgehen inkl. Wurzelglättung) bleibt Originalleistung, aber nicht zahn-/sitzungsgleich neben der analogen AIT."
+    },
+    {
+      "bema": "AIT b",
+      "goz": "3130a (BZÄK 2026) / 4138a (Beratungsforum); original 4075",
+      "hinweis": "Wie AIT a, mehrwurzelig."
+    },
+    {
+      "bema": "BEV a",
+      "goz": "3110a (BZÄK 2026) / 5070a (Beratungsforum)",
+      "hinweis": "Max. 3× jährlich, nicht neben 4000/4005(a)/Beratungen."
+    },
+    {
+      "bema": "BEV b",
+      "goz": "3110a / 5070a",
+      "hinweis": "Wie BEV a, nach chirurgischer Therapie."
+    },
+    {
+      "bema": "CPT a",
+      "goz": "4090 (Frontzahn) bzw. 4100 (Seitenzahn)",
+      "hinweis": "BEMA trennt ein-/mehrwurzelig, GOZ Front-/Seitenzahn: einwurzelige Prämolaren = 4100. Dazu ggf. 4110, 4120, 4136, 4138, 0500 ff., 0110/0120."
+    },
+    {
+      "bema": "CPT b",
+      "goz": "4100",
+      "hinweis": "Mehrwurzelige Zähne sind Seitenzähne."
+    },
+    {
+      "bema": "UPT a",
+      "goz": "1010",
+      "hinweis": "Mundhygienekontrolle.",
+      "unsicher": true,
+      "unsicherGrund": "Keine offizielle Zuordnung gefunden; fachliche Näherung."
+    },
+    {
+      "bema": "UPT b",
+      "goz": "1010 bzw. 1000",
+      "hinweis": "Mundhygieneunterweisung soweit erforderlich.",
+      "unsicher": true,
+      "unsicherGrund": "Fachliche Näherung."
+    },
+    {
+      "bema": "UPT c",
+      "goz": "1040",
+      "hinweis": "Je Zahn/Implantat/Brückenglied; neben subgingivaler Instrumentierung UPT berechnungsfähig."
+    },
+    {
+      "bema": "UPT d",
+      "goz": "4005 / 3210a bzw. 4005a (>2×/Jahr)",
+      "hinweis": "ST-/BOP-Messung.",
+      "unsicher": true,
+      "unsicherGrund": "Index-Erhebung deckt UPT d inhaltlich nicht vollständig; alternativ 4000 (max. 2×/Jahr)."
+    },
+    {
+      "bema": "UPT e",
+      "goz": "2000a (BZÄK 2026) / 0090a (Beratungsforum)",
+      "hinweis": "Einwurzelig; mehrfach in der UPT; 4080 bei eigener Indikation."
+    },
+    {
+      "bema": "UPT f",
+      "goz": "2380a (BZÄK 2026) / 2197a (Beratungsforum)",
+      "hinweis": "Mehrwurzelig."
+    },
+    {
+      "bema": "UPT g",
+      "goz": "3110a / 5070a",
+      "hinweis": "Befundevaluation umfasst auch die UPT-Bewertung (BZÄK).",
+      "unsicher": true,
+      "unsicherGrund": "Zuordnung aus Leistungsbeschreibung abgeleitet."
+    },
+    {
+      "bema": "108",
+      "goz": "4040",
+      "hinweis": "Einschleifen je Sitzung."
+    },
+    {
+      "bema": "111",
+      "goz": "4150 (nach Chirurgie) bzw. 4060 (nach Belagentfernung/PZR)",
+      "hinweis": "4060 neben 4150 möglich, wenn chirurgisch und nichtchirurgisch am Zahn."
+    },
+    {
+      "bema": "K1 (b) / K4 bei PAR",
+      "goz": "7010 / 7070",
+      "hinweis": "Aufbissschiene bzw. semipermanente Schienung bei PAR."
+    }
+  ],
+  "hinweise": [
+    "Nummernprüfung: Es gibt KEINE GOZ 4085 und keine 4140; nach 4080 folgt 4090. 4120 heißt amtlich 'Verlegen eines gestielten Schleimhautlappens' (nicht 'Transplantat'), 4130 'Gewinnung und Transplantation von Schleimhaut', 4133 Bindegewebe je Zahnzwischenraum, 4136 Osteoplastik/Kronenverlängerung/Tunnelierung, 4138 Membran.",
+    "Zwei gültige Analog-Varianten: 'aktuell' = BZÄK-Neubewertung 2026 (höher dotiert), 'beratungsforum' = ursprüngliche Beschlüsse mit PKV/Beihilfe. Die BZÄK hält beide für zulässig; PKV/Beihilfe kennen vertraglich nur die Beratungsforum-Variante – Erstattungsrisiko beim Patienten. Im Planer wählbar machen.",
+    "Rechnung (§ 10 Abs. 4 GOZ): analoge Leistung mit festgelegter Beschreibung wortgenau + 'entsprechend Nr. …' + Text der Referenzleistung (BZÄK Rechnungslegung).",
+    "Euro-Werte = Punkte × 0,0562421 × Faktor, auf Cent gerundet. Faktor > 2,3 schriftlich begründen; > 3,5 nur mit Vereinbarung nach § 2 GOZ. Zuschläge 0110/0500–0530 nur einfacher Satz.",
+    "GKV-Versicherte: GOZ-PAR nur mit schriftlicher Privatvereinbarung vor Behandlungsbeginn.",
+    "OP-Zuschläge (amtlich): 0500 = Leistungen 250–499 P. oder zu 4090/4130; 0510 = 500–799 P.; 0520 = 800–1199 P.; 0530 = ab 1200 P. In Abschnitt E nur zu 4090, 4100, 4130, 4133 zuordenbar; maßgeblich ist die eine Leistung mit der höchsten Punktzahl (keine Summenbildung), je Behandlungstag einmal, nur einfacher Satz, nicht neben GOÄ 440–445. Also 4090 → 0500, 4100 → 0500, 4130 → 0500, 4133 → 0520. Die BZÄK-Stellungnahme nennt den Zuschlag auch zu 4120 – das steht NICHT in der amtlichen Liste (unsicher, im Planer nicht automatisch).",
+    "4050/4055 für denselben Zahn innerhalb 30 Tagen nur einmal; 4000 und 4005 je 2× pro Jahr.",
+    "Laborauswertung mikrobiologischer Tests wird vom Labor (GOÄ M) berechnet, nicht vom Zahnarzt."
+  ]
+}

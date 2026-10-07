@@ -3,13 +3,14 @@ import type { Einstellungen, Plan, Regler } from './types'
 import { STANDARD_LABOR } from './data/katalog'
 import { useAblage } from './ablage'
 import { mk } from './mandant'
+import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 
 const KEY_PLAN = mk('kons-mkv.plan.v1')
 const KEY_EINST = mk('kons-mkv.einstellungen.v1')
 const KEY_LISTE = mk('kons-mkv.liste.v1')
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
-  praxis: { name: 'Zahnarztpraxis', zahnarzt: '', strasse: '', plz: '', ort: '', telefon: '', email: '' },
+  praxis: standardPraxis(),
   modell: 'proFlaeche',
   proZahn: 50,
   proFlaeche: 20,
@@ -17,8 +18,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   inlayFaktor: 2.3,
   gueltigMonate: 6,
   naechsteNummer: 1,
-  kzvNr: '',
-  punktwertOverride: null,
+  punktwertFest: {},
   laborPreise: STANDARD_LABOR.map((l) => ({ ...l })),
 }
 
@@ -37,7 +37,7 @@ export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {
     nummer,
     datum: new Date().toISOString().slice(0, 10),
-    patient: { name: '', geburtsdatum: '', kasse: '', kassennummer: '', versichertennr: '', kassenart: 'primaer' },
+    patient: leererPatient(),
     zaehne: {},
     regler: reglerAus(einst),
     bemerkung: '',
@@ -51,7 +51,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
   return {
     ...basis,
     ...p,
-    patient: { ...basis.patient, ...p.patient },
+    patient: patientMigrieren(p.patient),
     regler: { ...basis.regler, ...p.regler },
     zaehne: p.zaehne ?? {},
     bemerkung: p.bemerkung ?? '',
@@ -60,11 +60,13 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
 
 function einstMigrieren(roh: unknown): Einstellungen {
   if (!roh || typeof roh !== 'object') return { ...STANDARD_EINSTELLUNGEN }
-  const e = roh as Partial<Einstellungen>
+  // kzvNr / punktwertOverride: Stand vor den einheitlichen Anmeldedaten
+  const { kzvNr, punktwertOverride, ...e } = roh as Partial<Einstellungen> & { kzvNr?: string; punktwertOverride?: number | null }
   return {
     ...STANDARD_EINSTELLUNGEN,
     ...e,
-    praxis: { ...STANDARD_EINSTELLUNGEN.praxis, ...e.praxis },
+    praxis: praxisMigrieren(e.praxis, kzvNr),
+    punktwertFest: e.punktwertFest ?? (punktwertOverride ? { KCH: punktwertOverride } : {}),
     laborPreise: e.laborPreise?.length ? e.laborPreise : STANDARD_EINSTELLUNGEN.laborPreise,
   }
 }

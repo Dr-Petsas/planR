@@ -50,9 +50,8 @@ export function pruefeFall(fall: ParFall, _einst: Einstellungen, diag: DiagnoseE
 
   if (!p.name.trim()) add('fehler', 'Stammdaten', 'Name des Versicherten fehlt.')
   if (!p.geburtsdatum) add('fehler', 'Stammdaten', 'Geburtsdatum fehlt.')
-  if (!p.kostentraegerkennung) add('warnung', 'Stammdaten', 'Kostenträgerkennung (IK der Kasse) fehlt.')
-  if (!p.versichertennr) add('warnung', 'Stammdaten', 'Versicherten-Nr. fehlt.')
-  if (p.kassenart === 'ersatz' && !p.kassennummer) add('hinweis', 'Punktwert', 'Ersatzkasse ohne Kassennummer – Region des Punktwerts aus der Praxis-KZV.')
+  if (!p.kassenNr) add('warnung', 'Stammdaten', 'Kostenträgerkennung (IK der Kasse) fehlt.')
+  if (!p.versichertenNr) add('warnung', 'Stammdaten', 'Versicherten-Nr. fehlt.')
 
   // Blatt 1
   const d = fall.diagnose

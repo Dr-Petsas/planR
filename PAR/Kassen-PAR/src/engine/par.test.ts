@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { csvParsen, ermittlePunktwert } from '../data/punktwerte'
-import { STANDARD_EINSTELLUNGEN, befundeBereinigen, leererBefund, neuerFall, zweiMessstellen } from '../store'
+import { STANDARD_EINSTELLUNGEN, befundeBereinigen, einstMigrieren, leererBefund, neuerFall, zweiMessstellen } from '../store'
 import type { Befund, DiagnoseErgebnis, ParFall } from '../types'
 import { diagnostizieren } from './diagnose'
 import {
@@ -150,7 +149,7 @@ describe('Begleitleistungen', () => {
     f.termine = terminePlanen(f, diagGrad('B'))
     const bev = { ...leererBefund('beva', 'BEV a'), datum: '2026-03-01' }
     f.befunde = [...f.befunde, bev]
-    const preise = preiseAus(STANDARD_EINSTELLUNGEN, 1.19)
+    const preise = preiseAus(STANDARD_EINSTELLUNGEN, 1.19, 1.19)
     const cpt = f.termine.find((t) => t.art === 'cpt')!
     const wert = (id: string) => terminRechnen(f, cpt, preise).kacheln.find((k) => k.kachel.id === id)!.wert
     expect(wert('cptb')).toBeGreaterThan(0)
@@ -162,7 +161,7 @@ describe('Begleitleistungen', () => {
 describe('Regler', () => {
   const b = befundMit({ '16': 5, '15': 5, '11': 5, '36': 5, '46': 5 })
   const f = fallMit(b, 'B')
-  const preise = preiseAus(STANDARD_EINSTELLUNGEN, 1.2)
+  const preise = preiseAus(STANDARD_EINSTELLUNGEN, 1.2, 1.2)
   const ait = f.termine.find((t) => t.schluessel === 'ait-1')!
 
   it('AIT: Kern + Anästhesie sind die Grundauswahl, OK-Sitzung nur OK-Zähne', () => {
@@ -301,18 +300,16 @@ describe('Segment-Zuordnung', () => {
 })
 
 describe('Punktwert', () => {
-  const patient = neuerFall(1).patient
-  it('Override vor Richtwert, Ersatzkasse nach Regionalkennzeichen', () => {
-    const e = { ...STANDARD_EINSTELLUNGEN, kzvNr: '13' }
-    expect(ermittlePunktwert(e, patient, '').quelle).toBe('richtwert')
-    expect(ermittlePunktwert({ ...e, bemaPunktwertOverride: 1.3 }, patient, '').wert).toBe(1.3)
-    const ek = ermittlePunktwert(e, { ...patient, kassenart: 'ersatz', kassennummer: '3712345' }, '')
-    expect(ek.kzvNr).toBe('37')
+  it('Kassenanteil mit PAR- und KCH-Punktwert getrennt', () => {
+    const p = preiseAus(STANDARD_EINSTELLUNGEN, 1.2, 1.1)
+    expect(p.parPw).toBe(1.2)
+    expect(p.kchPw).toBe(1.1)
   })
-  it('CSV-Import mit Dezimalkomma und Kopfzeile', () => {
-    const t = csvParsen('KZV;Primaer;Ersatz\n13;1,2000;1,2500\nxx;1;1')
-    expect(t['13']).toEqual({ primaer: 1.2, ersatz: 1.25 })
-    expect(Object.keys(t)).toEqual(['13'])
+  it('alte Overrides werden zu festen Punktwerten', () => {
+    const e = einstMigrieren({ kzvNr: '13', bemaPunktwertOverride: 1.3, kchPunktwertOverride: null, praxis: { behandler: 'Dr. X' } })
+    expect(e.praxis.kzvNr).toBe('13')
+    expect(e.praxis.zahnarzt).toBe('Dr. X')
+    expect(e.punktwertFest).toEqual({ PAR: 1.3 })
   })
 })
 

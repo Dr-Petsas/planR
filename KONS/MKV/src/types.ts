@@ -9,7 +9,10 @@ export type Therapie = 'komposit' | 'mehrfarben' | 'inlay' | 'goldhaemmer'
 /** Wie die Praxis die Mehrkosten plastischer Füllungen festlegt. */
 export type MkvModell = 'gozDifferenz' | 'proZahn' | 'proFlaeche'
 
-export type Kassenart = 'primaer' | 'ersatz'
+import type { Patient, Praxis } from './stammdaten'
+import type { Leistungsbereich } from './punktwerte'
+
+export type { Kassenart, Patient, Praxis } from './stammdaten'
 
 export type Ebene = 'GOZ' | 'ANALOG' | 'LABOR' | 'BEMA'
 
@@ -40,15 +43,6 @@ export interface Regler {
   laborKlasse: number // 0 günstig · 1 Standard · 2 hochwertig
 }
 
-export interface Patient {
-  name: string
-  geburtsdatum: string
-  kasse: string
-  kassennummer: string
-  versichertennr: string
-  kassenart: Kassenart
-}
-
 export interface Plan {
   nummer: string
   datum: string
@@ -56,16 +50,6 @@ export interface Plan {
   zaehne: Record<string, ZahnLeistung>
   regler: Regler
   bemerkung: string
-}
-
-export interface Praxis {
-  name: string
-  zahnarzt: string
-  strasse: string
-  plz: string
-  ort: string
-  telefon: string
-  email: string
 }
 
 export interface LaborPreis {
@@ -83,8 +67,8 @@ export interface Einstellungen {
   inlayFaktor: number
   gueltigMonate: number
   naechsteNummer: number
-  kzvNr: string // fest gesetzt, sonst aus der Praxis-PLZ
-  punktwertOverride: number | null
+  /** Fest eingetragene Punktwerte (leer = Tabelle der KZV der Praxis) */
+  punktwertFest: Partial<Record<Leistungsbereich, number | null>>
   laborPreise: LaborPreis[]
 }
 

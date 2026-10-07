@@ -348,7 +348,13 @@ export function Teil1({ plan, setPlan, ergebnis, listen, onAbformung }: Props) {
         {/* ---------- Fuß ---------- */}
         <div className="hb-fuss">
           <Feld titel={<>Anschrift des <b>Versicherten</b></>} className="hb-anschrift">
-            <textarea value={plan.patient.anschrift} placeholder="Straße, PLZ Ort" onChange={(e) => patient('anschrift', e.target.value)} />
+            <div className="hb-anschrift-felder">
+              <input value={plan.patient.strasse} placeholder="Straße, Nr." onChange={(e) => patient('strasse', e.target.value)} />
+              <div>
+                <input className="hb-plz" value={plan.patient.plz} placeholder="PLZ" inputMode="numeric" onChange={(e) => patient('plz', e.target.value)} />
+                <input value={plan.patient.ort} placeholder="Ort" onChange={(e) => patient('ort', e.target.value)} />
+              </div>
+            </div>
           </Feld>
           <div className="hb-gutachter">
             <div className="hb-gutachter-box">

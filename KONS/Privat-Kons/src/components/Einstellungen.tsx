@@ -1,20 +1,13 @@
-import type { Einstellungen as EinstT, Praxis, Preis } from '../types'
+import type { Einstellungen as EinstT, Preis } from '../types'
 import { stufeName } from '../data/katalog'
+import { PraxisFelder } from './Stammdaten'
+import { ListenKarte } from './Listen'
+import { GENUTZTE_LISTEN } from '../engine/listen'
 
 interface Props {
   einst: EinstT
   setEinst: (e: EinstT) => void
 }
-
-const PRAXIS_FELDER: { key: keyof Praxis; label: string; breit?: boolean }[] = [
-  { key: 'name', label: 'Praxisname', breit: true },
-  { key: 'zahnarzt', label: 'Zahnärztin / Zahnarzt' },
-  { key: 'strasse', label: 'Straße' },
-  { key: 'plz', label: 'PLZ' },
-  { key: 'ort', label: 'Ort' },
-  { key: 'telefon', label: 'Telefon' },
-  { key: 'email', label: 'E-Mail' },
-]
 
 const zahl = (v: string, fallback: number) => (v === '' || Number.isNaN(+v) ? fallback : +v)
 
@@ -46,15 +39,9 @@ export default function Einstellungen({ einst, setEinst }: Props) {
     <>
       <div className="block">
         <h3>Praxis</h3>
-        <div className="formular">
-          {PRAXIS_FELDER.map((f) => (
-            <label key={f.key} className={`feld ${f.breit ? 'breit' : ''}`}>
-              {f.label}
-              <input value={einst.praxis[f.key]} onChange={(e) => set({ praxis: { ...einst.praxis, [f.key]: e.target.value } })} />
-            </label>
-          ))}
-        </div>
+        <PraxisFelder art="privat" praxis={einst.praxis} onChange={(praxis) => set({ praxis })} />
       </div>
+      <ListenKarte listen={GENUTZTE_LISTEN} />
 
       <div className="block">
         <h3>Vorgaben für neue Pläne</h3>

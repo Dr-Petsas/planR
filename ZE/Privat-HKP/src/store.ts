@@ -4,6 +4,7 @@ import { STANDARD_IMPLANTAT } from './engine/planung'
 import { markeLesen } from './engine/bruecken'
 import { useAblage } from './ablage'
 import { mk } from './mandant'
+import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 
 const PLAN_KEY = mk('privat-kv.plan.v1')
 const EINST_KEY = mk('privat-kv.einstellungen.v1')
@@ -12,7 +13,7 @@ const LISTE_KEY = mk('privat-kv.liste.v1')
 export const heute = () => new Date().toISOString().slice(0, 10)
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
-  praxis: { name: 'Zahnarztpraxis', zahnarzt: '', strasse: '', plzOrt: '', telefon: '', email: '' },
+  praxis: standardPraxis(),
   gozFaktor: 2.3,
   mwst: 7,
   gueltigMonate: 6,
@@ -26,7 +27,7 @@ export function neuerPlan(nummer: number): Plan {
   return {
     nummer: `KV-${new Date().getFullYear()}-${String(nummer).padStart(3, '0')}`,
     datum: heute(),
-    patient: { anrede: '', vorname: '', name: '', geburtsdatum: '', strasse: '', plzOrt: '', kostentraeger: '' },
+    patient: leererPatient(),
     zaehne: {},
     abformung: '',
     abformungProthese: '',
@@ -53,7 +54,7 @@ function laden<T>(key: string, standard: T): T {
 /** früher eine Wahl 'beides' = Zähne gescannt, Überabdruck für den herausnehmbaren Teil */
 export function planMigrieren(p: Plan): Plan {
   const abformung: Partial<Plan> = (p.abformung as string) === 'beides' ? { abformung: 'scan', abformungProthese: 'abdruck' } : {}
-  return { ...p, ...abformung, zaehne: markenMigrieren(p.zaehne) }
+  return { ...p, ...abformung, patient: patientMigrieren(p.patient), zaehne: markenMigrieren(p.zaehne) }
 }
 
 /** Brückenstriche, die im Kürzel selbst stehen („-KM“), in die Brückenmarken übernehmen */
@@ -73,4 +74,5 @@ export function useGespeichert<T>(key: string, standard: () => T, migrieren: (w:
 
 export const usePlan = (nummer: number) => useGespeichert<Plan>(PLAN_KEY, () => neuerPlan(nummer), planMigrieren)
 export const useZeAblage = () => useAblage<Plan>(LISTE_KEY)
-export const useEinstellungen = () => useGespeichert<Einstellungen>(EINST_KEY, () => STANDARD_EINSTELLUNGEN)
+export const einstMigrieren = (e: Einstellungen): Einstellungen => ({ ...e, praxis: praxisMigrieren(e.praxis) })
+export const useEinstellungen = () => useGespeichert<Einstellungen>(EINST_KEY, () => STANDARD_EINSTELLUNGEN, einstMigrieren)

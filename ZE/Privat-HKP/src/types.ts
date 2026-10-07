@@ -1,3 +1,6 @@
+import type { Patient, Praxis } from './stammdaten'
+export type { Patient, Praxis } from './stammdaten'
+
 import type { EigenPosition } from './engine/eigenlabor'
 import type { Werkstoff } from './engine/material'
 
@@ -64,16 +67,6 @@ export interface ImplantatAngaben {
   abutment: 'standard' | 'individuell' | 'keramik'
 }
 
-export interface Patient {
-  anrede: string
-  vorname: string
-  name: string
-  geburtsdatum: string
-  strasse: string
-  plzOrt: string
-  kostentraeger: string
-}
-
 export interface Plan {
   nummer: string
   datum: string
@@ -94,15 +87,6 @@ export interface Plan {
   entfernt: string[]
   regler: Regler
   bemerkung: string
-}
-
-export interface Praxis {
-  name: string
-  zahnarzt: string
-  strasse: string
-  plzOrt: string
-  telefon: string
-  email: string
 }
 
 export interface Einstellungen {

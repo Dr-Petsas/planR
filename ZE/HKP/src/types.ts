@@ -1,4 +1,5 @@
 import type { Werkstoff } from './engine/material'
+import type { Patient } from './stammdaten'
 
 export type ListenTyp = 'bema' | 'goz' | 'bel2' | 'beb' | 'festzuschuss'
 
@@ -198,17 +199,8 @@ export type Abformung = '' | 'scan' | 'abdruck'
 export type AbformungWahl = Partial<Pick<HkpPlan, 'abformung' | 'abformungProthese'>>
 
 export interface HkpPlan {
-  patient: {
-    name: string
-    vorname: string
-    geburtsdatum: string
-    kasse: string
-    kassenNr: string
-    versichertenNr: string
-    status: string
-    /** Anschrift des Versicherten (Feld unten links im Vordruck) */
-    anschrift: string
-  }
+  /** Einheitliche Anmeldedaten; name/vorname/geburtsdatum liest das HKP-Register in MAS */
+  patient: Patient
   verwaltung: {
     /** Lfd.-Nr. oben rechts im Vordruck */
     lfdNr: string

@@ -3,13 +3,14 @@ import type { Einstellungen, Plan } from './types'
 import { STANDARD_LABOR, STANDARD_MATERIAL } from './data/katalog'
 import { useAblage } from './ablage'
 import { mk } from './mandant'
+import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 
 const KEY_PLAN = mk('privat-kons.plan.v2')
 const KEY_EINST = mk('privat-kons.einstellungen.v2')
 const KEY_LISTE = mk('privat-kons.liste.v2')
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
-  praxis: { name: 'Zahnarztpraxis', zahnarzt: '', strasse: '', plz: '', ort: '', telefon: '', email: '' },
+  praxis: standardPraxis(),
   faktor: 2.3,
   stufe: 2,
   gueltigMonate: 6,
@@ -24,7 +25,7 @@ export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {
     nummer,
     datum: new Date().toISOString().slice(0, 10),
-    patient: { name: '', geburtsdatum: '', versicherung: '', versichertennr: '' },
+    patient: leererPatient(),
     vereinbarung: 'pkv',
     behandlungstage: 0,
     zaehne: {},
@@ -41,7 +42,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
   return {
     ...basis,
     ...p,
-    patient: { ...basis.patient, ...p.patient },
+    patient: patientMigrieren(p.patient),
     regler: { ...basis.regler, ...p.regler },
     zaehne: p.zaehne ?? {},
     frei: p.frei ?? [],
@@ -55,7 +56,7 @@ function einstMigrieren(roh: unknown): Einstellungen {
   return {
     ...STANDARD_EINSTELLUNGEN,
     ...e,
-    praxis: { ...STANDARD_EINSTELLUNGEN.praxis, ...e.praxis },
+    praxis: praxisMigrieren(e.praxis),
     laborPreise: e.laborPreise?.length ? e.laborPreise : STANDARD_EINSTELLUNGEN.laborPreise,
     materialPreise: e.materialPreise?.length ? e.materialPreise : STANDARD_EINSTELLUNGEN.materialPreise,
   }

@@ -126,10 +126,10 @@ export interface Preise {
   analog: Record<string, number>
 }
 
-export function preiseAus(einst: Einstellungen, parPw: number): Preise {
+export function preiseAus(einst: Einstellungen, parPw: number, kchPw: number): Preise {
   return {
     parPw,
-    kchPw: einst.kchPunktwertOverride && einst.kchPunktwertOverride > 0 ? einst.kchPunktwertOverride : parPw,
+    kchPw,
     gozFaktor: einst.gozFaktor || 2.3,
     roentgenFaktor: einst.roentgenFaktor || 1.8,
     analog: einst.analogPunkte,

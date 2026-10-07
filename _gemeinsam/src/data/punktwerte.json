@@ -1,0 +1,685 @@
+{
+  "stand": "2026-10-07",
+  "quelle": "Punktwertuebersichten der KZVen (BW, BY, BE, LB, HH, HE, RLP, SL, SN, WL) sowie Fremdkassenlisten der KZV Sachsen (Q3/2026) und KZV Berlin (IV/2026); ZE: KZBV-Bekanntmachung zum 01.01.2026",
+  "hinweis": "Regional vereinbarte Punktwerte; verbindlich ist das aktuelle KZV-Rundschreiben.",
+  "kzv": {
+    "02": {
+      "KCH": {
+        "primaer": 1.3853,
+        "ersatz": 1.3758,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvbw.de/wp-content/uploads/2026-06-23-Punktwerttabelle_Stand_26.06.2026_vdek_Heilfuersorge.pdf",
+        "geprueft": true,
+        "hinweis": "vdek = HKK/HEK/KKH/DAK; BARMER 1,3761, TK 1,3769. Ersatzkassen-Abschluss rueckwirkend zum 01.01.2026."
+      },
+      "KB": {
+        "primaer": 1.3853,
+        "ersatz": 1.3758,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvbw.de/wp-content/uploads/2026-06-23-Punktwerttabelle_Stand_26.06.2026_vdek_Heilfuersorge.pdf",
+        "geprueft": true,
+        "hinweis": "vdek = HKK/HEK/KKH/DAK; BARMER 1,3761, TK 1,3769. Ersatzkassen-Abschluss rueckwirkend zum 01.01.2026."
+      },
+      "PAR": {
+        "primaer": 1.3853,
+        "ersatz": 1.3758,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvbw.de/wp-content/uploads/2026-06-23-Punktwerttabelle_Stand_26.06.2026_vdek_Heilfuersorge.pdf",
+        "geprueft": true,
+        "hinweis": "vdek = HKK/HEK/KKH/DAK; BARMER 1,3761, TK 1,3769. Ersatzkassen-Abschluss rueckwirkend zum 01.01.2026."
+      },
+      "KFO": {
+        "primaer": 1.1752,
+        "ersatz": 1.1676,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvbw.de/wp-content/uploads/2026-06-23-Punktwerttabelle_Stand_26.06.2026_vdek_Heilfuersorge.pdf",
+        "geprueft": true,
+        "hinweis": "BARMER 1,1677, TK 1,1688."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "11": {
+      "KCH": {
+        "primaer": 1.3795,
+        "ersatz": 1.3117,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.kzvb.de/fileadmin/user_upload/Abrechnung/Punktwerte/PW_Q4_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.01.2026; vdek noch Wert 2025 (gilt laut KZVB vorlaeufig bis zu neuer Vereinbarung weiter). BKK 1,3848, IKK 1,3854, Knappschaft 1,3883 (je ab 01.07.2026)."
+      },
+      "KB": {
+        "primaer": 1.3795,
+        "ersatz": 1.3117,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.kzvb.de/fileadmin/user_upload/Abrechnung/Punktwerte/PW_Q4_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.01.2026; vdek noch Wert 2025 (gilt laut KZVB vorlaeufig bis zu neuer Vereinbarung weiter). BKK 1,3848, IKK 1,3854, Knappschaft 1,3883 (je ab 01.07.2026)."
+      },
+      "PAR": {
+        "primaer": 1.3795,
+        "ersatz": 1.3117,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.kzvb.de/fileadmin/user_upload/Abrechnung/Punktwerte/PW_Q4_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.01.2026; vdek noch Wert 2025 (gilt laut KZVB vorlaeufig bis zu neuer Vereinbarung weiter). BKK 1,3848, IKK 1,3854, Knappschaft 1,3883 (je ab 01.07.2026)."
+      },
+      "KFO": {
+        "primaer": 1.1858,
+        "ersatz": 1.1275,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.kzvb.de/fileadmin/user_upload/Abrechnung/Punktwerte/PW_Q4_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab Q1/2026; vdek-Wert aus 2025 gilt vorlaeufig weiter."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "30": {
+      "KCH": {
+        "primaer": 1.3378,
+        "ersatz": 1.3377,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/3_Publikationen/1_Rundschreiben/2026/SR_2026_01_KZV-Berlin_AOK-Vertrag_2026.pdf",
+        "geprueft": true,
+        "hinweis": "vdek-Wert laut KZV-Sachsen-Fremdkassenliste Q3/2026 (https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf)."
+      },
+      "KB": {
+        "primaer": 1.3378,
+        "ersatz": 1.3377,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/3_Publikationen/1_Rundschreiben/2026/SR_2026_01_KZV-Berlin_AOK-Vertrag_2026.pdf",
+        "geprueft": true,
+        "hinweis": "vdek-Wert laut KZV-Sachsen-Fremdkassenliste Q3/2026 (https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf)."
+      },
+      "PAR": {
+        "primaer": 1.3378,
+        "ersatz": 1.3377,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/3_Publikationen/1_Rundschreiben/2026/SR_2026_01_KZV-Berlin_AOK-Vertrag_2026.pdf",
+        "geprueft": true,
+        "hinweis": "vdek-Wert laut KZV-Sachsen-Fremdkassenliste Q3/2026 (https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf)."
+      },
+      "KFO": {
+        "primaer": 1.1902,
+        "ersatz": 1.1901,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/1_Abrechnung/7_Punktwerte/2026/Punktwerte_2026_IV_Ersatzkassen.pdf",
+        "geprueft": true,
+        "hinweis": "AOK-Wert aus KZV-Berlin-Sonderrundschreiben AOK-Vertrag 2026."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "53": {
+      "KCH": {
+        "primaer": 1.3593,
+        "ersatz": 1.3452,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvlb.de/fileadmin/user_upload/Aktuelles/Punktwerte/27_05_PUNKTWERT%C3%9CBERSICHT_LAND_BRANDENBURG_ab_01.01.2026_.pdf",
+        "geprueft": true
+      },
+      "KB": {
+        "primaer": 1.3593,
+        "ersatz": 1.3452,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvlb.de/fileadmin/user_upload/Aktuelles/Punktwerte/27_05_PUNKTWERT%C3%9CBERSICHT_LAND_BRANDENBURG_ab_01.01.2026_.pdf",
+        "geprueft": true
+      },
+      "PAR": {
+        "primaer": 1.3593,
+        "ersatz": 1.3452,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvlb.de/fileadmin/user_upload/Aktuelles/Punktwerte/27_05_PUNKTWERT%C3%9CBERSICHT_LAND_BRANDENBURG_ab_01.01.2026_.pdf",
+        "geprueft": true
+      },
+      "KFO": {
+        "primaer": 1.2093,
+        "ersatz": 1.1730,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvlb.de/fileadmin/user_upload/Aktuelles/Punktwerte/27_05_PUNKTWERT%C3%9CBERSICHT_LAND_BRANDENBURG_ab_01.01.2026_.pdf",
+        "geprueft": true
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "31": {
+      "KCH": {
+        "primaer": 1.3329,
+        "ersatz": 1.2127,
+        "gueltigAb": "2024-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Primaer (alle Kassenarten) ab 01.01.2026; vdek laut Fremdkassenlisten noch Wert ab 01.01.2024."
+      },
+      "KB": {
+        "primaer": 1.3329,
+        "ersatz": 1.2127,
+        "gueltigAb": "2024-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Primaer (alle Kassenarten) ab 01.01.2026; vdek laut Fremdkassenlisten noch Wert ab 01.01.2024."
+      },
+      "PAR": {
+        "primaer": 1.3329,
+        "ersatz": 1.2127,
+        "gueltigAb": "2024-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Primaer (alle Kassenarten) ab 01.01.2026; vdek laut Fremdkassenlisten noch Wert ab 01.01.2024."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "32": {
+      "KCH": {
+        "primaer": 1.3976,
+        "ersatz": 1.3976,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-hh.de/fileadmin/Redaktion/KZV/Abrechnung/2026-Punktwerte.pdf",
+        "geprueft": true,
+        "hinweis": "Hamburger Verteilungspunktwert fuer Hamburger Praxen; Gesamtvertragswert (Fremdkassenlisten) 1,3391."
+      },
+      "KB": {
+        "primaer": 1.3976,
+        "ersatz": 1.3976,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-hh.de/fileadmin/Redaktion/KZV/Abrechnung/2026-Punktwerte.pdf",
+        "geprueft": true,
+        "hinweis": "Hamburger Verteilungspunktwert fuer Hamburger Praxen; Gesamtvertragswert (Fremdkassenlisten) 1,3391."
+      },
+      "PAR": {
+        "primaer": 1.3976,
+        "ersatz": 1.3976,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-hh.de/fileadmin/Redaktion/KZV/Abrechnung/2026-Punktwerte.pdf",
+        "geprueft": true,
+        "hinweis": "Hamburger Verteilungspunktwert fuer Hamburger Praxen; Gesamtvertragswert (Fremdkassenlisten) 1,3391."
+      },
+      "KFO": {
+        "primaer": 1.1503,
+        "ersatz": 1.1661,
+        "gueltigAb": "2026-04-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-hh.de/fileadmin/Redaktion/KZV/Abrechnung/2026-Punktwerte.pdf",
+        "geprueft": true,
+        "hinweis": "vdek-KFO ab 01.04.2026 (Stand KZV Hamburg 23.06.2026)."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "20": {
+      "KCH": {
+        "primaer": 1.3948,
+        "ersatz": 1.3260,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-07-01",
+        "quelle": "https://www.kzvh.de/wcm/idc/groups/public/documents/web/df8y/mdez/~edisp/am_komplett_2013_10.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.07.2026 (01.01.-30.06.2026: 1,3901); vdek noch Wert ab 01.01.2025."
+      },
+      "KB": {
+        "primaer": 1.3948,
+        "ersatz": 1.3260,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-07-01",
+        "quelle": "https://www.kzvh.de/wcm/idc/groups/public/documents/web/df8y/mdez/~edisp/am_komplett_2013_10.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.07.2026 (01.01.-30.06.2026: 1,3901); vdek noch Wert ab 01.01.2025."
+      },
+      "PAR": {
+        "primaer": 1.3948,
+        "ersatz": 1.3260,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-07-01",
+        "quelle": "https://www.kzvh.de/wcm/idc/groups/public/documents/web/df8y/mdez/~edisp/am_komplett_2013_10.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.07.2026 (01.01.-30.06.2026: 1,3901); vdek noch Wert ab 01.01.2025."
+      },
+      "KFO": {
+        "primaer": 1.1519,
+        "ersatz": 1.0947,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-07-01",
+        "quelle": "https://www.kzvh.de/wcm/idc/groups/public/documents/web/df8y/mdez/~edisp/am_komplett_2013_10.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.07.2026 (01.01.-30.06.2026: 1,1480); vdek noch Wert 2025."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "52": {
+      "KCH": {
+        "primaer": 1.3510,
+        "ersatz": 1.3324,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true,
+        "hinweis": "BARMER 1,3351. vdek-Wert auch in KZV-Berlin-Ersatzkassenliste IV/2026 (https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/1_Abrechnung/7_Punktwerte/2026/Punktwerte_2026_IV_Ersatzkassen.pdf)."
+      },
+      "KB": {
+        "primaer": 1.3510,
+        "ersatz": 1.3324,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true,
+        "hinweis": "BARMER 1,3351. vdek-Wert auch in KZV-Berlin-Ersatzkassenliste IV/2026 (https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/1_Abrechnung/7_Punktwerte/2026/Punktwerte_2026_IV_Ersatzkassen.pdf)."
+      },
+      "PAR": {
+        "primaer": 1.3510,
+        "ersatz": 1.3324,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true,
+        "hinweis": "BARMER 1,3351. vdek-Wert auch in KZV-Berlin-Ersatzkassenliste IV/2026 (https://www.kzv-berlin.de/fileadmin/user_upload_kzv/Praxis-Service/1_Abrechnung/7_Punktwerte/2026/Punktwerte_2026_IV_Ersatzkassen.pdf)."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "04": {
+      "KCH": {
+        "primaer": 1.3776,
+        "ersatz": 1.3675,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true,
+        "hinweis": "Primaer einheitlich fuer AOK/BKK/IKK/Knappschaft/SVLFG."
+      },
+      "KB": {
+        "primaer": 1.3776,
+        "ersatz": 1.3675,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true,
+        "hinweis": "Primaer einheitlich fuer AOK/BKK/IKK/Knappschaft/SVLFG."
+      },
+      "PAR": {
+        "primaer": 1.3776,
+        "ersatz": 1.3675,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true,
+        "hinweis": "Primaer einheitlich fuer AOK/BKK/IKK/Knappschaft/SVLFG."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "13": {
+      "KCH": {
+        "primaer": 1.3234,
+        "ersatz": 1.3234,
+        "gueltigAb": "2025-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Laut Fremdkassenlisten (Stand 09/2026) fuer alle Kassenarten noch Wert ab 01.01.2025."
+      },
+      "KB": {
+        "primaer": 1.3234,
+        "ersatz": 1.3234,
+        "gueltigAb": "2025-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Laut Fremdkassenlisten (Stand 09/2026) fuer alle Kassenarten noch Wert ab 01.01.2025."
+      },
+      "PAR": {
+        "primaer": 1.3234,
+        "ersatz": 1.3234,
+        "gueltigAb": "2025-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Laut Fremdkassenlisten (Stand 09/2026) fuer alle Kassenarten noch Wert ab 01.01.2025."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "06": {
+      "KCH": {
+        "primaer": 1.2796,
+        "ersatz": 1.2796,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvrlp.de/mitglieder/abrechnung/",
+        "geprueft": true,
+        "hinweis": "Punktwertuebersicht 2026, Stand 05.03.2026."
+      },
+      "KB": {
+        "primaer": 1.1098,
+        "ersatz": 1.1098,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvrlp.de/mitglieder/abrechnung/",
+        "geprueft": true,
+        "hinweis": "Punktwertuebersicht 2026, Stand 05.03.2026."
+      },
+      "PAR": {
+        "primaer": 1.2796,
+        "ersatz": 1.2796,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvrlp.de/mitglieder/abrechnung/",
+        "geprueft": true,
+        "hinweis": "Punktwertuebersicht 2026, Stand 05.03.2026."
+      },
+      "KFO": {
+        "primaer": 1.1043,
+        "ersatz": 1.1043,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzvrlp.de/mitglieder/abrechnung/",
+        "geprueft": true,
+        "hinweis": "Punktwertuebersicht 2026, Stand 05.03.2026."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "35": {
+      "KCH": {
+        "primaer": 1.2964,
+        "ersatz": 1.3008,
+        "gueltigAb": "2025-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Laut Fremdkassenlisten Werte ab 01.01.2025; die eigene KZV-Saarland-Uebersicht (Stand 01.04.2026) fuehrt KCH noch mit 1,2416 (AOK) / 1,2459 (vdek) aus 2024."
+      },
+      "KB": {
+        "primaer": 1.2964,
+        "ersatz": 1.3008,
+        "gueltigAb": "2025-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Laut Fremdkassenlisten Werte ab 01.01.2025; die eigene KZV-Saarland-Uebersicht (Stand 01.04.2026) fuehrt KCH noch mit 1,2416 (AOK) / 1,2459 (vdek) aus 2024."
+      },
+      "PAR": {
+        "primaer": 1.2964,
+        "ersatz": 1.3008,
+        "gueltigAb": "2025-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Laut Fremdkassenlisten Werte ab 01.01.2025; die eigene KZV-Saarland-Uebersicht (Stand 01.04.2026) fuehrt KCH noch mit 1,2416 (AOK) / 1,2459 (vdek) aus 2024."
+      },
+      "KFO": {
+        "primaer": 1.1029,
+        "ersatz": 1.0542,
+        "gueltigAb": "2024-01-01",
+        "gueltigAbPrimaer": "2025-01-01",
+        "quelle": "https://www.kzv-saarland.de/api/view/019db928-dd8c-7280-82a7-86b05274b1c9",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.01.2025, vdek ab 01.01.2024; kein KFO-Wert 2026 veroeffentlicht."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "56": {
+      "KCH": {
+        "primaer": 1.3886,
+        "ersatz": 1.2692,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Sachsen_03_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK PLUS ab 01.01.2026; vdek noch Wert 2025 (TK 1,2839, BARMER 1,2705)."
+      },
+      "KB": {
+        "primaer": 1.3886,
+        "ersatz": 1.2692,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Sachsen_03_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK PLUS ab 01.01.2026; vdek noch Wert 2025."
+      },
+      "PAR": {
+        "primaer": 1.3886,
+        "ersatz": 1.2692,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Sachsen_03_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Fuer S-Positionen (4S, AIT/CPT/UPT ...S, 108S, 111S): AOK 1,4266, vdek 1,2972."
+      },
+      "KFO": {
+        "primaer": 1.2481,
+        "ersatz": 1.1435,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Sachsen_03_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK PLUS ab 01.01.2026; vdek noch Wert 2025."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "54": {
+      "KCH": {
+        "primaer": 1.3474,
+        "ersatz": 1.2622,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.01.2026; vdek noch Wert 2025 (Schiedsspruch Ersatzkassen 2026 vom 31.08.2026 noch nicht in den Listen)."
+      },
+      "KB": {
+        "primaer": 1.3474,
+        "ersatz": 1.2622,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.01.2026; vdek noch Wert 2025 (Schiedsspruch Ersatzkassen 2026 vom 31.08.2026 noch nicht in den Listen)."
+      },
+      "PAR": {
+        "primaer": 1.3474,
+        "ersatz": 1.2622,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK ab 01.01.2026; vdek noch Wert 2025 (Schiedsspruch Ersatzkassen 2026 vom 31.08.2026 noch nicht in den Listen)."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "36": {
+      "KCH": {
+        "primaer": 1.3918,
+        "ersatz": 1.3918,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true
+      },
+      "KB": {
+        "primaer": 1.3918,
+        "ersatz": 1.3918,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true
+      },
+      "PAR": {
+        "primaer": 1.3918,
+        "ersatz": 1.3918,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": true
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "55": {
+      "KCH": {
+        "primaer": 1.3886,
+        "ersatz": 1.2734,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK PLUS ab 01.01.2026; vdek noch Wert 2025 (TK 1,2827, BARMER 1,2755)."
+      },
+      "KB": {
+        "primaer": 1.3886,
+        "ersatz": 1.2734,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK PLUS ab 01.01.2026; vdek noch Wert 2025 (TK 1,2827, BARMER 1,2755)."
+      },
+      "PAR": {
+        "primaer": 1.3886,
+        "ersatz": 1.2734,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
+        "geprueft": false,
+        "hinweis": "AOK PLUS ab 01.01.2026; vdek noch Wert 2025 (TK 1,2827, BARMER 1,2755)."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    },
+    "37": {
+      "KCH": {
+        "primaer": 1.3826,
+        "ersatz": 1.3195,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://zahnaerzte-wl.de/download/825076873b6b1262795a47ac3/Punktwert-Tabelle-Stand-03.09.2026.pdf",
+        "geprueft": false,
+        "hinweis": "Primaer ab 01.01.2026; vdek noch Wert ab 01.01.2025."
+      },
+      "KB": {
+        "primaer": 1.3826,
+        "ersatz": 1.3195,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://zahnaerzte-wl.de/download/825076873b6b1262795a47ac3/Punktwert-Tabelle-Stand-03.09.2026.pdf",
+        "geprueft": false,
+        "hinweis": "Primaer ab 01.01.2026; vdek noch Wert ab 01.01.2025."
+      },
+      "PAR": {
+        "primaer": 1.3826,
+        "ersatz": 1.3195,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://zahnaerzte-wl.de/download/825076873b6b1262795a47ac3/Punktwert-Tabelle-Stand-03.09.2026.pdf",
+        "geprueft": false,
+        "hinweis": "PAR nach Paragraph 22a: Primaer 1,4131, vdek 1,3486."
+      },
+      "KFO": {
+        "primaer": 1.1270,
+        "ersatz": 1.0756,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://zahnaerzte-wl.de/download/825076873b6b1262795a47ac3/Punktwert-Tabelle-Stand-03.09.2026.pdf",
+        "geprueft": false,
+        "hinweis": "Primaer ab 01.01.2026; vdek noch Wert ab 01.01.2025."
+      },
+      "ZE": {
+        "primaer": 1.1844,
+        "ersatz": 1.1844,
+        "gueltigAb": "2026-01-01",
+        "quelle": "https://www.kzbv.de/wp-content/uploads/2025-12-05_FZ-RL_Anpassung-Betraege_01-01-2026_TrG.pdf",
+        "geprueft": true,
+        "hinweis": "Bundeseinheitlich (+4,78 %); massgeblich ist der Tag der HKP-Ausstellung."
+      }
+    }
+  }
+}

@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan } from './types'
 import { usePlan, leererPlan, planNormalisieren } from './store/plan'
-import { AUTO, kzvBereich, listenFuerPlan, usePreislisten, TYP_NAMEN } from './store/preislisten'
+import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, listenFuerPlan, usePreislisten, TYP_NAMEN } from './store/preislisten'
+import { getPraxis, usePraxis } from './store/praxis'
+import type { Praxis } from './stammdaten'
+import { PraxisFelder } from './components/Stammdaten'
+import { ListenKarte } from './components/Listen'
 import { KZVEN, kzvNachNr } from './data/kzv'
 import { ListenStand } from './components/ListenStand'
 import { berechnen, type Listen } from './engine/berechnung'
@@ -28,6 +32,13 @@ import { aktivSetzen, registerLesenPerLink, registerStatusSetzen, verbindungBere
 
 /** Breite des A4-Vordrucks (210 mm) in CSS-Pixeln */
 const BLATT_BREITE_PX = 793.7
+
+/** Neuer Plan mit den Einstellungen des bisherigen und den Nummern aus den Praxis-Stammdaten */
+function neuerPlan(einstellungen: Einstellungen): HkpPlan {
+  const leer = leererPlan()
+  const { zahnarztNr, abrechnungsNr } = getPraxis()
+  return { ...leer, einstellungen, verwaltung: { ...leer.verwaltung, zahnarztNr, abrechnungsNr } }
+}
 
 type Tab = 'teil1' | 'teil2' | 'anlage' | 'eigenlabor' | 'register' | 'preislisten' | 'einstellungen'
 
@@ -193,7 +204,7 @@ export default function App() {
       {hkpAnsicht && (
         <div className="werkzeuge">
           <button className="primaer" onClick={() => setTab('register')} title="HKPs aus dem Register (auch von Clara angelegte) öffnen und mit den Reglern durchspielen">📂 Erstellte HKPs laden</button>
-          <button onClick={() => { if (confirm('Aktuellen Plan verwerfen?')) { aktivSetzen(null); setPlan(() => ({ ...leererPlan(), einstellungen: plan.einstellungen })); setEngineHinweise([]) } }}>Neuer Plan</button>
+          <button onClick={() => { if (confirm('Aktuellen Plan verwerfen?')) { aktivSetzen(null); setPlan(() => neuerPlan(plan.einstellungen)); setEngineHinweise([]) } }}>Neuer Plan</button>
           <button onClick={() => setPlan((p) => ({ ...p, zaehne: Object.fromEntries(Object.keys(p.zaehne).map((z) => [z, { B: BEISPIEL[z] ?? '', R: '', TP: '' }])) }))}>
             Beispielbefund
           </button>
@@ -298,6 +309,7 @@ function EinstellungenSeite({ plan, setEinstellung, alle, listen }: {
   listen: Listen
 }) {
   const e = plan.einstellungen
+  const [praxis, setPraxis] = usePraxis()
   const bereich = kzvBereich(e)
   const kzvName = kzvNachNr(bereich.nr)?.name ?? bereich.nr
   const verwendet: Record<string, Listen[keyof Listen]> = {
@@ -325,8 +337,29 @@ function EinstellungenSeite({ plan, setEinstellung, alle, listen }: {
     ['praxis', 'Eigenlabor', 'Praxislabor · BEL II 5 % unter Gewerbe'],
     ['gewerbe', 'Fremdlabor', 'gewerblich · Preise aus der Labor-XML'],
   ] as const
+  const praxisAnzeige = { ...praxis, plz: praxis.plz || e.praxisPlz, kzvNr: praxis.kzvNr || e.kzv }
+  const praxisAendern = (p: Praxis) => {
+    setPraxis(p)
+    if (p.plz !== e.praxisPlz) setEinstellung('praxisPlz', p.plz)
+  }
+  const plzAendern = (plz: string) => {
+    setEinstellung('praxisPlz', plz)
+    setPraxis({ ...praxisAnzeige, plz })
+  }
+  const kzvAendern = (kzvNr: string) => {
+    setEinstellung('kzv', kzvNr)
+    setPraxis({ ...praxisAnzeige, kzvNr })
+  }
   return (
     <>
+      <section className="es-block">
+        <header className="es-kopf">
+          Praxis-Stammdaten
+          <small>gleiche Angaben wie in allen Planern – Zahnarzt- und Abrechnungsnummer gehen in jeden neuen Plan (Teil 1)</small>
+        </header>
+        <PraxisFelder praxis={praxisAnzeige} onChange={praxisAendern} art="kasse" />
+      </section>
+
       <section className="es-block">
         <header className="es-kopf">
           Praxis
@@ -348,7 +381,7 @@ function EinstellungenSeite({ plan, setEinstellung, alle, listen }: {
           <label className="es-kachel">
             <span className="es-titel">Praxis-PLZ</span>
             <input className="es-gross" value={e.praxisPlz} maxLength={5} inputMode="numeric" placeholder="z. B. 40235"
-              onChange={(ev) => setEinstellung('praxisPlz', ev.target.value)} />
+              onChange={(ev) => plzAendern(ev.target.value)} />
             <span className={`es-folge${bereich.quelle === 'standard' ? ' warn' : ''}`}>
               {bereich.quelle === 'plz' ? `→ KZV ${kzvName}` : bereich.quelle === 'einstellung' ? `KZV fest: ${kzvName}` : 'fehlt → bayerische BEL-Preise'}
             </span>
@@ -388,7 +421,7 @@ function EinstellungenSeite({ plan, setEinstellung, alle, listen }: {
               </span>
             </div>
             <div className="es-liste-name">{kzvName}</div>
-            <select value={e.kzv} onChange={(ev) => setEinstellung('kzv', ev.target.value)}>
+            <select value={e.kzv} onChange={(ev) => kzvAendern(ev.target.value)}>
               <option value="">Aus der Praxis-PLZ</option>
               {KZVEN.map((k) => <option key={k.nr} value={k.nr}>{k.name} ({k.kurz}){k.login ? ' – Liste nur mit Login' : ''}</option>)}
             </select>
@@ -404,6 +437,15 @@ function EinstellungenSeite({ plan, setEinstellung, alle, listen }: {
           bundeseinheitlich, die BEL-II-Höchstpreise vereinbart jedes Land gesondert (bis ±5 % um den Bundesmittelpreis,
           Praxislabor 5 % darunter). BEMA-Punktwert (ZE 2026: 1,1844 €) und GOZ-Punktwert (5,62421 Cent) stehen in der jeweiligen Preisliste.
         </p>
+      </section>
+
+      <section className="es-block">
+        <ListenKarte
+          listen={GENUTZTE_LISTEN}
+          neueOrdner={LISTEN_ORDNER}
+          knopf="Punktwerte und Preislisten aktualisieren"
+          hilfe="Der ZE-Punktwert steht in der BEMA-Liste des Jahres. Holt neue BEMA-, Festzuschuss- und BEL-II-Listen (auch neue Jahre) vom PlanR-Datendienst; eigene Änderungen bleiben erhalten."
+        />
       </section>
     </>
   )
