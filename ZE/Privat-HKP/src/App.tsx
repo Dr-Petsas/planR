@@ -10,8 +10,13 @@ import { BEB, kalkulieren, euro, positionen } from './engine/berechnung'
 import { kronenEinheiten, werkstoffVon } from './engine/material'
 import { KronenmaterialFelder } from './components/Kronenmaterial'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
-import { neuerPlan, useEinstellungen, usePlan } from './store'
+import { neuerPlan, planMigrieren, useEinstellungen, usePlan, useZeAblage } from './store'
+import { ungespeichert } from './ablage'
+import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
 import type { Einstellungen, Patient, Plan, Praxis } from './types'
+
+const patientName = (p: Plan) => [p.patient.vorname, p.patient.name].filter(Boolean).join(' ')
+const hatInhalt = (p: Plan) => Boolean(patientName(p).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP) || p.manuell.length)
 
 type Reiter = 'patient' | 'planung' | 'leistungen' | 'praxis'
 
@@ -27,11 +32,22 @@ export default function App() {
   const [plan, setPlan] = usePlan(einst.naechsteNummer)
   const [reiter, setReiter] = useState<Reiter>('planung')
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
+  const ablage = useZeAblage()
+  const daten = { nummer: plan.nummer, patient: patientName(plan), betrag: kalk.gesamt, plan }
+  const eintrag = ablage.eintrag(plan.nummer)
+  const offen = ungespeichert(plan, eintrag)
+  const gesperrt = eintrag?.status === 'freigegeben'
+  const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   const neu = () => {
-    if (!confirm('Neuen Kostenvoranschlag beginnen? Der aktuelle wird verworfen.')) return
+    sichern()
     const nr = einst.naechsteNummer + 1
     setEinst({ ...einst, naechsteNummer: nr })
     setPlan(neuerPlan(nr))
+    setReiter('patient')
+  }
+  const oeffnen = (p: Plan) => {
+    sichern()
+    setPlan(planMigrieren(p))
     setReiter('planung')
   }
   const tp = (z: string) => (plan.zaehne[z]?.TP ?? '').trim().toUpperCase()
@@ -73,12 +89,12 @@ export default function App() {
             <span>{plan.nummer}</span>
             <b>{euro(kalk.gesamt)}</b>
           </div>
-          <div className="aktionen">
-            {implantate.length > 0 && <button className="sekundaer" onClick={implantologieExport} title="Implantatpositionen als Datei für den Implantologie-Planer exportieren">Für Implantologie exportieren</button>}
-            <button className="primaer" onClick={neu}>Neuer Kostenvoranschlag</button>
-          </div>
+          {implantate.length > 0 && <button className="sekundaer" onClick={implantologieExport} title="Implantatpositionen als Datei für den Implantologie-Planer exportieren">Für Implantologie exportieren</button>}
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" />
         </header>
-        <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+        <fieldset className="sperre" disabled={gesperrt}>
+          <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+        </fieldset>
       </div>
 
       <main className="arbeitsflaeche">
@@ -91,9 +107,17 @@ export default function App() {
             ))}
           </nav>
 
-          {reiter === 'patient' && <PatientForm plan={plan} onChange={setPlan} />}
+          {reiter !== 'praxis' && <Sperrhinweis eintrag={eintrag} />}
+
+          {reiter === 'patient' && (
+            <>
+              <fieldset className="sperre" disabled={gesperrt}><PatientForm plan={plan} onChange={setPlan} /></fieldset>
+              <AblageListe ablage={ablage} aktuell={plan.nummer} onLaden={oeffnen} />
+            </>
+          )}
 
           {reiter === 'planung' && (
+            <fieldset className="sperre" disabled={gesperrt}>
             <div className="block">
               <h3>Befund und Planung</h3>
               <p className="hilfe">Befund (Kleinbuchstaben) und Planung (Großbuchstaben) mit den bekannten Kürzeln eintragen – z. B. Befund <b>kw</b>, Planung <b>KM</b>; Lücke <b>f</b> mit <b>BM</b>; Implantat <b>SKM</b>. Es gibt keine Regelversorgung: geplant und berechnet wird genau, was eingetragen ist.</p>
@@ -121,17 +145,18 @@ export default function App() {
               )}
               <Hinweise liste={kalk.hinweise} />
             </div>
+            </fieldset>
           )}
 
           {reiter === 'leistungen' && (
-            <>
+            <fieldset className="sperre" disabled={gesperrt}>
               <Hinweise liste={kalk.hinweise} />
               <Leistungen plan={plan} kalk={kalk} gozFaktor={einst.gozFaktor} eigenlabor={einst.eigenlabor ?? []} onChange={setPlan} />
               <div className="block">
                 <h3>Bemerkung im Kostenvoranschlag</h3>
                 <textarea rows={3} value={plan.bemerkung} onChange={(e) => setPlan({ ...plan, bemerkung: e.target.value })} placeholder="z. B. Farbe, Material, Behandlungsablauf …" />
               </div>
-            </>
+            </fieldset>
           )}
 
           {reiter === 'praxis' && <PraxisForm einst={einst} onChange={setEinst} />}

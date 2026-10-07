@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan } from './types'
 import { STANDARD_LABOR, STANDARD_MATERIAL } from './data/katalog'
+import { useAblage } from './ablage'
 
 const KEY_PLAN = 'privat-kons.plan.v2'
 const KEY_EINST = 'privat-kons.einstellungen.v2'
@@ -84,34 +85,4 @@ export function usePlan(einst: Einstellungen): [Plan, (p: Plan) => void] {
   return [plan, setPlan]
 }
 
-export interface GespeichertEintrag {
-  nummer: string
-  datum: string
-  patient: string
-  betrag: number
-  plan: Plan
-}
-
-export function useGespeichert(): {
-  liste: GespeichertEintrag[]
-  speichern: (plan: Plan, betrag: number) => void
-  laden: (nummer: string) => Plan | undefined
-  loeschen: (nummer: string) => void
-} {
-  const [liste, setListe] = useState<GespeichertEintrag[]>(() => (lade(KEY_LISTE) as GespeichertEintrag[]) ?? [])
-  useEffect(() => {
-    localStorage.setItem(KEY_LISTE, JSON.stringify(liste))
-  }, [liste])
-
-  const speichern = useCallback((plan: Plan, betrag: number) => {
-    setListe((alt) => {
-      const ohne = alt.filter((e) => e.nummer !== plan.nummer)
-      return [{ nummer: plan.nummer, datum: plan.datum, patient: plan.patient.name, betrag, plan }, ...ohne].slice(0, 100)
-    })
-  }, [])
-
-  const laden = useCallback((nummer: string) => liste.find((e) => e.nummer === nummer)?.plan, [liste])
-  const loeschen = useCallback((nummer: string) => setListe((alt) => alt.filter((e) => e.nummer !== nummer)), [])
-
-  return { liste, speichern, laden, loeschen }
-}
+export const useKonsAblage = () => useAblage<Plan>(KEY_LISTE)

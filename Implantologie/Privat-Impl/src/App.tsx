@@ -10,8 +10,13 @@ import { PraxisPreise } from './components/PraxisPreise'
 import { euro, kalkulieren } from './engine/berechnung'
 import { geplanteRegionen, implantatZaehne } from './engine/planung'
 import { importAusZe } from './engine/bruecke'
-import { neuerPlan, useEinstellungen, usePlan } from './store'
+import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } from './store'
+import { ungespeichert } from './ablage'
+import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
 import type { Patient, Plan } from './types'
+
+const patientName = (p: Plan) => [p.patient.vorname, p.patient.name].filter(Boolean).join(' ')
+const hatInhalt = (p: Plan) => Boolean(patientName(p).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP))
 
 type Reiter = 'patient' | 'planung' | 'leistungen' | 'praxis'
 
@@ -29,11 +34,22 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement>(null)
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
 
+  const ablage = useImplAblage()
+  const daten = { nummer: plan.nummer, patient: patientName(plan), betrag: kalk.gesamt, plan }
+  const eintrag = ablage.eintrag(plan.nummer)
+  const offen = ungespeichert(plan, eintrag)
+  const gesperrt = eintrag?.status === 'freigegeben'
+  const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   const neu = () => {
-    if (!confirm('Neuen Kostenvoranschlag beginnen? Der aktuelle wird verworfen.')) return
+    sichern()
     const nr = einst.naechsteNummer + 1
     setEinst({ ...einst, naechsteNummer: nr })
     setPlan(neuerPlan(nr))
+    setReiter('patient')
+  }
+  const oeffnen = (p: Plan) => {
+    sichern()
+    setPlan(planMigrieren(p))
     setReiter('planung')
   }
 
@@ -65,11 +81,11 @@ export default function App() {
             <span>{plan.nummer}</span>
             <b>{euro(kalk.gesamt)}</b>
           </div>
-          <div className="aktionen">
-            <button className="primaer" onClick={neu}>Neuer Kostenvoranschlag</button>
-          </div>
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" />
         </header>
-        <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+        <fieldset className="sperre" disabled={gesperrt}>
+          <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+        </fieldset>
       </div>
 
       <main className="arbeitsflaeche">
@@ -82,9 +98,19 @@ export default function App() {
             ))}
           </nav>
 
-          {reiter === 'patient' && <PatientForm plan={plan} onChange={setPlan} onZeImport={() => fileRef.current?.click()} />}
+          {reiter !== 'praxis' && <Sperrhinweis eintrag={eintrag} />}
+
+          {reiter === 'patient' && (
+            <>
+              <fieldset className="sperre" disabled={gesperrt}>
+                <PatientForm plan={plan} onChange={setPlan} onZeImport={() => fileRef.current?.click()} />
+              </fieldset>
+              <AblageListe ablage={ablage} aktuell={plan.nummer} onLaden={oeffnen} />
+            </>
+          )}
 
           {reiter === 'planung' && (
+            <fieldset className="sperre" disabled={gesperrt}>
             <div className="block">
               <h3>Befund und Planung</h3>
               <p className="hilfe">Befund (klein) und Planung (groß) je Zahn eintragen – z. B. Befund <b>f</b> (Lücke), Planung <b>I</b> (Implantat), <b>IS</b> (Sofortimplantat), <b>IA</b> (Implantat + Augmentation), <b>EX/OX</b> (Entfernung).</p>
@@ -107,17 +133,18 @@ export default function App() {
               )}
               <Hinweise liste={kalk.hinweise} />
             </div>
+            </fieldset>
           )}
 
           {reiter === 'leistungen' && (
-            <>
+            <fieldset className="sperre" disabled={gesperrt}>
               <Hinweise liste={kalk.hinweise} />
               <Leistungen plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
               <div className="block">
                 <h3>Bemerkung im Kostenvoranschlag</h3>
                 <textarea rows={3} value={plan.bemerkung} onChange={(e) => setPlan({ ...plan, bemerkung: e.target.value })} placeholder="z. B. Behandlungsablauf, Besonderheiten …" />
               </div>
-            </>
+            </fieldset>
           )}
 
           {reiter === 'praxis' && <PraxisPreise einst={einst} onChange={setEinst} />}

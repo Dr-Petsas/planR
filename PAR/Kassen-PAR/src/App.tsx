@@ -6,7 +6,9 @@ import { preiseAus, streckeRechnen } from './engine/leistungen'
 import { pruefeFall, zaehlMeldungen } from './engine/pruefung'
 import { euro, initialBefund } from './engine/strecke'
 import { terminePlanen } from './engine/termine'
-import { neuerFall, useEinstellungen, useFall } from './store'
+import { fallMigrieren, neuerFall, useEinstellungen, useFall, useParAblage } from './store'
+import { ungespeichert } from './ablage'
+import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
 import AntragReiter from './components/AntragReiter'
 import StreckeReiter from './components/StreckeReiter'
 import FormulareReiter from './components/FormulareReiter'
@@ -49,14 +51,30 @@ export default function App() {
     }
   }, [diag, letzterGrad, setFall])
 
+  const name = [fall.patient.vorname, fall.patient.name].filter(Boolean).join(' ')
+  const ablage = useParAblage()
+  const daten = { nummer: fall.nummer, patient: name, betrag: summe, plan: fall }
+  const eintrag = ablage.eintrag(fall.nummer)
+  const offen = ungespeichert(fall, eintrag)
+  const gesperrt = eintrag?.status === 'freigegeben'
+
+  /** Fälle mit Patientennamen werden beim Wechsel automatisch gesichert; namenlose nur nach Rückfrage verworfen. */
+  const sichern = () => {
+    if (!offen || gesperrt) return true
+    if (name.trim()) { ablage.speichern(daten); return true }
+    return confirm('Der offene Fall hat noch keinen Patientennamen und wird nicht gespeichert. Trotzdem wechseln?')
+  }
   const neu = () => {
-    if (!confirm('Neuen PAR-Fall beginnen? Der aktuelle Fall wird ersetzt.')) return
+    if (!sichern()) return
     setFall(neuerFall(einst.naechsteNummer))
     setEinst({ ...einst, naechsteNummer: einst.naechsteNummer + 1 })
     setReiter('antrag')
   }
-
-  const name = [fall.patient.vorname, fall.patient.name].filter(Boolean).join(' ')
+  const oeffnen = (f: typeof fall) => {
+    if (!sichern()) return
+    setFall(fallMigrieren(f))
+    setReiter('antrag')
+  }
 
   return (
     <div className="app">
@@ -73,7 +91,7 @@ export default function App() {
             PW {punktwert.wert.toFixed(4).replace('.', ',')} €{punktwert.richtwert ? ' (Richtwert)' : ''}
           </span>
           <span className="kopf-summe">{euro(summe)}</span>
-          <button onClick={neu}>Neuer Fall</button>
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Fall" />
         </div>
       </header>
 
@@ -97,9 +115,15 @@ export default function App() {
       )}
 
       <main className="inhalt">
-        {reiter === 'antrag' && <AntragReiter fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />}
-        {reiter === 'strecke' && <StreckeReiter fall={fall} setFall={setFall} diag={diag} preise={preise} />}
-        {reiter === 'formulare' && <FormulareReiter fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />}
+        {reiter !== 'einstellungen' && <Sperrhinweis eintrag={eintrag} />}
+        {reiter !== 'einstellungen' && (
+          <fieldset className="sperre" disabled={gesperrt}>
+            {reiter === 'antrag' && <AntragReiter fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />}
+            {reiter === 'strecke' && <StreckeReiter fall={fall} setFall={setFall} diag={diag} preise={preise} />}
+            {reiter === 'formulare' && <FormulareReiter fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />}
+          </fieldset>
+        )}
+        {reiter === 'antrag' && <AblageListe ablage={ablage} aktuell={fall.nummer} onLaden={oeffnen} />}
         {reiter === 'einstellungen' && <EinstellungenReiter einst={einst} setEinst={setEinst} punktwert={punktwert} />}
       </main>
     </div>

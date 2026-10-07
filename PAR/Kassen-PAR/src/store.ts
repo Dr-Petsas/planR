@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { ALLE_ZAEHNE } from './engine/zahnschema'
+import { useAblage } from './ablage'
 import type {
   Anamnese, Befund, BefundPhase, Einstellungen, ParFall, Planung, Termin, ZahnBefund, Zusatzformulare,
 } from './types'
 
 const K_FALL = 'kassen-par.fall.v2'
 const K_EINST = 'kassen-par.einstellungen.v2'
+const K_LISTE = 'kassen-par.liste.v1'
 // Alt-Schluessel (v1) zur einmaligen Uebernahme
 const K_FALL_ALT = 'kassen-par.plan.v1'
 
@@ -290,6 +292,8 @@ export function useFall() {
   }, [fall])
   return [fall, setFall] as const
 }
+
+export const useParAblage = () => useAblage<ParFall>(K_LISTE)
 
 export function useEinstellungen() {
   const [einst, setEinst] = useState<Einstellungen>(() => {

@@ -430,3 +430,33 @@ textarea.textbox { display: block; width: 100%; box-sizing: border-box; }
   .zahn-seg.tief, .zahn-seg.aktiv { fill: transparent; }
   @page { size: A4; margin: 0; }
 }
+
+/* ---------- Ablage: Speichern / Freigeben ---------- */
+fieldset.sperre { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+fieldset.sperre:disabled { opacity: .62; }
+.kopfbereich > fieldset.sperre { display: block; }
+.ablage-stand { align-self: center; font-size: 11.5px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--linie, #e3ddd3); color: var(--grau, #6b767d); white-space: nowrap; }
+.ablage-stand.ungespeichert { color: var(--warn, #9a5b00); background: var(--warn-hell, #fff4e0); border-color: #f0d9ae; }
+.ablage-stand.frei { color: var(--akzent-dunkel, #266a78); background: var(--akzent-hell, #e4f0f1); border-color: #c4dfe2; font-weight: 600; }
+.ablage-sperre { margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 13px; background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); border: 1px solid #c4dfe2; }
+.ablage h3 small { font-weight: 400; color: var(--grau, #6b767d); font-size: 12px; }
+.ablage-tabelle { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ablage-tabelle th { text-align: left; font-weight: 500; font-size: 11px; color: var(--grau, #6b767d); text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid var(--linie, #e3ddd3); }
+.ablage-tabelle td { padding: 5px 6px; border-bottom: 1px solid #f1ece4; vertical-align: middle; }
+.ablage-tabelle td.r, .ablage-tabelle th.r { text-align: right; white-space: nowrap; }
+.ablage-tabelle tr.aktuell td { background: var(--akzent-hell, #e4f0f1); }
+.ablage-status { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: #efece6; color: var(--grau, #6b767d); }
+.ablage-status.freigegeben { background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); }
+.ablage-zeit { color: var(--grau, #6b767d); font-size: 12px; white-space: nowrap; }
+.ablage-offen { font-size: 12px; color: var(--akzent-dunkel, #266a78); }
+/* Ablage im PAR-Design: Knöpfe im dunklen Kopf, Liste als Karte */
+.kopf-rechts .aktionen { display: flex; gap: 8px; align-items: center; }
+.kopf-rechts .ablage-stand:not(.ungespeichert):not(.frei) { color: rgba(255, 255, 255, .8); border-color: rgba(255, 255, 255, .35); }
+
+.kopf-rechts button.primaer { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+.inhalt > fieldset.sperre, .inhalt > .ablage-sperre, .inhalt > .block.ablage { margin-bottom: 14px; }
+.block.ablage { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, .05); }
+.block.ablage h3 { font-size: 15px; margin: 0 0 8px; color: var(--primary-blue); }
+.block.ablage .klein-btn { padding: 1px 9px; font-size: 12px; border-radius: 6px; }
+.block.ablage .x { border: 0; background: none; color: var(--grau); font-size: 18px; line-height: 1; padding: 0 4px; }
+.block.ablage .x:hover { color: var(--rot); }

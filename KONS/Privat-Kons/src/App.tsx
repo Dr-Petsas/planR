@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/kons'
-import { neuerPlan, nummerFormat, useEinstellungen, useGespeichert, usePlan } from './store'
+import { neuerPlan, nummerFormat, useEinstellungen, useKonsAblage, usePlan } from './store'
+import { ungespeichert } from './ablage'
+import type { Plan } from './types'
 import Patient from './components/Patient'
 import Zahnschema from './components/Zahnschema'
 import Zahnkarten from './components/Zahnkarten'
 import Einstellungen from './components/Einstellungen'
 import Regler from './components/Regler'
 import Dokument from './components/Dokument'
+import { AblageKnoepfe, AblageListe, Sperrhinweis } from './components/Ablage'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -16,20 +19,31 @@ const REITER: { id: Reiter; label: string }[] = [
   { id: 'einstellungen', label: 'Einstellungen' },
 ]
 
+const hatInhalt = (p: Plan) => Boolean(p.patient.name.trim() || Object.keys(p.zaehne).length || p.frei.length)
+
 export default function App() {
   const [einst, setEinst] = useEinstellungen()
   const [plan, setPlan] = usePlan(einst)
-  const gespeichert = useGespeichert()
+  const ablage = useKonsAblage()
   const [reiter, setReiter] = useState<Reiter>('planung')
 
   const rechnung = useMemo(() => rechnen(plan, einst), [plan, einst])
+  const daten = { nummer: plan.nummer, patient: plan.patient.name, betrag: rechnung.summe, plan }
+  const eintrag = ablage.eintrag(plan.nummer)
+  const offen = ungespeichert(plan, eintrag)
+  const gesperrt = eintrag?.status === 'freigegeben'
 
-  const speichern = () => gespeichert.speichern(plan, rechnung.summe)
+  const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   const neu = () => {
-    speichern()
+    sichern()
     setPlan(neuerPlan(nummerFormat(einst.naechsteNummer), einst))
     setEinst({ ...einst, naechsteNummer: einst.naechsteNummer + 1 })
     setReiter('patient')
+  }
+  const oeffnen = (p: Plan) => {
+    sichern()
+    setPlan(p)
+    setReiter('planung')
   }
 
   return (
@@ -44,15 +58,16 @@ export default function App() {
             </div>
           </div>
           <div className="kopf-summe">
-            <span>Gesamt (privat)</span>
+            <span>{plan.nummer} · Gesamt</span>
             <b>{euro(rechnung.summe)}</b>
           </div>
-          <div className="aktionen">
-            <button className="sekundaer" onClick={speichern}>Speichern</button>
-            <button className="primaer" onClick={neu}>Neuer Plan</button>
-          </div>
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Plan" />
         </header>
-        {reiter === 'planung' && <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />}
+        {reiter === 'planung' && (
+          <fieldset className="sperre" disabled={gesperrt}>
+            <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />
+          </fieldset>
+        )}
       </div>
 
       <div className="arbeitsflaeche">
@@ -66,51 +81,25 @@ export default function App() {
             ))}
           </div>
 
+          {reiter !== 'einstellungen' && <Sperrhinweis eintrag={eintrag} />}
+
           {reiter === 'patient' && (
             <>
-              <Patient plan={plan} setPlan={setPlan} />
-              {gespeichert.liste.length > 0 && (
-                <div className="block">
-                  <h3>Gespeicherte Pläne</h3>
-                  <table className="preis-tabelle">
-                    <tbody>
-                      {gespeichert.liste.slice(0, 12).map((e) => (
-                        <tr key={e.nummer}>
-                          <td className="mono">{e.nummer}</td>
-                          <td>{e.patient || '—'}</td>
-                          <td className="r mono">{euro(e.betrag)}</td>
-                          <td>
-                            <button
-                              className="klein-btn sekundaer"
-                              onClick={() => {
-                                const geladen = gespeichert.laden(e.nummer)
-                                if (geladen) {
-                                  setPlan(geladen)
-                                  setReiter('planung')
-                                }
-                              }}
-                            >
-                              laden
-                            </button>
-                          </td>
-                          <td><button className="x" onClick={() => gespeichert.loeschen(e.nummer)} title="löschen">×</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <fieldset className="sperre" disabled={gesperrt}>
+                <Patient plan={plan} setPlan={setPlan} />
+              </fieldset>
+              <AblageListe ablage={ablage} aktuell={plan.nummer} onLaden={oeffnen} />
             </>
           )}
 
           {reiter === 'planung' && (
-            <>
+            <fieldset className="sperre" disabled={gesperrt}>
               <Zahnschema plan={plan} setPlan={setPlan} />
               <Zahnkarten plan={plan} setPlan={setPlan} einst={einst} rechnung={rechnung} />
               {rechnung.hinweise.length > 0 && (
                 <ul className="hinweise">{rechnung.hinweise.map((h) => <li key={h}>{h}</li>)}</ul>
               )}
-            </>
+            </fieldset>
           )}
 
           {reiter === 'einstellungen' && <Einstellungen einst={einst} setEinst={setEinst} />}

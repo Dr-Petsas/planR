@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan, Regler } from './types'
 import { STANDARD_IMPLANTAT } from './engine/planung'
 import { markeLesen } from './engine/bruecken'
+import { useAblage } from './ablage'
 
 const PLAN_KEY = 'privat-kv.plan.v1'
 const EINST_KEY = 'privat-kv.einstellungen.v1'
+const LISTE_KEY = 'privat-kv.liste.v1'
 
 export const heute = () => new Date().toISOString().slice(0, 10)
 
@@ -69,4 +71,5 @@ export function useGespeichert<T>(key: string, standard: () => T, migrieren: (w:
 }
 
 export const usePlan = (nummer: number) => useGespeichert<Plan>(PLAN_KEY, () => neuerPlan(nummer), planMigrieren)
+export const useZeAblage = () => useAblage<Plan>(LISTE_KEY)
 export const useEinstellungen = () => useGespeichert<Einstellungen>(EINST_KEY, () => STANDARD_EINSTELLUNGEN)
