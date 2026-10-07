@@ -1,0 +1,442 @@
+{
+ "name": "BEMA Teil 2 – Kieferbruch, Kiefergelenkserkrankungen, UKPS",
+ "stand": "2026-01-01",
+ "quelle": "KZBV BEMA-Z Stand 01.01.2026; Kieferbruch nach GOÄ J/L (Bewertungszahl = GOÄ-Punkte / 9, aufgerundet, Liste KZV Hamburg 7/2024)",
+ "formular": "eFormular 2 – Behandlungsplan für Kiefergelenkserkrankungen und Kieferbruch (BMV-Z Anlage 14c, Version 2.1.0, gültig ab 01.04.2026; Inhalt nach § 7 bzw. § 8 Anlage 15 BMV-Z)",
+ "genehmigung": "Kiefergelenkserkrankung: Behandlungsplan vor Beginn elektronisch an die Krankenkasse; Antwortdatensatz 'genehmigt/abgelehnt'; Behandlung erst nach Genehmigung (Ausnahme: Schmerzbeseitigung/zahnmedizinisch unaufschiebbar – Genehmigung nachträglich, KZVB: K2). Kasse kann begutachten lassen. K1–K4 nur mit Kostenübernahmeerklärung; Landes-Gesamtverträge können Abweichendes/Genehmigungsverzicht vereinbaren (dann keine Übermittlung). K6–K9 ohne Genehmigung. Bei Änderung neuer Antrag mit Verarbeitungskennzeichen 'Änderung'. Kein Ablaufdatum vereinbart; Beginn muss vor einer Befundveränderung liegen (KZVB). Kieferbruch: Plan vor Beginn erstellen und der Kasse UNVERZÜGLICH ANZEIGEN (keine Genehmigung); Anzeige umfasst auch Verbandsplatten, Schienungen, Aufbissbehelfe und konservierend-chirurgische Begleitleistungen unter 'Vorgesehene Behandlung'.",
+ "hinweise": [
+  "Kieferbruch-Leistungen werden nach den GOÄ-Abschnitten J und L abgerechnet; Bewertungszahl = 9 GOÄ-Punkte je BEMA-Punkt, auf ganze Zahlen aufgerundet. BEMA-Teil-1-Leistungen zusätzlich, soweit nicht Bestandteil einer GOÄ-Leistung. Eigene numerische 'Kieferbruch'-Positionen gibt es in BEMA Teil 2 nicht.",
+  "Kieferbruch-Leistungen nach GOÄ (2685–2687, 2694–2702 u. ä.) laufen je nach KZV über KCH (Teil 1) oder die KB-Abrechnung (Teil 2) – regionale Vorgaben beachten (Liebold/Raff/Wissing).",
+  "Eine BEMA-Nr. K5 existiert im BEMA 2026 nicht (Teil 2 führt K1, K2, K3, K4, K6, K7, K8, K9).",
+  "Punktwert BEMA Teil 2 ist regional (KZV) – nicht in dieser Datei. 7a/7b werden im Zusammenhang mit KFO/ZE nach deren Punktwert abgerechnet.",
+  "Material-/Laborkosten gesondert (Eigen-/Fremdlabor mit Preisen elektronisch). Pauschale je Abformung 3,00 EUR (Ordnungsnummer 605); Versand je Versandgang Praxis–gewerbliches Labor zum Post-Päckchenpreis Onlinefrankierung (602); praxiseigenes Labor ohne Versandkosten. Gesamtverträge dürfen abweichen.",
+  "BEL § 2 Nr. 1: Laborleistungen für Kieferbruchbehandlungen, Epithesen, Resektionsprothesen und Obturatoren, die nicht im BEL stehen, werden nach tatsächlichem Aufwand abgerechnet.",
+  "BEL II Gruppe 4 (Aufbissbehelfe) enthält nur 401 0, 402 0, 403 0, 404 0 – in allen 16 lokalen KZV-Preislisten 2026 vorhanden (Preise siehe preise2026). Instandsetzung über 861 0 + 862 0 (Gruppe 8).",
+  "Typische Laborkette K1 (KZV Berlin): 001 0 Modell (2×), 012 0 Mittelwertartikulator, 401 0; ggf. 002 1 Doublieren (+1 Modell), 710 0 Aufbiss. K2: 001 0, 402 0, ggf. 002 1, 380 0. K3: 001 0 (2×), 012 0, 403 0, ggf. 710 0.",
+  "Keine Kassenleistung (KZV Berlin): Sportschutzschienen, Aqualizer, Fluoridierungsschienen/Medikamententräger (Ausnahmen möglich), funktionsanalytische Maßnahmen (Gesichtsbogen; Artikulator nicht über GKV, wenn Zusammenhang mit Funktionsdiagnostik), Abformung per Scanner mit Modellherstellung.",
+  "Genehmigungsverzicht regional: z. B. KZV Berlin – AOK Nordost, Ersatzkassen, AOKen/BKKen/IKKen bei Wohnsitz Berlin; Bundespolizei K1–K4 ohne Genehmigung, Bundeswehr K4 ohne Genehmigung (KZVB). Stand der jeweiligen KZV prüfen.",
+  "K9-Material für direkte Adjustierung als Praxismaterial (KZV Saarland Kategorie 5309) – regionale Kategorienummer.",
+  "Frage 'K7/K8-Limits': Der BEMA nennt für K7–K9 KEINE Höchstzahl je Fall; die einzige Begrenzung ist 'je Sitzung nur eine von K6–K9'. Wiederholte Erneuerungsintervalle für Schienen sind nicht im BEMA geregelt."
+ ],
+ "eintraege": [
+  {
+   "nr": "2",
+   "text": "Schriftliche Niederlegung eines Heil- und Kostenplanes",
+   "punkte": 20,
+   "gruppe": "Planung und Modelle",
+   "bestimmung": "Nicht für UKPS (UP1–UP6). In der Praxis nur für die genehmigungspflichtigen K1–K4 (KZV Berlin). Kommt der Patient nach Planerstellung nicht mehr, als alleinige Leistung mit Hinweis 'Behandlungsabbruch' abrechenbar (KZV Saarland)."
+  },
+  {
+   "nr": "7a",
+   "text": "Abformung, Bissnahme in habitueller Okklusion für dreidimensional orientierte Modelle des Ober- und Unterkiefers zur diagnostischen Auswertung und Planung sowie schriftliche Niederlegung",
+   "punkte": 19,
+   "gruppe": "Planung und Modelle",
+   "bestimmung": "Nur im Rahmen einer kieferorthopädischen Behandlung (bis 3×, kombiniert KFO/KCh bis 4×) – für KB-Schienen NICHT einschlägig."
+  },
+  {
+   "nr": "7b",
+   "text": "Abformung, Bissnahme für das Erstellen von Modellen des Ober- und Unterkiefers zur diagnostischen Auswertung und Planung sowie schriftliche Niederlegung",
+   "punkte": 19,
+   "gruppe": "Planung und Modelle",
+   "bestimmung": "Nur bei ZE, Behandlung von Verletzungen und Erkrankungen des Gesichtsschädels und UKPS. Nur wenn mit der Modellherstellung eine diagnostische Auswertung und Planung verbunden ist; für reine Arbeitsmodelle nur Material- und Laborkosten."
+  },
+  {
+   "nr": "K1",
+   "text": "Eingliedern eines Aufbissbehelfs mit adjustierter Oberfläche (a) zur Unterbrechung der Okklusionskontakte, b) als Aufbissschiene bei der Parodontalbehandlung, c) als Bissführungsplatte bei der Versorgung mit Zahnersatz)",
+   "punkte": 106,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Angezeigt bei Kiefergelenksstörungen, Myoarthropathien, zur Behebung von Fehlgewohnheiten. Angezeigt sind nur individuell adjustierte Aufbissbehelfe, Miniplastschienen mit individuell geformtem Kunststoffrelief, Interzeptoren, spezielle Aufbissschienen über alle Okklusionsflächen (z. B. Michigan-Schiene). Auch für ZE abrechnungsfähig; Daueraufbissbehelf mit K1 abgegolten. Nur mit Kostenübernahmeerklärung der Krankenkasse (Landesvereinbarungen können abweichen). Im zeitlichen Zusammenhang nur eine von K1–K3. Abrechnung als 'K1' ohne Buchstabe a/b/c. Auch für die Parodontalbehandlung abrechnungsfähig."
+  },
+  {
+   "nr": "K2",
+   "text": "Eingliedern eines Aufbissbehelfs zur Unterbrechung der Okklusionskontakte ohne adjustierte Oberfläche",
+   "punkte": 45,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Kann bei akuten Schmerzzuständen angezeigt sein. Kostenübernahme nötig; bei Schmerzbeseitigung/unaufschiebbar Genehmigung nachträglich einholbar (BMV-Z Anl. 1 Nr. 3.1.1, KZVB). Im zeitlichen Zusammenhang nur eine von K1–K3. Ausnahme: Strahlenschutzschiene OK und UK = 2× K2 möglich (KZV Berlin)."
+  },
+  {
+   "nr": "K3",
+   "text": "Umarbeitung einer vorhandenen Prothese zum Aufbissbehelf zur Unterbrechung der Okklusionskontakte mit adjustierter Oberfläche",
+   "punkte": 61,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Angezeigt bei Kiefergelenksstörungen, Myoarthropathien und nach chirurgischen Behandlungen; totale oder partielle Prothese. Kostenübernahme nötig. Im zeitlichen Zusammenhang nur eine von K1–K3."
+  },
+  {
+   "nr": "K4",
+   "text": "Semipermanente Schienung unter Anwendung der Ätztechnik, je Interdentalraum",
+   "punkte": 11,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Je Interdentalraum (z. B. 5 Räume = 55 Punkte). Zur Stabilisierung gelockerter Zähne und bei prä-/postchirurgischen Fixationsmaßnahmen; auch für die Parodontalbehandlung. Kostenübernahme nötig; im eFormular 2 Anzahl der Interdentalräume angeben. Wiederherstellung = K4 erneut, Kontrollen dazu nur K7 (KZV Saarland). Entfernung nach Ä2702 (34)."
+  },
+  {
+   "nr": "K6",
+   "text": "Wiederherstellung und/oder Unterfütterung eines Aufbissbehelfs",
+   "punkte": 30,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Je Sitzung nur eine der Leistungen K6–K9 (Kontrolle ist in K6/K8/K9 enthalten). Keine vorherige Genehmigung nötig (K1–K4-Regel gilt nur für K1–K4)."
+  },
+  {
+   "nr": "K7",
+   "text": "Kontrollbehandlung, ggf. mit einfachen Korrekturen des Aufbissbehelfs oder der Fixierung",
+   "punkte": 6,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Je Sitzung nur eine von K6–K9; nicht neben K6/K8/K9 und nicht in der Eingliederungssitzung von K1/K2/K3 (Kommentar Liebold/Raff/Wissing; KZV Saarland). Ohne Genehmigung abrechenbar. Eine Höchstzahl je Fall/Zeitraum nennt der BEMA nicht."
+  },
+  {
+   "nr": "K8",
+   "text": "Kontrollbehandlung mit Einschleifen des Aufbissbehelfs oder der Schienung (subtraktive Methode)",
+   "punkte": 12,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Je Sitzung nur eine von K6–K9; nicht am Eingliederungstag von K1/K2. Nach KZV Berlin für K2-Schienen (ohne adjustierte Oberfläche) nicht abrechenbar. Ohne Genehmigung. Keine BEMA-Höchstzahl."
+  },
+  {
+   "nr": "K9",
+   "text": "Kontrollbehandlung mit Aufbau einer neuen adjustierten Oberfläche (additive Methode)",
+   "punkte": 35,
+   "gruppe": "Aufbissbehelfe und Schienung",
+   "bestimmung": "Je Sitzung nur eine von K6–K9; nicht am Eingliederungstag von K1/K2. Auch Umarbeitung eines K2-Behelfs zum adjustierten Behelf (direkt: Praxismaterial; indirekt: BEL 403 0, ggf. 710 0 – KZVB). Ohne Genehmigung."
+  },
+  {
+   "nr": "UP1",
+   "text": "Untersuchung zur Versorgung mit einer Unterkieferprotrusionsschiene einschließlich Beratung",
+   "punkte": 27,
+   "gruppe": "UKPS",
+   "bestimmung": "Nur auf Veranlassung eines Vertragsarztes mit Zusatzbezeichnung Schlafmedizin bzw. Qualifikation § 6 Abs. 2 QSV. Ä1 in derselben Sitzung nur für andere Zwecke."
+  },
+  {
+   "nr": "UP2",
+   "text": "Abformung und dreidimensionale Registrierung der Startprotrusionsposition",
+   "punkte": 49,
+   "gruppe": "UKPS"
+  },
+  {
+   "nr": "UP3",
+   "text": "Eingliedern einer Unterkieferprotrusionsschiene",
+   "punkte": 223,
+   "gruppe": "UKPS",
+   "bestimmung": "Zweiteilige, bimaxillär verankerte UKPS, nachjustierbar mindestens in mm-Schritten, Start regelhaft ≥ 50 % der max. aktiven Protrusion. Kein Zusatzhonorar für besondere Abdruckverfahren."
+  },
+  {
+   "nr": "UP4",
+   "text": "Nachadaption des Protrusionsgrads",
+   "punkte": 10,
+   "gruppe": "UKPS",
+   "bestimmung": "In Abstimmung mit dem veranlassenden Vertragsarzt."
+  },
+  {
+   "nr": "UP5a",
+   "text": "Kontrollbehandlung ggf. mit einfachen Korrekturen der UP",
+   "punkte": 8,
+   "gruppe": "UKPS",
+   "bestimmung": "Je Sitzung nur eine von UP5a–c."
+  },
+  {
+   "nr": "UP5b",
+   "text": "Kontrollbehandlung mit Einschleifen der Stütz- und Gleitzonen einer UP (subtraktive Methode)",
+   "punkte": 12,
+   "gruppe": "UKPS",
+   "bestimmung": "Je Sitzung nur eine von UP5a–c."
+  },
+  {
+   "nr": "UP5c",
+   "text": "Kontrollbehandlung mit Aufbau der Stütz- und Gleitzone einer UP (additive Methode)",
+   "punkte": 35,
+   "gruppe": "UKPS",
+   "bestimmung": "Je Sitzung nur eine von UP5a–c."
+  },
+  {
+   "nr": "UP6a",
+   "text": "Wiederherstellen der Funktion/Erweiterung einer UKPS, kleinen Umfanges (ohne Abformung)",
+   "punkte": 25,
+   "gruppe": "UKPS"
+  },
+  {
+   "nr": "UP6b",
+   "text": "Wiederherstellen der Funktion/Erweiterung einer UKPS, größeren Umfanges (mit Abformung)",
+   "punkte": 42,
+   "gruppe": "UKPS"
+  },
+  {
+   "nr": "UP6c",
+   "text": "Teilunterfütterung einer Unterkieferprotrusionsschiene",
+   "punkte": 37,
+   "gruppe": "UKPS"
+  },
+  {
+   "nr": "UP6d",
+   "text": "Wiederherstellung eines einzelnen oder mehrerer Halte- oder Stützvorrichtungen",
+   "punkte": 19,
+   "gruppe": "UKPS"
+  },
+  {
+   "nr": "UP6e",
+   "text": "Wiederherstellung eines einzelnen oder mehrerer Protrusionselemente",
+   "punkte": 19,
+   "gruppe": "UKPS"
+  },
+  {
+   "nr": "101a",
+   "text": "Maßnahmen zur Weichteilstützung zum Ausgleich oder Verschluss von Defekten im Bereich des Kiefers, bei vorhandenem Restgebiss",
+   "punkte": 80,
+   "gruppe": "Defektprothetik",
+   "bestimmung": "Seit 01.01.2005 in Teil 2 (Punktwert Teil 2)."
+  },
+  {
+   "nr": "101b",
+   "text": "Maßnahmen zur Weichteilstützung zum Ausgleich oder Verschluss von Defekten im Bereich des Kiefers, bei zahnlosem Kiefer",
+   "punkte": 120,
+   "gruppe": "Defektprothetik"
+  },
+  {
+   "nr": "102",
+   "text": "Eingliedern eines Obturators zum Verschluss von Defekten des weichen Gaumens",
+   "punkte": 240,
+   "gruppe": "Defektprothetik"
+  },
+  {
+   "nr": "103a",
+   "text": "Eingliedern einer temporären Verschlussprothese nach Resektion oder bei großen Defekten des Oberkiefers",
+   "punkte": 160,
+   "gruppe": "Defektprothetik"
+  },
+  {
+   "nr": "103b",
+   "text": "Ergänzungsmaßnahmen im Anschluss an Leistungen nach 103a",
+   "punkte": 80,
+   "gruppe": "Defektprothetik"
+  },
+  {
+   "nr": "103c",
+   "text": "Eingliedern einer Dauerprothese (Resektionsprothese)",
+   "punkte": 300,
+   "gruppe": "Defektprothetik"
+  },
+  {
+   "nr": "104a",
+   "text": "Prothese oder Epithese zum Verschluss extraoraler Weichteildefekte oder Ersatz fehlender Gesichtsteile, kleineren Umfanges",
+   "punkte": 300,
+   "gruppe": "Defektprothetik",
+   "bestimmung": "Auch ohne gleichzeitigen Zahnersatz möglich (KZV Berlin)."
+  },
+  {
+   "nr": "104b",
+   "text": "Prothese oder Epithese zum Verschluss extraoraler Weichteildefekte oder Ersatz fehlender Gesichtsteile, größeren Umfanges",
+   "punkte": 500,
+   "gruppe": "Defektprothetik"
+  },
+  {
+   "nr": "Ä2680",
+   "text": "Einrenkung der Luxation des Unterkiefers",
+   "punkte": 12,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2681",
+   "text": "Einrenkung der alten Luxation des Unterkiefers",
+   "punkte": 45,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2682",
+   "text": "Operative Einrenkung der Luxation eines Kiefergelenks",
+   "punkte": 156,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2685",
+   "text": "Reposition eines Zahnes",
+   "punkte": 23,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2686",
+   "text": "Reposition eines zahntragenden Bruchstücks des Alveolarfortsatzes",
+   "punkte": 34,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2687",
+   "text": "Allmähliche Reposition des gebrochenen Ober- oder Unterkiefers oder eines schwer einstellbaren oder verkeilten Bruchstücks des Alveolarfortsatzes",
+   "punkte": 145,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2688",
+   "text": "Fixation bei nicht dislozierter Kieferfraktur durch Osteosynthese oder Aufhängung",
+   "punkte": 84,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2690",
+   "text": "Operative Reposition und Fixation durch Osteosynthese bei Unterkieferbruch, je Kieferhälfte",
+   "punkte": 112,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2691",
+   "text": "Operative Reposition und Fixation durch Osteosynthese bei Aussprengung des Oberkiefers an der Schädelbasis",
+   "punkte": 400,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2692",
+   "text": "Operative Reposition und Fixation durch Osteosynthese bei Kieferbruch im Mittelgesichtsbereich – ggf. einschließlich Jochbein- und/oder Nasenbeinbruch –, je Kieferhälfte",
+   "punkte": 167,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2693",
+   "text": "Operative Reposition und Fixation einer isolierten Orbitaboden-, Jochbein- oder Jochbogenfraktur",
+   "punkte": 134,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2694",
+   "text": "Operative Entfernung von Osteosynthesematerial aus einem Kiefer- oder Gesichtsknochen, je Fraktur",
+   "punkte": 50,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2695",
+   "text": "Einrichtung und Fixation eines gebrochenen Kiefers außerhalb der Zahnreihen durch intra- und extraorale Schienenverbände und Stützapparate",
+   "punkte": 300,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2696",
+   "text": "Drahtumschlingung des Unterkiefers oder orofaziale Drahtaufhängung, auch beidseitig",
+   "punkte": 56,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2697",
+   "text": "Anlegen von Drahtligaturen, Drahthäkchen oder dergleichen, je Kieferhälfte oder Frontzahnbereich, als selbständige Leistung",
+   "punkte": 39,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "Je Kieferhälfte oder Frontzahnbereich, als selbständige Leistung. BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2698",
+   "text": "Anlegen und Fixation einer Schiene am unverletzten Ober- oder Unterkiefer",
+   "punkte": 167,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2699",
+   "text": "Anlegen und Fixation einer Schiene am gebrochenen Ober- oder Unterkiefer",
+   "punkte": 245,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2700",
+   "text": "Anlegen von Stütz-, Halte- oder Hilfsvorrichtungen (z. B. Verbandsplatte, Pelotte) am Ober- oder Unterkiefer oder bei Kieferklemme",
+   "punkte": 39,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "Wiedereingliederung einer herausnehmbaren Verbandsplatte fällt nicht unter 2702. BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2701",
+   "text": "Anlegen von extraoralen Stütz-, Halte- oder Hilfsvorrichtungen, einer Verbands- oder Verschlussplatte, Pelotte oder dergleichen – im Zusammenhang mit plastischen Operationen oder zur Verhütung oder Behandlung von Narbenkontrakturen",
+   "punkte": 200,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2702",
+   "text": "Wiederanbringung einer gelösten Apparatur oder kleine Änderungen, teilweise Erneuerung von Schienen oder Stützapparaten – auch Entfernung von Schienen oder Stützapparaten –, je Kiefer",
+   "punkte": 34,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "Je Kiefer. Wiederbefestigung/Änderung/Teilerneuerung/Entfernung von Schienen nach 2697–2699 und fest eingegliederten Vorrichtungen nach 2700/2701; auch Entfernung semipermanenter Schienungen nach K4. Kontrollsitzungen und Mundhygiene bei angelegter Schienung NICHT nach 2702. BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2705",
+   "text": "Osteotomie nach disloziert verheilter Fraktur im Mittelgesicht – einschließlich Osteosynthese",
+   "punkte": 189,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  },
+  {
+   "nr": "Ä2706",
+   "text": "Osteotomie nach disloziert verheilter Fraktur im Unterkiefer – einschließlich Osteosynthese",
+   "punkte": 145,
+   "gruppe": "Kieferbruch (GOÄ J/L)",
+   "bestimmung": "BEMA-Bewertungszahl = GOÄ-Punkte/9, aufgerundet (Liste KZV Hamburg, Stand 7/2024)."
+  }
+ ],
+ "belHinweise": {
+  "1550": {
+   "abrechnung": "Bei 404 0 je Zahn abrechenbar."
+  },
+  "3020": {
+   "abrechnung": "Konfektionierte Zähne am Aufbissbehelf in zahnlosen Abschnitten (mit 362 0)."
+  },
+  "3620": {
+   "abrechnung": "Zusammen mit 302 0 am Aufbissbehelf."
+  },
+  "3800": {
+   "abrechnung": "Bei Aufbissbehelfen zusätzlich abrechenbar (z. B. Draht an K2-Schiene)."
+  },
+  "3810": {
+   "abrechnung": "Zusätzlich abrechenbar, wenn erforderlich."
+  },
+  "3821": {
+   "abrechnung": "Verarbeitung von Weichkunststoff u. a. bei der Herstellung eines Aufbissbehelfs."
+  },
+  "3822": {
+   "abrechnung": "Einmal je Prothese oder je Aufbissbehelf abrechenbar."
+  },
+  "4010": {
+   "bema": "K1, K3 (bzw. K9 indirekt)",
+   "abrechnung": "Werden an einem Aufbissbehelf in zahnlosen Kieferabschnitten konfektionierte Zähne angebracht, sind die L-Nrn. 302 0 und 362 0, nicht jedoch 301 0 oder 361 0 abrechenbar. Halte- und/oder Stützvorrichtungen sowie weitere Funktionsaufbisse zusätzlich abrechenbar (zuerst Leistungsgruppe 3, danach Gruppe 7). Seit BEL II 2014 fasst 401 0 die früheren 401 1/401 2/401 3 zusammen."
+  },
+  "4020": {
+   "bema": "K2 (bzw. K1 bei Adjustierung im Mund)",
+   "abrechnung": "Konfektionierte Zähne in zahnlosen Abschnitten: L-Nrn. 302 0 und 362 0 (nicht 301 0/361 0). Halte- und/oder Stützvorrichtungen zusätzlich abrechenbar. Seit BEL II 2014 fasst 402 0 die früheren 402 1/402 2/402 3 zusammen. Wird ein 402-0-Behelf bei Eingliederung im Mund adjustiert, ist zahnärztlich K1 abrechenbar (KZVB)."
+  },
+  "4030": {
+   "bema": "K3, K9 (indirektes Verfahren)",
+   "abrechnung": "Je Aufbissbehelf abrechenbar. Halte-/Stützvorrichtungen und weitere Funktionsaufbisse zusätzlich. Erneuerungen und Erweiterungen von Prothesenzähnen an der umgearbeiteten Prothese sind mit 403 0 nicht abrechenbar."
+  },
+  "4040": {
+   "bema": "K4 (labortechnisch gefertigte Variante)",
+   "abrechnung": "Die alleinige Verwendung von Drähten, auch verseilt, zur Herstellung einer Retentionsschiene erfüllt nicht den Leistungsinhalt der L-Nr. 404 0. Konditionierung je Zahn nach L-Nr. 155 0 zusätzlich; Duplikatmodell nach 002 1 + 001 0. Die frühere 406 0 (Kunststoffschiene) wurde 2014 gestrichen."
+  },
+  "7100": {
+   "abrechnung": "Aufbiss aus Hart- und/oder Weichkunststoff, auch als Vor- oder Rückbiss. Einmal je Kieferhälfte oder Frontzahngebiet abrechenbar."
+  },
+  "8610": {
+   "abrechnung": "Grundeinheit, einmal je Aufbissbehelf in Verbindung mit 862 0, 863 0, 802 1–802 4 (Wiederherstellung zu K6)."
+  },
+  "8620": {
+   "abrechnung": "Je eingefügtem Element (auch Aufbiss) einmal."
+  },
+  "9330": {
+   "abrechnung": "Gewerbliches Labor."
+  },
+  "0010": {
+   "abrechnung": "Für alle notwendigen und erbrachten Modelle; bei K1 i. d. R. 2× (KZV Berlin)."
+  },
+  "0021": {
+   "abrechnung": "Zzgl. 1 Modell (001 0); bei Schienen häufig erforderlich."
+  },
+  "0120": {
+   "abrechnung": "Nur wenn die Modelle die gesamten Kieferverhältnisse wiedergeben, einmal je Fall (außer neuer Abdruck/Biss). Montage mit Systemteilen (z. B. Gesichtsbogen) ist NICHT nach 012 0 abrechenbar."
+  }
+ }
+}

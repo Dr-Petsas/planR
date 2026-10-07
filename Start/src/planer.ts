@@ -42,13 +42,14 @@ export const BEREICHE: Bereich[] = [
     name: 'Parodontologie',
     planer: [
       { kuerzel: 'PAR', titel: 'Kassen-PAR-Planer', zweck: 'Parodontitis-Behandlungsplan', text: 'eFormular 5 · BEMA Teil 4 · Behandlungsstrecke und UPT', art: 'Kasse', host: 'par', port: 5202 },
+      { kuerzel: 'PA', titel: 'Privat-PAR-Planer', zweck: 'Heil- und Kostenplan PAR privat', text: 'GOZ Abschnitt E · Analogleistungen BZÄK 2026 oder Beratungsforum', art: 'Privat', host: 'privat-par', port: 5210 },
     ],
   },
   {
     name: 'Kieferbruch und Kiefergelenk',
     planer: [
-      { kuerzel: 'KB', titel: 'Kassen-KB-Planer', zweck: 'Kieferbruch und Aufbissbehelfe', text: 'BEMA Teil 2', art: 'Kasse' },
-      { kuerzel: 'KB', titel: 'Privat-KB-Planer', zweck: 'Schienentherapie privat', text: 'GOZ und BEB', art: 'Privat' },
+      { kuerzel: 'KB', titel: 'Kassen-KB-Planer', zweck: 'Kieferbruch und Aufbissbehelfe', text: 'eFormular 2 · BEMA Teil 2 und BEL II der KZV', art: 'Kasse', host: 'kb', port: 5206 },
+      { kuerzel: 'KB', titel: 'Privat-KB-Planer', zweck: 'Schienentherapie privat', text: 'GOZ Abschnitt H/J und BEB · Funktionsdiagnostik', art: 'Privat', host: 'privat-kb', port: 5208 },
     ],
   },
 ]

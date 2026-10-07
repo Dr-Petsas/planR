@@ -13,9 +13,9 @@ describe('Adressen', () => {
       .toBe('https://mkv.pickadoc-tunnel.com/?mandant=praxis2')
   })
 
-  it('Planer in Vorbereitung haben keine Adresse', () => {
+  it('ohne Host keine Adresse', () => {
     const kb = BEREICHE.flatMap((b) => b.planer).find((p) => p.kuerzel === 'KB')!
-    expect(adresse(kb, { protocol: 'http:', hostname: 'localhost', search: '' })).toBeNull()
+    expect(adresse({ ...kb, host: undefined, port: undefined }, { protocol: 'http:', hostname: 'localhost', search: '' })).toBeNull()
   })
 
   it('jeder Port und jede Subdomain nur einmal', () => {

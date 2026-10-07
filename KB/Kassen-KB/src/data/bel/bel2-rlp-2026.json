@@ -1,0 +1,1061 @@
+{
+ "id": "bel2-rlp-2026",
+ "kzv": "06",
+ "typ": "bel2",
+ "name": "BEL II Rheinland-Pfalz (KZV RLP)",
+ "gueltigAb": "2026-01-01",
+ "quelle": "https://www.kzvrlp.de/securedl/sdl-eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3OTExODMzMjEsImV4cCI6MTc5MTI3MzMyMSwidXNlciI6MCwiZ3JvdXBzIjpbMCwtMV0sImZpbGUiOiJcL2ZpbGVhZG1pblwvS1pWXC9Eb3dubG9hZHNcL01pdGdsaWVkZXJcL0FicmVjaG51bmdcL0FrdHVlbGxlc1wvQkVMLVByZWlzZVwvMDZsYTAxMjYuY3N2IiwicGFnZSI6MzIyfQ.UwsrnGA3HAQYMGKtetHA5rLRKmfU-8V9vhvqlQqlLqE/06la0126.csv",
+ "abgerufen": "2026-10-05",
+ "eintraege": [
+  {
+   "nr": "0010",
+   "text": "Modell",
+   "gewerbe": 8.45,
+   "praxis": 8.03
+  },
+  {
+   "nr": "0015",
+   "text": "Modell UKPS",
+   "gewerbe": 8.45,
+   "praxis": 8.03
+  },
+  {
+   "nr": "0018",
+   "text": "Modell bei Implantatversorgung",
+   "gewerbe": 8.45,
+   "praxis": 8.03
+  },
+  {
+   "nr": "0021",
+   "text": "Doublieren eines Modells",
+   "gewerbe": 15.59,
+   "praxis": 14.81
+  },
+  {
+   "nr": "0022",
+   "text": "Platzhalter einfügen",
+   "gewerbe": 17.89,
+   "praxis": 17
+  },
+  {
+   "nr": "0023",
+   "text": "Verwendung von Kunststoff",
+   "gewerbe": 17.89,
+   "praxis": 17
+  },
+  {
+   "nr": "0024",
+   "text": "Galvanisieren",
+   "gewerbe": 17.89,
+   "praxis": 17
+  },
+  {
+   "nr": "0025",
+   "text": "Doublieren eines Modells UKPS",
+   "gewerbe": 15.59,
+   "praxis": 14.81
+  },
+  {
+   "nr": "0030",
+   "text": "Set-up je Segment",
+   "gewerbe": 12.97,
+   "praxis": 12.32
+  },
+  {
+   "nr": "0051",
+   "text": "Sägemodell",
+   "gewerbe": 19.89,
+   "praxis": 18.89
+  },
+  {
+   "nr": "0052",
+   "text": "Einzelstumpfmodell",
+   "gewerbe": 19.89,
+   "praxis": 18.89
+  },
+  {
+   "nr": "0053",
+   "text": "Modell nach Überabdruck",
+   "gewerbe": 19.89,
+   "praxis": 18.89
+  },
+  {
+   "nr": "0054",
+   "text": "Set-up-Modell für KFO",
+   "gewerbe": 13.75,
+   "praxis": 13.06
+  },
+  {
+   "nr": "0055",
+   "text": "Fräsmodell",
+   "gewerbe": 13.55,
+   "praxis": 12.87
+  },
+  {
+   "nr": "0060",
+   "text": "Zahnkranz",
+   "gewerbe": 6.87,
+   "praxis": 6.52
+  },
+  {
+   "nr": "0070",
+   "text": "Zahnkranz sockeln",
+   "gewerbe": 7.26,
+   "praxis": 6.89
+  },
+  {
+   "nr": "0111",
+   "text": "Modellpaar trimmen",
+   "gewerbe": 11.22,
+   "praxis": 10.66
+  },
+  {
+   "nr": "0112",
+   "text": "Fixator",
+   "gewerbe": 11,
+   "praxis": 10.45
+  },
+  {
+   "nr": "0115",
+   "text": "Fixator UKPS",
+   "gewerbe": 11,
+   "praxis": 10.45
+  },
+  {
+   "nr": "0120",
+   "text": "Mittelwertartikulator",
+   "gewerbe": 12.42,
+   "praxis": 11.8
+  },
+  {
+   "nr": "0125",
+   "text": "Mittelwertartikulator UKPS",
+   "gewerbe": 12.42,
+   "praxis": 11.8
+  },
+  {
+   "nr": "0128",
+   "text": "Mittelwertartikulator bei Implantatversorgung",
+   "gewerbe": 12.42,
+   "praxis": 11.8
+  },
+  {
+   "nr": "0130",
+   "text": "Modellpaar sockeln",
+   "gewerbe": 30.19,
+   "praxis": 28.68
+  },
+  {
+   "nr": "0201",
+   "text": "Basis für Vorbissnahme",
+   "gewerbe": 11.48,
+   "praxis": 10.9
+  },
+  {
+   "nr": "0202",
+   "text": "Basis für Konstruktionsbiss",
+   "gewerbe": 11.4,
+   "praxis": 10.83
+  },
+  {
+   "nr": "0205",
+   "text": "Vorbereiten Bissgabel UKPS",
+   "gewerbe": 11.4,
+   "praxis": 10.83
+  },
+  {
+   "nr": "0211",
+   "text": "Individueller Löffel",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0212",
+   "text": "Funktionslöffel",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0213",
+   "text": "Basis für Bissregistrierung",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0214",
+   "text": "Basis für Stützstiftregistrierung",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0215",
+   "text": "Basis für Aufstellung",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0216",
+   "text": "Basis für Bissregistr. bei Implantatversorgung",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0217",
+   "text": "Individueller UKPS",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0218",
+   "text": "Basis für Aufstellung bei Implantatversorgung",
+   "gewerbe": 28.88,
+   "praxis": 27.43
+  },
+  {
+   "nr": "0220",
+   "text": "Bisswall",
+   "gewerbe": 8.33,
+   "praxis": 7.91
+  },
+  {
+   "nr": "0228",
+   "text": "Bisswall bei Implantatversorgung",
+   "gewerbe": 8.33,
+   "praxis": 7.91
+  },
+  {
+   "nr": "0230",
+   "text": "Registrierplatte und -stift auf Basen",
+   "gewerbe": 37.13,
+   "praxis": 35.27
+  },
+  {
+   "nr": "0240",
+   "text": "Übertragungskappe Kunststoff/Metall",
+   "gewerbe": 31.79,
+   "praxis": 30.2
+  },
+  {
+   "nr": "0310",
+   "text": "Provisorische Krone/Brückenglied",
+   "gewerbe": 42.53,
+   "praxis": 40.4
+  },
+  {
+   "nr": "0320",
+   "text": "Formteil",
+   "gewerbe": 23.04,
+   "praxis": 21.89
+  },
+  {
+   "nr": "1013",
+   "text": "Wurzelstiftkappe",
+   "gewerbe": 99.07,
+   "praxis": 94.11
+  },
+  {
+   "nr": "1021",
+   "text": "Vollkrone/Metall",
+   "gewerbe": 104.55,
+   "praxis": 99.32
+  },
+  {
+   "nr": "1022",
+   "text": "Teilkrone/Metall",
+   "gewerbe": 104.55,
+   "praxis": 99.32
+  },
+  {
+   "nr": "1023",
+   "text": "Flügel für Adhäsivbrücke, je Flügel",
+   "gewerbe": 102.36,
+   "praxis": 97.25
+  },
+  {
+   "nr": "1024",
+   "text": "Krone für vestibuläre Verblendung",
+   "gewerbe": 103.69,
+   "praxis": 98.5
+  },
+  {
+   "nr": "1026",
+   "text": "Vollkrone/Metall bei Implantatversorgung",
+   "gewerbe": 104.55,
+   "praxis": 99.32
+  },
+  {
+   "nr": "1028",
+   "text": "Krone für vestib. Verbl. bei Implantatversorgung",
+   "gewerbe": 103.69,
+   "praxis": 98.5
+  },
+  {
+   "nr": "1031",
+   "text": "Vorbereiten Krone",
+   "gewerbe": 17.79,
+   "praxis": 16.9
+  },
+  {
+   "nr": "1032",
+   "text": "Krone/Brückenglied einarbeiten",
+   "gewerbe": 17.79,
+   "praxis": 16.9
+  },
+  {
+   "nr": "1033",
+   "text": "Stiftaufbau einarbeiten",
+   "gewerbe": 17.79,
+   "praxis": 16.9
+  },
+  {
+   "nr": "1040",
+   "text": "Modellation gießen",
+   "gewerbe": 23.17,
+   "praxis": 22.01
+  },
+  {
+   "nr": "1050",
+   "text": "Stiftaufbau",
+   "gewerbe": 70.06,
+   "praxis": 66.55
+  },
+  {
+   "nr": "1100",
+   "text": "Brückenglied",
+   "gewerbe": 76.22,
+   "praxis": 72.41
+  },
+  {
+   "nr": "1200",
+   "text": "Teleskopierende Krone",
+   "gewerbe": 325.75,
+   "praxis": 309.46
+  },
+  {
+   "nr": "1201",
+   "text": "Teleskopierende Primär- oder Sekundärkrone",
+   "gewerbe": 217.37,
+   "praxis": 206.5
+  },
+  {
+   "nr": "1331",
+   "text": "Individuelles Geschiebe",
+   "gewerbe": 277.22,
+   "praxis": 263.36
+  },
+  {
+   "nr": "1341",
+   "text": "Konfektions-Geschiebe",
+   "gewerbe": 137.37,
+   "praxis": 130.5
+  },
+  {
+   "nr": "1343",
+   "text": "Konfektions-Anker",
+   "gewerbe": 137.37,
+   "praxis": 130.5
+  },
+  {
+   "nr": "1347",
+   "text": "Primär-/Sek.-Teil Konf.-Anker",
+   "gewerbe": 91.4,
+   "praxis": 86.83
+  },
+  {
+   "nr": "1349",
+   "text": "Wiederbef. Sek.-Teil",
+   "gewerbe": 91.4,
+   "praxis": 86.83
+  },
+  {
+   "nr": "1360",
+   "text": "Gefrästes Lager",
+   "gewerbe": 66.01,
+   "praxis": 62.71
+  },
+  {
+   "nr": "1370",
+   "text": "Schubverteilungsarm",
+   "gewerbe": 49.5,
+   "praxis": 47.02
+  },
+  {
+   "nr": "1500",
+   "text": "Metallverbindung nach Brand",
+   "gewerbe": 36.92,
+   "praxis": 35.07
+  },
+  {
+   "nr": "1550",
+   "text": "Konditionierung je Zahn/Flügel",
+   "gewerbe": 17.59,
+   "praxis": 16.71
+  },
+  {
+   "nr": "1600",
+   "text": "Vestibuläre Verblendung Kunststoff",
+   "gewerbe": 60.29,
+   "praxis": 57.28
+  },
+  {
+   "nr": "1610",
+   "text": "Zahnfleisch Kunststoff",
+   "gewerbe": 19.18,
+   "praxis": 18.22
+  },
+  {
+   "nr": "1620",
+   "text": "Vestibuläre Verblendung Keramik",
+   "gewerbe": 121.59,
+   "praxis": 115.51
+  },
+  {
+   "nr": "1628",
+   "text": "Vestib. Verbl. Keramik bei Implantatv.",
+   "gewerbe": 121.59,
+   "praxis": 115.51
+  },
+  {
+   "nr": "1630",
+   "text": "Zahnfleisch Keramik",
+   "gewerbe": 44.26,
+   "praxis": 42.04
+  },
+  {
+   "nr": "1638",
+   "text": "Zahnfleisch Keramik bei Implantatv.",
+   "gewerbe": 44.26,
+   "praxis": 42.04
+  },
+  {
+   "nr": "1640",
+   "text": "Vestibuläre Verblendung Komposite",
+   "gewerbe": 94.28,
+   "praxis": 89.57
+  },
+  {
+   "nr": "1650",
+   "text": "Zahnfleisch Komposite",
+   "gewerbe": 25.56,
+   "praxis": 24.28
+  },
+  {
+   "nr": "2010",
+   "text": "Metallbasis",
+   "gewerbe": 180.04,
+   "praxis": 171.04
+  },
+  {
+   "nr": "2021",
+   "text": "Einarmige gegossene Haltevorrichtung",
+   "gewerbe": 15.42,
+   "praxis": 14.65
+  },
+  {
+   "nr": "2025",
+   "text": "Kralle (gegossen)",
+   "gewerbe": 15.42,
+   "praxis": 14.65
+  },
+  {
+   "nr": "2026",
+   "text": "Ney-Stiel (gegossen)",
+   "gewerbe": 15.42,
+   "praxis": 14.65
+  },
+  {
+   "nr": "2027",
+   "text": "Auflage (gegossen)",
+   "gewerbe": 15.42,
+   "praxis": 14.65
+  },
+  {
+   "nr": "2028",
+   "text": "Umgehungsbügel bei Diastema (gegossen)",
+   "gewerbe": 15.42,
+   "praxis": 14.65
+  },
+  {
+   "nr": "2031",
+   "text": "Zweiarmige gegossene Haltevorrichtung",
+   "gewerbe": 28.23,
+   "praxis": 26.82
+  },
+  {
+   "nr": "2041",
+   "text": "Zweiarm. gegossene Halte- + Stützvorr. mit Auflage",
+   "gewerbe": 38.14,
+   "praxis": 36.23
+  },
+  {
+   "nr": "2050",
+   "text": "Bonwillklammer (gegossen)",
+   "gewerbe": 69.57,
+   "praxis": 66.09
+  },
+  {
+   "nr": "2081",
+   "text": "Rückenschutzplatte",
+   "gewerbe": 50.37,
+   "praxis": 47.85
+  },
+  {
+   "nr": "2082",
+   "text": "Metallzahn, gegossen",
+   "gewerbe": 50.37,
+   "praxis": 47.85
+  },
+  {
+   "nr": "2083",
+   "text": "Metallkaufläche, gegossen",
+   "gewerbe": 50.37,
+   "praxis": 47.85
+  },
+  {
+   "nr": "2100",
+   "text": "Lösungshilfe",
+   "gewerbe": 14.56,
+   "praxis": 13.84
+  },
+  {
+   "nr": "2110",
+   "text": "Unterfütterbarer Abschlussrand",
+   "gewerbe": 23.25,
+   "praxis": 22.08
+  },
+  {
+   "nr": "2120",
+   "text": "Zuschlag einzelne gegossene Klammer",
+   "gewerbe": 24.17,
+   "praxis": 22.96
+  },
+  {
+   "nr": "3010",
+   "text": "Aufstellung, Grundeinheit",
+   "gewerbe": 43.45,
+   "praxis": 41.28
+  },
+  {
+   "nr": "3018",
+   "text": "Aufstellung, Grundeinheit bei Implantatv.",
+   "gewerbe": 43.45,
+   "praxis": 41.28
+  },
+  {
+   "nr": "3020",
+   "text": "Aufstellen Wachs oder Kunststoff je Zahn",
+   "gewerbe": 2.38,
+   "praxis": 2.26
+  },
+  {
+   "nr": "3028",
+   "text": "Aufst. Wachs o. Kunststoff je Zahn bei Implantatv.",
+   "gewerbe": 2.38,
+   "praxis": 2.26
+  },
+  {
+   "nr": "3030",
+   "text": "Aufstellen Metall je Zahn",
+   "gewerbe": 3.13,
+   "praxis": 2.97
+  },
+  {
+   "nr": "3410",
+   "text": "Übertragung je Zahn",
+   "gewerbe": 1.87,
+   "praxis": 1.78
+  },
+  {
+   "nr": "3610",
+   "text": "Fertigstellung Grundeinheit",
+   "gewerbe": 65.39,
+   "praxis": 62.12
+  },
+  {
+   "nr": "3618",
+   "text": "Fertigst. Grundeinheit bei Implantatv.",
+   "gewerbe": 65.39,
+   "praxis": 62.12
+  },
+  {
+   "nr": "3620",
+   "text": "Fertigstellen je Zahn",
+   "gewerbe": 4.1,
+   "praxis": 3.89
+  },
+  {
+   "nr": "3628",
+   "text": "Fertigstellen je Zahn bei Implantatv.",
+   "gewerbe": 4.1,
+   "praxis": 3.89
+  },
+  {
+   "nr": "3800",
+   "text": "Einfache gebogene Halte-/Stützvorrichtung",
+   "gewerbe": 12.57,
+   "praxis": 11.94
+  },
+  {
+   "nr": "3805",
+   "text": "Gebogene Klammer",
+   "gewerbe": 12.57,
+   "praxis": 11.94
+  },
+  {
+   "nr": "3810",
+   "text": "Sonstige gebogene Halte- und/oder Stützvorrichtung",
+   "gewerbe": 21.22,
+   "praxis": 20.16
+  },
+  {
+   "nr": "3821",
+   "text": "Weichkunststoff (nur bei KBR und ZE)",
+   "gewerbe": 68.76,
+   "praxis": 65.33
+  },
+  {
+   "nr": "3822",
+   "text": "Sonderkunststoff (nur bei KBR und ZE)",
+   "gewerbe": 68.76,
+   "praxis": 65.33
+  },
+  {
+   "nr": "3830",
+   "text": "Zahn zahnfarben hergestellt",
+   "gewerbe": 28.83,
+   "praxis": 27.39
+  },
+  {
+   "nr": "3840",
+   "text": "Zahn zahnfarben hinterlegt",
+   "gewerbe": 15.13,
+   "praxis": 14.37
+  },
+  {
+   "nr": "4010",
+   "text": "Aufbissbehelf m. adj. Oberfläche",
+   "gewerbe": 101.28,
+   "praxis": 96.22
+  },
+  {
+   "nr": "4020",
+   "text": "Aufbissbehelf o. adj. Oberfläche",
+   "gewerbe": 73.73,
+   "praxis": 70.05
+  },
+  {
+   "nr": "4030",
+   "text": "Umarbeiten zum Aufbissbehelf",
+   "gewerbe": 52.24,
+   "praxis": 49.63
+  },
+  {
+   "nr": "4040",
+   "text": "Semipermanente Schiene Metall, je Zahn",
+   "gewerbe": 44.76,
+   "praxis": 42.52
+  },
+  {
+   "nr": "5010",
+   "text": "Basen UKPS",
+   "gewerbe": 324.75,
+   "praxis": 308.51
+  },
+  {
+   "nr": "5020",
+   "text": "Vestibuläre Protrusionsgleitfläche UKPS",
+   "gewerbe": 19.17,
+   "praxis": 18.21
+  },
+  {
+   "nr": "5100",
+   "text": "Befestigungselement Protrusionselement UKPS",
+   "gewerbe": 15.06,
+   "praxis": 14.31
+  },
+  {
+   "nr": "5110",
+   "text": "Montage Protrusionselement UKPS",
+   "gewerbe": 15.06,
+   "praxis": 14.31
+  },
+  {
+   "nr": "5200",
+   "text": "Befestigungselement Mundöffungsbegrenzungselement UKPS",
+   "gewerbe": 12.57,
+   "praxis": 11.94
+  },
+  {
+   "nr": "5210",
+   "text": "Einfache gebogenes Haltelement für UKPS",
+   "gewerbe": 12.57,
+   "praxis": 11.94
+  },
+  {
+   "nr": "7010",
+   "text": "Basis für Einzelkiefergerät",
+   "gewerbe": 53.81,
+   "praxis": 51.12
+  },
+  {
+   "nr": "7020",
+   "text": "Basis bimaxilläres Gerät",
+   "gewerbe": 89.03,
+   "praxis": 84.58
+  },
+  {
+   "nr": "7030",
+   "text": "Schiefe Ebene",
+   "gewerbe": 46.58,
+   "praxis": 44.25
+  },
+  {
+   "nr": "7040",
+   "text": "Vorhofplatte",
+   "gewerbe": 67.81,
+   "praxis": 64.42
+  },
+  {
+   "nr": "7050",
+   "text": "Kinnkappe",
+   "gewerbe": 51.39,
+   "praxis": 48.82
+  },
+  {
+   "nr": "7100",
+   "text": "Aufbiss",
+   "gewerbe": 10.26,
+   "praxis": 9.75
+  },
+  {
+   "nr": "7110",
+   "text": "Abschirmelement",
+   "gewerbe": 19.17,
+   "praxis": 18.21
+  },
+  {
+   "nr": "7121",
+   "text": "Weichkunststoff (nur bei KFO)",
+   "gewerbe": 32.87,
+   "praxis": 31.22
+  },
+  {
+   "nr": "7122",
+   "text": "Sonderkunststoff (nur bei KFO)",
+   "gewerbe": 54.59,
+   "praxis": 51.86
+  },
+  {
+   "nr": "7200",
+   "text": "Schraube einarbeiten",
+   "gewerbe": 15.06,
+   "praxis": 14.31
+  },
+  {
+   "nr": "7210",
+   "text": "Spezial-Schraube einarbeiten",
+   "gewerbe": 21.89,
+   "praxis": 20.8
+  },
+  {
+   "nr": "7220",
+   "text": "Trennen einer Basis",
+   "gewerbe": 6.86,
+   "praxis": 6.52
+  },
+  {
+   "nr": "7300",
+   "text": "Labialbogen",
+   "gewerbe": 20.57,
+   "praxis": 19.54
+  },
+  {
+   "nr": "7310",
+   "text": "Labialbogen modifiziert",
+   "gewerbe": 27.4,
+   "praxis": 26.03
+  },
+  {
+   "nr": "7320",
+   "text": "Labialbogen intermaxillär",
+   "gewerbe": 30.82,
+   "praxis": 29.28
+  },
+  {
+   "nr": "7330",
+   "text": "Feder, offen",
+   "gewerbe": 8.92,
+   "praxis": 8.47
+  },
+  {
+   "nr": "7340",
+   "text": "Feder, geschlossen",
+   "gewerbe": 10.97,
+   "praxis": 10.42
+  },
+  {
+   "nr": "7400",
+   "text": "Verbindungselement/intramaxillär",
+   "gewerbe": 25.35,
+   "praxis": 24.08
+  },
+  {
+   "nr": "7410",
+   "text": "Verbindungselemente/intermaxillär",
+   "gewerbe": 26.03,
+   "praxis": 24.73
+  },
+  {
+   "nr": "7420",
+   "text": "Verankerungselement",
+   "gewerbe": 24,
+   "praxis": 22.8
+  },
+  {
+   "nr": "7430",
+   "text": "Einzelelement einarbeiten",
+   "gewerbe": 12.68,
+   "praxis": 12.04
+  },
+  {
+   "nr": "7440",
+   "text": "Metallverbindung (KFO)",
+   "gewerbe": 15.76,
+   "praxis": 14.97
+  },
+  {
+   "nr": "7500",
+   "text": "Einarmiges H-/A-Element",
+   "gewerbe": 11.02,
+   "praxis": 10.47
+  },
+  {
+   "nr": "7510",
+   "text": "Mehrarmiges H-/A-Element",
+   "gewerbe": 13.35,
+   "praxis": 12.68
+  },
+  {
+   "nr": "8010",
+   "text": "Grundeinheit ZE",
+   "gewerbe": 28.55,
+   "praxis": 27.12
+  },
+  {
+   "nr": "8018",
+   "text": "Grundeinh. Instands. ZE/implantatgest.",
+   "gewerbe": 28.55,
+   "praxis": 27.12
+  },
+  {
+   "nr": "8021",
+   "text": "LE Sprung",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8022",
+   "text": "LE Bruch",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8023",
+   "text": "LE Einarbeiten Zahn",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8024",
+   "text": "LE Basisteil Kunststoff",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8025",
+   "text": "LE Halte- und/oder Stützvorrichtung einarbeiten",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8026",
+   "text": "LE Rückenschutzplatte einarbeiten",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8027",
+   "text": "LE Kunststoffsattel",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8030",
+   "text": "Retention, gebogen",
+   "gewerbe": 46,
+   "praxis": 43.7
+  },
+  {
+   "nr": "8040",
+   "text": "Retention, gegossen",
+   "gewerbe": 58.1,
+   "praxis": 55.19
+  },
+  {
+   "nr": "8060",
+   "text": "Gegossenes Basisteil",
+   "gewerbe": 88.01,
+   "praxis": 83.61
+  },
+  {
+   "nr": "8070",
+   "text": "Metallverbindung bei Instandsetzung/Erweiterung",
+   "gewerbe": 23.04,
+   "praxis": 21.89
+  },
+  {
+   "nr": "8080",
+   "text": "Teilunterfütterung einer Basis",
+   "gewerbe": 45.12,
+   "praxis": 42.86
+  },
+  {
+   "nr": "8085",
+   "text": "Teilunterfütterung einer Basis UKPS",
+   "gewerbe": 45.12,
+   "praxis": 42.86
+  },
+  {
+   "nr": "8088",
+   "text": "Teilunterfütterung/implantatgest.",
+   "gewerbe": 45.12,
+   "praxis": 42.86
+  },
+  {
+   "nr": "8090",
+   "text": "Vollständige Unterfütterung",
+   "gewerbe": 72.17,
+   "praxis": 68.56
+  },
+  {
+   "nr": "8098",
+   "text": "Vollst. Unterfütterung/implantatgest.",
+   "gewerbe": 72.17,
+   "praxis": 68.56
+  },
+  {
+   "nr": "8100",
+   "text": "Prothesenbasis erneuern",
+   "gewerbe": 88.31,
+   "praxis": 83.89
+  },
+  {
+   "nr": "8108",
+   "text": "Prothesenbasis erneuern/Implantatv.",
+   "gewerbe": 88.31,
+   "praxis": 83.89
+  },
+  {
+   "nr": "8130",
+   "text": "Auswechseln Konfektionsteil",
+   "gewerbe": 15.48,
+   "praxis": 14.7
+  },
+  {
+   "nr": "8200",
+   "text": "Instandsetzung Krone/Flügel/Brückenglied",
+   "gewerbe": 45.39,
+   "praxis": 43.12
+  },
+  {
+   "nr": "8208",
+   "text": "Instandsetzung Krone/implantatgest.",
+   "gewerbe": 45.39,
+   "praxis": 43.12
+  },
+  {
+   "nr": "8500",
+   "text": "Grundeinheit/Instands. und/oder Erweiterung UKPS",
+   "gewerbe": 74.23,
+   "praxis": 70.52
+  },
+  {
+   "nr": "8511",
+   "text": "LE Erneuerung Basis",
+   "gewerbe": 162.37,
+   "praxis": 154.26
+  },
+  {
+   "nr": "8512",
+   "text": "LE Sprung/ Bruch",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8513",
+   "text": "LE Basisteil Kunststoff UKPS",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8514",
+   "text": "LE Halte- und/oder Stützvorrichtung einarbeiten UKPS",
+   "gewerbe": 10.57,
+   "praxis": 10.04
+  },
+  {
+   "nr": "8610",
+   "text": "Grundeinheit/Instands. KFO oder Aufbissbehelf",
+   "gewerbe": 22.09,
+   "praxis": 20.98
+  },
+  {
+   "nr": "8620",
+   "text": "LE Einfügen Regulierungs- oder Halteelement",
+   "gewerbe": 11.01,
+   "praxis": 10.46
+  },
+  {
+   "nr": "8630",
+   "text": "LE Erneuerung eines Elementes/intermaxillär",
+   "gewerbe": 16.03,
+   "praxis": 15.23
+  },
+  {
+   "nr": "8640",
+   "text": "KFO-Basis erneuern",
+   "gewerbe": 90.62,
+   "praxis": 86.09
+  },
+  {
+   "nr": "8700",
+   "text": "Remontieren KFO-Gerät",
+   "gewerbe": 41.34,
+   "praxis": 39.27
+  },
+  {
+   "nr": "9330",
+   "text": "Versandkosten (nur FL)",
+   "gewerbe": 7.17,
+   "praxis": 0
+  },
+  {
+   "nr": "9335",
+   "text": "Versandkosten UKPS",
+   "gewerbe": 7.17,
+   "praxis": 0
+  },
+  {
+   "nr": "9338",
+   "text": "Versandkosten bei Implantatv. (nur FL)",
+   "gewerbe": 7.17,
+   "praxis": 0
+  },
+  {
+   "nr": "9700",
+   "text": "Verarbeitungsaufwand NEM-Legierung",
+   "gewerbe": 17.22,
+   "praxis": 17.22
+  }
+ ]
+}

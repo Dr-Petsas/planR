@@ -1,0 +1,28 @@
+import gozMitgeliefert from '../data/goz-2012.json'
+import { aktuell } from '../daten'
+import type { GenutzteListe } from '../components/Listen'
+
+interface Eintrag { nr: string; text: string; punkte?: number }
+
+const gozDaten = aktuell('goz-2012.json', gozMitgeliefert)
+
+/** Listen, die "Preislisten aktualisieren" erneuert. */
+export const GENUTZTE_LISTEN: GenutzteListe[] = [
+  { datei: 'goz-2012.json', name: 'GOZ (Privathonorar)', mitgeliefert: gozMitgeliefert, aktuell: gozDaten },
+]
+
+export const GOZ_PUNKTWERT = gozDaten.punktwert
+const GOZ = new Map((gozDaten.eintraege as Eintrag[]).map((e) => [e.nr, e] as const))
+export const GOZ_LISTE = gozDaten.eintraege as Eintrag[]
+
+export const runden = (x: number) => Math.round(x * 100) / 100
+
+export const GOZ_SCHWELLE = 2.3
+export const GOZ_HOECHSTSATZ = 3.5
+/** Mit § 2-Vereinbarung zulässige Obergrenze im Regler. */
+export const GOZ_VEREINBARUNG_MAX = 5.0
+
+export const gozPunkte = (nr: string) => GOZ.get(nr)?.punkte ?? 0
+export const gozText = (nr: string) => GOZ.get(nr)?.text ?? ''
+export const gozBekannt = (nr: string) => GOZ.has(nr)
+export const gozEinzel = (nr: string, faktor: number) => runden(gozPunkte(nr) * GOZ_PUNKTWERT * faktor)

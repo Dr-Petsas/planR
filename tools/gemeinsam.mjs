@@ -45,6 +45,13 @@ const LISTEN = [
   ),
 ]
 
+/** Mitgelieferte Listen der neueren Planer: Kopie aus dem Datendienst nach src/data (Ordner mit "/" am Ende). */
+const DATENKOPIEN = {
+  'KB/Kassen-KB': ['bel/'],
+  'KB/Privat-KB': ['goz-2012.json', 'beb-itz-2024.json'],
+  'PAR/Privat-PAR': ['goz-2012.json'],
+}
+
 const lesen = (p) => readFileSync(p, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')
 const pruefen = process.argv.includes('--pruefen')
 let fehler = 0
@@ -78,8 +85,11 @@ for (const [planer, saetze] of Object.entries(PLANER)) {
     console.log(`– ${planer}: (noch) kein src/`)
     continue
   }
-  for (const datei of saetze.flatMap((s) => SAETZE[s])) {
-    const von = join(QUELLE, datei)
+  const kopien = (DATENKOPIEN[planer] ?? []).flatMap((d) =>
+    d.endsWith('/') ? readdirSync(join(DATEN, d)).filter((f) => f.endsWith('.json')).map((f) => d + f) : [d],
+  ).map((d) => [join(DATEN, d), `data/${d}`])
+  const dateien = [...saetze.flatMap((s) => SAETZE[s]).map((d) => [join(QUELLE, d), d]), ...kopien]
+  for (const [von, datei] of dateien) {
     const nach = join(src, datei)
     const soll = lesen(von)
     const gleich = existsSync(nach) && lesen(nach) === soll
