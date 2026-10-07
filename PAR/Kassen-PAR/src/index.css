@@ -168,6 +168,7 @@ textarea.textbox { display: block; width: 100%; box-sizing: border-box; }
 .zahn-st { font-size: 8px; font-weight: 700; }
 .zahn-st.tief { fill: #b91c1c; }
 .zahn-fehlt line, .zahn-nichterh line { stroke: #000; stroke-width: 1.2; }
+.knochenlinie { fill: none; stroke: #dc2626; stroke-width: 1.1; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
 .chart-hilfe { font-size: 12px; color: var(--grau); margin: 8px 0 0; }
 
 /* Strecke: links Planung, rechts Zeitleiste (Stil UPT-Prototyp) */
@@ -338,7 +339,7 @@ textarea.textbox { display: block; width: 100%; box-sizing: border-box; }
 .unterschrift small { display: block; margin-top: 3mm; }
 .unterschrift-feld { border: .5pt solid #000; height: 28mm; }
 .zs-liste { font-size: 9pt; line-height: 1.35; }
-.b2-chart .blatt2-chart { --spalte: 11.4mm; overflow: visible; }
+.b2-chart .blatt2-chart { --spalte: 11.5mm; overflow: visible; }
 .b2-chart .zahn-svg { width: 10mm; }
 .b2-chart .zahn-nr { display: none; }
 .b2-bemerkung { border: .5pt solid #ccc; min-height: 30mm; padding: 2mm; margin: 3mm 0; }

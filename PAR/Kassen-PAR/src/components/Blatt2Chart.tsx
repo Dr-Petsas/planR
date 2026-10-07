@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { OBERKIEFER, UNTERKIEFER, hatFbFeld } from '../engine/zahnschema'
+import { linkerIndex } from '../engine/zahnform'
 import type { Befund, Grad0123, ZahnBefund, ZahnStatus } from '../types'
 import { ZahnSvg } from './ZahnSvg'
 
 const ALLE = [...OBERKIEFER, ...UNTERKIEFER]
+/** Messstellen in Bildschirm-Reihenfolge: je Kiefer von links nach rechts. */
+const POS = ALLE.flatMap((zahn) => {
+  const li = linkerIndex(Number(zahn))
+  return [{ zahn, seg: li }, { zahn, seg: 1 - li }]
+})
 const ROEMISCH = ['0', 'I', 'II', 'III']
 
 interface Props {
@@ -24,12 +30,16 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
     onChange({ ...befund, zaehne: { ...befund.zaehne, [zahn]: { ...z, ...patch } } })
   }, [befund, onChange])
 
-  const setSt = useCallback((zahn: string, seg: number, wert: number | null) => {
-    const z = befund.zaehne[zahn]
-    const st = [...z.st]
-    st[seg] = wert
-    setZahn(zahn, { st })
-  }, [befund, setZahn])
+  /** Mehrere Messwerte in EINER Aenderung (sonst ueberschreibt der zweite den ersten). */
+  const setSt = useCallback((werte: { zahn: string; seg: number; wert: number | null }[]) => {
+    const zaehne = { ...befund.zaehne }
+    for (const { zahn, seg, wert } of werte) {
+      const st = [...zaehne[zahn].st]
+      st[seg] = wert
+      zaehne[zahn] = { ...zaehne[zahn], st }
+    }
+    onChange({ ...befund, zaehne })
+  }, [befund, onChange])
 
   const toggleBop = useCallback((zahn: string, seg: number) => {
     const z = befund.zaehne[zahn]
@@ -38,20 +48,35 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
     setZahn(zahn, { bop })
   }, [befund, setZahn])
 
-  const wechsle = useCallback((dTooth: number, dSeg: number) => {
+  /** Messstelle `d` Schritte weiter in Bildschirm-Reihenfolge; fehlende Zaehne werden uebersprungen. */
+  const schritt = useCallback((a: Aktiv, d: number): Aktiv => {
+    let i = POS.findIndex((p) => p.zahn === a.zahn && p.seg === a.seg)
+    const richtung = Math.sign(d)
+    for (let n = Math.abs(d); n > 0;) {
+      const j = i + richtung
+      if (j < 0 || j >= POS.length) break
+      i = j
+      if (befund.zaehne[POS[i].zahn].zs !== 1) n--
+    }
+    return POS[i]
+  }, [befund])
+
+  const wechsle = useCallback((d: number) => {
+    setAktiv((a) => (a ? schritt(a, d) : POS[0]))
+    setPuffer('')
+  }, [schritt])
+  /** Gleiche Messstelle im anderen Kiefer (eine Bildschirmzeile = 32 Messstellen). */
+  const kieferWechsel = useCallback((d: number) => {
     setAktiv((a) => {
-      if (!a) return { zahn: ALLE[0], seg: 0 }
-      let ti = ALLE.indexOf(a.zahn)
-      let seg = a.seg + dSeg
-      if (seg > 1) { seg = 0; ti += 1 }
-      if (seg < 0) { seg = 1; ti -= 1 }
-      ti += dTooth
-      ti = Math.max(0, Math.min(ALLE.length - 1, ti))
-      return { zahn: ALLE[ti], seg }
+      if (!a) return POS[0]
+      const i = POS.findIndex((p) => p.zahn === a.zahn && p.seg === a.seg) + d
+      return POS[Math.max(0, Math.min(POS.length - 1, i))]
     })
     setPuffer('')
   }, [])
 
+  const zehnerTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(zehnerTimer.current), [])
   useEffect(() => { setPuffer('') }, [aktiv?.zahn, aktiv?.seg])
 
   const onKey = useCallback((e: React.KeyboardEvent) => {
@@ -59,28 +84,44 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
     const { zahn, seg } = aktiv
     if (/^[0-9]$/.test(e.key)) {
       e.preventDefault()
-      const neu = puffer.length === 1 && Number(puffer + e.key) <= 15 ? puffer + e.key : e.key
-      setPuffer(neu)
-      setSt(zahn, seg, Number(neu))
+      window.clearTimeout(zehnerTimer.current)
+      const k = Number(e.key)
+      if (puffer === '1' && k <= 5) {
+        setSt([{ zahn, seg, wert: 10 + k }])
+        wechsle(1)
+      } else if (puffer === '1') {
+        // "1" bleibt stehen, die neue Ziffer gehoert schon zur naechsten Messstelle
+        const naechste = schritt(aktiv, 1)
+        setSt([{ zahn, seg, wert: 1 }, { ...naechste, wert: k }])
+        setAktiv(schritt(naechste, 1))
+      } else if (k === 1) {
+        // 10-15 moeglich: kurz auf die zweite Ziffer warten
+        setSt([{ zahn, seg, wert: 1 }])
+        setPuffer('1')
+        zehnerTimer.current = window.setTimeout(() => wechsle(1), 900)
+      } else {
+        setSt([{ zahn, seg, wert: k }])
+        wechsle(1)
+      }
       return
     }
     switch (e.key) {
       case '*': case '+': case ' ':
         e.preventDefault(); toggleBop(zahn, seg); break
       case 'Backspace': case 'Delete':
-        e.preventDefault(); setSt(zahn, seg, null); setPuffer(''); break
+        e.preventDefault(); window.clearTimeout(zehnerTimer.current); setSt([{ zahn, seg, wert: null }]); setPuffer(''); break
       case 'Enter': case 'ArrowDown':
-        e.preventDefault(); wechsle(16, 0); break
+        e.preventDefault(); kieferWechsel(32); break
       case 'ArrowUp':
-        e.preventDefault(); wechsle(-16, 0); break
+        e.preventDefault(); kieferWechsel(-32); break
       case 'Tab':
-        e.preventDefault(); wechsle(0, e.shiftKey ? -1 : 1); break
+        e.preventDefault(); wechsle(e.shiftKey ? -1 : 1); break
       case 'ArrowRight':
-        e.preventDefault(); wechsle(0, 1); break
+        e.preventDefault(); wechsle(1); break
       case 'ArrowLeft':
-        e.preventDefault(); wechsle(0, -1); break
+        e.preventDefault(); wechsle(-1); break
     }
-  }, [aktiv, puffer, readOnly, setSt, toggleBop, wechsle])
+  }, [aktiv, puffer, readOnly, schritt, setSt, toggleBop, wechsle, kieferWechsel])
 
   const zsCycle = (zahn: string) => {
     if (readOnly) return
@@ -137,15 +178,23 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
     )
   }
 
-  const zahnZelle = (zahn: string) => (
+  /** Knochenlinie laeuft nur zum direkt rechts stehenden, vorhandenen Nachbarzahn weiter. */
+  const rechterNachbar = (reihe: string[], zahn: string): number | null => {
+    const n = reihe[reihe.indexOf(zahn) + 1]
+    if (!n || befund.zaehne[n].zs === 1) return null
+    return befund.zaehne[n].st[linkerIndex(Number(n))]
+  }
+
+  const zahnZelle = (zahn: string, reihe: string[]) => (
     <div className={`zahn-zelle${ALLE.indexOf(zahn) === 7 || ALLE.indexOf(zahn) === 23 ? ' mitte' : ''}`}>
       <div className="zahn-nr">{zahn}</div>
       <ZahnSvg
         fdi={Number(zahn)}
         befund={befund.zaehne[zahn]}
         aktivSeg={aktiv?.zahn === zahn ? aktiv.seg : null}
-        onSeg={(seg) => { if (!readOnly) setAktiv({ zahn, seg }) }}
+        onSeg={(seg) => { if (!readOnly) { window.clearTimeout(zehnerTimer.current); setAktiv({ zahn, seg }) } }}
         onLockerung={() => lockCycle(zahn)}
+        rechterNachbar={rechterNachbar(reihe, zahn)}
       />
     </div>
   )
@@ -159,9 +208,9 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
         <div className="gitter-reihe"><span className="gitter-label">FB</span>{OBERKIEFER.map((z) => <div key={z}>{fbZelle(z)}</div>)}<span className="gitter-label">FB</span></div>
       </div>
       <div className="kiefer-label">Oberkiefer</div>
-      <div className="zahn-reihe ok">{OBERKIEFER.map((z) => <div key={z}>{zahnZelle(z)}</div>)}</div>
+      <div className="zahn-reihe ok">{OBERKIEFER.map((z) => <div key={z}>{zahnZelle(z, OBERKIEFER)}</div>)}</div>
       <div className="seiten-label"><span>rechts</span><span>links</span></div>
-      <div className="zahn-reihe uk">{UNTERKIEFER.map((z) => <div key={z}>{zahnZelle(z)}</div>)}</div>
+      <div className="zahn-reihe uk">{UNTERKIEFER.map((z) => <div key={z}>{zahnZelle(z, UNTERKIEFER)}</div>)}</div>
       <div className="kiefer-label">Unterkiefer</div>
       {/* Unterkiefer-Reihen (FB, AIT, ZS) */}
       <div className="gitter uk">
@@ -171,8 +220,8 @@ export function Blatt2Chart({ befund, onChange, readOnly }: Props) {
       </div>
       {!readOnly && (
         <p className="chart-hilfe keindruck">
-          Je Zahn zwei Messstellen: mesiale bzw. distale Kronenhälfte anklicken, dann Zahl tippen (0-15).
-          <b> *</b> oder Leertaste = Sondierungsbluten, <b>Tab</b>/Pfeile = nächste Messstelle, <b>Entf</b> = löschen.
+          Je Zahn zwei Messstellen: mesiale bzw. distale Kronenhälfte anklicken, dann Zahl tippen (0-15) – danach springt die Markierung automatisch zur nächsten Messstelle (für 10-15 nach der 1 gleich die zweite Ziffer tippen).
+          <b> *</b> oder Leertaste = Sondierungsbluten, <b>Tab</b>/Pfeile = nächste Messstelle, <b>Entf</b> = löschen. Die rote Linie zeigt den Knochenverlauf nach den Taschentiefen.
           ZS/AIT/FB-Felder und das Lockerungsfeld in der Zahnmitte durch Klick weiterschalten.
         </p>
       )}

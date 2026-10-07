@@ -8,6 +8,14 @@ export const KW = 28; // Kronenbreite
 export const KH = 30; // Kronenhoehe
 export const WURZEL_H = 32; // Wurzelhoehe (ueber bzw. unter der Krone)
 export const SPALTE = 34; // Spaltenbreite je Zahn
+/**
+ * Abstand zweier Zahnmitten in SVG-Einheiten fuer die Knochenlinie. Setzt
+ * voraus, dass Spalte : SVG-Breite in der CSS ueberall 1,15 betraegt
+ * (46px : 40px am Bildschirm, 11,5mm : 10mm auf Blatt 2).
+ */
+export const NACHBAR_ABSTAND = (KW + 2) * 1.15;
+/** SVG-Einheiten je mm Sondierungstiefe (15 mm = 30 Einheiten, Wurzel 32). */
+export const EINHEITEN_JE_MM = 2;
 
 // Zentrales Lockerungsfeld
 const BW = 10;
@@ -56,6 +64,11 @@ const LABELS = ['mesial', 'distal'];
 export function mesialRechts(fdi: number): boolean {
   const q = Math.floor(fdi / 10);
   return q === 1 || q === 4; // Quadrant 1 und 4 liegen bild-links, mesial zeigt nach rechts
+}
+
+/** st-Index der am Bildschirm linken Kronenhaelfte. */
+export function linkerIndex(fdi: number): number {
+  return mesialRechts(fdi) ? 1 : 0;
 }
 
 /** Oberkiefer (Quadrant 1/2): Wurzel oben. */

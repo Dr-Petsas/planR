@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import {
-  KH, KRONEN_LINIEN, KW, WURZEL_H, istOberkiefer, lockerungsFeld, segmente, wurzelPfade,
+  EINHEITEN_JE_MM, KH, KRONEN_LINIEN, KW, NACHBAR_ABSTAND, WURZEL_H, istOberkiefer, linkerIndex,
+  lockerungsFeld, segmente, wurzelPfade,
 } from '../engine/zahnform'
 import type { ZahnBefund } from '../types'
 
@@ -12,16 +13,29 @@ interface Props {
   aktivSeg: number | null
   onSeg: (stIndex: number) => void
   onLockerung: () => void
+  /** Taschentiefe der linken Messstelle des rechten Nachbarzahns (null = Linie endet hier) */
+  rechterNachbar: number | null
 }
 
 /** Ein Zahn als SVG: Wurzel, Krone mit Messhälften mesial/distal, zentrales Lockerungsfeld. */
-function ZahnSvgInner({ fdi, befund, aktivSeg, onSeg, onLockerung }: Props) {
+function ZahnSvgInner({ fdi, befund, aktivSeg, onSeg, onLockerung, rechterNachbar }: Props) {
   const ok = istOberkiefer(fdi)
   const segs = segmente(fdi)
   const wurzeln = wurzelPfade(fdi)
   const kroneY = ok ? WURZEL_H : 0
   const fehlt = befund.zs === 1
   const nichtErh = befund.zs === 2
+
+  // Knochenlinie: Taschentiefe von der Kronenkante in den Wurzelbereich abgetragen.
+  const tiefeY = (mm: number) => (ok ? -mm * EINHEITEN_JE_MM : KH + mm * EINHEITEN_JE_MM)
+  const li = linkerIndex(fdi)
+  const xL = segs.find((s) => s.stIndex === li)!.mitte[0]
+  const xR = segs.find((s) => s.stIndex !== li)!.mitte[0]
+  const stL = fehlt ? null : befund.st[li]
+  const stR = fehlt ? null : befund.st[1 - li]
+  const linie: string[] = []
+  if (stL != null && stR != null) linie.push(`M ${xL},${tiefeY(stL)} L ${xR},${tiefeY(stR)}`)
+  if (stR != null && rechterNachbar != null) linie.push(`M ${xR},${tiefeY(stR)} L ${NACHBAR_ABSTAND + xL},${tiefeY(rechterNachbar)}`)
 
   return (
     <svg viewBox={`-1 -1 ${KW + 2} ${KH + WURZEL_H + 2}`} className="zahn-svg" role="img">
@@ -30,6 +44,9 @@ function ZahnSvgInner({ fdi, befund, aktivSeg, onSeg, onLockerung }: Props) {
         {wurzeln.map((d, i) => (
           <path key={`w${i}`} d={d} className="zahn-wurzel" />
         ))}
+        {linie.length > 0 && <path d={linie.join(' ')} className="knochenlinie" />}
+        {stL != null && stR == null && <circle cx={xL} cy={tiefeY(stL)} r={0.9} className="knochenlinie" />}
+        {stR != null && stL == null && rechterNachbar == null && <circle cx={xR} cy={tiefeY(stR)} r={0.9} className="knochenlinie" />}
         {/* Kronen-Umriss */}
         <rect x={0} y={0} width={KW} height={KH} rx={4} ry={4} className="zahn-krone" />
         {/* Segment-Linien */}
