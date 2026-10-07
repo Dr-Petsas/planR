@@ -211,7 +211,9 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     hinweise.push(`119/120: höchstens ${abschlaege} Abschläge, nur in Quartalen mit kieferorthopädischer Leistung. ${frueh
       ? 'Bei vorzeitigem Abschluss der Frühbehandlung werden die restlichen Abschläge am Ende abgerechnet.'
       : 'Bei vorzeitigem Abschluss: a/b restliche Abschläge am Ende; c/d bei Ende vor dem 10. Quartal nur die fälligen.'}`)
-    hinweise.push('Retention ist bis zu zwei Jahre nach dem Quartal der letzten Abschlagszahlung abrechenbar, längstens bis zum Abschluss.')
+    hinweise.push(frueh
+      ? 'Frühbehandlung: innerhalb von 6 Kalenderquartalen abschließen; ein Retentionszeitraum ist laut KZBV-Kommentar nicht vorgesehen.'
+      : 'Retention ist bis zu zwei Jahre nach dem Quartal der letzten Abschlagszahlung abrechenbar, längstens bis zum Abschluss.')
   }
   if (plan.positionen.some((p) => p.ebene === 'BEMA' && istRoentgen(p.nr))) {
     hinweise.push(`Röntgen zur KFO: ohne Eigenanteil, gerechnet mit dem ${einst.roentgenKfo ? 'KFO' : 'KCH'}-Punktwert – welcher Punktwert gilt, bei der KZV klären (Einstellungen).`)
