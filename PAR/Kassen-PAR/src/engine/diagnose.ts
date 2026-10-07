@@ -33,13 +33,7 @@ function stadiumBerechnen(d: Diagnose): { stadium: 1 | 2 | 3 | 4; text: string }
   // Stadium IV
   if (d.zahnverlustPar >= 5 || d.komplexeReha) stadium = 4
 
-  const texte: Record<number, string> = {
-    1: 'Stadium I – initiale Parodontitis',
-    2: 'Stadium II – moderate Parodontitis',
-    3: 'Stadium III – schwere Parodontitis mit möglichem Zahnverlust',
-    4: 'Stadium IV – schwere Parodontitis mit Verlust der Kaufunktion',
-  }
-  return { stadium, text: texte[stadium] }
+  return { stadium, text: STADIUM_TEXT[stadium] }
 }
 
 /**
@@ -47,12 +41,20 @@ function stadiumBerechnen(d: Diagnose): { stadium: 1 | 2 | 3 | 4; text: string }
  * Patientenalter): < 0,25 = A, 0,25–1,0 = B, > 1,0 = C.
  * Raucher und Diabetes heben das Grading (Grad-Modifikatoren).
  */
+/** Klasse des Knochenabbauindex (A < 0,25, B 0,25-1,0, C > 1,0); null ohne KA/Alter. */
+export function kaIndexKlasse(d: Diagnose): 'A' | 'B' | 'C' | null {
+  if (d.kaIndexManuell) return d.kaIndexManuell
+  if (d.alter <= 0 || d.knochenabbauProzent <= 0) return null
+  const index = d.knochenabbauProzent / d.alter
+  return index > 1.0 ? 'C' : index >= 0.25 ? 'B' : 'A'
+}
+
 function gradBerechnen(d: Diagnose): { grad: 'A' | 'B' | 'C'; basis: string; index: number } {
   const index = d.alter > 0 ? d.knochenabbauProzent / d.alter : 0
-  let grad: 'A' | 'B' | 'C' = 'A'
-  if (index > 1.0) grad = 'C'
-  else if (index >= 0.25) grad = 'B'
-  const teile = [`KA ${d.knochenabbauProzent}% / Alter ${d.alter} = ${index.toFixed(2)}`]
+  let grad: 'A' | 'B' | 'C' = kaIndexKlasse(d) ?? 'A'
+  const teile = [d.kaIndexManuell
+    ? `Knochenabbauindex von Hand: ${{ A: '< 0,25', B: '0,25 - 1,0', C: '> 1,0' }[d.kaIndexManuell]}`
+    : `KA ${d.knochenabbauProzent}% / Alter ${d.alter} = ${index.toFixed(2)}`]
 
   const hebeAuf = (ziel: 'B' | 'C', grund: string) => {
     const rang = { A: 0, B: 1, C: 2 }
@@ -69,18 +71,38 @@ function gradBerechnen(d: Diagnose): { grad: 'A' | 'B' | 'C'; basis: string; ind
   return { grad, basis: teile.join('; '), index }
 }
 
+const STADIUM_TEXT: Record<number, string> = {
+  1: 'Stadium I – initiale Parodontitis',
+  2: 'Stadium II – moderate Parodontitis',
+  3: 'Stadium III – schwere Parodontitis mit möglichem Zahnverlust',
+  4: 'Stadium IV – schwere Parodontitis mit Verlust der Kaufunktion',
+}
+
 export function diagnostizieren(d: Diagnose, initial: Befund): DiagnoseErgebnis {
-  const { stadium, text } = stadiumBerechnen(d)
-  const { grad, basis, index } = gradBerechnen(d)
+  const hinweise: string[] = []
+  const roem = ['', 'I', 'II', 'III', 'IV']
+  const rechnung = stadiumBerechnen(d)
+  const stadium = d.stadiumManuell ?? rechnung.stadium
+  if (d.stadiumManuell && d.stadiumManuell !== rechnung.stadium) {
+    hinweise.push(`Stadium von Hand auf ${roem[stadium]} gesetzt (aus den Angaben: ${roem[rechnung.stadium]}).`)
+  }
+  const text = STADIUM_TEXT[stadium]
+  const gr = gradBerechnen(d)
+  const grad = d.gradManuell ?? gr.grad
+  if (d.gradManuell && d.gradManuell !== gr.grad) hinweise.push(`Grad von Hand auf ${grad} gesetzt (aus den Angaben: ${gr.grad}).`)
+  const { basis, index } = gr
 
   const gesamt = vorhandeneZaehne(initial)
   const befallen = betroffeneZaehne(initial)
   const anteil = gesamt > 0 ? (befallen / gesamt) * 100 : 0
+  const ausmassBefund = anteil >= 30 ? 'generalisiert' : 'lokalisiert'
   const ausmass: DiagnoseErgebnis['ausmass'] = d.mipMuster
     ? 'molaren-inzisiven'
-    : anteil >= 30 ? 'generalisiert' : 'lokalisiert'
+    : d.ausmassManuell ?? ausmassBefund
+  if (!d.mipMuster && d.ausmassManuell && d.ausmassManuell !== ausmassBefund) {
+    hinweise.push(`Ausmaß von Hand „${d.ausmassManuell}", laut Blatt 2 ${ausmassBefund} (${Math.round(anteil)} % der Zähne).`)
+  }
 
-  const hinweise: string[] = []
   if (gesamt === 0) hinweise.push('Noch kein Befund erfasst – Staging/Ausmaß vorläufig.')
   if (d.alter === 0) hinweise.push('Alter fehlt – Grading (%/Alter) nicht berechenbar.')
   if (grad === 'C') hinweise.push('Grad C → UPT-Intervall 3 Monate (6× in 2 Jahren).')

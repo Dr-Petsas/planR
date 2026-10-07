@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { diagnoseText } from '../engine/diagnose'
+import { diagnoseText, kaIndexKlasse } from '../engine/diagnose'
 import { leistungsblock } from '../engine/strecke'
 import { datumDe } from '../engine/termine'
 import { heute, id, leererBefund } from '../store'
@@ -13,9 +13,11 @@ const PHASE_LABEL: Record<BefundPhase, string> = {
   initial: 'Initialbefund', beva: 'BEV a', bevb: 'BEV b', upt: 'UPT g / Kontrolle',
 }
 
-interface Props { fall: ParFall; setFall: (f: ParFall) => void; einst: Einstellungen; diag: DiagnoseErgebnis }
+interface Props {
+  fall: ParFall; setFall: (f: ParFall) => void; einst: Einstellungen; setEinst: (e: Einstellungen) => void; diag: DiagnoseErgebnis
+}
 
-export default function AntragReiter({ fall, setFall, einst, diag }: Props) {
+export default function AntragReiter({ fall, setFall, einst, setEinst, diag }: Props) {
   const [befundId, setBefundId] = useState(fall.befunde[0]?.id ?? '')
   const befund = fall.befunde.find((b) => b.id === befundId) ?? fall.befunde[0]
   const setBefund = (b: Befund) => setFall({ ...fall, befunde: fall.befunde.map((x) => (x.id === b.id ? b : x)) })
@@ -54,7 +56,7 @@ export default function AntragReiter({ fall, setFall, einst, diag }: Props) {
         <button className="primaer" onClick={() => window.print()}>Drucken</button>
       </div>
 
-      <Blatt1 fall={fall} setFall={setFall} einst={einst} diag={diag} />
+      <Blatt1 fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />
 
       <div className="befund-leiste keindruck">
         <span className="leiste-titel">Blatt 2 zeigt:</span>
@@ -70,7 +72,7 @@ export default function AntragReiter({ fall, setFall, einst, diag }: Props) {
         <span className="leiste-hilfe">Neue Befunde übernehmen ZS, FB und Lockerung, die Messwerte bleiben leer.</span>
       </div>
 
-      <Blatt2 fall={fall} setFall={setFall} einst={einst} befund={befund} setBefund={setBefund} />
+      <Blatt2 fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} befund={befund} setBefund={setBefund} />
     </div>
   )
 }
@@ -79,7 +81,7 @@ export default function AntragReiter({ fall, setFall, einst, diag }: Props) {
 // Blatt 1
 // ---------------------------------------------------------------------------
 
-function Blatt1({ fall, setFall, einst, diag }: Props) {
+function Blatt1({ fall, setFall, einst, setEinst, diag }: Props) {
   const d = fall.diagnose
   const an = fall.anamnese
   const setD = (patch: Partial<Diagnose>) => setFall({ ...fall, diagnose: { ...d, ...patch } })
@@ -89,6 +91,16 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
   const ka = d.knochenabbauProzent
   const cal = d.calMax
   const komplex = d.st6plus || d.vertikalerKA3 || d.furkationII_III
+  const st5 = d.st5horizontal ?? (diag.stadium === 2 && !komplex)
+  const kaKlasse = kaIndexKlasse(d)
+  /** Kreuz in einem Wertebereich: setzt einen typischen Wert bzw. leert ihn wieder. */
+  const kaKreuz = (von: number, bis: number, wert: number) => () =>
+    setD({ knochenabbauProzent: ka >= von && ka <= bis ? 0 : wert })
+  const calKreuz = (von: number, bis: number, wert: number) => () =>
+    setD({ calMax: cal >= von && cal <= bis ? 0 : wert })
+  const ausmassKreuz = (a: 'lokalisiert' | 'generalisiert') => () =>
+    setD({ ausmassManuell: d.ausmassManuell === a ? null : a, mipMuster: false })
+  const indexKreuz = (k: 'A' | 'B' | 'C') => () => setD({ kaIndexManuell: d.kaIndexManuell === k ? null : k })
   const kk = (e: KkEntscheidung) => setFall({ ...fall, kkEntscheidung: fall.kkEntscheidung === e ? 'offen' : e })
   const initial = fall.befunde.find((b) => b.phase === 'initial') ?? fall.befunde[0]
   const setInitialDatum = (v: string) =>
@@ -97,7 +109,7 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
   return (
     <Seite titel={<h1>PARODONTALSTATUS <small>Blatt 1</small></h1>}>
       <div className="a4-kopf">
-        <Versichertenfeld fall={fall} einst={einst} setFall={setFall} />
+        <Versichertenfeld fall={fall} einst={einst} setFall={setFall} setEinst={setEinst} />
         <div className="a4-kopf-rechts">
           <div className="vom">vom <Fi type="date" value={initial.datum} onChange={setInitialDatum} /></div>
           <Antragsbox fall={fall} setFall={setFall} />
@@ -119,9 +131,10 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
         </div>
         <div>
           <h4>Spezielle Vorgeschichte</h4>
-          <div>Frühere PAR-Therapie<br />Angabe des Jahres: ca.{' '}
+          <div><span className="b1-option"><X an={an.fruehereParTherapie} onClick={() => setAn({ fruehereParTherapie: !an.fruehereParTherapie })} /> Frühere PAR-Therapie</span>
+            Angabe des Jahres: ca.{' '}
             <Fi value={an.fruehereParJahr} breite="18mm"
-              onChange={(v) => setAn({ fruehereParJahr: v, fruehereParTherapie: !!v.trim() })} />
+              onChange={(v) => setAn({ fruehereParJahr: v, fruehereParTherapie: an.fruehereParTherapie || !!v.trim() })} />
           </div>
         </div>
       </div>
@@ -139,7 +152,9 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
         <h4>Stadium <small>(Schweregrad, der Patient wird durch das höchste Stadium charakterisiert)</small></h4>
         <table className="b1-tab">
           <tbody>
-            <tr><td></td>{[1, 2, 3, 4].map((i) => <td key={i}><X an={s === i} /> <b>Stadium {['I', 'II', 'III', 'IV'][i - 1]}</b></td>)}</tr>
+            <tr><td>{d.stadiumManuell && <button className="klein keindruck" onClick={() => setD({ stadiumManuell: null })}>Stadium automatisch</button>}</td>
+              {([1, 2, 3, 4] as const).map((i) => <td key={i}><X an={s === i} title="Stadium von Hand setzen (nochmal klicken = automatisch)"
+                onClick={() => setD({ stadiumManuell: d.stadiumManuell === i ? null : i })} /> <b>Stadium {['I', 'II', 'III', 'IV'][i - 1]}</b></td>)}</tr>
             <tr>
               <td>Röntg. Knochenabbau (KA)<br />(oder interdentaler CAL)
                 <span className="ein keindruck">
@@ -148,9 +163,9 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
                   CAL <input type="number" min={0} max={20} value={cal || ''} onChange={(e) => setD({ calMax: zahl(e.target.value) })} /> mm
                 </span>
               </td>
-              <td><X an={ka > 0 && ka < 15} /> &lt; 15 %<br /><X an={cal >= 1 && cal <= 2} /> (1 – 2 mm)</td>
-              <td><X an={ka >= 15 && ka <= 33} /> 15 - 33 %<br /><X an={cal >= 3 && cal <= 4} /> (3 – 4 mm)</td>
-              <td colSpan={2} className="rechts"><X an={ka > 33} /> &gt; 33 %<br /><X an={cal >= 5} /> (≥5 mm)</td>
+              <td><X an={ka > 0 && ka < 15} onClick={kaKreuz(1, 14, 10)} /> &lt; 15 %<br /><X an={cal >= 1 && cal <= 2} onClick={calKreuz(1, 2, 2)} /> (1 – 2 mm)</td>
+              <td><X an={ka >= 15 && ka <= 33} onClick={kaKreuz(15, 33, 25)} /> 15 - 33 %<br /><X an={cal >= 3 && cal <= 4} onClick={calKreuz(3, 4, 4)} /> (3 – 4 mm)</td>
+              <td colSpan={2} className="rechts"><X an={ka > 33} onClick={kaKreuz(34, 100, 40)} /> &gt; 33 %<br /><X an={cal >= 5} onClick={calKreuz(5, 20, 5)} /> (≥5 mm)</td>
             </tr>
             <tr>
               <td>Zahnverlust aufgrund von Parodontitis
@@ -159,15 +174,18 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
                 </span>
               </td>
               <td></td>
-              <td><X an={d.zahnverlustPar === 0} /> Nein</td>
-              <td><X an={d.zahnverlustPar >= 1 && d.zahnverlustPar <= 4} /> ≤ 4 Zähne</td>
-              <td><X an={d.zahnverlustPar >= 5} /> ≥ 5 Zähne</td>
+              <td><X an={d.zahnverlustPar === 0} onClick={() => setD({ zahnverlustPar: 0 })} /> Nein</td>
+              <td><X an={d.zahnverlustPar >= 1 && d.zahnverlustPar <= 4}
+                onClick={() => setD({ zahnverlustPar: d.zahnverlustPar >= 1 && d.zahnverlustPar <= 4 ? 0 : 1 })} /> ≤ 4 Zähne</td>
+              <td><X an={d.zahnverlustPar >= 5} onClick={() => setD({ zahnverlustPar: d.zahnverlustPar >= 5 ? 0 : 5 })} /> ≥ 5 Zähne</td>
             </tr>
             <tr>
               <td>Komplexitätsfaktoren (anzukreuzen, auch wenn nur ein Faktor aus der jeweiligen Gruppe vorliegt)</td>
               <td></td>
-              <td><X an={diag.stadium === 2 && !komplex} /> ST = 5 mm, vorwiegend horizontaler KA</td>
-              <td><X an={komplex} onClick={() => setD({ st6plus: !komplex, vertikalerKA3: false, furkationII_III: false })}
+              <td><X an={st5} onClick={() => setD(st5
+                ? { st5horizontal: false }
+                : { st5horizontal: true, st6plus: false, vertikalerKA3: false, furkationII_III: false })} /> ST = 5 mm, vorwiegend horizontaler KA</td>
+              <td><X an={komplex} onClick={() => setD({ st6plus: !komplex, vertikalerKA3: false, furkationII_III: false, ...(komplex ? {} : { st5horizontal: false }) })}
                 title="ST ≥ 6 mm, vertikaler KA ≥ 3 mm oder FB Grad II/III" /> ST ≥ 6 mm, vertikaler KA ≥ 3 mm, FB Grad II oder III</td>
               <td><X an={d.komplexeReha} onClick={() => setD({ komplexeReha: !d.komplexeReha })} /> Komplexe Rehabilitation wegen mastikatorischer Dysfunktion erforderlich</td>
             </tr>
@@ -178,25 +196,29 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
       <div className="b1-block">
         <h4>Ausmaß/Verteilung <small>(für das höchste Stadium)</small></h4>
         <div className="b1-reihe">
-          <X an={diag.ausmass === 'lokalisiert'} /> Lokalisiert (&lt; 30 % der Zähne)
-          <X an={diag.ausmass === 'generalisiert'} /> Generalisiert (≥30 % der Zähne)
+          <X an={diag.ausmass === 'lokalisiert'} onClick={ausmassKreuz('lokalisiert')} /> Lokalisiert (&lt; 30 % der Zähne)
+          <X an={diag.ausmass === 'generalisiert'} onClick={ausmassKreuz('generalisiert')} /> Generalisiert (≥30 % der Zähne)
           <X an={diag.ausmass === 'molaren-inzisiven'} onClick={() => setD({ mipMuster: !d.mipMuster })} /> Molaren-Inzisiven-Muster
-          <span className="ein keindruck">aus Blatt 2: {diag.befalleneZaehne} von {diag.gesamtZaehne} Zähnen ({diag.anteilProzent} %)</span>
+          <span className="ein keindruck">aus Blatt 2: {diag.befalleneZaehne} von {diag.gesamtZaehne} Zähnen ({diag.anteilProzent} %)
+            {d.ausmassManuell && <button className="klein" onClick={() => setD({ ausmassManuell: null })}>automatisch</button>}</span>
         </div>
       </div>
 
       <div className="b1-block">
         <table className="b1-tab">
           <tbody>
-            <tr><td><h4>Grad <small>(Progression)</small></h4></td>{(['A', 'B', 'C'] as const).map((g) => <td key={g}><X an={diag.grad === g} /> <b>Grad {g}</b></td>)}</tr>
+            <tr><td><h4>Grad <small>(Progression)</small></h4>
+              {d.gradManuell && <button className="klein keindruck" onClick={() => setD({ gradManuell: null })}>Grad automatisch</button>}</td>
+              {(['A', 'B', 'C'] as const).map((g) => <td key={g}><X an={diag.grad === g} title="Grad von Hand setzen (nochmal klicken = automatisch)"
+                onClick={() => setD({ gradManuell: d.gradManuell === g ? null : g })} /> <b>Grad {g}</b></td>)}</tr>
             <tr><td>Knochenabbauindex (KA (%)/Alter)
               <span className="ein keindruck">
                 Alter <input type="number" min={0} max={120} value={d.alter || ''} onChange={(e) => setD({ alter: zahl(e.target.value) })} />
                 {d.alter > 0 && ka > 0 && <> = {diag.kaIndex.toFixed(2).replace('.', ',')}</>}
               </span></td>
-              <td><X an={d.alter > 0 && ka > 0 && diag.kaIndex < 0.25} /> &lt; 0,25</td>
-              <td><X an={diag.kaIndex >= 0.25 && diag.kaIndex <= 1} /> 0,25 - 1,0</td>
-              <td><X an={diag.kaIndex > 1} /> &gt; 1,0</td></tr>
+              <td><X an={kaKlasse === 'A'} onClick={indexKreuz('A')} /> &lt; 0,25</td>
+              <td><X an={kaKlasse === 'B'} onClick={indexKreuz('B')} /> 0,25 - 1,0</td>
+              <td><X an={kaKlasse === 'C'} onClick={indexKreuz('C')} /> &gt; 1,0</td></tr>
             <tr><td>Diabetes</td>
               <td><X an={d.diabetes === 'nein'} onClick={() => setD({ diabetes: 'nein' })} /> Kein Diabetes</td>
               <td><X an={d.diabetes === 'hba1c_unter7'} onClick={() => setD({ diabetes: 'hba1c_unter7' })} /> HbA 1c &lt; 7,0 %</td>
@@ -230,8 +252,9 @@ function Blatt1({ fall, setFall, einst, diag }: Props) {
 // Blatt 2
 // ---------------------------------------------------------------------------
 
-function Blatt2({ fall, setFall, einst, befund, setBefund }: {
-  fall: ParFall; setFall: (f: ParFall) => void; einst: Einstellungen; befund: Befund; setBefund: (b: Befund) => void
+function Blatt2({ fall, setFall, einst, setEinst, befund, setBefund }: {
+  fall: ParFall; setFall: (f: ParFall) => void; einst: Einstellungen; setEinst: (e: Einstellungen) => void
+  befund: Befund; setBefund: (b: Befund) => void
 }) {
   const lb = leistungsblock(fall)
   const gut = (g: Gutachten) => setFall({ ...fall, gutachten: fall.gutachten === g ? 'offen' : g })
@@ -239,7 +262,7 @@ function Blatt2({ fall, setFall, einst, befund, setBefund }: {
   return (
     <Seite titel={<h1>PARODONTALSTATUS <small>Blatt 2</small></h1>}>
       <div className="a4-kopf">
-        <Versichertenfeld fall={fall} einst={einst} setFall={setFall} />
+        <Versichertenfeld fall={fall} einst={einst} setFall={setFall} setEinst={setEinst} />
         <div className="a4-kopf-rechts">
           <div className="vom">vom <Fi type="date" value={befund.datum} onChange={(v) => setBefund({ ...befund, datum: v })} />
             {befund.phase !== 'initial' && <span className="ein keindruck"> {befund.bezeichnung}</span>}</div>

@@ -232,6 +232,14 @@ describe('Diagnose-Grenzen (Blatt 1)', () => {
     expect(diagnostizieren({ ...basis, knochenabbauProzent: 10, alter: 50, raucher: 'ab10' }, b).grad).toBe('C')
     expect(diagnostizieren({ ...basis, knochenabbauProzent: 10, alter: 50, diabetes: 'hba1c_unter7' }, b).grad).toBe('B')
   })
+  it('Von Hand gesetzte Kreuze gehen vor und werden als Hinweis gemeldet', () => {
+    const r = diagnostizieren({ ...basis, calMax: 5, stadiumManuell: 2, gradManuell: 'C', ausmassManuell: 'generalisiert' }, b)
+    expect(r.stadium).toBe(2)
+    expect(r.grad).toBe('C')
+    expect(r.ausmass).toBe('generalisiert')
+    expect(r.hinweise.some((h) => h.includes('Stadium von Hand'))).toBe(true)
+    expect(diagnostizieren({ ...basis, kaIndexManuell: 'B' }, b).grad).toBe('B')
+  })
   it('Ausmaß ab 30 % betroffener Zähne generalisiert', () => {
     const viele = befundMit({ '11': 4, '12': 4, '13': 4, '14': 4, '15': 4, '16': 4, '17': 4, '18': 4, '21': 4, '22': 4 })
     expect(diagnostizieren(basis, viele).ausmass).toBe('generalisiert')

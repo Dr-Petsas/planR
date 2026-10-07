@@ -55,6 +55,12 @@ export interface Diagnose {
   komplexeReha: boolean // komplexe Rehabilitation mastikatorischer Dysfunktion
   mipMuster: boolean // Molaren-Inzisiven-Muster (Ausmass, manuell)
   diagnoseTyp: 'parodontitis' | 'systemisch' | 'sonstige_vergroesserung'
+  // Von Hand gesetzte Kreuze auf Blatt 1; null = automatisch aus den Werten
+  stadiumManuell: 1 | 2 | 3 | 4 | null
+  gradManuell: 'A' | 'B' | 'C' | null
+  ausmassManuell: 'lokalisiert' | 'generalisiert' | null
+  kaIndexManuell: 'A' | 'B' | 'C' | null // Knochenabbauindex < 0,25 / 0,25-1,0 / > 1,0
+  st5horizontal: boolean | null // Komplexitaet Stadium II: ST = 5 mm, vorwiegend horizontaler KA
 }
 
 /** Anamnese-Block Blatt 1. */
@@ -95,6 +101,7 @@ export interface Patient {
   kostentraegerkennung: string // 9-stellig (IK der Kasse)
   kassennummer: string // Versichertenart/Regionalkennzeichen (erste 2 Ziffern = Regionalkennzeichen)
   kassenart: Kassenart
+  status: string // Versichertenstatus der eGK
 }
 
 export type Kassenart = 'primaer' | 'ersatz'

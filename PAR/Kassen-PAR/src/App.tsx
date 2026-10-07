@@ -97,7 +97,7 @@ export default function App() {
       )}
 
       <main className="inhalt">
-        {reiter === 'antrag' && <AntragReiter fall={fall} setFall={setFall} einst={einst} diag={diag} />}
+        {reiter === 'antrag' && <AntragReiter fall={fall} setFall={setFall} einst={einst} setEinst={setEinst} diag={diag} />}
         {reiter === 'strecke' && <StreckeReiter fall={fall} setFall={setFall} diag={diag} preise={preise} einst={einst} />}
         {reiter === 'formulare' && <FormulareReiter fall={fall} setFall={setFall} einst={einst} diag={diag} />}
         {reiter === 'einstellungen' && <EinstellungenReiter einst={einst} setEinst={setEinst} punktwert={punktwert} />}

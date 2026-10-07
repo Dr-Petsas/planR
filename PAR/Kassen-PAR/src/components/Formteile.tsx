@@ -24,9 +24,12 @@ export function Fi({ value, onChange, type = 'text', breite, placeholder, mono }
   )
 }
 
-export function Versichertenfeld({ fall, einst, setFall }: {
-  fall: ParFall; einst: Einstellungen; setFall?: (f: ParFall) => void
+export function Versichertenfeld({ fall, einst, setFall, setEinst }: {
+  fall: ParFall; einst: Einstellungen; setFall?: (f: ParFall) => void; setEinst?: (e: Einstellungen) => void
 }) {
+  const praxis = (key: 'abrechnungsNr' | 'zahnarztNr') => (
+    <Fi value={einst.praxis[key]} onChange={setEinst ? (v) => setEinst({ ...einst, praxis: { ...einst.praxis, [key]: v } }) : undefined} />
+  )
   const p = fall.patient
   const set = setFall ? (patch: Partial<Patient>) => setFall({ ...fall, patient: { ...p, ...patch } }) : null
   const f = (key: keyof Patient, extra: { breite?: string; type?: 'text' | 'date'; placeholder?: string } = {}) => (
@@ -43,11 +46,11 @@ export function Versichertenfeld({ fall, einst, setFall }: {
       <div className="vf-drei">
         <div><small>Kostenträgerkennung</small>{f('kostentraegerkennung', { placeholder: 'IK' })}</div>
         <div><small>Versicherten-Nr.</small>{f('versichertennr')}</div>
-        <div><small>Status</small><span></span></div>
+        <div><small>Status</small>{f('status', { breite: '14mm' })}</div>
       </div>
       <div className="vf-drei">
-        <div><small>Abrechnungs-Nr.</small><span>{einst.praxis.abrechnungsNr}</span></div>
-        <div><small>Zahnarzt-Nr.</small><span>{einst.praxis.zahnarztNr}</span></div>
+        <div><small>Abrechnungs-Nr.</small>{praxis('abrechnungsNr')}</div>
+        <div><small>Zahnarzt-Nr.</small>{praxis('zahnarztNr')}</div>
         <div><small>Datum</small><Fi type="date" value={fall.datum} onChange={setFall ? (v) => setFall({ ...fall, datum: v }) : undefined} /></div>
       </div>
     </div>

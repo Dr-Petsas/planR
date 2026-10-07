@@ -102,7 +102,7 @@ export function neuerFall(nummer: number): ParFall {
     datum: heute(),
     patient: {
       name: '', vorname: '', geburtsdatum: '', kasse: '', versichertennr: '',
-      kostentraegerkennung: '', kassennummer: '', kassenart: 'primaer',
+      kostentraegerkennung: '', kassennummer: '', kassenart: 'primaer', status: '',
     },
     antrag: {
       antragsnummer: '', antragsnummerUrspruenglich: '', verarbeitungskennzeichen: '',
@@ -118,6 +118,7 @@ export function neuerFall(nummer: number): ParFall {
       zahnverlustPar: 0, raucher: 'nein', diabetes: 'nein', st6plus: false,
       vertikalerKA3: false, furkationII_III: false, komplexeReha: false, mipMuster: false,
       diagnoseTyp: 'parodontitis',
+      stadiumManuell: null, gradManuell: null, ausmassManuell: null, kaIndexManuell: null, st5horizontal: null,
     },
     befunde: [leererBefund()],
     termine: [],
