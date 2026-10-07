@@ -23,6 +23,8 @@ const PLANER = {
   'PAR/Privat-PAR': ['basis', 'ablage'],
   'KB/Kassen-KB': ['basis', 'ablage', 'kasse'],
   'KB/Privat-KB': ['basis', 'ablage'],
+  'KFO/Kassen-KFO': ['basis', 'ablage', 'kasse'],
+  'KFO/Privat-KFO': ['basis', 'ablage'],
 }
 
 const SAETZE = {
@@ -50,6 +52,8 @@ const DATENKOPIEN = {
   'KB/Kassen-KB': ['bel/'],
   'KB/Privat-KB': ['goz-2012.json', 'beb-itz-2024.json'],
   'PAR/Privat-PAR': ['goz-2012.json'],
+  'KFO/Kassen-KFO': ['bel/', 'goz-2012.json'],
+  'KFO/Privat-KFO': ['goz-2012.json', 'beb-itz-2024.json'],
 }
 
 const lesen = (p) => readFileSync(p, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')

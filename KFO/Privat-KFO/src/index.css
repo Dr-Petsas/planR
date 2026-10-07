@@ -1,0 +1,267 @@
+:root {
+  --tinte: #1f2a30;
+  --grau: #6b767d;
+  --linie: #e3ddd3;
+  --papier: #fffdf9;
+  --grund: #f2eee7;
+  --akzent: #2f7f8f;
+  --akzent-dunkel: #266a78;
+  --akzent-hell: #e4f0f1;
+  --stahl: #4a6f8f;
+  --stahl-hell: #e4edf4;
+  --kasse: #34506e;
+  --warn: #9a5b00;
+  --warn-hell: #fff4e0;
+  --rot: #b0413a;
+  --rot-hell: #fbeceb;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--tinte);
+  background: var(--grund);
+  font-size: 14px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: default; opacity: .55; }
+input, select, textarea { font: inherit; color: inherit; }
+.mono { font-family: Consolas, 'Cascadia Mono', monospace; }
+.r { text-align: right; }
+
+/* ---------- Kopf mit Reglern (bleibt oben stehen) ---------- */
+.kopfbereich { position: sticky; top: 0; z-index: 5; background: var(--grund); box-shadow: 0 2px 10px rgba(60, 40, 10, .08); }
+.kopfleiste {
+  display: flex; align-items: center; gap: 24px; padding: 10px 24px;
+  background: var(--papier); border-bottom: 1px solid var(--linie);
+}
+.marke { display: flex; align-items: center; gap: 12px; }
+.logo {
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--akzent); color: white; font-weight: 700; font-size: 12px; letter-spacing: .5px;
+}
+.titel { font-size: 18px; font-weight: 600; }
+.sub { color: var(--grau); font-size: 12px; }
+.kopf-summe { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.kopf-summe span { color: var(--grau); font-size: 12px; }
+.kopf-summe b { font-size: 20px; color: var(--akzent-dunkel); }
+.aktionen { display: flex; gap: 8px; }
+.primaer, .sekundaer { border-radius: 999px; padding: 7px 16px; border: 1px solid var(--akzent); }
+.primaer { background: var(--akzent); color: white; }
+.primaer:hover { background: var(--akzent-dunkel); }
+.sekundaer { background: transparent; color: var(--akzent-dunkel); }
+.sekundaer:hover:not(:disabled) { background: var(--akzent-hell); }
+.klein-btn { padding: 3px 12px; font-size: 12px; }
+
+.reglerleiste { display: grid; grid-template-columns: 1.2fr 1fr 0.9fr; gap: 10px; padding: 10px 24px; }
+.kl-block {
+  background: var(--papier); border: 1px solid var(--linie); border-top: 4px solid var(--grau); border-radius: 8px;
+  padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.kl-block h4 { margin: 0; font-size: 13px; display: flex; align-items: baseline; gap: 6px; }
+.kl-block h4 span { font-size: 11px; font-weight: 400; color: var(--grau); }
+.kl-fuellung { border-top-color: var(--stahl); }
+.kl-einlage { border-top-color: #8a7a55; }
+.kl-summenblock { border-top-color: var(--akzent); }
+.regler { display: grid; gap: 1px; font-size: 12px; }
+.regler-kopf b { color: var(--tinte); }
+.regler-kopf small { color: var(--grau); }
+.regler input[type=range] { width: 100%; accent-color: var(--stahl); cursor: pointer; margin: 0; }
+.kl-einlage .regler input[type=range] { accent-color: #8a7a55; }
+.regler input[type=range]:disabled { opacity: .35; cursor: not-allowed; }
+.regler-info { font-size: 11px; color: var(--grau); margin: auto 0 0; }
+.regler-info.begruendung { color: var(--warn); margin: 0; }
+.modell-wahl { display: flex; gap: 4px; }
+.modell-wahl button { flex: 1; border: 1px solid var(--linie); background: white; border-radius: 6px; padding: 4px 6px; font-size: 11.5px; color: var(--grau); }
+.modell-wahl button.aktiv { background: var(--stahl); border-color: var(--stahl); color: white; font-weight: 600; }
+.kl-werte { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; margin: 0; font-size: 12px; }
+.kl-werte dt { color: #555; }
+.kl-werte dd { margin: 0; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kl-werte .kl-summe { font-weight: 700; color: var(--tinte); border-top: 1px solid var(--linie); padding-top: 2px; font-size: 13px; }
+.kl-summenblock .klein-btn { align-self: flex-start; margin-top: auto; }
+
+/* ---------- Arbeitsfläche ---------- */
+.arbeitsflaeche {
+  display: grid; grid-template-columns: minmax(640px, 1fr) minmax(520px, 760px);
+  gap: 24px; padding: 16px 24px; align-items: start;
+}
+.editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.vorschau { position: sticky; top: 220px; max-height: calc(100vh - 240px); overflow: auto; border-radius: 4px; box-shadow: 0 6px 24px rgba(60, 40, 10, .12); }
+
+.reiter { display: flex; gap: 4px; border-bottom: 1px solid var(--linie); }
+.reiter button { background: none; border: none; padding: 10px 14px; color: var(--grau); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.reiter button.aktiv { color: var(--tinte); border-bottom-color: var(--akzent); font-weight: 600; }
+.schritt { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 50%; background: var(--linie); font-size: 11px; color: var(--tinte); }
+.reiter .aktiv .schritt { background: var(--akzent); color: white; }
+
+.block { background: var(--papier); border: 1px solid var(--linie); border-radius: 10px; padding: 16px 18px; }
+.block h3 { margin: 0 0 10px; font-weight: 600; font-size: 15px; }
+.hilfe { color: var(--grau); margin: 0 0 12px; line-height: 1.5; }
+.leer { color: var(--grau); margin: 0; }
+.fuss { color: var(--grau); font-size: 11.5px; margin: 10px 0 0; line-height: 1.45; }
+textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padding: 8px; background: white; }
+
+.formular { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 14px; }
+.feld { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--grau); }
+.feld.breit { grid-column: span 3; }
+.feld input, .feld select { padding: 7px 9px; border: 1px solid var(--linie); border-radius: 6px; background: white; font-size: 14px; color: var(--tinte); min-width: 0; }
+.feld input:focus, .feld select:focus, textarea:focus { outline: 2px solid var(--akzent-hell); border-color: var(--akzent); }
+.feld .wert { color: var(--tinte); font-size: 13px; padding: 7px 0 0; }
+.feld small { color: var(--grau); font-size: 11px; }
+
+.hinweise { margin: 0; padding: 10px 14px 10px 32px; background: var(--akzent-hell); border: 1px solid #c4dfe2; border-radius: 8px; color: var(--akzent-dunkel); line-height: 1.5; }
+
+/* ---------- Zahnschema ---------- */
+.zahnschema { overflow-x: auto; padding: 8px 0; }
+.zs-kiefer { display: flex; flex-direction: column; gap: 3px; }
+.zs-reihe { display: grid; grid-template-columns: 40px repeat(16, minmax(32px, 1fr)); gap: 3px; align-items: center; }
+.zs-label { font-size: 11px; color: var(--grau); text-transform: uppercase; letter-spacing: .5px; }
+.zs-nr { text-align: center; font-weight: 600; font-size: 12px; color: var(--grau); }
+.zs-zelle { display: block; min-width: 0; }
+.zs-feld { width: 100%; min-width: 0; height: 30px; text-align: center; padding: 0; border: 1px solid var(--linie); border-radius: 6px; background: white; font-size: 12px; text-transform: uppercase; }
+.zs-feld.belegt { font-weight: 600; }
+.zs-komposit, .zs-mehrfarben { background: var(--stahl-hell); border-color: var(--stahl); color: var(--kasse); }
+.zs-inlay, .zs-goldhaemmer { background: #f3eedf; border-color: #b9a77a; color: #6d5c33; }
+.zs-feld:focus { outline: 2px solid var(--akzent); }
+.zs-trenner { display: flex; justify-content: space-between; margin: 6px 0 6px 40px; border-top: 1px dashed var(--linie); padding-top: 2px; font-size: 10px; color: var(--grau); text-transform: uppercase; }
+.zs-hilfe { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; font-size: 12px; }
+.chip { background: var(--grund); border-radius: 999px; padding: 2px 9px; color: var(--tinte); cursor: help; }
+
+/* ---------- Füllungstabelle ---------- */
+.zahn-tabelle { width: 100%; border-collapse: collapse; font-size: 13px; }
+.zahn-tabelle th { text-align: left; font-weight: 500; font-size: 11px; color: var(--grau); text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid var(--linie); }
+.zahn-tabelle td { padding: 6px; border-bottom: 1px solid #f1ece4; vertical-align: top; }
+.zahn-tabelle td.zahn { font-weight: 700; padding-top: 10px; }
+.zahn-tabelle select { display: block; width: 100%; max-width: 230px; padding: 4px 6px; border: 1px solid var(--linie); border-radius: 6px; background: white; }
+.zahn-tabelle select + select { margin-top: 4px; }
+.zahn-tabelle td.r { padding-top: 10px; white-space: nowrap; }
+.zahn-tabelle .kasse { color: var(--kasse); }
+.zahn-tabelle .stark { font-weight: 700; color: var(--akzent-dunkel); }
+.zahn-tabelle tr.mit-warnung td:first-child { box-shadow: inset 3px 0 var(--rot); }
+.zahn-tabelle tfoot td { border-bottom: none; padding-top: 6px; }
+.zahn-tabelle tfoot tr.summe td { border-top: 1px solid #bbb; font-weight: 600; }
+.details { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; min-width: 260px; }
+.chk { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+.faktor-feld input { width: 62px; padding: 2px 4px; border: 1px solid var(--linie); border-radius: 5px; background: white; }
+.faktor-feld input:disabled { background: #f5f2ec; color: var(--grau); }
+.zeilen-hinweis { flex-basis: 100%; font-size: 11.5px; line-height: 1.35; padding: 3px 7px; border-radius: 5px; }
+.zeilen-hinweis.warn { background: var(--rot-hell); color: var(--rot); }
+.zeilen-hinweis.info { background: var(--warn-hell); color: var(--warn); }
+.flaechen-wahl { display: flex; gap: 2px; }
+.flaechen-wahl button { width: 26px; height: 26px; border: 1px solid var(--linie); background: white; border-radius: 5px; font-size: 12px; color: var(--grau); padding: 0; }
+.flaechen-wahl button.aktiv { background: var(--stahl); border-color: var(--stahl); color: white; font-weight: 600; }
+.x { border: none; background: none; color: var(--grau); font-size: 18px; line-height: 1; }
+.x:hover { color: var(--rot); }
+
+.preis-tabelle { width: 100%; border-collapse: collapse; }
+.preis-tabelle td { padding: 4px 6px; border-bottom: 1px solid #f1ece4; }
+.preis-tabelle input { padding: 4px 7px; border: 1px solid var(--linie); border-radius: 5px; background: white; }
+.preis-tabelle td:first-child input { width: 100%; }
+.preis-tabelle input[type=number] { width: 90px; text-align: right; }
+
+/* ---------- Vereinbarung (Blatt) ---------- */
+.kv-blatt { background: white; padding: 16mm 16mm 14mm 20mm; min-height: 297mm; font-size: 12.5px; line-height: 1.45; color: #222; }
+.kv-kopf { display: flex; justify-content: flex-end; border-bottom: 2px solid var(--akzent); padding-bottom: 8px; }
+.kv-praxis { text-align: right; font-size: 11px; color: var(--grau); }
+.kv-praxisname { font-size: 18px; font-weight: 600; color: var(--akzent-dunkel); }
+.kv-meta { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 11.5px; margin: 8mm 0 6mm; }
+.kv-meta span { display: block; font-size: 9.5px; color: var(--grau); text-transform: uppercase; letter-spacing: .5px; }
+.kv-blatt h1 { font-size: 21px; font-weight: 600; margin: 0; }
+.kv-untertitel { margin: 2px 0 12px; color: var(--grau); font-style: italic; }
+.kv-blatt h2 { font-size: 13.5px; margin: 0 0 6px; color: var(--akzent-dunkel); font-weight: 600; }
+.kv-tabelle { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+.kv-tabelle th { text-align: left; font-weight: 600; font-size: 10px; color: var(--grau); border-bottom: 1px solid #bbb; padding: 3px 5px; text-transform: uppercase; }
+.kv-tabelle td { padding: 3px 5px; border-bottom: 1px solid #eee; vertical-align: top; }
+.kv-tabelle td.r, .kv-tabelle th.r { white-space: nowrap; }
+.kv-zaehne td:nth-child(3) { width: 100%; }
+.kv-leistung td:nth-child(2) { width: 100%; }
+.kv-summe { margin: 14px 0 0 auto; width: 70%; font-size: 12px; }
+.kv-summe div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.kv-summe .gesamt { border-top: 2px solid var(--akzent); margin-top: 4px; padding-top: 6px; font-size: 15px; color: var(--akzent-dunkel); }
+.kv-vereinbarung { margin-top: 16px; border-top: 2px solid var(--linie); padding-top: 12px; }
+.kv-bemerkung { white-space: pre-wrap; margin-top: 14px; }
+.kv-fuss { font-size: 11px; color: var(--grau); margin-top: 6px; }
+.kv-hinweise { margin-top: 18px; font-size: 10.5px; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
+.kv-hinweise p { margin: 4px 0; }
+.kv-unterschriften { display: grid; grid-template-columns: 1fr 1fr; gap: 14mm; margin-top: 16mm; font-size: 10px; color: var(--grau); }
+.kv-blatt-folge { margin-top: 10mm; min-height: 0; border-top: 6px solid var(--grund); }
+.kv-erstattung { margin-top: 12px; font-weight: 600; }
+.kv-unterschriften span { display: block; border-bottom: 1px solid #555; height: 12mm; margin-bottom: 3px; }
+
+@media (max-width: 1400px) {
+  .arbeitsflaeche { grid-template-columns: 1fr; }
+  .vorschau { position: static; max-height: none; }
+  .reglerleiste { padding: 8px 16px; gap: 8px; }
+  .kl-block { padding: 6px 10px; gap: 4px; }
+  .regler-info:not(.begruendung) { display: none; }
+}
+@media (max-width: 900px) {
+  .kopfbereich { position: static; }
+  .reglerleiste { grid-template-columns: 1fr; }
+}
+
+/* ---------- Ablage: Speichern / Freigeben ---------- */
+fieldset.sperre { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+fieldset.sperre:disabled { opacity: .62; }
+.kopfbereich > fieldset.sperre { display: block; }
+.ablage-stand { align-self: center; font-size: 11.5px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--linie, #e3ddd3); color: var(--grau, #6b767d); white-space: nowrap; }
+.ablage-stand.ungespeichert { color: var(--warn, #9a5b00); background: var(--warn-hell, #fff4e0); border-color: #f0d9ae; }
+.ablage-stand.frei { color: var(--akzent-dunkel, #266a78); background: var(--akzent-hell, #e4f0f1); border-color: #c4dfe2; font-weight: 600; }
+.ablage-sperre { margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 13px; background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); border: 1px solid #c4dfe2; }
+.ablage h3 small { font-weight: 400; color: var(--grau, #6b767d); font-size: 12px; }
+.ablage-tabelle { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ablage-tabelle th { text-align: left; font-weight: 500; font-size: 11px; color: var(--grau, #6b767d); text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid var(--linie, #e3ddd3); }
+.ablage-tabelle td { padding: 5px 6px; border-bottom: 1px solid #f1ece4; vertical-align: middle; }
+.ablage-tabelle td.r, .ablage-tabelle th.r { text-align: right; white-space: nowrap; }
+.ablage-tabelle tr.aktuell td { background: var(--akzent-hell, #e4f0f1); }
+.ablage-status { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: #efece6; color: var(--grau, #6b767d); }
+.ablage-status.freigegeben { background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); }
+.ablage-zeit { color: var(--grau, #6b767d); font-size: 12px; white-space: nowrap; }
+.ablage-offen { font-size: 12px; color: var(--akzent-dunkel, #266a78); }
+
+/* ---------- Vorlagen und Positionsliste ---------- */
+.vorlagen { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.vorlage { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 9px 11px; border: 1px solid var(--linie); border-radius: 8px; background: white; }
+.vorlage:hover:not(:disabled) { border-color: var(--akzent); background: var(--akzent-hell); }
+.vorlage b { font-size: 13px; color: var(--tinte); }
+.vorlage small { font-size: 11.5px; color: var(--grau); line-height: 1.3; }
+.vorlage.aktiv { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); background: var(--akzent-hell); }
+.pos-tabelle { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; }
+.pos-tabelle th { text-align: left; font-weight: 500; font-size: 11px; color: var(--grau); text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid var(--linie); }
+.pos-tabelle th.r { text-align: right; }
+.pos-tabelle td { padding: 4px 6px; border-bottom: 1px solid #f1ece4; vertical-align: middle; }
+.pos-tabelle td.nr { width: 56px; font-weight: 600; white-space: nowrap; }
+.pos-tabelle td.r { white-space: nowrap; }
+.pos-tabelle tr.mit-warnung td:first-child { box-shadow: inset 3px 0 var(--rot); }
+.pos-tabelle .gruppe td { background: var(--grund); font-size: 11px; font-weight: 600; color: var(--grau); text-transform: uppercase; letter-spacing: .4px; }
+.pos-tabelle .summe td { border-top: 1px solid #bbb; font-weight: 600; border-bottom: none; }
+.zahl-feld { width: 74px; padding: 3px 5px; border: 1px solid var(--linie); border-radius: 5px; background: white; text-align: right; }
+.text-feld { width: 100%; padding: 3px 6px; border: 1px solid var(--linie); border-radius: 5px; background: white; }
+.pos-neu { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 6px; border-top: 1px dashed var(--linie); }
+.pos-neu select { padding: 5px 7px; border: 1px solid var(--linie); border-radius: 6px; background: white; max-width: 460px; }
+.grau { color: var(--grau); }
+.hinweise li.warn { color: var(--rot); }
+.schalter { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.wahl { display: flex; gap: 4px; flex-wrap: wrap; }
+.wahl button { border: 1px solid var(--linie); background: white; border-radius: 6px; padding: 5px 10px; font-size: 12.5px; color: var(--grau); }
+.wahl button.aktiv { background: var(--stahl); border-color: var(--stahl); color: white; font-weight: 600; }
+.kv-felder { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 11.5px; margin: 6px 0 10px; }
+.kv-felder div span { display: block; font-size: 9.5px; color: var(--grau); text-transform: uppercase; letter-spacing: .5px; }
+.kv-felder .breit { grid-column: span 2; }
+.kv-kreuz { display: inline-block; width: 11px; height: 11px; border: 1px solid #555; margin-right: 4px; vertical-align: -1px; text-align: center; line-height: 10px; font-size: 10px; }
+.kv-blatt h2 { margin-top: 10px; }
+
+/* ---------- KFO: Behandlungsaufgabe, Analog, Abschläge ---------- */
+.analog-text { display: block; font-size: 11px; color: var(--grau); line-height: 1.3; }
+.kv-tabelle .analog-text { font-size: 9.5px; }
+.block h3 small { font-weight: 400; font-size: 12px; }
+.aufgabe { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.aufgabe > div { border: 1px solid var(--linie); border-radius: 8px; padding: 8px 10px; background: white; }
+.chk.kopf { font-weight: 600; font-size: 13px; white-space: normal; }
+.umfang { display: inline-block; margin: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--akzent-dunkel); background: var(--akzent-hell); border-radius: 999px; padding: 1px 9px; }
+.kriterien { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.kriterien .chk { white-space: normal; align-items: flex-start; line-height: 1.35; }
+.kriterien .chk input { margin-top: 2px; }
+.nr-feld { width: 54px; text-align: left; }
+.kv-kriterien { margin: 4px 0 0; padding-left: 18px; font-size: 10.5px; color: #444; }
+.kv-abschlag { margin-top: 10px; font-size: 11.5px; background: #f6f3ee; border-radius: 4px; padding: 6px 8px; }
+@media (max-width: 1100px) { .aufgabe { grid-template-columns: 1fr; } }

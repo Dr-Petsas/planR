@@ -1,0 +1,51 @@
+{
+  "stand": "GOZ 2012 Abschnitt G (6000–6260) mit Allgemeiner Bestimmung, abgeglichen mit gesetze-im-internet.de am 07.10.2026 (alle 27 Positionen identisch mit goz-2012.json); Punktwert 0,0562421 EUR; GOÄ-Röntgen und 2702 mit Punktwert 0,0582873 EUR; BZÄK-Kommentar und Beratungsforum, BLZK (BZB 07/2021 und 07/2026), ZÄK Berlin (MBZ 5/2020).",
+  "punktwert": 0.0562421,
+  "punktwertGoae": 0.0582873,
+  "quellen": [
+    "https://www.gesetze-im-internet.de/goz_1987/anlage_1.html",
+    "https://www.gesetze-im-internet.de/goz_1987/__2.html",
+    "https://www.gesetze-im-internet.de/goz_1987/__4.html",
+    "https://www.gesetze-im-internet.de/goz_1987/__5.html",
+    "https://www.gesetze-im-internet.de/goz_1987/__9.html",
+    "https://www.gesetze-im-internet.de/goz_1987/__10.html",
+    "https://www.gesetze-im-internet.de/go__1982/anlage.html",
+    "https://www.bzaek.de/goz/goz-kommentar/kieferorthopaedische-leistungen/goz-nr-6010.html",
+    "https://www.bzaek.de/goz/goz-kommentar/kieferorthopaedische-leistungen/goz-nr-6030.html",
+    "https://www.bzaek.de/goz/goz-kommentar/kieferorthopaedische-leistungen/goz-nr-6080.html",
+    "https://www.bzaek.de/goz/goz-kommentar/analog-zu-berechnende-leistungen.html",
+    "https://www.blzk.de/blzk/Site.nsf/gfx/kieferorthopaedie_bzb_2021-07.pdf/$file/kieferorthopaedie_bzb_2021-07.pdf",
+    "https://epaper.zwp-online.info/epaper/gim/bzb/2026/bzb0726/GOZ_39.pdf",
+    "https://www.zaek-berlin.de/dateien/Content/Dokumente/Zahn%C3%A4rzte/GOZ/GOZ-Artikel_im_MBZ/2020/MBZ_05_2020_2.pdf",
+    "https://www.pkv.de/fileadmin/user_upload/PKV/3_PDFs/GOAE-GOZ/GOZ_2021_Stellungnahme_Berechnungsf%C3%A4higkeit_kiefernorthop%C3%A4discher_Leistungen.pdf",
+    "https://www.iww.de/aaz/abrechnungswissen/kfo-so-rechnen-sie-aligner-richtig-ab-diese-gebuehrenziffern-sind-berechnungsfaehig-teil-2-f159055",
+    "https://www.iww.de/pa/leserforum/kfo-wie-ist-die-entfernung-eines-festsitzenden-retainers-zu-berechnen-f171837",
+    "https://www.gesetze-im-internet.de/bbhv/__15a.html",
+    "lokale Kopien: F:\\PlanR\\.git\\kfo-quellen\\ (goz-abschnitt-g.txt, goz-anlage.html, goae-anlage.html, blzk_kfo_2021.txt, zaekb_kfo_2020.txt, bericht-privat.md)"
+  ],
+  "positionen": [
+    "F:\\PlanR\\KFO\\Privat-KFO\\src\\data\\goz-2012.json",
+    "F:\\PlanR\\KFO\\Privat-KFO\\src\\data\\goae-kfo.json (Ä1, Ä5, Ä2702, Ä5004, Ä5020, Ä5037, Ä5090, Ä5095)"
+  ],
+  "regeln": {
+    "einstufung": "6030–6050 je Kiefer nach fünf Kriterien a–e (Zahngruppen, Bewegung über 2 mm, Art, Richtung, zusätzliche Verankerung): 6040 ab drei, 6050 ab vier Kriterien. 6060–6080 je Fall (ein oder beide Kiefer, Wachstumsphase ohne feste Altersgrenze): 6070 ab einem, 6080 ab zwei Kriterien aus a–c. 6090 je Kiefer, nach Wachstumsende.",
+    "zeitraum": "6030–6080 umfassen bis zu vier Jahre, unabhängig von Methode und Gerät (auch Aligner); volle Gebühr auch bei früherem Ende. Abschlagszahlungen sind üblich, aber frei vereinbart; der endgültige Faktor steht erst in der Schlussrechnung.",
+    "abgegolten": "In 6030–6080 enthalten: Abformungen für Geräte, Eingliedern herausnehmbarer Geräte, Verlaufskontrollen, Retention. Gesondert: 6100–6170 und deren Entfernung. Nicht daneben: 6190–6260; 6210 nur außerhalb dieser Fälle oder nach vier Jahren.",
+    "brackets": "6100 je Klebestelle (auch Wiederbefestigen, Lingualbrackets; Umpositionieren = 6110 + 6100); 6120 je Zahn; 6140/6150 je Bogen. Bogenentfernung nicht in 6140/6150 enthalten – BZÄK: GOÄ 2702.",
+    "material": "Allgemeine Bestimmung Abschnitt G: 6100, 6120, 6140 und 6150 enthalten Standardmaterial (unprogrammierte Edelstahlbrackets und -attachments, Edelstahlbänder). Mehrkosten nur mit schriftlicher Vereinbarung VOR der Verwendung, mit voraussichtlichen Kosten, abzuziehenden Standardkosten und Hinweis auf möglicherweise unvollständige Erstattung. § 4 Abs. 3 GOZ ist keine Grundlage für Materialberechnung.",
+    "labor": "Laborgefertigte Geräte als Auslagen nach § 9 GOZ; privat gibt es keine amtlichen Laborpreise (BEL II nur für Kassenleistungen).",
+    "faktor": "Über 2,3 schriftliche Begründung (§ 5 Abs. 2, § 10 Abs. 3 GOZ), über 3,5 nur mit Vereinbarung nach § 2 GOZ.",
+    "fotos": "Mehr als vier Mal 6000 je Behandlung in der Rechnung begründen."
+  },
+  "offen": [
+    "Ob 6030–6050 und 6060–6080 im selben Fall nebeneinander berechnet werden dürfen, ist nicht abschließend belegt – der Planer rechnet beides und zeigt einen Hinweis.",
+    "Entfernen eines Bogens: BZÄK nennt GOÄ 2702, der Berufsverband BDK will analog berechnen.",
+    "Analyse digitaler Modelle: PKV/Beihilfe halten 6010 analog für angemessen, die BZÄK legt sich nicht fest.",
+    "Materialpreise (Spezialbrackets, Bögen) und Laborpreise legt die Praxis bzw. das Labor fest; die BLZK-Zahlen (14,00 € minus 3,50 €) sind nur ein Rechenbeispiel."
+  ],
+  "hinweise": [
+    "Euro-Werte = Punkte × 0,0562421 × Faktor, auf Cent gerundet (§ 5 Abs. 1 GOZ).",
+    "'16 Quartale' ist eine Kassenregel, keine GOZ-Regel.",
+    "Beihilfe: Kieferorthopädie für Erwachsene nur in Ausnahmefällen (§ 15a BBhV)."
+  ]
+}

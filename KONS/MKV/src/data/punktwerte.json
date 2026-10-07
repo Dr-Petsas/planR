@@ -390,6 +390,14 @@
         "geprueft": false,
         "hinweis": "Laut Fremdkassenlisten (Stand 09/2026) fuer alle Kassenarten noch Wert ab 01.01.2025."
       },
+      "KFO": {
+        "primaer": 1.1000,
+        "ersatz": 1.1000,
+        "gueltigAb": "2025-01-01",
+        "quelle": "https://www.kzvnr.de/service/wissen-to-go",
+        "geprueft": true,
+        "hinweis": "Punktwertuebersicht der KZV Nordrhein ab 01.01.2026, Stand 15.12.2025 (Anlage Informationsdienst 6/2025): KFO noch Wert ab 01.01.2025."
+      },
       "ZE": {
         "primaer": 1.1844,
         "ersatz": 1.1844,
@@ -625,6 +633,15 @@
         "quelle": "https://www.zahnaerzte-in-sachsen.de/fileadmin/Praxis/KZVS/Punktwerte/2026/Punktwerte_Fremdkassen_Q3_2026.pdf",
         "geprueft": false,
         "hinweis": "AOK PLUS ab 01.01.2026; vdek noch Wert 2025 (TK 1,2827, BARMER 1,2755)."
+      },
+      "KFO": {
+        "primaer": 1.2481,
+        "ersatz": 1.1381,
+        "gueltigAb": "2025-01-01",
+        "gueltigAbPrimaer": "2026-01-01",
+        "quelle": "https://www.kzvth.de/services/asset/KZVTh/Downloadbereich/Punktwertlisten/PWL%202026/Verguetungspunktwerte_III_2026.pdf",
+        "geprueft": false,
+        "hinweis": "Vorlaeufige Verguetungspunktwerte III/2026 (Rundschreiben 4/2026): AOK 1,2481; BKK 1,2405, IKK 1,2115, Knappschaft 1,1929 (ab 01.04.2026), LKK 1,1997; vdek 1,1381 (BARMER 1,1415, TK 1,1454) noch Wert 2025."
       },
       "ZE": {
         "primaer": 1.1844,

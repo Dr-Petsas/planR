@@ -1,0 +1,65 @@
+{
+  "stand": "BEMA Teil 3 (KZBV, gültig ab 01.01.2026, S. 51–56, Raster an den Originalbildern geprüft); KFO-Richtlinie G-BA mit Anlagen 1 und 2; SGB V §§ 28, 29, 88; BMV-Z Anlage 14c/14d (eFormular 4, Version 2.1.0, ab 01.04.2026), Anlage 14a Vordruck 4d und Anlage B (Mehr-/Zusatzleistungen, Beschluss Bewertungsausschuss 24.04.2023); BEL II je KZV aus dem Datendienst. Abgeglichen am 07.10.2026.",
+  "positionen": "F:\\PlanR\\KFO\\Kassen-KFO\\src\\data\\bema-kfo.json",
+  "quellen": [
+    "https://www.kzbv.de/wp-content/uploads/KZBV_BEMA_2026-01-01.pdf",
+    "https://www.g-ba.de/richtlinien/28/",
+    "https://www.g-ba.de/downloads/83-691-41/RL-Kieferorthop%C3%A4die-Anl1.pdf",
+    "https://www.g-ba.de/downloads/83-691-42/RL-Kieferorthop%C3%A4die-Anl2.pdf",
+    "https://www.gesetze-im-internet.de/sgb_5/__28.html",
+    "https://www.gesetze-im-internet.de/sgb_5/__29.html",
+    "https://www.gesetze-im-internet.de/sgb_5/__88.html",
+    "https://www.kzbv.de/wp-content/uploads/bmv-z-2026-04-01_anlage-14c.pdf",
+    "https://www.kzbv.de/wp-content/uploads/bmv-z-2026-04-01_anlage-14d.pdf",
+    "https://www.kzbv.de/wp-content/uploads/Vereinbarung_Erklaerung_Mehr_Zusatzleistungen_KFO_Vordruck-4d.pdf",
+    "https://www.kzbv.de/wp-content/uploads/bmv-z-2024-02-20-anlage-b.pdf",
+    "https://www.kzbv.de/wp-content/uploads/Beschluss-BewAus-Katalog-KFO-Mehr-Zusatzleistg_2023-04-24.pdf",
+    "https://www.kzv-berlin.de/fuer-praxen/abrechnung/kieferorthopaedie/mehr-und-zusatzleistungen",
+    "https://abrechnungsmappe.kzvb.de/leistungskataloge/bemateil-drei-kfo/insiderw-kfo-kompakt/mehr-zusatzl/definition-mehrleistung",
+    "https://www.kzvbw.de/aktuelles/2025/kfo-behandlung-therapie-mit-alignern-u-a-invisalign-nicht-ueber-die-gkv-abrechenbar-2/",
+    "https://pasident.de/kfo-mkv-126a-b-und-6100-entscheidungshilfe-die-richtige-berechnung-von-avl-mehrkosten/",
+    "lokale Kopien: F:\\PlanR\\.git\\kfo-quellen\\ (BEMA_full.txt, bema_s52/53-Bilder, KFO-RL*.txt, anlage-14b/14c/14d, Muster_4d.txt, kzbv_katalog_anlageB.txt, pw\\)"
+  ],
+  "regeln": {
+    "raster119": {
+      "kriterien": [
+        "I Zahl der bewegten Zähne bzw. Zahngruppen: 1–2 = 1, 1–2 Zahngruppen = 2, alle Zahngruppen = 3",
+        "II Größe der Bewegung: 1–2 mm = 1, 3–5 mm = 3, mehr als 5 mm = 5",
+        "III Art und Richtung: günstig kippend = 1, ungünstig kippend = 3, körperlich = 5",
+        "IV Verankerung: einfach = 1, mittelschwer = 2, schwierig = 5",
+        "V Reaktionsweise: sehr günstig = 1, gut = 3, ungünstig = 5"
+      ],
+      "stufen": "5–7 a, 8–10 b, 11–15 c, ab 16 d",
+      "abschlagPunkte": { "a": 11, "b": 17, "c": 23, "d": 28 }
+    },
+    "raster120": {
+      "kriterien": [
+        "I Größe der Bissverlagerung: 1–2 mm = 1, ½ Prämolarenbreite = 3, über ½ bis 1 Prämolarenbreite = 5",
+        "II Lokalisation: einseitig = 1, beiderseitig = 3",
+        "III Richtung der Bissverschiebung: mesial = 1, lateral = 2, distal = 3",
+        "IV Reaktionsweise: sehr günstig = 1, gut = 3, ungünstig = 10"
+      ],
+      "stufen": "4–8 a, 9–10 b, 11–12 c, ab 13 d",
+      "abschlagPunkte": { "a": 17, "b": 19, "c": 23, "d": 28 }
+    },
+    "abschlaege": "119/120 in höchstens 12 Quartalsabschlägen (= Bewertungszahl je Quartal), Frühbehandlung höchstens 6 Quartale; abgegolten 16 Quartale einschließlich Retention. Vorzeitiger Abschluss: a/b restliche Abschläge am Ende, c/d vor dem 10. Quartal nur die fälligen. Retention bis 2 Jahre nach dem letzten Abschlag. 121–124 nicht neben 119/120.",
+    "hoechstzahlen": "116 höchstens 4; 7a und 117 je höchstens 3, kombiniert 4 (keine Grenze bei früher Behandlung nach B8 d); 118 und Ä934a höchstens 2 (Ausnahme 3), bei Frühbehandlung 1; 121 höchstens 6; 124 höchstens 2.",
+    "kig": "KFO-RL Anlage 1: Kassenleistung nur ab Grad 3. Frühbehandlung (B8 c) bei D5, K3, K4, B4, M4, M5, P3 – nicht vor dem 4. Lebensjahr. Frühe Behandlung (B8 d) bei A5, O5, M4, M5. Ab 18 Jahren nur kombiniert kieferchirurgisch-kieferorthopädisch (A5, D4/5, M4/5, O5, B4, K4).",
+    "eigenanteil": "§ 29 Abs. 2 SGB V: 20 %, ab dem zweiten gleichzeitig behandelten Kind 10 %. Bemessung: KFO-Honorar, Labor und Material. Ohne Eigenanteil: 01k, BEMA 12 und Röntgen (§ 29 Abs. 2 Satz 2), gerechnet mit dem KCH-Punktwert. Rückzahlung nach Abschluss im geplanten Umfang (§ 29 Abs. 3).",
+    "vordruck4d": "§ 29 Abs. 5–7 SGB V, Anlage 14a BMV-Z: Mehrleistung (M) = GOZ-Betrag minus voller Betrag der vergleichbaren BEMA-Leistung (nicht unter 0); die BEMA-Leistung bleibt im Kassenplan. Zusatz- (Z) und andere Leistungen (A) zahlt die Familie voll. Private Material- und Laborkosten getrennt. Vor Behandlungsbeginn mündlich aufklären und schriftlich vereinbaren."
+  },
+  "offen": [
+    "Röntgen zur KFO: KFO- oder KCH-Punktwert ist je KZV unterschiedlich geregelt – Einstellung 'roentgenKfo' (Vorgabe aus, also KCH).",
+    "BEMA 121–124 ohne Eigenanteil: so nur von der KZV Bayerns belegt – Einstellung 'ohneEigenanteil121' (Vorgabe aus).",
+    "KFO-Punktwerte ohne öffentliche Quelle (Mitglieder-Login): KZV Bremen (31), Schleswig-Holstein (36), Mecklenburg-Vorpommern (52), Sachsen-Anhalt (54), Niedersachsen (04) – dort rechnet der Planer mit dem Bundesmittel und zeigt einen Hinweis; eigener Wert über die Einstellungen.",
+    "KZV Nordrhein (13): KFO 1,1000 laut Punktwertübersicht Stand 15.12.2025 noch der Wert ab 01.01.2025; eine Erhöhung 2026 war dort noch nicht eingepflegt.",
+    "KZV Thüringen (55): Werte aus der VORLÄUFIGEN Liste III/2026; Primärkassen je Kassenart verschieden (AOK 1,2481, BKK 1,2405, IKK 1,2115, Knappschaft 1,1929, LKK 1,1997) – Tabelle führt AOK.",
+    "KZV Hamburg (32): 'Zahnarzt aktuell' 12/2025 nannte KFO 2026 Primär 1,0978 / vdek 1,1014; die neuere Liste der KZV Hamburg (Stand 23.06.2026) nennt 1,1503 / 1,1661 – übernommen ist die KZV-Liste.",
+    "Preise für Mehrmaterial, Z-Leistungen ohne GOZ-Nummer (Retainer, Minischrauben, Apparaturen) und private Laborkosten gibt es nicht amtlich – sie trägt die Praxis in den Einstellungen bzw. je Position ein."
+  ],
+  "hinweise": [
+    "Aligner sind keine Kassenleistung (KZV BW 2025); bei Wunsch der Familie vollständig privat.",
+    "UK-Frontzahnretainer ist nur bei E3/E4 in der UK-Front Kassenleistung (126a/127a), sonst Zusatzleistung.",
+    "Der Plan wird elektronisch (eFormular 4) an die Kasse übermittelt; die Antragsnummer vergibt das PVS."
+  ]
+}

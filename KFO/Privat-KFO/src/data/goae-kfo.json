@@ -1,0 +1,17 @@
+{
+  "name": "GOÄ – Leistungen in der KFO (für Zahnärzte nach § 6 Abs. 2 GOZ)",
+  "quelle": "https://www.gesetze-im-internet.de/go__1982/anlage.html",
+  "stand": "2026-10-07",
+  "punktwert": 0.0582873,
+  "hinweis": "Abschnitt O (Röntgen): Spanne 1,0–2,5, Begründung ab 1,8, keine abweichende Vereinbarung (§ 5 Abs. 3, § 2 Abs. 3 GOÄ). Übrige: 2,3 / 3,5. Zuschlag 5298 = 25 % des einfachen Satzes der Leistungen 5010–5290.",
+  "eintraege": [
+    { "nr": "1", "text": "Beratung – auch mittels Fernsprecher", "punkte": 80, "kat": "B" },
+    { "nr": "5", "text": "Symptombezogene Untersuchung", "punkte": 80, "kat": "B" },
+    { "nr": "2702", "text": "Wiederanbringung einer gelösten Apparatur oder kleine Änderungen, teilweise Erneuerung von Schienen oder Stützapparaten – auch Entfernung von Schienen oder Stützapparaten –, je Kiefer", "punkte": 300, "kat": "L" },
+    { "nr": "5004", "text": "Panoramaschichtaufnahme der Kiefer (OPG)", "punkte": 400, "kat": "O" },
+    { "nr": "5020", "text": "Röntgen Handgelenk, Mittelhand, Finger – jeweils in zwei Ebenen", "punkte": 220, "kat": "O" },
+    { "nr": "5037", "text": "Bestimmung des Skelettalters einschließlich der zugehörigen Röntgendiagnostik und gutachterlichen Beurteilung", "punkte": 300, "kat": "O" },
+    { "nr": "5090", "text": "Schädel-Übersicht in zwei Ebenen (Fernröntgenseitenbild)", "punkte": 400, "kat": "O" },
+    { "nr": "5095", "text": "Schädelteile in Spezialprojektionen, je Teil", "punkte": 200, "kat": "O" }
+  ]
+}

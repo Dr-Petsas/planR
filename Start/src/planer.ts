@@ -52,6 +52,13 @@ export const BEREICHE: Bereich[] = [
       { kuerzel: 'KB', titel: 'Privat-KB-Planer', zweck: 'Schienentherapie privat', text: 'GOZ Abschnitt H/J und BEB · Funktionsdiagnostik', art: 'Privat', host: 'privat-kb', port: 5208 },
     ],
   },
+  {
+    name: 'Kieferorthopädie',
+    planer: [
+      { kuerzel: 'KFO', titel: 'Kassen-KFO-Planer', zweck: 'Kieferorthopädischer Behandlungsplan', text: 'eFormular 4 · BEMA Teil 3 · KIG · Mehrleistungen nach Vordruck 4d', art: 'Kasse', host: 'kfo', port: 5212 },
+      { kuerzel: 'KFO', titel: 'Privat-KFO-Planer', zweck: 'Heil- und Kostenplan KFO privat', text: 'GOZ Abschnitt G · Behandlungsaufgabe, Diagnostik und Material', art: 'Privat', host: 'privat-kfo', port: 5214 },
+    ],
+  },
 ]
 
 /** Adresse eines Planers: über den Tunnel die Subdomain, am Praxis-PC der lokale Port; ?mandant= wird durchgereicht. */
