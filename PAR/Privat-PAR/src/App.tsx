@@ -13,6 +13,7 @@ import Regler from './components/Regler'
 import Dokument from './components/Dokument'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
+import { PlanrZurueck } from './PlanrZurueck'
 
 type Reiter = 'patient' | 'befund' | 'planung' | 'einstellungen'
 
@@ -56,6 +57,7 @@ export default function App() {
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">
+            <PlanrZurueck />
             <div className="logo">PA</div>
             <div>
               <div className="titel">Privat-PAR-Planer <MandantName /></div>

@@ -16,6 +16,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   naechsteNummer: 1,
   laborName: '',
   laborPreise: {},
+  ukpsAnalog: '5220',
 }
 
 export const reglerAus = (e: Einstellungen): Regler => ({ faktor: e.faktor, faFaktor: e.faFaktor, laborKlasse: 1 })
@@ -30,6 +31,8 @@ export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
     diagnose: '',
     positionen: [],
     regler: reglerAus(einst),
+    abformung: 'abdruck',
+    fremdlabor: { name: einst.laborName },
     bemerkung: '',
   }
 }
@@ -44,6 +47,8 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     patient: patientMigrieren(p.patient),
     regler: { ...basis.regler, ...p.regler },
     positionen: Array.isArray(p.positionen) ? p.positionen : [],
+    abformung: p.abformung === 'scan' ? 'scan' : 'abdruck',
+    fremdlabor: { ...basis.fremdlabor, ...p.fremdlabor },
     diagnose: p.diagnose ?? '',
     bemerkung: p.bemerkung ?? '',
   }

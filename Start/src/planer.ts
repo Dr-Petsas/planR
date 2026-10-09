@@ -61,6 +61,27 @@ export const BEREICHE: Bereich[] = [
   },
 ]
 
+const MODUL: Record<string, { kuerzel: string; art: Art }> = {
+  hkp: { kuerzel: 'HKP', art: 'Kasse' },
+  'privat-kv': { kuerzel: 'ZE', art: 'Privat' },
+  'privat-impl': { kuerzel: 'IMPL', art: 'Privat' },
+  'kons-mkv': { kuerzel: 'MKV', art: 'Kasse' },
+  'privat-kons': { kuerzel: 'KONS', art: 'Privat' },
+  'kassen-par': { kuerzel: 'PAR', art: 'Kasse' },
+  'privat-par': { kuerzel: 'PA', art: 'Privat' },
+  'kassen-kb': { kuerzel: 'KB', art: 'Kasse' },
+  'privat-kb': { kuerzel: 'KB', art: 'Privat' },
+  'kassen-kfo': { kuerzel: 'KFO', art: 'Kasse' },
+  'privat-kfo': { kuerzel: 'KFO', art: 'Privat' },
+}
+
+/** Planer, in dem ein gespeicherter Plan entstanden ist. */
+export function planerZuModul(modul: string): Planer | undefined {
+  const ziel = MODUL[modul]
+  if (!ziel) return undefined
+  return BEREICHE.flatMap((b) => b.planer).find((p) => p.kuerzel === ziel.kuerzel && p.art === ziel.art)
+}
+
 /** Adresse eines Planers: über den Tunnel die Subdomain, am Praxis-PC der lokale Port; ?mandant= wird durchgereicht. */
 export function adresse(p: Planer, ort: { protocol: string; hostname: string; search: string }): string | null {
   if (!p.host || !p.port) return null

@@ -85,7 +85,7 @@ input, select, textarea { font: inherit; color: inherit; }
   gap: 24px; padding: 16px 24px; align-items: start;
 }
 .editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.vorschau { position: sticky; top: 220px; max-height: calc(100vh - 240px); overflow: auto; border-radius: 4px; box-shadow: 0 6px 24px rgba(60, 40, 10, .12); }
+.vorschau { position: sticky; top: 220px; max-height: calc(100vh - 240px); overflow: auto; background: #d9d3c7; padding: 10px; border-radius: 4px; }
 
 .reiter { display: flex; gap: 4px; border-bottom: 1px solid var(--linie); }
 .reiter button { background: none; border: none; padding: 10px 14px; color: var(--grau); border-bottom: 2px solid transparent; margin-bottom: -1px; }
@@ -158,34 +158,62 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .preis-tabelle td:first-child input { width: 100%; }
 .preis-tabelle input[type=number] { width: 90px; text-align: right; }
 
-/* ---------- Vereinbarung (Blatt) ---------- */
-.kv-blatt { background: white; padding: 16mm 16mm 14mm 20mm; min-height: 297mm; font-size: 12.5px; line-height: 1.45; color: #222; }
-.kv-kopf { display: flex; justify-content: flex-end; border-bottom: 2px solid var(--akzent); padding-bottom: 8px; }
-.kv-praxis { text-align: right; font-size: 11px; color: var(--grau); }
-.kv-praxisname { font-size: 18px; font-weight: 600; color: var(--akzent-dunkel); }
-.kv-meta { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 11.5px; margin: 8mm 0 6mm; }
-.kv-meta span { display: block; font-size: 9.5px; color: var(--grau); text-transform: uppercase; letter-spacing: .5px; }
-.kv-blatt h1 { font-size: 21px; font-weight: 600; margin: 0; }
-.kv-untertitel { margin: 2px 0 12px; color: var(--grau); font-style: italic; }
-.kv-blatt h2 { font-size: 13.5px; margin: 0 0 6px; color: var(--akzent-dunkel); font-weight: 600; }
-.kv-tabelle { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
-.kv-tabelle th { text-align: left; font-weight: 600; font-size: 10px; color: var(--grau); border-bottom: 1px solid #bbb; padding: 3px 5px; text-transform: uppercase; }
-.kv-tabelle td { padding: 3px 5px; border-bottom: 1px solid #eee; vertical-align: top; }
-.kv-tabelle td.r, .kv-tabelle th.r { white-space: nowrap; }
-.kv-zaehne td:nth-child(3) { width: 100%; }
-.kv-leistung td:nth-child(2) { width: 100%; }
-.kv-summe { margin: 14px 0 0 auto; width: 70%; font-size: 12px; }
-.kv-summe div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
-.kv-summe .gesamt { border-top: 2px solid var(--akzent); margin-top: 4px; padding-top: 6px; font-size: 15px; color: var(--akzent-dunkel); }
-.kv-vereinbarung { margin-top: 16px; border-top: 2px solid var(--linie); padding-top: 12px; }
-.kv-bemerkung { white-space: pre-wrap; margin-top: 14px; }
-.kv-fuss { font-size: 11px; color: var(--grau); margin-top: 6px; }
-.kv-hinweise { margin-top: 18px; font-size: 10.5px; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
-.kv-hinweise p { margin: 4px 0; }
-.kv-unterschriften { display: grid; grid-template-columns: 1fr 1fr; gap: 14mm; margin-top: 16mm; font-size: 10px; color: var(--grau); }
-.kv-blatt-folge { margin-top: 10mm; min-height: 0; border-top: 6px solid var(--grund); }
-.kv-erstattung { margin-top: 12px; font-weight: 600; }
-.kv-unterschriften span { display: block; border-bottom: 1px solid #555; height: 12mm; margin-bottom: 3px; }
+/* ---------- eFormular 2 (BMV-Z Anlage 14c, schwarz auf weiß) ---------- */
+.ef2 { background: #fff; color: #111; font: 10px/1.25 Arial, Helvetica, sans-serif; padding: 8px 10px 12px; margin-bottom: 10px; }
+.ef2-amt { text-align: right; font-size: 9px; margin: 0 0 6px; }
+.ef2 h1 { font-size: 13px; font-weight: 400; margin: 0 0 2px; line-height: 1.2; }
+.ef2 h1 b { font-weight: 700; }
+.ef2-version { margin: 0 0 6px; font-size: 9px; }
+.ef2-hinweis { margin: 0 0 6px; font-size: 9px; }
+.ef2-rahmen { position: relative; border: 1.5px solid #222; padding-left: 14px; }
+.ef2-stand { position: absolute; left: 1px; bottom: 36px; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 7px; color: #333; }
+.ef2-kopf { display: grid; grid-template-columns: minmax(0, 1fr) 142px; }
+.ef2-personal { border-right: 1px solid #222; border-bottom: 1px solid #222; min-width: 0; }
+.ef2-feld { border-bottom: 1px solid #222; padding: 1px 4px 2px; min-height: 22px; }
+.ef2-feld:last-child { border-bottom: none; }
+.ef2-feld > span, .ef2-zeile > span, .ef2-stempel > span { display: block; font-size: 8px; color: #222; }
+.ef2-feld b { display: block; font-size: 11px; font-weight: 600; min-height: 12px; }
+.ef2-name, .ef2-drei, .ef2-seite { display: flex; }
+.ef2-name > .ef2-feld, .ef2-drei > .ef2-feld, .ef2-seite > .ef2-feld { flex: 1; border-bottom: none; border-right: 1px solid #222; }
+.ef2-name > .ef2-feld:last-child, .ef2-drei > .ef2-feld:last-child, .ef2-seite > .ef2-feld:last-child { border-right: none; }
+.ef2-geb { flex: 0 0 72px; }
+.ef2-name, .ef2-drei { border-bottom: 1px solid #222; }
+.ef2-personal > :last-child { border-bottom: none; }
+.ef2-art { padding: 6px 6px; border-bottom: 1px solid #222; min-width: 0; }
+.ef2-art b { display: block; font-size: 11px; margin-bottom: 6px; }
+.ef2-art div { margin: 4px 0; font-size: 10px; line-height: 1.25; }
+.ef2-kasten { display: inline-block; width: 11px; height: 11px; border: 1px solid #222; margin: 0 3px; text-align: center; line-height: 10px; font-size: 11px; font-weight: 700; vertical-align: -1px; }
+.ef2-zeile { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; padding: 2px 4px 0; border-top: 1px solid #222; }
+.ef2-zeile.ef2-wert { min-height: 16px; border-top: none; padding-bottom: 2px; }
+.ef2-unfall { font-size: 10px; }
+.ef2-linien {
+  margin: 0 4px; padding: 0 2px; white-space: pre-wrap; font-size: 11px; font-weight: 600;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 15px, #c8c8c8 15px 16px);
+  background-position: 0 14px;
+}
+.ef2-ltabelle { display: grid; grid-template-columns: 64px 36px 1fr; border-top: 1px solid #bbb; min-height: 16px; padding: 1px 4px; font-size: 11px; font-weight: 600; }
+.ef2-ltabelle.kopf { font-size: 8px; font-weight: 400; border-top: none; }
+.ef2-entscheidung { align-items: flex-start; padding-bottom: 4px; font-size: 9px; }
+.ef2-entscheidung small { font-size: 7.5px; }
+.ef2-fuss { display: grid; grid-template-columns: 1.15fr 1fr 1fr; border-top: 1px solid #222; }
+.ef2-meta .ef2-feld { min-height: 18px; }
+.ef2-seite { border-top: 1px solid #222; }
+.ef2-stempel { border-left: 1px solid #222; min-height: 78px; padding: 2px 4px; display: flex; flex-direction: column; }
+.ef2-stempel b { margin-top: auto; font-size: 8px; font-weight: 600; }
+.ef2 h3 { font-size: 11px; margin: 8px 0 2px; }
+.ef2-kosten { width: 100%; border-collapse: collapse; font-size: 9px; }
+.ef2-kosten th { text-align: left; font-weight: 600; font-size: 8px; border-bottom: 1px solid #222; padding: 2px 3px; }
+.ef2-kosten td { padding: 2px 3px; border-bottom: 1px solid #e4e4e4; vertical-align: top; }
+.ef2-kosten .r, .ef2-summe .r { text-align: right; }
+.ef2-summe { margin: 6px 0 0 auto; width: 62%; font-size: 10px; }
+.ef2-summe div { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+.ef2-summe .gesamt { border-top: 1.5px solid #222; margin-top: 2px; padding-top: 3px; font-size: 12px; }
+@media print {
+  .kopfbereich, .editor { display: none !important; }
+  .arbeitsflaeche { display: block; padding: 0; }
+  .vorschau { position: static; max-height: none; overflow: visible; background: #fff; padding: 0; }
+  .ef2 { break-after: page; }
+}
 
 @media (max-width: 1400px) {
   .arbeitsflaeche { grid-template-columns: 1fr; }
@@ -240,12 +268,13 @@ fieldset.sperre:disabled { opacity: .62; }
 .pos-neu select { padding: 5px 7px; border: 1px solid var(--linie); border-radius: 6px; background: white; max-width: 460px; }
 .grau { color: var(--grau); }
 .hinweise li.warn { color: var(--rot); }
+.kl-block .text-feld { margin-top: 6px; }
+.labor-xml { margin-top: 8px; }
+.xml-meldung { margin: 6px 0 0; padding-left: 16px; font-size: 11.5px; color: var(--grau); }
+.xml-meldung li.warn { color: var(--rot); }
+.xml-marke { margin-left: 6px; padding: 0 4px; border-radius: 3px; background: var(--akzent-hell); color: var(--akzent); font-size: 10px; font-weight: 600; }
+.link-btn { border: none; background: none; padding: 0; color: var(--akzent); text-decoration: underline; cursor: pointer; font-size: inherit; }
 .schalter { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .wahl { display: flex; gap: 4px; flex-wrap: wrap; }
 .wahl button { border: 1px solid var(--linie); background: white; border-radius: 6px; padding: 5px 10px; font-size: 12.5px; color: var(--grau); }
 .wahl button.aktiv { background: var(--stahl); border-color: var(--stahl); color: white; font-weight: 600; }
-.kv-felder { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 11.5px; margin: 6px 0 10px; }
-.kv-felder div span { display: block; font-size: 9.5px; color: var(--grau); text-transform: uppercase; letter-spacing: .5px; }
-.kv-felder .breit { grid-column: span 2; }
-.kv-kreuz { display: inline-block; width: 11px; height: 11px; border: 1px solid #555; margin-right: 4px; vertical-align: -1px; text-align: center; line-height: 10px; font-size: 10px; }
-.kv-blatt h2 { margin-top: 10px; }

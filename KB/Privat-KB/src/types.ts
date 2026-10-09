@@ -3,10 +3,17 @@
 // Laborkosten nach BEB (§ 9 GOZ).
 
 import type { Patient, Praxis } from './stammdaten'
+import type { LaborImport } from './laborxml'
 
 export type { Patient, Praxis } from './stammdaten'
 
 export type Ebene = 'GOZ' | 'LABOR' | 'MATERIAL'
+export type Abformung = 'abdruck' | 'scan'
+
+export interface Fremdlabor {
+  name: string
+  import?: LaborImport
+}
 
 export interface Position {
   id: string
@@ -19,6 +26,10 @@ export interface Position {
   preis?: number
   /** freier Text (Material oder abweichende Bezeichnung) */
   text?: string
+  /** Analogleistung nach § 6 Abs. 1 GOZ: `nr` ist die Bemessungsleistung, `text` die erbrachte Leistung */
+  analog?: boolean
+  /** aus dem Labor-XML übernommen */
+  ausXml?: boolean
 }
 
 export interface Regler {
@@ -38,6 +49,8 @@ export interface Plan {
   diagnose: string
   positionen: Position[]
   regler: Regler
+  abformung: Abformung
+  fremdlabor: Fremdlabor
   bemerkung: string
 }
 
@@ -51,6 +64,8 @@ export interface Einstellungen {
   laborName: string
   /** Praxis-Laborpreise je BEB-Nummer (überschreiben die Laborpreisliste) */
   laborPreise: Record<string, number>
+  /** Bemessungsleistung der UKPS-Anfertigung (analog § 6 Abs. 1 GOZ) */
+  ukpsAnalog: string
 }
 
 export interface Zeile {
@@ -64,6 +79,11 @@ export interface Zeile {
   summe: number
   /** Preis fehlt (Labor ohne Listen- und Praxispreis) */
   ohnePreis?: boolean
+  /** Analogleistung: `nr` endet auf „a“, `bemessung` ist die GOZ-Nummer, nach der bemessen wird */
+  bemessung?: string
+  /** Platzhalterpreis für Fremdlabor – durch Kostenvoranschlag ersetzen */
+  platzhalter?: boolean
+  ausXml?: boolean
 }
 
 export interface Rechnung {

@@ -43,6 +43,29 @@ describe('Auftrag verstehen', () => {
     expect(b[18]).toBe('f')
   })
 
+  it('„Alle Zähne sind gesund“ beantwortet die Befundfrage (Anruf 07.10.2026 16:26)', () => {
+    const b = befundVerstehen('Alle Zähne sind gesund', 'OK')
+    expect(Object.keys(b).sort()).toEqual(['11', '12', '13', '14', '15', '16', '17', '21', '22', '23', '24', '25', '26', '27'])
+    expect(Object.values(b).every((c) => c === '')).toBe(true)
+    expect(befundVerstehen('es fehlt keiner', 'UK')[36]).toBe('')
+    const c = befundVerstehen('16 fehlt, alle anderen Zähne sind vorhanden', 'OK')
+    expect(c[16]).toBe('f')
+    expect(c[15]).toBe('')
+    expect(befundVerstehen('alle anderen fehlen', 'OK')[11]).toBe('f')
+  })
+
+  it('Implantat „am Zahn 26“ / „in Region 26“ ist die Implantatposition (Anruf 07.10.2026 19:36)', () => {
+    const a = auftragVerstehen('Ich möchte einen Kostenvoranschlag erstellen für ein Implantat, und zwar am Zahn 26')
+    expect([a.versorgung, a.pfeiler]).toEqual(['implantatkronen', ['26']])
+    expect(auftragVerstehen('Ein einfaches Implantat ohne Knochenaufbau in Region 26').pfeiler).toEqual(['26'])
+    expect(auftragVerstehen('Teleskopprothese im Oberkiefer, am Zahn 26 fehlt einer').pfeiler).toEqual([])
+  })
+
+  it('gesprochene Befund-Kürzel: „ww“ (Parakeet: „www“) und „kw“', () => {
+    expect(befundVerstehen('Die Zähne 13 bis 23 sind www', 'OK')).toMatchObject({ 13: 'ww', 11: 'ww', 23: 'ww' })
+    expect(befundVerstehen('14 ist k w', 'OK')[14]).toBe('kw')
+  })
+
   it('beide Kiefer in einem Auftrag: OK Totalprothese, UK Teleskope (Gespräch 05.10.2026)', () => {
     const satz = 'Im Oberkiefer eine Totalprothese und im Unterkiefer eine Teleskopprothese auf die Dreier und Vierer beidseitig.'
     const a = auftragVerstehen(satz)

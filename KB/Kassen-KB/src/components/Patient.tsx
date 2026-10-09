@@ -44,7 +44,10 @@ export default function Patient({ plan, setPlan }: Props) {
           ) : (
             <label className="feld breit">
               Anamnese, Befunde, Diagnose
-              <textarea rows={2} value={a.befund} placeholder="z. B. Myoarthropathie, Bruxismus, Diskusverlagerung"
+              <textarea rows={2} value={a.befund}
+                placeholder={a.art === 'ukps'
+                  ? 'z. B. obstruktive Schlafapnoe (G47.31), AHI 22/h laut Polygrafie, CPAP nicht toleriert – Veranlassung Dr. … (Schlafmedizin)'
+                  : 'z. B. Myoarthropathie, Bruxismus, Diskusverlagerung'}
                 onChange={(e) => setA({ befund: e.target.value })} />
             </label>
           )}
@@ -56,11 +59,11 @@ export default function Patient({ plan, setPlan }: Props) {
         <div className="schalter" style={{ margin: '10px 0' }}>
           <label><input type="checkbox" checked={a.unfall} onChange={(e) => setA({ unfall: e.target.checked })} /> Unfall / Unfallfolgen</label>
           <label><input type="checkbox" checked={a.stationaer} onChange={(e) => setA({ stationaer: e.target.checked })} /> stationäre Behandlung</label>
-          {!bruch && (
-            <>
-              <label><input type="checkbox" checked={a.schlafmedizin} onChange={(e) => setA({ schlafmedizin: e.target.checked })} /> UKPS: Veranlassung Schlafmedizin liegt vor</label>
-              <label><input type="checkbox" checked={a.genehmigungsverzicht} onChange={(e) => setA({ genehmigungsverzicht: e.target.checked })} /> Genehmigungsverzicht der Kasse</label>
-            </>
+          {a.art === 'ukps' && (
+            <label><input type="checkbox" checked={a.schlafmedizin} onChange={(e) => setA({ schlafmedizin: e.target.checked })} /> Veranlassung Schlafmedizin liegt vor (Vertragsarzt, Zusatzbezeichnung)</label>
+          )}
+          {a.art === 'kiefergelenk' && (
+            <label><input type="checkbox" checked={a.genehmigungsverzicht} onChange={(e) => setA({ genehmigungsverzicht: e.target.checked })} /> Genehmigungsverzicht der Kasse</label>
           )}
         </div>
         {a.stationaer && (

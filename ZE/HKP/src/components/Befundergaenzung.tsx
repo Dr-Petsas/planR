@@ -4,6 +4,7 @@ import { NACHTRAEGLICHE_LEISTUNGEN, nachtraeglichePositionen, nachtraeglicheVari
 import { REPARATUR_ARTEN, reparaturArt } from '../engine/reparaturen'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
 import { neueId } from '../format'
+import { geloescht, Tonne, wiederEinfuegen } from '../rueckgaengig'
 import { ABUTMENTS, implantatZaehne } from '../engine/implantat'
 import { ABFORMUNG_ARTEN, LOEFFEL, PROTHESE_ARTEN, implantatAbformung } from '../engine/abformung'
 import { implantatsystem } from '../data/implantatsysteme'
@@ -47,7 +48,13 @@ function NachtraeglicheLeistungen({ plan, setPlan, spaeter }: Props & { spaeter:
     setPlan((p) => ({ ...p, positionen: [...p.positionen, ...nachtraeglichePositionen(art, zahn.trim(), p)] }))
     setZahn('')
   }
-  const entfernen = (id: string) => setPlan((p) => ({ ...p, positionen: p.positionen.filter((x) => x.id !== id) }))
+  const entfernen = (x: Position) => {
+    const i = plan.positionen.findIndex((y) => y.id === x.id)
+    if (i < 0) return
+    setPlan((p) => ({ ...p, positionen: p.positionen.filter((y) => y.id !== x.id) }))
+    geloescht(`Nachträgliche Leistung entfernt: ${x.ebene} ${x.nr}${x.zahn ? `, Zahn ${x.zahn}` : ''}`, () =>
+      setPlan((p) => ({ ...p, positionen: wiederEinfuegen(p.positionen, x, i, (a, b) => a.id === b.id) })))
+  }
 
   return (
     <div className="be-karte">
@@ -61,7 +68,7 @@ function NachtraeglicheLeistungen({ plan, setPlan, spaeter }: Props & { spaeter:
                 <td>{p.zahn}</td>
                 <td><b>{p.ebene} {p.nr}</b></td>
                 <td>{titelVon(p)}</td>
-                <td><button className="x-btn" title="Entfernen" onClick={() => entfernen(p.id)}>×</button></td>
+                <td className="aktionen"><Tonne titel={`${p.ebene} ${p.nr} entfernen`} onClick={() => entfernen(p)} /></td>
               </tr>
             ))}
           </tbody>
@@ -257,7 +264,12 @@ export function Befundergaenzung({ plan, setPlan, onAbformung }: Props & { onAbf
                         onChange={(e) => setReps((rs) => rs.map((x) => (x.id === r.id ? { ...x, gebiet: e.target.value } : x)))}
                       />
                     </td>
-                    <td><button className="x-btn" title="Entfernen" onClick={() => setReps((rs) => rs.filter((x) => x.id !== r.id))}>×</button></td>
+                    <td className="aktionen"><Tonne titel="Wiederherstellung entfernen" onClick={() => {
+                      const i = reps.findIndex((x) => x.id === r.id)
+                      setReps((rs) => rs.filter((x) => x.id !== r.id))
+                      geloescht(`Wiederherstellung entfernt: ${r.art.replace(/-.*/, '')}${r.gebiet ? `, ${r.gebiet}` : ''}`, () =>
+                        setReps((rs) => wiederEinfuegen(rs, r, i, (a, b) => a.id === b.id)))
+                    }} /></td>
                   </tr>
                 )
               })}

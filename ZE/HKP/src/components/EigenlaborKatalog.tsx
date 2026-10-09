@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { jsonAnalysieren, uebernehmen, zeilenAnalysieren, type Analyse, type EigenPosition } from '../engine/eigenlabor'
 import { dateiZeilen } from '../engine/eigenlabor-pdf'
 import { DIGITAL, DIGITAL_ERSETZT, DIGITAL_KATALOG } from '../engine/digital'
+import { eigenlaborLesen } from '../store/eigenlabor'
+import { geloescht, Tonne, wiederEinfuegen } from '../rueckgaengig'
 
 interface Props {
   katalog: EigenPosition[]
@@ -150,7 +152,11 @@ export function EigenlaborKatalog({ katalog, onChange, bebText }: Props) {
                       {e.ersetzt?.trim() && <span className={`el-klein ${ersetzt ? '' : 'el-fehler-text'}`}> {ersetzt ?? 'nicht in der BEB-Liste'}</span>}
                       {gleich && <span className="el-klein"> ersetzt BEB {e.nr}: {gleich}</span>}
                     </td>
-                    <td><button className="el-x" title="Position löschen" onClick={() => onChange(katalog.filter((_, j) => j !== i))}>×</button></td>
+                    <td className="aktionen"><Tonne titel={`Eigenlabor-Position ${e.nr} löschen`} onClick={() => {
+                      onChange(katalog.filter((_, j) => j !== i))
+                      geloescht(`Eigenlabor-Position gelöscht: ${e.nr}${e.text ? ` – ${e.text.slice(0, 40)}` : ''}`, () =>
+                        onChange(wiederEinfuegen(eigenlaborLesen(), e, i)))
+                    }} /></td>
                   </tr>
                 )
               })}

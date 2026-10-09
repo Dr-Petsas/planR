@@ -22311,9 +22311,96 @@ function bebErgaenzen(liste) {
 	};
 }
 //#endregion
+//#region src/mandant.ts
+var LISTE_KEY = "planr.mandanten.v1";
+var AKTIV_KEY = "planr.mandant.v1";
+/** Der Standard-Mandant liest die alten Schlüssel ohne Zusatz – vorhandene Daten bleiben ihm erhalten. */
+var STANDARD_ID = "standard";
+var STANDARD = {
+	id: STANDARD_ID,
+	name: "Praxis"
+};
+var speicher = () => typeof localStorage === "undefined" ? null : localStorage;
+function kennung(text) {
+	return text.toLowerCase().replace(/ß/g, "ss").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+/** Speicherschlüssel eines Mandanten */
+var schluessel$2 = (key, mandantId) => mandantId === "standard" ? key : `${key}@${mandantId}`;
+function lesen() {
+	let liste = [];
+	try {
+		const roh = JSON.parse(speicher()?.getItem(LISTE_KEY) ?? "[]");
+		if (Array.isArray(roh)) liste = roh.filter((m) => m && typeof m.id === "string" && kennung(m.id) === m.id && m.id);
+	} catch {
+		liste = [];
+	}
+	return [liste.find((m) => m.id === "standard") ?? STANDARD, ...liste.filter((m) => m.id !== STANDARD_ID)].map((m) => ({
+		id: m.id,
+		name: String(m.name || m.id)
+	}));
+}
+var schreiben = (liste) => speicher()?.setItem(LISTE_KEY, JSON.stringify(liste));
+/** Aktiver Mandant beim Laden der Seite; ?mandant=kürzel wählt (und legt bei Bedarf an). */
+function starten() {
+	const liste = lesen();
+	let id = speicher()?.getItem(AKTIV_KEY) ?? "standard";
+	const aufruf = typeof location === "undefined" ? null : new URLSearchParams(location.search).get("mandant");
+	if (aufruf && kennung(aufruf)) {
+		id = kennung(aufruf);
+		if (!liste.some((m) => m.id === id)) {
+			liste.push({
+				id,
+				name: aufruf.trim()
+			});
+			schreiben(liste);
+		}
+		speicher()?.setItem(AKTIV_KEY, id);
+	}
+	return {
+		liste,
+		aktiv: liste.find((m) => m.id === id) ?? liste[0]
+	};
+}
+/** Gilt für die ganze Sitzung; ein Wechsel lädt die Seite neu, damit alle Speicher den neuen Mandanten lesen. */
+var MANDANT_ID = starten().aktiv.id;
+var mk = (key) => schluessel$2(key, MANDANT_ID);
+//#endregion
+//#region src/daten.ts
+var SPEICHER = (datei) => `planr.daten.${datei}`;
+var standVon = (d) => d?.stand || d?.gueltigAb || "";
+function gespeichert(datei) {
+	try {
+		const roh = localStorage.getItem(SPEICHER(datei));
+		return roh ? JSON.parse(roh) : null;
+	} catch {
+		return null;
+	}
+}
+/** Geladener Stand, wenn er neuer ist als der mitgelieferte – sonst der mitgelieferte. */
+function aktuell(datei, mitgeliefert) {
+	const g = typeof localStorage === "undefined" ? null : gespeichert(datei);
+	return g && standVon(g) > standVon(mitgeliefert) ? g : mitgeliefert;
+}
+/** Geladene Dateien unter einem Ordner, die nicht mitgeliefert sind (z. B. die BEL-II-Liste des neuen Jahres). */
+function zusaetzliche(ordner, mitgeliefert) {
+	if (typeof localStorage === "undefined") return [];
+	const praefix = SPEICHER(ordner);
+	const bekannt = new Set(mitgeliefert.map(SPEICHER));
+	const out = [];
+	for (let i = 0; i < localStorage.length; i++) {
+		const k = localStorage.key(i);
+		if (k && k.startsWith(praefix) && !bekannt.has(k)) {
+			const d = gespeichert(k.slice(12));
+			if (d) out.push(d);
+		}
+	}
+	return out;
+}
+//#endregion
 //#region src/store/preislisten.ts
-var SPEICHER_KEY = "hkp.preislisten.v1";
-var STANDARD_LISTEN = [
+var SPEICHER_KEY = mk("hkp.preislisten.v1");
+/** Mitgelieferte Listen unter ihrem Dateinamen beim Datendienst (Start/public/daten) */
+var MITGELIEFERT = [
 	...Object.entries(/* @__PURE__ */ Object.assign({
 		"../data/bel/bel2-bayern-2026.json": bel2_bayern_2026_default,
 		"../data/bel/bel2-berlin-2026-02.json": bel2_berlin_2026_02_default,
@@ -22334,23 +22421,51 @@ var STANDARD_LISTEN = [
 		"../data/bema/bema-2026.json": bema_2026_default,
 		"../data/fz/fz-2026.json": fz_2026_default
 	})).map(([pfad, l]) => ({
-		...l,
-		id: l.id ?? pfad.split("/").pop().replace(/\.json$/, ""),
-		standard: true
+		datei: pfad.replace("../data/", ""),
+		liste: l
 	})),
 	{
-		...goz_2012_default,
-		id: "goz-2012",
-		typ: "goz",
-		standard: true
+		datei: "goz-2012.json",
+		liste: {
+			...goz_2012_default,
+			id: "goz-2012",
+			typ: "goz"
+		}
 	},
 	{
-		...bebErgaenzen(beb_itz_2024_default),
-		id: "beb-itz-2024",
-		typ: "beb",
-		standard: true
+		datei: "beb-itz-2024.json",
+		liste: {
+			...beb_itz_2024_default,
+			id: "beb-itz-2024",
+			typ: "beb"
+		}
 	}
 ];
+var alsStandard = (datei, l) => {
+	const liste = {
+		...l,
+		id: l.id ?? datei.split("/").pop().replace(/\.json$/, ""),
+		standard: true
+	};
+	return liste.typ === "beb" ? bebErgaenzen(liste) : liste;
+};
+/** Listen, die "Punktwerte und Preislisten aktualisieren" abgleicht (inkl. BEMA-Punktwerte je Jahr) */
+var GENUTZTE_LISTEN = MITGELIEFERT.map(({ datei, liste }) => {
+	const a = aktuell(datei, liste);
+	return {
+		datei,
+		name: liste.name,
+		mitgeliefert: liste,
+		aktuell: a
+	};
+});
+/** Neue Jahreslisten (z. B. BEL II 2027) kommen ohne Programm-Update dazu – sie tragen ihre id selbst */
+var LISTEN_ORDNER = [
+	"bel/",
+	"bema/",
+	"fz/"
+];
+var STANDARD_LISTEN = [...GENUTZTE_LISTEN.map((l) => alsStandard(l.datei, l.aktuell)), ...LISTEN_ORDNER.flatMap((o) => zusaetzliche(o, MITGELIEFERT.map((m) => m.datei)).map((l) => alsStandard(`${o}${l.id}.json`, l)))];
 var ergaenzt = (l) => l.typ === "beb" ? bebErgaenzen(l) : l;
 var TYP_NAMEN = {
 	bema: "BEMA (Kassenhonorar)",
@@ -22556,6 +22671,41 @@ var istFrontzahn = (zahn) => [
 	"3"
 ].includes(zahn[1]);
 var kieferVon = (zahn) => zahn[0] === "1" || zahn[0] === "2" ? "OK" : "UK";
+var BEFUND_KUERZEL = {
+	a: "Adhäsivbrücke (Anker)",
+	ab: "Adhäsivbrücke (Brückenglied)",
+	abw: "erneuerungsbedürftige Adhäsivbrücke (Brückenglied)",
+	aw: "erneuerungsbedürftige Adhäsivbrücke (Anker)",
+	b: "Brückenglied",
+	bw: "erneuerungsbedürftiges Brückenglied",
+	e: "ersetzter Zahn",
+	ew: "ersetzter, aber erneuerungsbedürftiger Zahn",
+	f: "fehlender Zahn",
+	ix: "zu entfernendes Implantat",
+	k: "klinisch intakte Krone",
+	kw: "erneuerungsbedürftige Krone",
+	pkw: "erneuerungsbedürftige Teilkrone",
+	pw: "erhaltungswürdiger Zahn mit partiellen Substanzdefekten",
+	r: "Wurzelstiftkappe mit ersetztem Zahn",
+	rw: "erneuerungsbedürftige Wurzelstiftkappe",
+	sb: "implantatgetragenes Brückenglied",
+	sbw: "erneuerungsbedürftiges implantatgetragenes Brückenglied",
+	se: "ersetzter Zahn einer implantatgetragenen (Teil-)Prothese",
+	sew: "erneuerungsbedürftiger ersetzter Zahn einer implantatgetragenen Prothese",
+	sk: "implantatgetragene intakte Krone",
+	skw: "erneuerungsbedürftige implantatgetragene Krone",
+	so: "implantatgetragenes Verbindungselement mit ersetztem Zahn",
+	sow: "erneuerungsbedürftiges implantatgetragenes Verbindungselement",
+	st: "implantatgetragene Teleskopkrone",
+	stw: "erneuerungsbedürftige implantatgetragene Teleskopkrone",
+	t: "Teleskopkrone",
+	t2w: "erneuerungsbedürftiges Sekundärteil einer Teleskopkrone",
+	tw: "erneuerungsbedürftige Teleskopkrone",
+	ur: "unzureichende Retention",
+	ww: "erhaltungswürdiger Zahn mit weitgehender Zerstörung",
+	x: "nicht erhaltungswürdiger Zahn",
+	")(": "Lückenschluss"
+};
 /** Befundkürzel, die einen fehlenden oder zu ersetzenden Zahn bedeuten */
 var FEHLEND = /* @__PURE__ */ new Set([
 	"f",
@@ -22655,19 +22805,121 @@ function brueckenBereiche(reihe, kuerzel, marke) {
 /** Pfeiler einer explizit markierten Brücke: alle Kronen im Bereich (auch Doppelanker ohne angrenzendes Glied) */
 var pfeilerIm = (b, kuerzel) => b.zaehne.filter((z) => PFEILER.test(kuerzel(z)));
 //#endregion
-//#region src/store/plan.ts
+//#region src/stammdaten.ts
+var leererPatient = () => ({
+	anrede: "",
+	vorname: "",
+	name: "",
+	geburtsdatum: "",
+	strasse: "",
+	plz: "",
+	ort: "",
+	kasse: "",
+	kassenNr: "",
+	versichertenNr: "",
+	status: "",
+	kassenart: "primaer"
+});
+var text = (v) => typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
+var erster = (o, ...keys) => {
+	for (const k of keys) {
+		const t = text(o[k]).trim();
+		if (t) return t;
+	}
+	return "";
+};
+/** "80331 München" -> { plz, ort } */
+function plzOrtTrennen(s) {
+	const t = s.trim();
+	const m = /^(\d{4,5})\s*(.*)$/.exec(t);
+	return m ? {
+		plz: m[1],
+		ort: m[2].trim()
+	} : {
+		plz: "",
+		ort: t
+	};
+}
+/** "Hauptstr. 1, 80331 München" (auch mehrzeilig) -> { strasse, plz, ort } */
+function anschriftLesen(s) {
+	const teile = s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+	if (!teile.length) return {
+		strasse: "",
+		plz: "",
+		ort: ""
+	};
+	const i = teile.findIndex((t) => /^\d{4,5}\b/.test(t));
+	if (i < 0) return {
+		strasse: teile.join(", "),
+		plz: "",
+		ort: ""
+	};
+	return {
+		strasse: teile.slice(0, i).join(", "),
+		...plzOrtTrennen(teile.slice(i).join(" "))
+	};
+}
+/** Ein voller Name ohne getrennten Vornamen: letztes Wort = Name. "Meier, Hans" ebenso. */
+function nameTrennen(voll) {
+	const t = voll.trim().replace(/\s+/g, " ");
+	if (!t) return {
+		vorname: "",
+		name: ""
+	};
+	if (t.includes(",")) {
+		const [n, ...v] = t.split(",");
+		return {
+			vorname: v.join(",").trim(),
+			name: n.trim()
+		};
+	}
+	const w = t.split(" ");
+	return w.length < 2 ? {
+		vorname: "",
+		name: t
+	} : {
+		vorname: w.slice(0, -1).join(" "),
+		name: w[w.length - 1]
+	};
+}
+/**
+* Liest jeden früheren Stand: MKV/Kons (voller Name, kassennummer, versichertennr, versicherung),
+* Privat-ZE/Implantologie (plzOrt, kostentraeger), PAR (kostentraegerkennung), HKP (anschrift).
+*/
+function patientMigrieren(roh) {
+	const p = leererPatient();
+	if (!roh || typeof roh !== "object") return p;
+	const o = roh;
+	const { vorname, name } = "vorname" in o ? {
+		vorname: erster(o, "vorname"),
+		name: erster(o, "name")
+	} : nameTrennen(erster(o, "name"));
+	let { strasse, plz, ort } = {
+		strasse: erster(o, "strasse"),
+		plz: erster(o, "plz"),
+		ort: erster(o, "ort")
+	};
+	if (!plz && !ort && text(o.plzOrt)) ({plz, ort} = plzOrtTrennen(text(o.plzOrt)));
+	if (!strasse && !plz && !ort && text(o.anschrift)) ({strasse, plz, ort} = anschriftLesen(text(o.anschrift)));
+	return {
+		anrede: erster(o, "anrede"),
+		vorname,
+		name,
+		geburtsdatum: erster(o, "geburtsdatum"),
+		strasse,
+		plz,
+		ort,
+		kasse: erster(o, "kasse", "versicherung", "kostentraeger"),
+		kassenNr: erster(o, "kassenNr", "kostentraegerkennung", "kassennummer"),
+		versichertenNr: erster(o, "versichertenNr", "versichertennr"),
+		status: erster(o, "status"),
+		kassenart: o.kassenart === "ersatz" ? "ersatz" : "primaer"
+	};
+}
+mk("hkp.plan.v1");
 function leererPlan() {
 	return {
-		patient: {
-			name: "",
-			vorname: "",
-			geburtsdatum: "",
-			kasse: "",
-			kassenNr: "",
-			versichertenNr: "",
-			status: "",
-			anschrift: ""
-		},
+		patient: leererPatient(),
 		verwaltung: {
 			lfdNr: "",
 			eingliederungsdatum: "",
@@ -22777,10 +23029,7 @@ function planNormalisieren(p) {
 	return {
 		...leer,
 		...p,
-		patient: {
-			...leer.patient,
-			...p.patient
-		},
+		patient: patientMigrieren(p.patient),
 		verwaltung: {
 			...leer.verwaltung,
 			...p.verwaltung
@@ -24191,7 +24440,7 @@ var implantatsystem = (id) => IMPLANTATSYSTEME.find((s) => s.id === id) ?? IMPLA
 //#region src/engine/implantat.ts
 /** Kürzel (TP, sonst R) einer implantatgetragenen Krone, eines Implantat-Teleskops oder -Verbindungselements (Steg, Locator) */
 var IMPLANTAT_TP = /^S[KTO]/;
-var kuerzelVon = (v) => (v?.TP.trim() || v?.R || "").toUpperCase();
+var kuerzelVon$1 = (v) => (v?.TP.trim() || v?.R || "").toUpperCase();
 var GEGENUEBER = {
 	"OK rechts": "UK rechts",
 	"OK-Front": "UK-Front",
@@ -24201,7 +24450,7 @@ var GEGENUEBER = {
 	"UK links": "OK links"
 };
 function implantatZaehne(zaehne) {
-	return ALLE_ZAEHNE.filter((z) => IMPLANTAT_TP.test(kuerzelVon(zaehne[z])));
+	return ALLE_ZAEHNE.filter((z) => IMPLANTAT_TP.test(kuerzelVon$1(zaehne[z])));
 }
 var zaehler$2 = 0;
 function pos$2(ebene, nr, zahn, anzahl = 1, extra = {}) {
@@ -24249,7 +24498,7 @@ function implantatPositionen(zaehne, a, teileLabor) {
 		for (const z of imp) positionen.push(pos$2("BEB", "0225", z), mat("abdruckpfosten", z), mat("laboranalog", z));
 	} else hinweise.push(`Implantatkrone ${imp.join(", ")}: Abformung (Intraoralscan oder offener/geschlossener Löffel) noch nicht festgelegt – Abformleistungen und Abformteile fehlen.`);
 	for (const h of haelften) positionen.push(pos$2("BEB", "0223", h));
-	for (const z of imp) if (a.abutment === "standard" || kuerzelVon(zaehne[z]) === "SO") positionen.push(pos$2("BEB", "4421", z), mat("abutmentStandard", z));
+	for (const z of imp) if (a.abutment === "standard" || kuerzelVon$1(zaehne[z]) === "SO") positionen.push(pos$2("BEB", "4421", z), mat("abutmentStandard", z));
 	else positionen.push(pos$2("BEB", a.abutment === "keramik" ? "6906" : "2033", z), mat("tiBase", z), mat("schraube", z));
 	if (sys.genau !== "ja") hinweise.push(`Implantatteile ${sys.hersteller} ${sys.system}: Preise ${sys.genau === "teilweise" ? "teilweise " : ""}geschätzt (${sys.stand}) – mit der aktuellen Preisliste bzw. Laborrechnung abgleichen.`);
 	hinweise.push("Chirurgische Implantatleistungen (GOZ 9000–9040, Augmentation) gehören nicht in den HKP und sind gesondert zu planen.");
@@ -24640,7 +24889,7 @@ var KIEFER_BEREICHE = {
 * Zweite Abformung für den herausnehmbaren Teil (z. B. über die eingesetzten Primärkronen):
 * Scan → GOZ 0065 für die drei Bereiche des Kiefers und gedrucktes Modell;
 * Abdruck → individueller Löffel (BEMA 98a/BEL 0211 bei Kassenprothese, sonst GOZ 5170/BEB 1006).
-* Kiefer mit Funktionsabformung (zahnlos, BEMA 98b/c bzw. GOZ 5180/5190) bleiben konventionell.
+* Kiefer mit Funktionsabformung (zahnlos, BEMA 98b/c bzw. GOZ 5180/5190) bekommen keine zweite Abformung (Scan dort: zahnlosScannen).
 */
 function protheseAbformen(positionen, art, erste) {
 	const kiefer = ["OK", "UK"].filter((k) => positionen.some((p) => p.zahn === k && PROTHESE$1(p)));
@@ -24648,10 +24897,13 @@ function protheseAbformen(positionen, art, erste) {
 		positionen,
 		hinweise: []
 	};
-	if (!art) return {
-		positionen,
-		hinweise: erste === "scan" ? [`Herausnehmbarer Teil ${kiefer.join(", ")}: zweite Abformung (Scan oder Überabdruck) noch offen.`] : []
-	};
+	if (!art) {
+		const offen = kiefer.filter((k) => !positionen.some((p) => p.zahn === k && FUNKTIONSABFORMUNG(p)));
+		return {
+			positionen,
+			hinweise: erste === "scan" && offen.length ? [`Herausnehmbarer Teil ${offen.join(", ")}: zweite Abformung (Scan oder Überabdruck) noch offen.`] : []
+		};
+	}
 	const neu = [];
 	const funktion = [];
 	const bearbeitet = [];
@@ -24677,10 +24929,44 @@ function protheseAbformen(positionen, art, erste) {
 	}
 	const hinweise = [];
 	if (bearbeitet.length) hinweise.push(art === "scan" ? `Herausnehmbarer Teil ${bearbeitet.join(", ")}: zweiter Intraoralscan – GOZ 0065 je Bereich des Kiefers und gedrucktes Modell (BEB 0009); Gipsmodelle der Prothese ggf. streichen.` : `Herausnehmbarer Teil ${bearbeitet.join(", ")}: Überabdruck mit individuellem Löffel${neu.length ? ` (${neu.map((p) => `${p.ebene} ${p.nr}`).join(", ")})` : ""}, Meistermodell aus Gips.`);
-	if (funktion.length) hinweise.push(`${funktion.join(", ")}: Funktionsabformung mit individuellem Löffel ist schon enthalten – bleibt konventionell.`);
+	if (funktion.length && art !== "scan") hinweise.push(`${funktion.join(", ")}: Funktionsabformung mit individuellem Löffel ist schon enthalten – bleibt konventionell.`);
 	return {
 		positionen: [...positionen, ...neu],
 		hinweise
+	};
+}
+/** Situationsmodell eines Prothesenkiefers: BEL 0010 bzw. BEB 0002 mit Kieferangabe */
+var SITUATIONSMODELL = (k) => (p) => p.zahn === k && (p.ebene === "BEL" && p.nr === "0010" || p.ebene === "BEB" && p.nr === "0002");
+/**
+* Zahnloser Kiefer (Funktionsabformung, BEMA 98b/c bzw. GOZ 5180/5190) mit Intraoralscan (Chef 09.10.2026):
+* der Scan ersetzt die anatomische Erstabformung – GOZ 0065 für die drei Bereiche des Kiefers und ein
+* gedrucktes Modell (BEB 0009) statt des Situationsmodells. Individueller Löffel und Funktionsabformung bleiben.
+*/
+function zahnlosScannen(positionen) {
+	const kiefer = ["OK", "UK"].filter((k) => positionen.some((p) => p.zahn === k && PROTHESE$1(p) && FUNKTIONSABFORMUNG(p)));
+	if (!kiefer.length) return {
+		positionen,
+		hinweise: []
+	};
+	let out = positionen;
+	const neu = [];
+	for (const k of kiefer) {
+		const gescannt = new Set(out.filter((p) => p.ebene === "GOZ" && p.nr === "0065").map((p) => p.zahn));
+		neu.push(...KIEFER_BEREICHE[k].filter((b) => !gescannt.has(b)).map((b) => pos$1("GOZ", "0065", b, { text: `Optisch-elektronische Abformung ${k} (zahnloser Kiefer)` })));
+		if (out.some((p) => p.ebene === "BEB" && p.nr === "0009" && p.zahn === k)) continue;
+		const modell = out.find(SITUATIONSMODELL(k));
+		if (modell) out = out.flatMap((p) => p !== modell ? [p] : (p.anzahl ?? 1) > 1 ? [{
+			...p,
+			anzahl: (p.anzahl ?? 1) - 1
+		}] : []);
+		neu.push(pos$1("BEB", "0009", k, {
+			text: `Modell aus Kunststoff ${k} (gedruckt)`,
+			...modell?.labor ? { labor: modell.labor } : {}
+		}));
+	}
+	return {
+		positionen: [...out, ...neu],
+		hinweise: [`${kiefer.join(", ")} zahnlos: Intraoralscan statt anatomischer Erstabformung – GOZ 0065 je Bereich des Kiefers, gedrucktes Modell (BEB 0009) statt Situationsmodell; individueller Löffel und Funktionsabformung bleiben.`]
 	};
 }
 /**
@@ -24698,12 +24984,17 @@ function abformungAnwenden(positionen, zaehne, abformung, prothese = "", eigenla
 		hinweise: []
 	};
 	const zweite = protheseAbformen(digital.positionen, prothese, abformung);
-	return {
+	const zahnlos = abformung === "scan" || prothese === "scan" ? zahnlosScannen(zweite.positionen) : {
 		positionen: zweite.positionen,
+		hinweise: []
+	};
+	return {
+		positionen: zahnlos.positionen,
 		hinweise: [
 			...erste.hinweise,
 			...digital.hinweise,
-			...zweite.hinweise
+			...zweite.hinweise,
+			...zahnlos.hinweise
 		]
 	};
 }
@@ -26916,7 +27207,7 @@ function einzelAuftrag(text) {
 		pfeilerDavor = false;
 		if (/entfern|extrah|ziehen|gezogen|raus/.test(teil)) auftrag.entfernen.push(...zs);
 		else if (/bleib|erhalt|behalt|stehen/.test(teil)) auftrag.erhalten.push(...zs);
-		else if (/teleskop|konus|doppelkrone|pfeiler|krone|anker|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil)) {
+		else if (/teleskop|konus|doppelkrone|pfeiler|krone|anker|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil) || (auftrag.versorgung === "implantatkronen" || auftrag.versorgung === "kronen") && /implantat|\b(?:am|an|bei|f(?:ü|ue)r) (?:zahn )?[1-4][1-8]\b|\bzahn [1-4][1-8]\b|\bregion?\b/.test(teil)) {
 			const vorBefund = teil.split(BEFUND_BEGINN)[0];
 			const pf = vorBefund === teil ? zs : zaehneIn(vorBefund, auftrag.kiefer);
 			auftrag.pfeiler.push(...pf.filter((z) => !auftrag.pfeiler.includes(z)));
@@ -26961,8 +27252,8 @@ function brueckeVerstehen(t, a) {
 var BEFUND_BEGINN = /\b(?:ersetzt\w*|(?:es )?fehl\w*|vorhanden|extrah\w*|entfern\w*)\b/;
 var BEFUND_WORTE = [
 	[/nicht erhaltungsw(ü|ue)rdig|zerst(ö|oe)rt|extrah|entfern|ziehen/, "x"],
-	[/erneuerungsbed(ü|ue)rftig|krone (ist )?(kaputt|defekt|insuffizient)/, "kw"],
-	[/(ü|ue)berkronungsbed(ü|ue)rftig|krone n(ö|oe)tig|braucht? (eine )?krone|kariös|karies/, "ww"],
+	[/erneuerungsbed(ü|ue)rftig|krone (ist )?(kaputt|defekt|insuffizient)|\b(?:k ?w|ka ?weh)\b/, "kw"],
+	[/(ü|ue)berkronungsbed(ü|ue)rftig|krone n(ö|oe)tig|braucht? (eine )?krone|kariös|karies|\b(?:w ?w ?w?|weh ?weh)\b/, "ww"],
 	[/fehl|ohne zahn|l(ü|ue)cke|ersetzt/, "f"],
 	[/vorhanden|gesund|intakt|da\b|steh|bleib|erhalt/, ""]
 ];
@@ -27008,11 +27299,16 @@ function befundVerstehen(text, kiefer) {
 		letztes = code;
 	});
 	for (const k of nurKiefer) for (const z of REIHE[k]) if (!(z in befund)) befund[z] = "f";
+	if (ALLE_DA.test(norm(text))) {
+		for (const k of kiefer ? [kiefer] : ["OK", "UK"]) for (const z of REIHE[k]) if (!(z in befund) && !istWeisheitszahn(z)) befund[z] = "";
+	}
 	if (kiefer && /alle (anderen|übrigen|uebrigen|restlichen) fehlen|sonst (fehlt|fehlen) alle|rest fehlt|(anderen|übrigen|uebrigen|restlichen) z(ä|ae)hne (sind |werden )?(ersetzt|fehlen)/.test(norm(text))) {
 		for (const z of REIHE[kiefer]) if (!(z in befund)) befund[z] = "f";
 	}
 	return befund;
 }
+/** „Alle Zähne sind gesund“, „es fehlt keiner“: Antwort auf die Befundfrage – die übrigen Zähne sind vorhanden */
+var ALLE_DA = /\balle (?:anderen |(?:ü|ue)brigen )?z(?:ä|ae)hne (?:sind )?(?:noch )?(?:gesund|vorhanden|da|intakt|in ordnung|erhalten)\b|\bes fehlt (?:kein zahn|keiner|nichts)\b|\bnichts fehlt\b|\bkeine z(?:ä|ae)hne fehlen\b|\bvoll ?bezahnt\b/;
 var ALLE_FEHLEN = /\b(fehlen|fehlt) (ihm |ihr )?(schon )?alle z(ä|ae)hne\b|\balle z(ä|ae)hne (fehlen|sind (weg|raus|gezogen))\b|\bzahnlos\b|\bkeine z(ä|ae)hne mehr\b/;
 var VERSORGUNGS_TEIL = /prothese|teleskop|konus|doppelkrone|krone|anker|pfeiler|co?ver.?dent|kover|bonus|scan|abdruck|abform|gold|zirkon|keramik|\bnem\b|erstell|plan|hkp|kostenpl/;
 /** Befund-Satzteile aus einem gesprochenen Auftrag („… die Sechser und Siebener fehlen …“), sonst '' */
@@ -27260,8 +27556,60 @@ function planRechnen(auftrag, teile, befund, tp, hinweise, optionen) {
 	};
 }
 //#endregion
+//#region src/clara/befundDatei.ts
+var kuerzelVon = (plan, z) => (plan.zaehne[z]?.B ?? "").trim().toLowerCase();
+function befundDatei(plan, a) {
+	const diktiert = new Set(a.diktiert);
+	const zeile = (reihe) => ({
+		zaehne: reihe,
+		kuerzel: reihe.map((z) => kuerzelVon(plan, z))
+	});
+	const zaehne = ALLE_ZAEHNE.map((zahn) => ({
+		zahn,
+		kuerzel: kuerzelVon(plan, zahn)
+	})).filter((x) => x.kuerzel).map((x) => ({
+		...x,
+		bedeutung: BEFUND_KUERZEL[x.kuerzel] ?? "unbekanntes Kürzel",
+		diktiert: diktiert.has(x.zahn)
+	}));
+	return {
+		format: "planr-zahnbefund",
+		version: 1,
+		kuerzelliste: "KZBV – eHKP Zahnersatz, Liste zulässiger Befundkürzel",
+		zahnschema: "FDI",
+		erstellt: a.erstellt ?? (/* @__PURE__ */ new Date()).toISOString(),
+		erstelltVon: a.erstelltVon ?? "Clara",
+		hkpId: a.hkpId,
+		patient: {
+			name: plan.patient.name ?? "",
+			vorname: plan.patient.vorname ?? "",
+			geburtsdatum: plan.patient.geburtsdatum ?? ""
+		},
+		quelle: {
+			...a.quelle,
+			diktat: a.diktat
+		},
+		befundzeile: {
+			oberkiefer: zeile(OBERKIEFER),
+			unterkiefer: zeile(UNTERKIEFER)
+		},
+		zaehne,
+		legende: Object.fromEntries([...new Set(zaehne.map((z) => z.kuerzel))].sort().map((k) => [k, BEFUND_KUERZEL[k] ?? "unbekanntes Kürzel"]))
+	};
+}
+var teil = (s) => s.trim().replace(/[^\p{L}\p{N}-]+/gu, "_").replace(/^_+|_+$/g, "");
+/** „Befund_Meier_Hans_2026-10-09.json“ */
+function befundDateiName(d) {
+	return `${[
+		"Befund",
+		d.patient.name,
+		d.patient.vorname,
+		d.erstellt.slice(0, 10)
+	].map(teil).filter(Boolean).join("_")}.json`;
+}
+//#endregion
 //#region src/clara/index.ts
-var ENGINE_STAND = "2026-10-06 20:48";
+var ENGINE_STAND = "2026-10-09 11:20";
 /** Preislisten für einen Plan wählen (KZV, Stichtag) – wie in der App */
 function listenFuer(plan, praxis = {}) {
 	const eigene = praxis.preislisten ?? [];
@@ -27590,4 +27938,4 @@ function positionPruefen(e, listen, frage) {
 	};
 }
 //#endregion
-export { ENGINE_STAND, LABOR_SPRECH, STANDARD_LISTEN, WERKSTOFF_SPRECH, auftragVerstehen, ausfuehrungAendern, ausfuehrungIn, ausfuehrungSatz, ausfuehrungVon, befundAusAuftrag, befundVerstehen, berechnen, hkpEntwurf, kurzText, listenFuer, planAusAuftrag, planNormalisieren, positionAendern, positionPruefen, positionVerstehen, rechnen, systemSprech, zahlwort, zusammenfassen };
+export { ENGINE_STAND, LABOR_SPRECH, STANDARD_LISTEN, WERKSTOFF_SPRECH, auftragVerstehen, ausfuehrungAendern, ausfuehrungIn, ausfuehrungSatz, ausfuehrungVon, befundAusAuftrag, befundDatei, befundDateiName, befundVerstehen, berechnen, hkpEntwurf, kurzText, listenFuer, planAusAuftrag, planNormalisieren, positionAendern, positionPruefen, positionVerstehen, rechnen, systemSprech, zahlwort, zusammenfassen };

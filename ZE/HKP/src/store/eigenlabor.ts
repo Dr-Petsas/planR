@@ -22,6 +22,8 @@ export function eigenlaborSpeichern(neu: EigenPosition[]) {
   abonnenten.forEach((f) => f())
 }
 
+export const eigenlaborLesen = () => katalog
+
 export function useEigenlabor() {
   return useSyncExternalStore(
     (f) => {

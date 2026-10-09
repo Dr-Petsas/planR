@@ -68,13 +68,7 @@ label.check input { width: auto; }
 .kopfleiste nav { display: flex; gap: 4px; }
 .kopfleiste nav button { border: none; border-bottom: 2px solid transparent; border-radius: 0; }
 .kopfleiste nav button.aktiv { border-bottom-color: var(--rot); color: var(--rot); font-weight: 600; }
-
-.werkzeuge {
-  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-  padding: 8px 20px; background: #fff; border-bottom: 1px solid var(--linie);
-}
-.kurzsumme { margin-left: auto; font-size: 13px; }
-.kurzsumme strong { color: var(--rot); }
+.kopfleiste nav button.drucken { margin-left: 10px; border: 1px solid var(--linie); border-radius: 6px; }
 
 /* ---- Arbeitsfläche: Kostenleiste links, HKP rechts ---- */
 .arbeitsflaeche { display: grid; grid-template-columns: 310px minmax(0, 1fr); align-items: start; }
@@ -667,6 +661,29 @@ main { padding: 16px 20px 60px; max-width: 1320px; margin: 0 auto; }
 .tabelle td input:hover { border-color: var(--linie); }
 .tabelle tfoot td { border-bottom: none; padding-top: 4px; }
 .tabelle .leer { color: var(--grau); text-align: center; padding: 10px; }
+.tabelle td { padding: 4px 6px; }
+.tabelle tbody tr.zebra > td,
+:is(.be-reps, .editierbar, .el-tabelle) tbody tr:nth-child(even) > td { box-shadow: inset 0 0 0 999px rgba(30, 60, 90, .045); }
+:is(.tabelle, .el-tabelle) tbody tr:hover > td { box-shadow: inset 0 0 0 999px rgba(0, 110, 140, .08); }
+:is(.tabelle, .el-tabelle) tbody tr:has(.tonne-btn:hover) > td { box-shadow: inset 0 0 0 999px rgba(200, 30, 30, .12); color: #8a1010; }
+:is(.tabelle, .el-tabelle) tbody tr:has(.tonne-btn:hover) > td input { text-decoration: line-through; }
+.tonne-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px; margin-left: 8px;
+  border: 1px solid transparent; border-radius: 6px; background: none; color: #8a939b; cursor: pointer; vertical-align: middle;
+}
+.tonne-btn svg { flex: none; width: 16px; min-width: 16px; height: 16px; }
+.tonne-btn:hover { color: #fff; background: #c62828; border-color: #c62828; }
+.tonne-btn:focus-visible { outline: 2px solid #c62828; outline-offset: 1px; }
+.rueckgaengig-leiste {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000;
+  display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 18px; border-radius: 10px; background: #23313b; color: #fff; font-size: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .28); animation: rg-ein .18s ease-out;
+}
+.rueckgaengig-leiste span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rueckgaengig-leiste button { border: none; border-radius: 6px; padding: 6px 12px; font-weight: 700; cursor: pointer; background: #ffd54a; color: #23313b; }
+.rueckgaengig-leiste button.zu { background: none; color: #b8c3cb; padding: 6px 8px; font-weight: 400; }
+@keyframes rg-ein { from { opacity: 0; transform: translate(-50%, 10px); } }
 .zeile-auto { background: #f7fbff; }
 .zeile-fehler { background: #ffecec; }
 .zeile-fakultativ { background: #fffbea; font-style: italic; }
@@ -759,7 +776,7 @@ code { background: #f0f1f3; padding: 0 3px; border-radius: 3px; }
 @media print {
   @page { size: A4 portrait; margin: 0; }
   :root { background: #fff; font-size: 10px; }
-  .kopfleiste, .werkzeuge, .hinweise, .x-btn, .klein-btn, .ebene header button, .preislisten, .einstellungen, .bildschirm { display: none !important; }
+  .kopfleiste, .werkzeuge, .hinweise, .x-btn, .tonne-btn, .rueckgaengig-leiste, .klein-btn, .ebene header button, .preislisten, .einstellungen, .bildschirm { display: none !important; }
   .zahnschema .zs-R input, .zahnschema .zs-TP input { color: #000; }
   .hkp-blatt { zoom: 1; box-shadow: none; page-break-after: always; border-top: none; --hb-wert: #000; }
   .hkp-blatt .vorschau { visibility: hidden; }
@@ -773,6 +790,7 @@ code { background: #f0f1f3; padding: 0 3px; border-radius: 3px; }
   .hkp-blatt .hb-box, .hkp-blatt .hb-alter input, .hkp-blatt .hb-eingliederung label input { background: #fff !important; }
   .hkp-blatt .hb-box { border: 1px solid var(--hb-m) !important; }
   .zeile-auto, .zeile-fehler, .zeile-fakultativ { background: none; }
+  .tabelle td, .el-tabelle td { box-shadow: none !important; }
   .ebene { page-break-inside: avoid; }
 }
 
@@ -807,6 +825,8 @@ button.link { border: none; background: none; padding: 0; color: var(--text); fo
 .status-freigegeben, .status-genehmigt { color: #1a7f37; font-weight: 600; }
 .status-abgelehnt, .status-verworfen { color: #b00; }
 .badge-clara { margin-left: 6px; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--blau); color: #fff; vertical-align: middle; }
+.badge-datei { margin-left: 6px; font: inherit; font-size: 10px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--blau); background: #fff; color: var(--blau); vertical-align: middle; cursor: pointer; }
+.badge-datei:hover { background: var(--blau); color: #fff; }
 .badge-warten { margin-left: 8px; font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #e0b400; color: #fff; vertical-align: middle; }
 @media print { .register-leiste { display: none; } }
 

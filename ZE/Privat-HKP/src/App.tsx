@@ -16,6 +16,7 @@ import { neuerPlan, planMigrieren, useEinstellungen, usePlan, useZeAblage } from
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
+import { PlanrZurueck } from './PlanrZurueck'
 import type { Einstellungen, Plan } from './types'
 import { patientName } from './stammdaten'
 
@@ -82,6 +83,7 @@ export default function App() {
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">
+            <PlanrZurueck />
             <span className="logo">ZE</span>
             <div>
               <div className="titel">Privat-ZE-Planer <MandantName /></div>

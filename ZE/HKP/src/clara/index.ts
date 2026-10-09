@@ -16,7 +16,9 @@ import {
 
 export { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, planNormalisieren, berechnen, STANDARD_LISTEN }
 export { ausfuehrungIn, ausfuehrungSatz, ausfuehrungVon, systemSprech, LABOR_SPRECH, WERKSTOFF_SPRECH }
+export { befundDatei, befundDateiName } from './befundDatei'
 export type { Befund, PlanOptionen, Rueckfrage, Ergebnis, HkpPlan, Ausfuehrung, AusfuehrungStand }
+export type { BefundDatei, BefundDateiAngaben } from './befundDatei'
 
 declare const __HKP_ENGINE_STAND__: string | undefined
 export const ENGINE_STAND = typeof __HKP_ENGINE_STAND__ === 'string' ? __HKP_ENGINE_STAND__ : 'dev'

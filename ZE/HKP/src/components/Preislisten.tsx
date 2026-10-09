@@ -1,8 +1,9 @@
 import { Fragment, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, EintragNachTyp, ListenTyp, Preisliste } from '../types'
 import {
-  STANDARD_LISTEN, TYP_NAMEN, listeLoeschen, listeSpeichern, listeZuruecksetzen, usePreislisten,
+  STANDARD_LISTEN, TYP_NAMEN, getListen, listeLoeschen, listeSpeichern, listeZuruecksetzen, usePreislisten,
 } from '../store/preislisten'
+import { geloescht, Tonne, wiederEinfuegen } from '../rueckgaengig'
 import { alsCsv, dateiImportieren, herunterladen, type ImportErgebnis } from '../store/import'
 import { eingabeZahl, neueId, zahlDe } from '../format'
 import { belNrAnzeige } from '../engine/berechnung'
@@ -206,12 +207,23 @@ export function Preislisten({ einstellungen, setAktiv, verwendet }: Props) {
           <button onClick={() => herunterladen(`${liste.id}.json`, JSON.stringify(liste, null, 1), 'application/json')}>⬇ JSON</button>
           {!istAktiv && <button onClick={() => setAktiv(AKTIV_FELD[liste.typ], liste.id)}>Im Plan verwenden</button>}
           {istGeaendertStandard && (
-            <button onClick={() => confirm('Alle Änderungen an dieser Liste verwerfen und Originalstand wiederherstellen?') && listeZuruecksetzen(liste.id)}>
+            <button onClick={() => {
+              if (!confirm('Alle Änderungen an dieser Liste verwerfen und Originalstand wiederherstellen?')) return
+              const alt = liste
+              listeZuruecksetzen(liste.id)
+              geloescht(`Änderungen an „${alt.name}“ verworfen`, () => listeSpeichern(alt))
+            }}>
               Original wiederherstellen
             </button>
           )}
           {!liste.standard && (
-            <button className="gefahr" onClick={() => confirm(`Liste „${liste.name}“ löschen?`) && (listeLoeschen(liste.id), setAuswahl(alle[0].id))}>
+            <button className="gefahr" onClick={() => {
+              if (!confirm(`Liste „${liste.name}“ löschen?`)) return
+              const alt = liste
+              listeLoeschen(liste.id)
+              setAuswahl(alle[0].id)
+              geloescht(`Liste „${alt.name}“ gelöscht`, () => { listeSpeichern(alt); setAuswahl(alt.id) })
+            }}>
               Liste löschen
             </button>
           )}
@@ -293,8 +305,14 @@ export function Preislisten({ einstellungen, setAktiv, verwendet }: Props) {
                     {info && (
                       <button className={`info-btn ${offen === i ? 'aktiv' : ''}`} title="Erläuterung anzeigen" onClick={() => setOffen(offen === i ? null : i)}>i</button>
                     )}
-                    <button className="x-btn" title="Zeile löschen"
-                      onClick={() => aktualisieren({ eintraege: liste.eintraege.filter((_, j) => j !== i) as Preisliste['eintraege'] })}>×</button>
+                    <Tonne titel={`Zeile ${e.nr || i + 1} löschen`} onClick={() => {
+                      const id = liste.id
+                      aktualisieren({ eintraege: liste.eintraege.filter((_, j) => j !== i) as Preisliste['eintraege'] })
+                      geloescht(`Zeile gelöscht: ${e.nr || '(ohne Nr.)'}${'text' in e && e.text ? ` – ${String(e.text).slice(0, 40)}` : ''}`, () => {
+                        const jetzt = getListen().find((l) => l.id === id)
+                        if (jetzt) listeSpeichern({ ...jetzt, eintraege: wiederEinfuegen(jetzt.eintraege as typeof e[], e, i) } as Preisliste)
+                      })
+                    }} />
                   </td>
                 </tr>
                 {info && offen === i && (

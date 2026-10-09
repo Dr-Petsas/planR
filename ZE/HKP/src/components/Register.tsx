@@ -3,14 +3,27 @@ import type { HkpPlan } from '../types'
 import type { Ergebnis } from '../engine/berechnung'
 import { euro } from '../format'
 import {
-  RegisterFehler, STATUS_TEXT, aktivSetzen, planStand, registerAnlegen, registerListe, registerStatusSetzen, schluesselSetzen, useVerbindung, verbunden,
-  type HkpStatus, type RegisterKopf,
+  RegisterFehler, STATUS_TEXT, aktivSetzen, planStand, registerAnlegen, registerDatei, registerListe, registerStatusSetzen, schluesselSetzen, useVerbindung, verbunden,
+  type HkpStatus, type RegisterDateiKopf, type RegisterKopf,
 } from '../store/register'
 import type { RegisterAbgleich } from '../store/registerAbgleich'
 
 const datum = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('de-DE') : '')
 const zeit = (iso?: string) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '')
-const QUELLE: Record<string, string> = { lena01: 'Lena-Erstuntersuchung', gesprochen: 'gesprochen', 'gesprochen+lena01': 'gesprochen + Lena', pvs: 'Praxisprogramm', planr: 'PlanR' }
+const QUELLE: Record<string, string> = { lena01: 'Lena-Erstuntersuchung', gesprochen: 'gesprochen', 'gesprochen+lena01': 'gesprochen + Lena', pvs: 'Praxisprogramm', planr: 'PlanR', auftrag: 'aus dem Auftrag (Totalprothese: zahnlos)', keiner: 'aus dem Auftrag (Totalprothese: zahnlos)' }
+
+async function dateiHerunterladen(hkpId: string, d: RegisterDateiKopf) {
+  try {
+    const datei = await registerDatei(hkpId, d.id)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([datei.inhalt], { type: datei.typ || 'application/json' }))
+    a.download = datei.name || d.name
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : String(e))
+  }
+}
 
 /** Zeile über dem Formular: Verknüpfung, Status, Freigabe, Konflikte */
 export function RegisterLeiste({ r, onStatus }: { r: RegisterAbgleich; onStatus: (s: HkpStatus) => void }) {
@@ -156,7 +169,12 @@ function RegisterZeile({ h, geoeffnet, offen, onToggle, onOeffnen, onStatus }: {
     <>
       <tr className={geoeffnet ? 'geoeffnet' : ''}>
         <td><button className="link" onClick={onToggle}>{offen ? '▾' : '▸'} {h.patient.label}</button></td>
-        <td>{h.versorgungText ?? 'HKP'}{h.kiefer ? ` ${h.kiefer}` : ''}{h.erstelltVon === 'clara' && <span className="badge-clara" title="per Sprache von Clara angelegt">Clara</span>}</td>
+        <td>
+          {h.versorgungText ?? 'HKP'}{h.kiefer ? ` ${h.kiefer}` : ''}{h.erstelltVon === 'clara' && <span className="badge-clara" title="per Sprache von Clara angelegt">Clara</span>}
+          {h.dateien?.filter((d) => d.art === 'befund').map((d) => (
+            <button key={d.id} type="button" className="badge-datei" onClick={() => dateiHerunterladen(h.id, d)} title="Befund mit KZBV-Kürzeln als JSON herunterladen">⤓ Befund</button>
+          ))}
+        </td>
         <td>{datum(h.erstellt)}</td>
         <td>
           <select className={`status status-${h.status}`} value={h.status} onChange={(e) => onStatus(e.target.value as HkpStatus)}>
@@ -175,6 +193,13 @@ function RegisterZeile({ h, geoeffnet, offen, onToggle, onOeffnen, onStatus }: {
           <td colSpan={7}>
             {h.auftragText && <p><strong>Eingesprochen:</strong> „{h.auftragText}“</p>}
             {h.befundQuelle && <p><strong>Befund:</strong> {QUELLE[h.befundQuelle.art] ?? h.befundQuelle.art}{h.befundQuelle.datum ? ` vom ${datum(h.befundQuelle.datum)}` : ''}</p>}
+            {!!h.dateien?.length && (
+              <p><strong>Dateien:</strong>{' '}
+                {h.dateien.map((d) => (
+                  <button key={d.id} className="link" onClick={() => dateiHerunterladen(h.id, d)} title="Befund mit KZBV-Kürzeln als JSON herunterladen">⤓ {d.name}</button>
+                ))}
+              </p>
+            )}
             {h.summen && <p><strong>Festzuschuss</strong> {euro(h.summen.festzuschuss)} · <strong>Material</strong> {euro(h.summen.material)}</p>}
             {!!h.hinweise?.length && <ul className="klein">{h.hinweise.map((x) => <li key={x}>{x}</li>)}</ul>}
             {h.offeneAenderung && <p className="hinweis warnung">Clara hat eine Änderung vorgeschlagen, die noch nicht bestätigt ist.</p>}
