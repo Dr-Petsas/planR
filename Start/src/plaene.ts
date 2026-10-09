@@ -16,6 +16,8 @@ export interface PlanKarte {
   behandler?: string
   /** HKP: Kennung der angehängten Befund-Datei im MAS-Register */
   befund?: string
+  /** HKP liegt schon im Praxisprogramm (Text für die Liste) */
+  imPvs?: string
 }
 
 /** Name der Zahnärztin / des Zahnarztes, falls der Plan ihn selbst trägt. */

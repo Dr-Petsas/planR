@@ -18,7 +18,7 @@ export const PVS_LISTE: Pvs[] = [
   { id: 'cgm-z1', name: 'Z1', hersteller: 'CGM Dentalsysteme', weg: 'VDDS-Schnittstelle', bereit: false },
   { id: 'evident', name: 'evident', hersteller: 'evident', weg: 'VDDS-Schnittstelle', bereit: false },
   { id: 'charly', name: 'charly', hersteller: 'solutio', weg: 'VDDS-Schnittstelle', bereit: false },
-  { id: 'dens', name: 'DENSoffice', hersteller: 'DENS', weg: 'Übergabeordner (DENSappConnect)', bereit: true, ordner: true },
+  { id: 'dens', name: 'DENSoffice', hersteller: 'DENS', weg: 'pvsConnectoR – HKP direkt in die Prothetik des Patienten', bereit: true },
   { id: 'ivoris', name: 'ivoris', hersteller: 'Computer konkret', weg: 'VDDS-Schnittstelle', bereit: false },
   { id: 'linudent', name: 'LinuDent', hersteller: 'Pharmatechnik', weg: 'VDDS-Schnittstelle', bereit: false },
   { id: 'visident', name: 'VISIdent', hersteller: 'VISIdent', weg: 'VDDS-Schnittstelle', bereit: false },

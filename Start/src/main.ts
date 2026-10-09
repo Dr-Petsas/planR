@@ -2,6 +2,8 @@ import './style.css'
 import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
+import { PVS_CONNECTOR } from './pvs'
+import { pvsImportOeffnen } from './pvsImport'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const STATUS: Record<string, string> = {
@@ -97,7 +99,7 @@ const TONNE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true
 const PFEIL = (d: string) => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`
 const EXPORT = PFEIL('M12 4v11M7 10l5 5 5-5M5 20h14')
 const IMPORT = PFEIL('M12 15V4M7 9l5-5 5 5M5 20h14')
-const ZAHN = PFEIL('M12 5.5C10.5 4 9 3 7 3 4.8 3 3 4.8 3 7.5c0 2.3 1 3.6 1.6 5.4.6 1.9.6 4.1 1.4 6.4.4 1.2 1.9 1.3 2.4.1l1.3-3.6c.6-1.6 4-1.6 4.6 0l1.3 3.6c.5 1.2 2 1.1 2.4-.1.8-2.3.8-4.5 1.4-6.4.6-1.8 1.6-3.1 1.6-5.4C21 4.8 19.2 3 17 3c-2 0-3.5 1-5 2.5Z')
+const DELFIN = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 13.2C3.2 12.4 4 11.6 5 10.6 7.6 7.8 11.4 6.2 15 6.8L15.6 4.6 17.2 7.4C19.4 8.4 20.6 10.4 21 12.4L23 11.2 22 14.2 22.6 16.6 20.2 14.8C19.2 13.2 17.4 12 15 11.7 12 11.4 9 12.4 7 14.4L6 17 5.2 14.5C4 14.5 2.8 14.1 2 13.2Z"/><circle cx="6.4" cy="11.7" r=".65" fill="#fff"/></svg>'
 const ZAHNRAD = PFEIL('M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z')
 
 function zeile(p: PlanKarte, i: number): string {
@@ -107,14 +109,16 @@ function zeile(p: PlanKarte, i: number): string {
   const tonne = loeschbar(p)
     ? `<button type="button" class="aktion tonne" data-loeschen="${i}" title="${hkp ? 'HKP verwerfen' : 'Plan löschen'}" aria-label="${hkp ? 'HKP verwerfen' : 'Plan löschen'}: ${name}">${TONNE}</button>`
     : `<span class="aktion tonne aus" title="Liegt bei der Kasse – nur in PlanR änderbar">${TONNE}</span>`
-  const export_ = `<button type="button" class="aktion" data-export="${i}" title="Als JSON exportieren" aria-label="Exportieren: ${name}">${EXPORT}</button>`
+  const ziel = hkp ? pvsZiel() : ''
+  const dens = einstellungen.pvs === 'dens'
+  const export_ = ziel
+    ? `<button type="button" class="aktion pvs-knopf${p.imPvs ? ' im-pvs' : ''}" data-export="${i}" title="${esc(`In ${ziel} exportieren${p.imPvs ? ` · ${p.imPvs}` : ''}`)}" aria-label="In ${esc(ziel)} exportieren: ${name}">${dens ? DELFIN : EXPORT}<span>${dens ? 'DENS' : esc(ziel)}</span></button>`
+    : hkp
+      ? `<span class="aktion aus" title="Kein Praxisprogramm mit Bridge eingestellt (Einstellungen)">${EXPORT}</span>`
+      : `<button type="button" class="aktion" data-export="${i}" title="Als JSON exportieren" aria-label="Exportieren: ${name}">${EXPORT}</button>`
   const import_ = ersetzbar(p)
     ? `<button type="button" class="aktion" data-import="${i}" title="Plan aus JSON-Datei ersetzen" aria-label="Importieren: ${name}">${IMPORT}</button>`
     : `<span class="aktion aus" title="Wartet nicht mehr auf Freigabe – nur in PlanR änderbar">${IMPORT}</span>`
-  const befund = !hkp ? '<span class="aktion leer" aria-hidden="true"></span>'
-    : p.befund
-      ? `<button type="button" class="aktion befund" data-befund="${i}" title="Befund (KZBV-Kürzel) als JSON herunterladen" aria-label="Befund herunterladen: ${name}">${ZAHN}</button>`
-      : `<span class="aktion aus" title="Kein Befund angehängt">${ZAHN}</span>`
   return `<div class="zeile${url ? ' mit-link' : ''}" role="row">
     <span class="sp-art"><span class="kuerzel">${esc(p.kuerzel)}</span></span>
     ${url ? `<a class="sp-patient" href="${esc(url)}">${name}</a>` : `<span class="sp-patient">${name}</span>`}
@@ -122,7 +126,7 @@ function zeile(p: PlanKarte, i: number): string {
     <span class="sp-status">${esc(STATUS[p.status] || p.status)}</span>
     <span class="sp-betrag">${p.betrag ? esc(euro(p.betrag)) : ''}</span>
     <span class="sp-zeit">${esc(zeit(p.geaendert))}</span>
-    <span class="sp-aktionen">${befund}${export_}${import_}${tonne}</span>
+    <span class="sp-aktionen">${export_}${import_}${tonne}</span>
   </div>`
 }
 
@@ -136,9 +140,9 @@ function melden(text: string, zurueck?: PlanKarte) {
   zeichnen()
 }
 
-interface Antwort { ok: boolean; meldung?: string; datei?: PlanDatei; nummer?: string; befund?: { name: string; inhalt: string } }
+interface Antwort { ok: boolean; meldung?: string; datei?: PlanDatei; nummer?: string }
 
-async function senden(pfad: 'loeschen' | 'zurueck' | 'export' | 'import' | 'befund', daten: unknown): Promise<Antwort> {
+async function senden(pfad: 'loeschen' | 'zurueck' | 'export' | 'import', daten: unknown): Promise<Antwort> {
   try {
     const r = await fetch(`/api/plaene/${pfad}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten),
@@ -151,7 +155,52 @@ async function senden(pfad: 'loeschen' | 'zurueck' | 'export' | 'import' | 'befu
 
 const kennung = (p: PlanKarte) => ({ modul: p.modul, nummer: p.nummer })
 
+/** Name des PVS, in das HKPs direkt gehen – nur mit aktiver Bridge und fertigem Connector */
+function pvsZiel(): string {
+  const p = pvsVon(einstellungen.pvs)
+  return p && einstellungen.bridge && PVS_CONNECTOR[p.id] ? p.name : ''
+}
+
+let pvsLaeuft = false
+
+async function insPvs(p: PlanKarte, ziel: string) {
+  if (pvsLaeuft) return
+  if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+    return melden(`Export nach ${ziel} geht nur direkt am Praxis-PC (http://localhost:5189).`)
+  }
+  const wer = p.patient || p.nummer
+  const frage = p.imPvs
+    ? `${p.imPvs}.\n\nTrotzdem noch einmal als neuen Plan in ${ziel} anlegen?`
+    : `HKP von ${wer} in ${ziel} beim gleichnamigen Patienten anlegen?`
+  if (!confirm(frage)) return
+  pvsLaeuft = true
+  melden(`HKP von ${wer} geht an ${ziel} …`)
+  try {
+    const r = await fetch('/api/plaene/pvs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...kennung(p), mandant }),
+    }).then((x) => x.json() as Promise<Antwort>).catch((): Antwort => ({ ok: false, meldung: 'Keine Verbindung.' }))
+    if (r.ok) await laden()
+    melden(r.meldung || (r.ok ? `HKP in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`))
+  } finally {
+    pvsLaeuft = false
+  }
+}
+
+/** Aus dem PVS übernommener HKP: Liste neu laden, dann den Planer mit dem Plan öffnen */
+async function ausPvsOeffnen(nummer: string, hinweise: string[]) {
+  await laden()
+  const k = plaene.find((p) => p.modul === 'hkp' && p.nummer === nummer)
+  const url = k && planUrl(k)
+  if (hinweise.length) alert(`Übernommen mit Hinweisen:\n\n${hinweise.join('\n')}`)
+  if (url) location.href = url
+  else melden('HKP übernommen – er steht jetzt in der Liste.')
+}
+
 async function exportieren(p: PlanKarte) {
+  if (p.modul === 'hkp') {
+    const ziel = pvsZiel()
+    return ziel ? insPvs(p, ziel) : undefined
+  }
   const r = await senden('export', kennung(p))
   if (!r.ok || !r.datei) return melden(r.meldung || 'Export hat nicht geklappt.')
   const teil = (s: string) => s.trim().replace(/[^\p{L}\p{N}-]+/gu, '_').replace(/^_+|_+$/g, '')
@@ -162,17 +211,6 @@ async function exportieren(p: PlanKarte) {
   a.click()
   setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   melden(`Plan von ${p.patient || p.nummer} exportiert.`)
-}
-
-async function befundLaden(p: PlanKarte) {
-  const r = await senden('befund', kennung(p))
-  if (!r.ok || !r.befund) return melden(r.meldung || 'Befund ließ sich nicht laden.')
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([r.befund.inhalt], { type: 'application/json' }))
-  a.download = r.befund.name
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-  melden(`Befund von ${p.patient || p.nummer} heruntergeladen.`)
 }
 
 /** Ziel des laufenden Imports: eine Zeile (ersetzen) oder null (neuer Plan) */
@@ -374,7 +412,7 @@ function zeichnen() {
       <div class="kopf-rechts">
         <span class="kopf-info">${sichtbar.length} von ${gesamt}</span>
         <button type="button" class="import-knopf" data-einstellungen title="PVS und Bridge einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
-        <button type="button" class="import-knopf" data-import-neu title="Plan aus einer JSON-Datei übernehmen">${IMPORT}<span>Plan importieren</span></button>
+        <button type="button" class="import-knopf" data-import-neu title="${pvsZiel() ? `HKP aus ${esc(pvsZiel())} übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
         <button type="button" class="neu-knopf" data-neu>Neuer Plan erstellen</button>
     </div>
   </header>
@@ -427,15 +465,18 @@ function zeichnen() {
     const p = sichtbar[Number(b.dataset.export)]
     if (p) void exportieren(p)
   }))
-  app.querySelectorAll<HTMLButtonElement>('[data-befund]').forEach((b) => b.addEventListener('click', () => {
-    const p = sichtbar[Number(b.dataset.befund)]
-    if (p) void befundLaden(p)
-  }))
   app.querySelectorAll<HTMLButtonElement>('[data-import]').forEach((b) => b.addEventListener('click', () => {
     const p = sichtbar[Number(b.dataset.import)]
     if (p) importWaehlen(p)
   }))
-  app.querySelector<HTMLButtonElement>('[data-import-neu]')!.addEventListener('click', () => importWaehlen(null))
+  app.querySelector<HTMLButtonElement>('[data-import-neu]')!.addEventListener('click', () => {
+    const ziel = pvsZiel()
+    if (!ziel) return importWaehlen(null)
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+      return melden(`Import aus ${ziel} geht nur direkt am Praxis-PC (http://localhost:5189).`)
+    }
+    pvsImportOeffnen({ pvsName: ziel, mandant, dateiWaehlen: () => importWaehlen(null), geoeffnet: ausPvsOeffnen })
+  })
   app.querySelector<HTMLButtonElement>('[data-einstellungen]')!.addEventListener('click', () => {
     entwurf = einstellungen
     einstellungAuf = true

@@ -7,7 +7,9 @@ import {
   type Eingang, type Grab, type PlanKarte,
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
-import { einstellungenPruefen, LEER, MANDANT_RE } from './src/einstellungen.ts'
+import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
+import { PVS_CONNECTOR, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
+import { spawn } from 'node:child_process'
 
 const ORDNER = 'F:/PlanR/Start/data'
 const DATEI = `${ORDNER}/plaene.json`
@@ -20,6 +22,9 @@ const EINGANG = `${ORDNER}/eingang.json`
 const BEHANDLER = `${ORDNER}/behandler.json`
 /** PVS und Bridge je Mandant */
 const EINSTELLUNGEN = `${ORDNER}/einstellungen.json`
+/** HKPs, die schon im PVS liegen: `hkp|nummer` → Vermerk */
+const PVS_VERMERKE = `${ORDNER}/pvs-export.json`
+const TUNNEL_HOST = 'planr.pickadoc-tunnel.com'
 const HERKUNFT = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$|^https:\/\/[a-z0-9-]+\.pickadoc-tunnel\.com$/
 const MODUL_RE = /^[a-z0-9-]{1,40}$/
 
@@ -187,6 +192,137 @@ async function befundLaden(modul: string, nummer: string, res: ServerResponse) {
   json(res, 200, { ok: true, befund: { name: String(datei.name ?? 'Befund.json'), inhalt: datei.inhalt } })
 }
 
+// ---------- Export ins PVS (pvsConnectoR) ----------
+
+/** Der Connector liest Patientendaten und schreibt ins PVS – nur direkt am Praxis-PC, nie über den Tunnel. */
+function amPraxisPc(req: IncomingMessage) {
+  const host = String(req.headers.host ?? '').split(':')[0]
+  const lokal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '')
+  return lokal && !req.headers['cf-connecting-ip'] && host !== TUNNEL_HOST
+}
+
+const vermerkeLesen = async () => {
+  const roh = await jsonLesen<unknown>(PVS_VERMERKE, {})
+  return (roh && typeof roh === 'object' && !Array.isArray(roh) ? roh : {}) as Record<string, PvsVermerk>
+}
+
+async function connector<T>(basis: string, pfad: string, init: { method?: string; body?: unknown; ms?: number } = {}) {
+  const r = await fetch(`${basis}${pfad}`, {
+    method: init.method ?? 'GET',
+    headers: init.body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    signal: AbortSignal.timeout(init.ms ?? 10_000),
+  })
+  return { ok: r.ok, status: r.status, daten: await r.json().catch(() => ({})) as T & { error?: string } }
+}
+
+/** Holt das PVS-Fenster nach vorn, damit der Plan dort gleich geöffnet werden kann. */
+function pvsNachVorn(pvs: string) {
+  const prozess = ({ dens: 'DensOffice' } as Record<string, string>)[pvs]
+  if (!prozess) return
+  const befehl = `$p = Get-Process ${prozess} -ErrorAction SilentlyContinue | Select-Object -First 1; if ($p) { (New-Object -ComObject WScript.Shell).AppActivate($p.Id) | Out-Null }`
+  try {
+    spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', befehl], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+  } catch { /* Fenster bleibt, wo es ist */ }
+}
+
+async function insPvs(req: IncomingMessage, modul: string, nummer: string, mandant: string, res: ServerResponse) {
+  if (!amPraxisPc(req)) return json(res, 403, { ok: false, meldung: 'Ins Praxisprogramm exportieren geht nur direkt am Praxis-PC (http://localhost:5189).' })
+  if (modul !== 'hkp') return json(res, 400, { ok: false, meldung: 'Ins Praxisprogramm gehen bisher nur HKPs.' })
+  const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
+  const e = alle[mandant] ? einstellungenPruefen(alle[mandant]) : LEER
+  const pvs = pvsVon(e.pvs)
+  if (!pvs || !e.bridge) return json(res, 409, { ok: false, meldung: 'Kein Praxisprogramm mit aktiver Bridge eingestellt (Einstellungen).' })
+  const basis = PVS_CONNECTOR[pvs.id]
+  if (!basis) return json(res, 409, { ok: false, meldung: `Für ${pvs.name} gibt es noch keinen HKP-Connector.` })
+
+  const r = await mas(`/${encodeURIComponent(nummer)}/rechnung`)
+  if (!r.ok) return json(res, r.status === 404 ? 404 : 502, { ok: false, meldung: r.status === 404 ? 'HKP nicht gefunden.' : String(r.daten.message ?? 'Der HKP ließ sich in MAS nicht berechnen.') })
+  const plan = r.daten.plan as { patient?: PlanPatient } & Record<string, unknown>
+  const patient = plan.patient ?? {}
+
+  try {
+    const q = new URLSearchParams({ firstName: String(patient.vorname ?? '').trim(), lastName: String(patient.name ?? '').trim() })
+    const suche = await connector<{ items?: PvsTreffer[] }>(basis, `/patients?${q}`)
+    if (!suche.ok) return json(res, 502, { ok: false, meldung: `${pvs.name}: ${suche.daten.error ?? `Patientensuche fehlgeschlagen (HTTP ${suche.status}).`}` })
+    const wahl = patientWaehlen(suche.daten.items ?? [], patient, pvs.name)
+    if (!wahl.id) return json(res, 409, { ok: false, meldung: wahl.fehler })
+
+    const anlage = await connector<{ number?: number }>(basis, `/patients/${encodeURIComponent(wahl.id)}/hkps`, {
+      method: 'POST', body: { json: hkpFuerPvs(plan, r.daten.ergebnis as Record<string, unknown>) }, ms: 70_000,
+    })
+    if (!anlage.ok || typeof anlage.daten.number !== 'number') {
+      return json(res, 422, { ok: false, meldung: `${pvs.name} hat den HKP nicht übernommen: ${anlage.daten.error ?? `HTTP ${anlage.status}`}` })
+    }
+    const vermerk: PvsVermerk = { pvs: pvs.id, patientId: wahl.id, planNr: anlage.daten.number, am: new Date().toISOString() }
+    await jsonSchreiben(PVS_VERMERKE, { ...await vermerkeLesen(), [`hkp|${nummer}`]: vermerk })
+    pvsNachVorn(pvs.id)
+    const wer = `${patient.vorname ?? ''} ${patient.name ?? ''}`.trim()
+    json(res, 200, {
+      ok: true,
+      meldung: `HKP für ${wer} in ${pvs.name} als Plan Nr. ${vermerk.planNr} angelegt. Dort: Patient (Nr. ${wahl.id}) → Prothetik → Plan ${vermerk.planNr} öffnen.`,
+    })
+  } catch {
+    json(res, 503, { ok: false, meldung: `Der ${pvs.name}-Connector antwortet nicht – läuft er auf diesem PC?` })
+  }
+}
+
+/** Connector des eingestellten PVS oder Fehlermeldung */
+async function pvsConnector(mandant: string): Promise<{ basis?: string; name?: string; fehler?: string }> {
+  const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
+  const e = alle[mandant] ? einstellungenPruefen(alle[mandant]) : LEER
+  const pvs = pvsVon(e.pvs)
+  if (!pvs || !e.bridge) return { fehler: 'Kein Praxisprogramm mit aktiver Bridge eingestellt (Einstellungen).' }
+  const basis = PVS_CONNECTOR[pvs.id]
+  return basis ? { basis, name: pvs.name } : { fehler: `Für ${pvs.name} gibt es noch keinen HKP-Connector.` }
+}
+
+/** Patientensuche und HKP-Liste im PVS (nur lesen) */
+async function pvsLesen(art: string, q: URLSearchParams, res: ServerResponse) {
+  const c = await pvsConnector(q.get('mandant') || 'standard')
+  if (!c.basis) return json(res, 409, { ok: false, meldung: c.fehler })
+  try {
+    if (art === 'patienten') {
+      const woerter = (q.get('q') ?? '').trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean).slice(0, 4)
+      if (!woerter.length) return json(res, 400, { ok: false, meldung: 'Vor- und/oder Nachname eingeben.' })
+      const r = await connector<{ items?: (PvsTreffer & { city?: string })[] }>(c.basis, `/patients?${new URLSearchParams({ q: woerter.reduce((a, b) => (b.length > a.length ? b : a)) })}`)
+      if (!r.ok) return json(res, 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
+      const patienten = (r.daten.items ?? [])
+        .filter((p) => woerter.every((w) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.toLocaleLowerCase('de').includes(w)))
+        .map((p) => ({ id: p.id, vorname: p.firstName ?? '', name: p.lastName ?? '', geburtsdatum: p.birthDate ?? '', ort: p.city ?? '' }))
+      return json(res, 200, { ok: true, pvs: c.name, patienten })
+    }
+    const id = q.get('patient') ?? ''
+    if (!/^\d{1,9}$/.test(id)) return json(res, 400, { ok: false })
+    const r = await connector<{ hkps?: Record<string, unknown>[] }>(c.basis, `/patients/${id}/clinical`, { ms: 30_000 })
+    if (!r.ok) return json(res, 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
+    const hkps = (r.daten.hkps ?? []).map((h) => ({
+      nummer: Number(h.number), datum: String(h.date ?? ''), planart: String(h.planType ?? ''), bezeichnung: String(h.description ?? ''),
+      status: String(h.status ?? ''), betrag: Number(h.estimatedTotal) || 0,
+    })).sort((a, b) => b.nummer - a.nummer)
+    return json(res, 200, { ok: true, pvs: c.name, hkps })
+  } catch {
+    return json(res, 503, { ok: false, meldung: `Der ${c.name}-Connector antwortet nicht – läuft er auf diesem PC?` })
+  }
+}
+
+/** HKP aus dem PVS ins MAS-Register übernehmen; Mapping macht der Connector */
+async function ausPvs(patient: string, planNr: string, mandant: string, res: ServerResponse) {
+  const c = await pvsConnector(mandant)
+  if (!c.basis) return json(res, 409, { ok: false, meldung: c.fehler })
+  let r
+  try {
+    r = await connector<{ plan?: Record<string, unknown>; hinweise?: string[] }>(c.basis, `/patients/${patient}/hkps/${planNr}/planr`, { ms: 30_000 })
+  } catch {
+    return json(res, 503, { ok: false, meldung: `Der ${c.name}-Connector antwortet nicht – läuft er auf diesem PC?` })
+  }
+  if (!r.ok || !r.daten.plan) return json(res, r.status === 404 ? 404 : 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? 'HKP ließ sich nicht lesen.'}` })
+  const m = await mas('', { method: 'POST', body: { plan: r.daten.plan, status: 'wartet_auf_freigabe', versorgungText: `aus ${c.name} (Plan ${planNr})` } })
+  const neu = m.daten.hkp as { id?: string } | undefined
+  if (!m.ok || !neu?.id) return json(res, 400, { ok: false, meldung: String(m.daten.message ?? 'Der HKP konnte nicht angelegt werden.') })
+  json(res, 200, { ok: true, nummer: neu.id, hinweise: r.daten.hinweise ?? [] })
+}
+
 /**
  * Plandatei übernehmen. Mit `ziel` ersetzt sie den Plan dieser Zeile (gleicher Planer Pflicht), ohne `ziel`
  * kommt sie unter ihrer eigenen Nummer dazu. HKPs gehen direkt ins MAS-Register, alles andere in den Eingang
@@ -327,7 +463,7 @@ function lesenBody(req: IncomingMessage, hoechstens = 5_000_000): Promise<string
   })
 }
 
-const AKTIONEN = ['loeschen', 'zurueck', 'export', 'import', 'befund'] as const
+const AKTIONEN = ['loeschen', 'zurueck', 'export', 'import', 'befund', 'pvs', 'pvs-import'] as const
 type Aktion = (typeof AKTIONEN)[number]
 
 const eigeneSeite = (req: IncomingMessage) =>
@@ -362,6 +498,14 @@ function einstellungen(req: IncomingMessage, res: ServerResponse, query: string)
 export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
   const [url, query = ''] = String(req.url ?? '').split('?')
   if (url === '/api/einstellungen') return einstellungen(req, res, query)
+  if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps') {
+    res.setHeader('Cache-Control', 'no-store')
+    if (req.method !== 'GET' || !eigeneSeite(req) || !amPraxisPc(req)) return json(res, 403, { ok: false, meldung: 'Nur direkt am Praxis-PC (http://localhost:5189).' })
+    const q = new URLSearchParams(query)
+    if (!MANDANT_RE.test(q.get('mandant') || 'standard')) return json(res, 400, { ok: false })
+    pvsLesen(url.slice('/api/pvs/'.length), q, res).catch(() => { if (!res.headersSent) json(res, 500, { ok: false }) })
+    return
+  }
   const aktion = url.startsWith('/api/plaene/') ? url.slice('/api/plaene/'.length) as Aktion : null
   if (url !== '/api/plaene' && !(aktion && AKTIONEN.includes(aktion))) return next()
   const origin = herkunft(req)
@@ -374,8 +518,32 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (aktion) {
     // Nur die Übersicht selbst – kein Planer, keine andere Seite.
     if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
+    if (aktion === 'pvs-import') {
+      if (!amPraxisPc(req)) return json(res, 403, { ok: false, meldung: 'Nur direkt am Praxis-PC (http://localhost:5189).' })
+      lesenBody(req, 2000).then((text) => {
+        const b = JSON.parse(text) as { patient?: unknown; plan?: unknown; mandant?: unknown }
+        const patient = String(b.patient ?? '')
+        const planNr = String(b.plan ?? '')
+        const mandant = String(b.mandant ?? 'standard')
+        if (!/^\d{1,9}$/.test(patient) || !/^\d{1,5}$/.test(planNr) || !MANDANT_RE.test(mandant)) return json(res, 400, { ok: false })
+        return ausPvs(patient, planNr, mandant, res)
+      }).catch(() => { if (!res.headersSent) json(res, 500, { ok: false, meldung: 'Das hat gerade nicht geklappt.' }) })
+      return
+    }
+    if (aktion === 'pvs') {
+      // Schreiben im PVS dauert Sekunden – nicht in der Warteschlange, sonst hängt die Liste so lange
+      lesenBody(req, 2000).then((text) => {
+        const b = JSON.parse(text) as { modul?: unknown; nummer?: unknown; mandant?: unknown }
+        const modul = String(b.modul ?? '')
+        const nummer = String(b.nummer ?? '')
+        const mandant = String(b.mandant ?? 'standard')
+        if (!MODUL_RE.test(modul) || !nummer || nummer.length > 80 || !MANDANT_RE.test(mandant)) return json(res, 400, { ok: false })
+        return insPvs(req, modul, nummer, mandant, res)
+      }).catch(() => { if (!res.headersSent) json(res, 500, { ok: false, meldung: 'Das hat gerade nicht geklappt.' }) })
+      return
+    }
     lesenBody(req).then((text) => exklusiv(async () => {
-      const b = JSON.parse(text) as { modul?: unknown; nummer?: unknown; datei?: unknown; ziel?: { modul?: unknown; nummer?: unknown } }
+      const b = JSON.parse(text) as { modul?: unknown; nummer?: unknown; datei?: unknown; ziel?: { modul?: unknown; nummer?: unknown }; mandant?: unknown }
       if (aktion === 'import') {
         let ziel: PlanKarte | null = null
         if (b.ziel) {
@@ -414,6 +582,11 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
       const liste = hkps ? modulErsetzen(datei.filter((k) => k.modul !== 'hkp'), 'hkp', hkps) : datei
       const namen = await behandlerLesen()
       for (const k of liste) if (!k.behandler && namen[k.modul]) k.behandler = namen[k.modul]
+      const vermerke = await vermerkeLesen()
+      for (const k of liste) {
+        const v = k.modul === 'hkp' ? vermerke[`hkp|${k.nummer}`] : undefined
+        if (v) k.imPvs = vermerkText(v, pvsVon(v.pvs)?.name ?? v.pvs)
+      }
       json(res, 200, { plaene: liste })
     }).catch(() => json(res, 500, { plaene: [] }))
     return
