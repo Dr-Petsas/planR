@@ -771,7 +771,8 @@ button.link { border: none; background: none; padding: 0; color: var(--text); fo
 .status-freigegeben, .status-genehmigt { color: #1a7f37; font-weight: 600; }
 .status-abgelehnt, .status-verworfen { color: #b00; }
 .badge-clara { margin-left: 6px; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--blau); color: #fff; vertical-align: middle; }
-.badge-datei { margin-left: 6px; font-size: 9px; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--blau); color: var(--blau); vertical-align: middle; }
+.badge-datei { margin-left: 6px; font: inherit; font-size: 10px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--blau); background: #fff; color: var(--blau); vertical-align: middle; cursor: pointer; }
+.badge-datei:hover { background: var(--blau); color: #fff; }
 .badge-warten { margin-left: 8px; font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #e0b400; color: #fff; vertical-align: middle; }
 @media print { .register-leiste { display: none; } }
 
