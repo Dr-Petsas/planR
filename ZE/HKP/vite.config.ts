@@ -38,11 +38,13 @@ const MAS_PROXY: Record<string, ProxyOptions> = {
   },
 }
 
-// DENS-Connector (pvsConnectoR) – nur lokal am Praxis-PC
+// DENS-Connector (pvsConnectoR) – nur lokal am Praxis-PC. Über den Tunnel (preview auf 5181 ist öffentlich)
+// gibt es 404: der Connector liest Patientendaten und schreibt in DENSoffice, und ohne Origin hält er jede Anfrage für lokal.
 const PVS_PROXY: Record<string, ProxyOptions> = {
   '/pvs': {
     target: 'http://127.0.0.1:8770',
     changeOrigin: true,
+    bypass: (req) => (amPraxisPc(req) ? undefined : false),
     rewrite: (p: string) => p.replace(/^\/pvs/, ''),
     configure: (proxy) => proxy.on('proxyReq', (proxyReq) => {
       proxyReq.removeHeader('Origin')
