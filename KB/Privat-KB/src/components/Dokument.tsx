@@ -1,5 +1,5 @@
 import type { Einstellungen, Plan, Rechnung, Zeile } from '../types'
-import { euro, faktorText } from '../engine/kb'
+import { euro, faktorText, istUkps } from '../engine/kb'
 import { anschrift, patientName, plzOrt } from '../stammdaten'
 
 interface Props {
@@ -75,12 +75,17 @@ function Tabelle({ zeilen, mitFaktor }: { zeilen: Zeile[]; mitFaktor: boolean })
 
 export default function Dokument({ plan, einst, rechnung }: Props) {
   const leer = !rechnung.honorar.length && !rechnung.labor.length
+  const ukps = istUkps(plan.positionen)
+  const labor = plan.fremdlabor.name || einst.laborName
   return (
     <>
       <div className="kv-blatt">
         <Kopf plan={plan} einst={einst} />
-        <h1>Kostenvoranschlag Schienentherapie</h1>
-        <p className="kv-untertitel">Aufbissbehelfe und Funktionsdiagnostik nach der Gebührenordnung für Zahnärzte (GOZ)</p>
+        <h1>Kostenvoranschlag {ukps ? 'Unterkieferprotrusionsschiene' : 'Schienentherapie'}</h1>
+        <p className="kv-untertitel">
+          {ukps ? 'UKPS bei obstruktiver Schlafapnoe' : 'Aufbissbehelfe und Funktionsdiagnostik'} nach der Gebührenordnung für Zahnärzte (GOZ)
+          {plan.abformung === 'scan' ? ' · digitale Abformung (Intraoralscan)' : ''}
+        </p>
         {plan.diagnose && <p><b>Befund / Diagnose:</b> {plan.diagnose}</p>}
 
         {leer ? (
@@ -90,7 +95,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
             {rechnung.honorar.length > 0 && (<><h2>Zahnärztliches Honorar</h2><Tabelle zeilen={rechnung.honorar} mitFaktor /></>)}
             {rechnung.labor.length > 0 && (
               <>
-                <h2 style={{ marginTop: 12 }}>Material- und Laborkosten{einst.laborName ? ` (${einst.laborName})` : ''}</h2>
+                <h2 style={{ marginTop: 12 }}>Material- und Laborkosten{labor ? ` (${labor})` : ''}</h2>
                 <Tabelle zeilen={rechnung.labor} mitFaktor={false} />
               </>
             )}
@@ -109,13 +114,17 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
             Die Beträge sind voraussichtlich; das endgültige Honorar richtet sich nach dem tatsächlichen Aufwand.
             Material- und Laborkosten werden nach tatsächlichem Anfall berechnet.
           </p>
+          {rechnung.honorar.some((z) => z.bemessung) && (
+            <p>Mit „a“ gekennzeichnete Leistungen sind in der GOZ nicht beschrieben und werden nach § 6 Abs. 1 GOZ entsprechend einer gleichwertigen Leistung berechnet.</p>
+          )}
+          {ukps && <p>Hinweis für gesetzlich Versicherte: Bei ärztlich festgestellter obstruktiver Schlafapnoe und Veranlassung durch einen Schlafmediziner ist die UKPS Leistung der gesetzlichen Krankenversicherung.</p>}
           {rechnung.begruendung.length > 0 && <p>Für Faktoren über 2,3 erhalten Sie die Begründung mit der Rechnung (§ 10 Abs. 3 GOZ).</p>}
           {rechnung.vereinbarung2.length > 0 && <p>Für Faktoren über 3,5 gilt die gesonderte Vereinbarung nach § 2 GOZ (Blatt 2).</p>}
-          <p>
+          {!ukps && <p>
             Gesetzlich Versicherte: Die Leistungen sind privat zu tragen; sie werden nur nach schriftlicher Vereinbarung vor
             Behandlungsbeginn erbracht (§ 8 Abs. 7 BMV-Z). Ob und in welchem Umfang eine private Versicherung oder Beihilfe
             erstattet, richtet sich nach Ihrem Vertrag.
-          </p>
+          </p>}
           <p>Dieser Kostenvoranschlag gilt bis {gueltigBis(plan.datum, einst.gueltigMonate)}.</p>
         </div>
         <Unterschriften />

@@ -1,6 +1,6 @@
 import type { Einstellungen as EinstT } from '../types'
 import { BEB_POSITIONEN } from '../data/katalog'
-import { GENUTZTE_LISTEN, LABORLISTE_NAME, laborListenPreis } from '../engine/listen'
+import { GENUTZTE_LISTEN, gozEinzel, gozText, LABORLISTE_NAME, laborListenPreis } from '../engine/listen'
 import { euro } from '../engine/kb'
 import { PraxisFelder } from './Stammdaten'
 import { ListenKarte } from './Listen'
@@ -49,6 +49,14 @@ export default function Einstellungen({ einst, setEinst }: Props) {
             Labor (erscheint im Kostenvoranschlag)
             <input value={einst.laborName} placeholder="z. B. Praxislabor oder Name des Fremdlabors" onChange={(e) => set({ laborName: e.target.value })} />
           </label>
+          <label className="feld breit">
+            UKPS bei OSAS: Bemessungsleistung (analog § 6 Abs. 1 GOZ)
+            <select value={einst.ukpsAnalog} onChange={(e) => set({ ukpsAnalog: e.target.value })}>
+              {['5220', '5230', '7010', '7060'].map((nr) => (
+                <option key={nr} value={nr}>GOZ {nr} – {euro(gozEinzel(nr, 2.3))} bei 2,3 · {gozText(nr).slice(0, 70)}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
@@ -61,11 +69,11 @@ export default function Einstellungen({ einst, setEinst }: Props) {
         <table className="preis-tabelle">
           <tbody>
             {BEB_POSITIONEN.map((b) => {
-              const liste = laborListenPreis(b.labor)
+              const liste = laborListenPreis(b.labor) ?? b.preis
               return (
                 <tr key={b.nr}>
                   <td className="mono">{b.nr}</td>
-                  <td>{b.text}{b.hinweis && <small className="grau"> · {b.hinweis}</small>}</td>
+                  <td>{b.text}{b.hinweis && <small className="grau"> · {b.hinweis}</small>}{b.fremd && <small className="grau"> · Platzhalter, bis ein Praxispreis oder Kostenvoranschlag vorliegt</small>}</td>
                   <td className="r grau">{liste != null ? euro(liste) : '—'}</td>
                   <td className="r">
                     <input type="number" min={0} step={0.01} value={einst.laborPreise[b.nr] ?? ''} placeholder={liste != null ? String(liste) : 'Preis'}

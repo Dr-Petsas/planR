@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
-import { BEB_POSITIONEN, GOZ_POSITIONEN, VORLAGEN } from '../data/katalog'
-import { euro, laborGrundpreis, neueId, positionsFaktor, vorlageAnwenden } from '../engine/kb'
+import { BEB_POSITIONEN, GOZ_POSITIONEN, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
+import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, vorlageAnwenden } from '../engine/kb'
 import { gozText } from '../engine/listen'
 
 interface Props {
@@ -20,7 +20,16 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   const aendern = (id: string, patch: Partial<Position>) => setPos(plan.positionen.map((p) => (p.id === id ? { ...p, ...patch } : p)))
   const zeile = (id: string) => [...rechnung.honorar, ...rechnung.labor].find((z) => z.id === id)
 
+  const vorlageNehmen = (pos: VorlagenPosition[]) => {
+    const neu = vorlageAnwenden(plan.positionen, pos, einst)
+    setPos(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu)
+  }
+
   const hinzufuegen = () => {
+    if (neuEbene === 'GOZ' && neuNr === 'analog') {
+      setPos([...plan.positionen, { id: neueId(), ebene: 'GOZ', nr: einst.ukpsAnalog || '5220', anzahl: 1, analog: true, text: '' }])
+      return
+    }
     const nr = neuEbene === 'MATERIAL' ? 'Mat.' : neuNr
     setPos([...plan.positionen, { id: neueId(), ebene: neuEbene, nr, anzahl: 1, ...(neuEbene === 'MATERIAL' ? { text: '', preis: 0 } : {}) }])
   }
@@ -35,14 +44,19 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
       <div className="block">
         <h3>Behandlung wählen</h3>
         <p className="hilfe">Jede Vorlage fügt die üblichen GOZ- und Laborpositionen hinzu – Anzahl, Faktor und Preis bleiben einzeln änderbar.</p>
-        <div className="vorlagen">
-          {VORLAGEN.map((v) => (
-            <button key={v.id} className="vorlage" onClick={() => setPos(vorlageAnwenden(plan.positionen, v.pos))}>
-              <b>{v.titel}</b>
-              <small>{v.text}</small>
-            </button>
-          ))}
-        </div>
+        {VORLAGEN_GRUPPEN.map((gr) => (
+          <div key={gr}>
+            <div className="vorlagen-gruppe">{gr}</div>
+            <div className="vorlagen">
+              {VORLAGEN.filter((v) => v.gruppe === gr).map((v) => (
+                <button key={v.id} className="vorlage" onClick={() => vorlageNehmen(v.pos)}>
+                  <b>{v.titel}</b>
+                  <small>{v.text}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="block">
@@ -61,11 +75,25 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                   const z = zeile(p.id)
                   return (
                     <tr key={p.id} className={z?.ohnePreis ? 'mit-warnung' : ''}>
-                      <td className="mono nr">{p.ebene === 'MATERIAL' ? 'Mat.' : p.nr}</td>
+                      <td className="mono nr">{p.ebene === 'MATERIAL' ? 'Mat.' : p.analog ? `${p.nr}a` : p.nr}</td>
                       <td>
-                        {p.ebene === 'MATERIAL'
-                          ? <input className="text-feld" value={p.text ?? ''} placeholder="Material, z. B. Folie" onChange={(e) => aendern(p.id, { text: e.target.value })} />
-                          : <span>{z?.text ?? (p.ebene === 'GOZ' ? gozText(p.nr) : p.nr)}</span>}
+                        {p.ebene === 'MATERIAL' ? (
+                          <input className="text-feld" value={p.text ?? ''} placeholder="Material, z. B. Folie" onChange={(e) => aendern(p.id, { text: e.target.value })} />
+                        ) : p.analog ? (
+                          <>
+                            <input className="text-feld" value={p.text ?? ''} placeholder="erbrachte Leistung" onChange={(e) => aendern(p.id, { text: e.target.value })} />
+                            <small className="grau">
+                              entsprechend GOZ{' '}
+                              <select value={p.nr} onChange={(e) => aendern(p.id, { nr: e.target.value })}>
+                                {[...new Set([p.nr, '5220', '5230', '7010', '7050', '7060', '8010', '2270'])].map((nr) => (
+                                  <option key={nr} value={nr}>{nr} {gozText(nr).slice(0, 50)}</option>
+                                ))}
+                              </select>
+                            </small>
+                          </>
+                        ) : <span>{z?.text ?? (p.ebene === 'GOZ' ? gozText(p.nr) : p.nr)}</span>}
+                        {p.ausXml && <span className="xml-marke" title="Preis aus dem Labor-XML">XML</span>}
+                        {z?.platzhalter && <span className="xml-marke" title="Platzhalterpreis – Kostenvoranschlag einlesen">Platzhalter</span>}
                       </td>
                       <td className="r">
                         <input className="zahl-feld" type="number" min={0} step={1} value={p.anzahl}
@@ -112,15 +140,21 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                   ))}
                 </optgroup>
               ))}
+              <optgroup label="Analog (§ 6 Abs. 1 GOZ)">
+                <option value="analog">Analogleistung, z. B. UKPS – Bemessung wählbar</option>
+              </optgroup>
             </select>
           )}
           {neuEbene === 'LABOR' && (
             <select value={neuNr} onChange={(e) => setNeuNr(e.target.value)}>
               <optgroup label="Schienen">
-                {BEB_POSITIONEN.filter((b) => !b.begleit).map((b) => <option key={b.nr} value={b.nr}>{b.nr} {b.text}</option>)}
+                {BEB_POSITIONEN.filter((b) => !b.begleit && !b.fremd).map((b) => <option key={b.nr} value={b.nr}>{b.nr} {b.text}</option>)}
               </optgroup>
-              <optgroup label="Modelle, Artikulator, Aufbisse">
-                {BEB_POSITIONEN.filter((b) => b.begleit).map((b) => <option key={b.nr} value={b.nr}>{b.nr} {b.text}</option>)}
+              <optgroup label="Modelle, Artikulator, Aufbisse, Versand">
+                {BEB_POSITIONEN.filter((b) => b.begleit && !b.fremd).map((b) => <option key={b.nr} value={b.nr}>{b.nr} {b.text}</option>)}
+              </optgroup>
+              <optgroup label="Fremdlabor (Platzhalter bis Kostenvoranschlag)">
+                {BEB_POSITIONEN.filter((b) => b.fremd).map((b) => <option key={b.nr} value={b.nr}>{b.nr} {b.text}</option>)}
               </optgroup>
             </select>
           )}

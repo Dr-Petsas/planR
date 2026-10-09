@@ -240,6 +240,13 @@ fieldset.sperre:disabled { opacity: .62; }
 .pos-neu select { padding: 5px 7px; border: 1px solid var(--linie); border-radius: 6px; background: white; max-width: 460px; }
 .grau { color: var(--grau); }
 .hinweise li.warn { color: var(--rot); }
+.kl-block .text-feld { margin-top: 6px; }
+.labor-xml { margin-top: 8px; }
+.xml-meldung { margin: 6px 0 0; padding-left: 16px; font-size: 11.5px; color: var(--grau); }
+.xml-meldung li.warn { color: var(--rot); }
+.xml-marke { margin-left: 6px; padding: 0 4px; border-radius: 3px; background: var(--akzent-hell); color: var(--akzent); font-size: 10px; font-weight: 600; }
+.link-btn { border: none; background: none; padding: 0; color: var(--akzent); text-decoration: underline; cursor: pointer; font-size: inherit; }
+.vorlagen-gruppe { margin: 10px 0 4px; font-size: 11px; font-weight: 600; color: var(--grau); text-transform: uppercase; letter-spacing: .4px; }
 .schalter { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .wahl { display: flex; gap: 4px; flex-wrap: wrap; }
 .wahl button { border: 1px solid var(--linie); background: white; border-radius: 6px; padding: 5px 10px; font-size: 12.5px; color: var(--grau); }

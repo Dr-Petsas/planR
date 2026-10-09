@@ -53,6 +53,9 @@ export interface BebPosition {
   labor?: string
   begleit?: boolean
   hinweis?: string
+  /** Fremdlabor-Leistung ohne Listenpreis: `preis` ist ein Platzhalter bis zum Kostenvoranschlag */
+  fremd?: boolean
+  preis?: number
 }
 
 export const BEB_POSITIONEN: BebPosition[] = [
@@ -92,18 +95,30 @@ export const BEB_POSITIONEN: BebPosition[] = [
   { nr: '1115', text: 'Registrierplatte und -stift auf Basen', labor: '1115', begleit: true },
   { nr: '1122', text: 'Wachsplatte für zentrische Bissnahme vorbereiten', labor: '1122', begleit: true },
   { nr: '0732', text: 'Desinfektion', labor: '0732', begleit: true },
+  { nr: '0009', text: 'Modell aus Kunststoff, gedruckt nach Intraoralscan', labor: '0009', begleit: true },
+  { nr: '0701', text: 'Versand je Versandgang', labor: '0701', begleit: true },
+  { nr: '0036', text: 'Versand bei Datenlieferung', labor: '0036', begleit: true },
+  // Die ITZ-Liste kennt keine UKPS: Fremdlabor-Platzhalter, bis der Kostenvoranschlag (XML) eingelesen ist.
+  { nr: 'F-UKPS', text: 'Unterkieferprotrusionsschiene zweiteilig, Fremdlabor (lt. Kostenvoranschlag)', fremd: true, preis: 480 },
+  { nr: 'F-UKPS-REP', text: 'Instandsetzung/Erneuerung Protrusionselemente UKPS, Fremdlabor', fremd: true, preis: 90, begleit: true },
 ]
 
 export const BEB = new Map(BEB_POSITIONEN.map((b) => [b.nr, b] as const))
 
 export interface VorlagenPosition {
   ebene: 'GOZ' | 'LABOR'
+  /** `UKPS` = Bemessungsleistung aus den Einstellungen */
   nr: string
   anzahl: number
+  analog?: boolean
+  text?: string
 }
+
+export type VorlagenGruppe = 'Schienen' | 'UKPS bei OSAS' | 'Funktion und Nachsorge'
 
 export interface Vorlage {
   id: string
+  gruppe: VorlagenGruppe
   titel: string
   text: string
   pos: VorlagenPosition[]
@@ -111,9 +126,14 @@ export interface Vorlage {
 
 const G = (nr: string, anzahl = 1): VorlagenPosition => ({ ebene: 'GOZ', nr, anzahl })
 const L = (nr: string, anzahl = 1): VorlagenPosition => ({ ebene: 'LABOR', nr, anzahl })
+const A = (nr: string, text: string, anzahl = 1): VorlagenPosition => ({ ebene: 'GOZ', nr, anzahl, analog: true, text })
+
+export const UKPS_TEXT = 'Unterkieferprotrusionsschiene zweiteilig bei OSAS: Bestimmung der therapeutischen Protrusion, Eingliederung und Einweisung'
+export const UKPS_TITRATION_TEXT = 'Nachstellen der Protrusion einer UKPS (Titration), je Sitzung'
+export const VORLAGEN_GRUPPEN: VorlagenGruppe[] = ['Schienen', 'UKPS bei OSAS', 'Funktion und Nachsorge']
 
 /** Typische Behandlungen – fügen GOZ- und Laborpositionen hinzu, alles bleibt einzeln änderbar. */
-export const VORLAGEN: Vorlage[] = [
+const SCHIENEN: Omit<Vorlage, 'gruppe'>[] = [
   {
     id: 'michigan', titel: 'Adjustierte Aufbissschiene', text: 'Michigan-Typ, Mittelwertartikulator',
     pos: [G('7010'), L('0002', 3), L('0241'), L('0402'), L('7621'), L('0732', 2)],
@@ -134,6 +154,24 @@ export const VORLAGEN: Vorlage[] = [
     id: 'umarbeitung', titel: 'Prothese umarbeiten', text: 'zum Aufbissbehelf',
     pos: [G('7020'), L('0002', 2), L('0402'), L('0732', 2)],
   },
+]
+
+const UKPS: Omit<Vorlage, 'gruppe'>[] = [
+  {
+    id: 'ukps', titel: 'UKPS anfertigen', text: 'analog § 6 GOZ, Protrusionsregistrat, Fremdlabor',
+    pos: [G('0060'), A('UKPS', UKPS_TEXT), G('8010'), L('0002', 2), L('0402'), L('F-UKPS'), L('0701'), L('0732', 2)],
+  },
+  {
+    id: 'ukps-titration', titel: 'Titration und Kontrollen', text: '2 × Protrusion nachstellen, 2 × Kontrolle',
+    pos: [A('7050', UKPS_TITRATION_TEXT, 2), G('7040', 2)],
+  },
+  {
+    id: 'ukps-reparatur', titel: 'UKPS instand setzen', text: 'Wiederherstellung, Fremdlabor',
+    pos: [G('7030'), L('F-UKPS-REP'), L('0701'), L('0732', 2)],
+  },
+]
+
+const FUNKTION: Omit<Vorlage, 'gruppe'>[] = [
   {
     id: 'fal', titel: 'Klinische Funktionsanalyse', text: 'mit Heil- und Kostenplan',
     pos: [G('8000'), G('0040')],
@@ -159,6 +197,19 @@ export const VORLAGEN: Vorlage[] = [
     pos: [G('7080', 4), G('7090')],
   },
 ]
+
+export const VORLAGEN: Vorlage[] = [
+  ...SCHIENEN.map((v) => ({ ...v, gruppe: 'Schienen' as const })),
+  ...UKPS.map((v) => ({ ...v, gruppe: 'UKPS bei OSAS' as const })),
+  ...FUNKTION.map((v) => ({ ...v, gruppe: 'Funktion und Nachsorge' as const })),
+]
+
+/** Gipsmodelle, die beim Intraoralscan durch gedruckte Modelle ersetzt werden */
+export const LABOR_GIPSMODELLE = ['0001', '0002']
+/** Entfallen beim Intraoralscan */
+export const LABOR_NUR_ABDRUCK = ['0241']
+/** 0065 je Kieferhälfte bzw. Frontzahnbereich: beide Kiefer = 6 */
+export const SCAN_BEREICHE_BEIDE_KIEFER = 6
 
 export const LABOR_KLASSE_FAKTOR = [0.85, 1, 1.2]
 export const laborKlasseName = (k: number) => ['günstig', 'Standard', 'hochwertig'][k] ?? 'Standard'
