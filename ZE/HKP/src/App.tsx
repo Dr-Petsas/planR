@@ -31,6 +31,11 @@ import { PlanrZurueck } from './PlanrZurueck'
 import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
 import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, useAktiv, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
 
+import { LIVE_TITEL, PHASE_TEXT, liveAbonnieren, liveModus, liveSchritte, type LiveStand } from './store/live'
+
+/** Gesamtdauer, in der ein Live-Schritt von Clara sichtbar eingetragen wird */
+const LIVE_DAUER_MS = 5000
+
 /** Breite des A4-Vordrucks (210 mm) in CSS-Pixeln */
 const BLATT_BREITE_PX = 793.7
 
@@ -135,6 +140,68 @@ export default function App() {
     })()
   }, [register, setPlan])
 
+  // Clara plant live (?live=1): MAS meldet jeden Schritt beim Anlegen per Sprache, hier wird er
+  // sichtbar eingetragen. Ein neuer Vorgang löst vorher die Register-Verknüpfung, damit kein
+  // Zwischenstand in einen anderen HKP gespeichert wird; der angelegte HKP wird danach verknüpft geladen.
+  const liveAn = useMemo(() => liveModus(), [])
+  const [live, setLive] = useState<{ an: boolean; stand: LiveStand | null; spielt: boolean }>({ an: false, stand: null, spielt: false })
+  const planRef = useRef(plan)
+  const registerRef = useRef(register)
+  useEffect(() => {
+    planRef.current = plan
+    registerRef.current = register
+  })
+  useEffect(() => {
+    if (!liveAn) return
+    document.title = LIVE_TITEL
+    let vorgang = ''
+    let seq = 0
+    let letzter: HkpPlan | null = null
+    const schlange: { tun: HkpPlan | (() => void); ms: number }[] = []
+    let uhr = 0
+    const takt = () => {
+      const n = schlange.shift()
+      if (!n) {
+        uhr = 0
+        setLive((l) => ({ ...l, spielt: false }))
+        return
+      }
+      if (typeof n.tun === 'function') n.tun()
+      else { const p = n.tun; setPlan(() => p) }
+      uhr = window.setTimeout(takt, n.ms)
+    }
+    const aus = liveAbonnieren((s) => {
+      if (s.vorgang === vorgang && s.seq <= seq) return
+      const neu = s.vorgang !== vorgang
+      vorgang = s.vorgang
+      seq = s.seq
+      if (neu) {
+        schlange.length = 0
+        aktivSetzen(null)
+        setLinkEintrag(null)
+        setLinkListen(null)
+        setLinkHinweis('')
+        setTab('teil1')
+        letzter = neuerPlan(planRef.current.einstellungen)
+        schlange.push({ tun: letzter, ms: 300 })
+      }
+      const schritte = liveSchritte(letzter ?? planRef.current, s)
+      if (schritte.length) letzter = schritte[schritte.length - 1]
+      const ms = Math.min(300, Math.max(60, LIVE_DAUER_MS / Math.max(1, schritte.length)))
+      schlange.push(...schritte.map((tun) => ({ tun, ms })))
+      if (s.phase === 'angelegt' && s.hkpId) {
+        const id = s.hkpId
+        schlange.push({ tun: () => { registerRef.current.laden(id).catch(() => {}) }, ms: 0 })
+      }
+      setLive((l) => ({ ...l, stand: s, spielt: true }))
+      if (!uhr) takt()
+    }, (an) => setLive((l) => ({ ...l, an })))
+    return () => {
+      aus()
+      window.clearTimeout(uhr)
+    }
+  }, [liveAn, setPlan])
+
   async function registerStatus(s: HkpStatus) {
     const a = register.aktiv
     if (!a) return
@@ -200,6 +267,18 @@ export default function App() {
         </nav>
       </header>
 
+      {liveAn && (
+        <div className={`register-leiste live-leiste${live.an ? ' verbunden' : ''}${live.spielt ? ' spielt' : ''}`}>
+          <span className="live-punkt" aria-hidden="true" />
+          <span>
+            <b>{LIVE_TITEL}</b>
+            {!live.an ? ' – keine Verbindung zu MAS (geht nur direkt am Praxis-PC)'
+              : live.stand ? ` · ${live.stand.patient?.label ?? ''} · ${PHASE_TEXT[live.stand.phase]}${live.stand.auftragText ? ` · Auftrag: ${live.stand.auftragText}` : ''}`
+                : ' – wartet auf den nächsten HKP'}
+            {live.an && live.stand?.meldung && <span className="live-meldung">„{live.stand.meldung}“</span>}
+          </span>
+        </div>
+      )}
       {hkpAnsicht && <RegisterLeiste r={register} onStatus={registerStatus} />}
       {linkHinweis && (
         <div className="register-leiste">

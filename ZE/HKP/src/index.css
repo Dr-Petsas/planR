@@ -809,6 +809,12 @@ code { background: #f0f1f3; padding: 0 3px; border-radius: 3px; }
 .schluessel-eingabe input { min-width: 240px; padding: 6px 8px; }
 .register-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 16px 8px; padding: 6px 10px; background: var(--hinter); border: 1px solid var(--linie); border-radius: 6px; font-size: 13px; }
 .register-leiste.konflikt { background: var(--gelb); border-color: #e0b400; }
+.register-leiste.live-leiste { background: #fdf0f6; border-color: #e9b8cf; }
+.live-leiste .live-punkt { width: 10px; height: 10px; border-radius: 50%; background: #b9a3ad; flex: none; }
+.live-leiste.verbunden .live-punkt { background: #c2185b; }
+.live-leiste.spielt .live-punkt { animation: livePuls 0.9s ease-in-out infinite; }
+.live-leiste .live-meldung { display: block; font-style: italic; color: #6b4a5a; margin-top: 2px; }
+@keyframes livePuls { 50% { opacity: 0.25; transform: scale(0.8); } }
 .register-leiste .klein { font-size: 11px; }
 .werkzeuge-zeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 10px; }
 .werkzeuge-zeile label { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; margin: 0; }
