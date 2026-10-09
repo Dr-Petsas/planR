@@ -38,6 +38,15 @@ export interface RegisterKopf {
   hinweise?: string[]
   offeneAenderung?: { id: string } | null
   verlauf?: { at: string; wer: string; was: string }[]
+  /** angehängte Dateien, z. B. der diktierte Befund */
+  dateien?: RegisterDateiKopf[]
+}
+
+export interface RegisterDateiKopf {
+  id: string
+  name: string
+  art: 'befund'
+  erstellt: string
 }
 
 export interface RegisterHkp extends RegisterKopf {
@@ -136,6 +145,8 @@ async function anfrage<T>(pfad: string, init: RequestInit = {}): Promise<T> {
 export const registerStatus = () => anfrage<{ engineStand: string; praxis: { aktualisiert: string; preislisten: number; eigen: number } }>('/status')
 export const registerListe = () => anfrage<{ hkps: RegisterKopf[] }>('/hkp').then((d) => d.hkps)
 export const registerLesen = (id: string) => anfrage<{ hkp: RegisterHkp }>(`/hkp/${id}`).then((d) => d.hkp)
+export const registerDatei = (id: string, dateiId: string) =>
+  anfrage<{ datei: { name: string; typ: string; inhalt: string } }>(`/hkp/${encodeURIComponent(id)}/datei/${encodeURIComponent(dateiId)}`).then((d) => d.datei)
 
 /** Zugang über einen Link aus MAS: t = lesen, f = freigeben (nur Karte in der Clara-App), c = Mandant */
 export interface LinkZugang { id: string; t: string; f?: string; c?: string }
