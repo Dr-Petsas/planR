@@ -3,7 +3,8 @@ import type { HkpPlan } from '../types'
 import type { Ergebnis } from '../engine/berechnung'
 import { planNormalisieren } from './plan'
 import {
-  RegisterFehler, aktivSetzen, planStand, registerLesen, registerListe, registerSpeichern, useAktiv, useVerbindung, verbunden, type RegisterKopf,
+  RegisterFehler, aktivSetzen, planStand, registerLesen, registerListe, registerSpeichern, speichernPerLink, useAktiv, useVerbindung, verbunden,
+  type LinkZugang, type RegisterKopf,
 } from './register'
 
 export type Abgleich =
@@ -74,3 +75,41 @@ export function useRegisterAbgleich(plan: HkpPlan, ergebnis: Ergebnis, setPlan: 
 }
 
 export type RegisterAbgleich = ReturnType<typeof useRegisterAbgleich>
+
+/** Aus der PlanR-Übersicht über den Tunnel geöffneter HKP (Bearbeiten-Schlüssel statt Praxis-Schlüssel) */
+export interface LinkEintrag { zugang: LinkZugang; version: number; stand: string }
+
+type LinkStand = Abgleich | { art: 'fehler'; text: string; stand: string }
+
+/** Speichert Änderungen am per Link geöffneten HKP 1,5 s nach der letzten Änderung ins Register. */
+export function useLinkAbgleich(plan: HkpPlan, eintrag: LinkEintrag | null, setEintrag: (e: LinkEintrag | null) => void) {
+  const [abgleich, setAbgleich] = useState<LinkStand>({ art: 'aus' })
+  const stand = planStand(plan)
+  const geaendert = !!eintrag && stand !== eintrag.stand
+  const fehlerHier = abgleich.art === 'fehler' && 'stand' in abgleich && abgleich.stand === stand
+
+  useEffect(() => {
+    if (!eintrag || !geaendert || fehlerHier || abgleich.art === 'konflikt' || abgleich.art === 'speichert') return
+    const t = setTimeout(async () => {
+      setAbgleich({ art: 'speichert' })
+      try {
+        const h = await speichernPerLink(eintrag.zugang, eintrag.version, plan)
+        setEintrag({ ...eintrag, version: h.version, stand })
+        setAbgleich({ art: 'gespeichert' })
+      } catch (e) {
+        if (e instanceof RegisterFehler && e.status === 409 && e.daten.aktuell) setAbgleich({ art: 'konflikt', aktuell: e.daten.aktuell as RegisterKopf })
+        else setAbgleich({ art: 'fehler', text: e instanceof Error ? e.message : String(e), stand })
+      }
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [eintrag, geaendert, fehlerHier, abgleich.art, plan, stand, setEintrag])
+
+  return {
+    abgleich, geaendert,
+    ueberschreiben: () => {
+      if (abgleich.art !== 'konflikt' || !eintrag) return
+      setEintrag({ ...eintrag, version: abgleich.aktuell.version })
+      setAbgleich({ art: 'aus' })
+    },
+  }
+}

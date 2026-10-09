@@ -190,8 +190,8 @@ interface HkpKopf {
   patient?: { label?: string }
   summen?: { gesamt?: number }
   versorgungText?: string
-  /** Lese-Link aus MAS: ohne ihn öffnet der Planer über den Tunnel (kein Praxis-Schlüssel) den HKP nicht */
-  link?: { t?: string; c?: string }
+  /** Lese-Link aus MAS: ohne ihn öffnet der Planer über den Tunnel (kein Praxis-Schlüssel) den HKP nicht; b = Änderungen speichern */
+  link?: { t?: string; b?: string; c?: string }
   dateien?: { id?: string; art?: string }[]
 }
 
@@ -205,6 +205,7 @@ function hkpOeffnen(id: string, link: HkpKopf['link']): string {
   const q = new URLSearchParams({ hkp: id })
   if (link?.t && TOKEN.test(link.t)) {
     q.set('t', link.t)
+    if (link.b && TOKEN.test(link.b)) q.set('b', link.b)
     if (link.c && TOKEN.test(link.c)) q.set('c', link.c)
   }
   return q.toString()

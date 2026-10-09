@@ -25,10 +25,10 @@ import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
 import { euro } from './format'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
-import { useRegisterAbgleich } from './store/registerAbgleich'
+import { useLinkAbgleich, useRegisterAbgleich, type LinkEintrag } from './store/registerAbgleich'
 import { MasVerbindung } from './components/MasVerbindung'
 import { MandantKarte, MandantName } from './components/Mandant'
-import { aktivSetzen, registerLesenPerLink, registerStatusSetzen, verbindungBereit, verbunden, type HkpStatus } from './store/register'
+import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
 
 /** Breite des A4-Vordrucks (210 mm) in CSS-Pixeln */
 const BLATT_BREITE_PX = 793.7
@@ -61,6 +61,9 @@ export default function App() {
 
   const ergebnis = useMemo(() => berechnen(plan, listen), [plan, listen])
   const register = useRegisterAbgleich(plan, ergebnis, setPlan)
+  const [linkEintrag, setLinkEintrag] = useState<LinkEintrag | null>(null)
+  useEffect(() => { if (register.aktiv) setLinkEintrag(null) }, [register.aktiv])
+  const linkAbgleich = useLinkAbgleich(plan, linkEintrag, setLinkEintrag)
   const [linkHinweis, setLinkHinweis] = useState('')
 
   // SMS-Link von Clara: ?hkp=<id>&t=<token> öffnet den HKP direkt. Mit MAS-Schlüssel verknüpft
@@ -84,10 +87,15 @@ export default function App() {
             return
           } catch { /* Schlüssel falsch o. ä. – weiter mit dem Link */ }
         }
-        const h = await registerLesenPerLink(id, q.get('t') ?? '', q.get('c') ?? undefined)
+        const zugang: LinkZugang = { id, t: q.get('t') ?? '', b: q.get('b') || undefined, c: q.get('c') ?? undefined }
+        const h = (await hkpPerLink(zugang)).hkp
+        const p = planNormalisieren(JSON.parse(h.planJson || '{}'))
         aktivSetzen(null)
-        setPlan(() => planNormalisieren(JSON.parse(h.planJson || '{}')))
-        setLinkHinweis(`${h.versorgungText ?? 'HKP'} für ${h.patient.label} aus dem Link geladen. Mit den Reglern frei probieren – ins Register gespeichert wird nur mit MAS-Schlüssel (Einstellungen).`)
+        setPlan(() => p)
+        setLinkEintrag(zugang.b ? { zugang, version: h.version, stand: planStand(p) } : null)
+        setLinkHinweis(zugang.b
+          ? `${h.versorgungText ?? 'HKP'} für ${h.patient.label} geöffnet – Änderungen werden im Register gespeichert.`
+          : `${h.versorgungText ?? 'HKP'} für ${h.patient.label} aus dem Link geladen. Mit den Reglern frei probieren – ins Register gespeichert wird nur mit MAS-Schlüssel (Einstellungen).`)
         setTab('teil1')
       } catch (err) {
         setLinkHinweis(`Der HKP aus dem Link konnte nicht geladen werden: ${err instanceof Error ? err.message : String(err)}`)
@@ -225,6 +233,17 @@ export default function App() {
         <div className="register-leiste">
           <span>{linkHinweis}</span>
           <button className="klein" onClick={() => setLinkHinweis('')}>✕</button>
+        </div>
+      )}
+      {hkpAnsicht && linkEintrag && (
+        <div className={`register-leiste ${linkAbgleich.abgleich.art === 'konflikt' ? 'konflikt' : ''}`}>
+          <span className="klein">
+            {linkAbgleich.abgleich.art === 'speichert' ? 'speichert …'
+              : linkAbgleich.abgleich.art === 'fehler' ? `⚠ ${linkAbgleich.abgleich.text}`
+                : linkAbgleich.abgleich.art === 'konflikt' ? `⚠ Im Register inzwischen geändert (${linkAbgleich.abgleich.aktuell.verlauf?.at(-1)?.wer ?? '?'}: ${linkAbgleich.abgleich.aktuell.verlauf?.at(-1)?.was ?? ''}) – Seite neu laden oder meinen Stand speichern.`
+                  : linkAbgleich.geaendert ? 'Änderungen werden gespeichert …' : 'im Register gespeichert'}
+          </span>
+          {linkAbgleich.abgleich.art === 'konflikt' && <button onClick={linkAbgleich.ueberschreiben}>Meinen Stand speichern</button>}
         </div>
       )}
 

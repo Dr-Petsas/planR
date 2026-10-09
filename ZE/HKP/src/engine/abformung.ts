@@ -16,7 +16,7 @@ export const DIGITAL_BEB = {
 export const ABFORMUNG_ARTEN: { id: Exclude<Abformung, ''>; titel: string; text: string }[] = [
   {
     id: 'scan', titel: 'Intraoralscan',
-    text: 'GOZ 0065 je Kieferhälfte/Frontzahnbereich (präparierte Bereiche und Gegenkiefer), gedruckte Modelle (BEB 0009) statt Gips- und Sägemodell, digitaler Laborablauf (Präp freilegen, Druckstumpf, CAD-Konstruktion, Sintern). Privatleistung – die Versorgung wird gleichartig.',
+    text: 'GOZ 0065 je Kieferhälfte/Frontzahnbereich (präparierte Bereiche und Gegenkiefer, zahnloser Kiefer ganz), gedruckte Modelle (BEB 0009) statt Gips-, Säge- und Situationsmodell, digitaler Laborablauf (Präp freilegen, Druckstumpf, CAD-Konstruktion, Sintern). Privatleistung – die Versorgung wird gleichartig.',
   },
   {
     id: 'abdruck', titel: 'Abdruck (konventionell)',
@@ -71,16 +71,17 @@ const KIEFER_BEREICHE = { OK: ['OK rechts', 'OK-Front', 'OK links'], UK: ['UK re
  * Zweite Abformung für den herausnehmbaren Teil (z. B. über die eingesetzten Primärkronen):
  * Scan → GOZ 0065 für die drei Bereiche des Kiefers und gedrucktes Modell;
  * Abdruck → individueller Löffel (BEMA 98a/BEL 0211 bei Kassenprothese, sonst GOZ 5170/BEB 1006).
- * Kiefer mit Funktionsabformung (zahnlos, BEMA 98b/c bzw. GOZ 5180/5190) bleiben konventionell.
+ * Kiefer mit Funktionsabformung (zahnlos, BEMA 98b/c bzw. GOZ 5180/5190) bekommen keine zweite Abformung (Scan dort: zahnlosScannen).
  */
 function protheseAbformen(positionen: Position[], art: Abformung, erste: Abformung): { positionen: Position[]; hinweise: string[] } {
   const kiefer = (['OK', 'UK'] as const).filter((k) => positionen.some((p) => p.zahn === k && PROTHESE(p)))
   if (!kiefer.length) return { positionen, hinweise: [] }
   if (!art) {
+    const offen = kiefer.filter((k) => !positionen.some((p) => p.zahn === k && FUNKTIONSABFORMUNG(p)))
     return {
       positionen,
-      hinweise: erste === 'scan'
-        ? [`Herausnehmbarer Teil ${kiefer.join(', ')}: zweite Abformung (Scan oder Überabdruck) noch offen.`]
+      hinweise: erste === 'scan' && offen.length
+        ? [`Herausnehmbarer Teil ${offen.join(', ')}: zweite Abformung (Scan oder Überabdruck) noch offen.`]
         : [],
     }
   }
@@ -107,9 +108,38 @@ function protheseAbformen(positionen: Position[], art: Abformung, erste: Abformu
     hinweise.push(art === 'scan'
       ? `Herausnehmbarer Teil ${bearbeitet.join(', ')}: zweiter Intraoralscan – GOZ 0065 je Bereich des Kiefers und gedrucktes Modell (BEB 0009); Gipsmodelle der Prothese ggf. streichen.`
       : `Herausnehmbarer Teil ${bearbeitet.join(', ')}: Überabdruck mit individuellem Löffel${neu.length ? ` (${neu.map((p) => `${p.ebene} ${p.nr}`).join(', ')})` : ''}, Meistermodell aus Gips.`)
-  if (funktion.length)
+  if (funktion.length && art !== 'scan')
     hinweise.push(`${funktion.join(', ')}: Funktionsabformung mit individuellem Löffel ist schon enthalten – bleibt konventionell.`)
   return { positionen: [...positionen, ...neu], hinweise }
+}
+
+/** Situationsmodell eines Prothesenkiefers: BEL 0010 bzw. BEB 0002 mit Kieferangabe */
+const SITUATIONSMODELL = (k: string) => (p: Position) =>
+  p.zahn === k && ((p.ebene === 'BEL' && p.nr === '0010') || (p.ebene === 'BEB' && p.nr === '0002'))
+
+/**
+ * Zahnloser Kiefer (Funktionsabformung, BEMA 98b/c bzw. GOZ 5180/5190) mit Intraoralscan (Chef 09.10.2026):
+ * der Scan ersetzt die anatomische Erstabformung – GOZ 0065 für die drei Bereiche des Kiefers und ein
+ * gedrucktes Modell (BEB 0009) statt des Situationsmodells. Individueller Löffel und Funktionsabformung bleiben.
+ */
+function zahnlosScannen(positionen: Position[]): { positionen: Position[]; hinweise: string[] } {
+  const kiefer = (['OK', 'UK'] as const).filter((k) => positionen.some((p) => p.zahn === k && PROTHESE(p) && FUNKTIONSABFORMUNG(p)))
+  if (!kiefer.length) return { positionen, hinweise: [] }
+  let out = positionen
+  const neu: Position[] = []
+  for (const k of kiefer) {
+    const gescannt = new Set(out.filter((p) => p.ebene === 'GOZ' && p.nr === '0065').map((p) => p.zahn))
+    neu.push(...KIEFER_BEREICHE[k].filter((b) => !gescannt.has(b))
+      .map((b) => pos('GOZ', '0065', b, { text: `Optisch-elektronische Abformung ${k} (zahnloser Kiefer)` })))
+    if (out.some((p) => p.ebene === 'BEB' && p.nr === '0009' && p.zahn === k)) continue
+    const modell = out.find(SITUATIONSMODELL(k))
+    if (modell) out = out.flatMap((p) => (p !== modell ? [p] : (p.anzahl ?? 1) > 1 ? [{ ...p, anzahl: (p.anzahl ?? 1) - 1 }] : []))
+    neu.push(pos('BEB', '0009', k, { text: `Modell aus Kunststoff ${k} (gedruckt)`, ...(modell?.labor ? { labor: modell.labor } : {}) }))
+  }
+  return {
+    positionen: [...out, ...neu],
+    hinweise: [`${kiefer.join(', ')} zahnlos: Intraoralscan statt anatomischer Erstabformung – GOZ 0065 je Bereich des Kiefers, gedrucktes Modell (BEB 0009) statt Situationsmodell; individueller Löffel und Funktionsabformung bleiben.`],
+  }
 }
 
 /**
@@ -123,7 +153,8 @@ export function abformungAnwenden(
   const erste = abformung === 'scan' ? scanAnwenden(positionen, zaehne) : { positionen, hinweise: [] }
   const digital = abformung === 'scan' ? digitalerWorkflow(erste.positionen, zaehne, eigenlabor) : { positionen: erste.positionen, hinweise: [] }
   const zweite = protheseAbformen(digital.positionen, prothese, abformung)
-  return { positionen: zweite.positionen, hinweise: [...erste.hinweise, ...digital.hinweise, ...zweite.hinweise] }
+  const zahnlos = abformung === 'scan' || prothese === 'scan' ? zahnlosScannen(zweite.positionen) : { positionen: zweite.positionen, hinweise: [] }
+  return { positionen: zahnlos.positionen, hinweise: [...erste.hinweise, ...digital.hinweise, ...zweite.hinweise, ...zahnlos.hinweise] }
 }
 
 const istImplantat = (zaehne: Record<string, ZahnZeilen>, z: string) => /^S/i.test((zaehne[z]?.TP.trim() || zaehne[z]?.R || '').toUpperCase())

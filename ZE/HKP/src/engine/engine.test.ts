@@ -704,6 +704,27 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
     expect(restzahn.hinweise.some((h) => h.includes('Funktionsabformung') && h.includes('enthalten'))).toBe(true)
   })
 
+  it('Totalprothese mit Intraoralscan: GOZ 0065 für den Kiefer, gedrucktes Modell statt Situationsmodell, Funktionsabformung bleibt', () => {
+    const ok = ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28']
+    const rechne = (abformung: HkpPlan['abformung'], abformungProthese: HkpPlan['abformung'] = '') => {
+      const p = { ...planMit(fehlend(...ok)), abformung, abformungProthese }
+      return therapieAnwenden(regelversorgungErmitteln(p.zaehne, regelOptionen(p)), p.zaehne, p)
+    }
+    const modelle = (r: ReturnType<typeof rechne>) => r.positionen.filter((x) => x.ebene === 'BEL' && x.nr === '0010' && x.zahn === 'OK').reduce((s, x) => s + (x.anzahl ?? 1), 0)
+    const abdruck = rechne('abdruck')
+    expect(abdruck.positionen.some((x) => x.nr === '0065' || (x.ebene === 'BEB' && x.nr === '0009'))).toBe(false)
+    expect(modelle(abdruck)).toBe(2)
+
+    for (const scan of [rechne('scan'), rechne('abdruck', 'scan')]) {
+      expect(scan.positionen.filter((x) => x.ebene === 'GOZ' && x.nr === '0065').map((x) => x.zahn).sort()).toEqual(['OK links', 'OK rechts', 'OK-Front'])
+      expect(scan.positionen.filter((x) => x.ebene === 'BEB' && x.nr === '0009' && x.zahn === 'OK')).toHaveLength(1)
+      expect(modelle(scan)).toBe(1)
+      expect(hat(scan, 'BEMA', '98b', 'OK') && hat(scan, 'BEL', '0211', 'OK')).toBe(true)
+      expect(scan.hinweise.some((h) => h.includes('zahnlos') && h.includes('Intraoralscan'))).toBe(true)
+      expect(scan.hinweise.some((h) => h.includes('noch offen'))).toBe(false)
+    }
+  })
+
   it('Abformung: Scan bei Implantatkrone ohne doppelte 0065, Abdruck mit Löffelwahl; Zusatz-Regler setzt bei Abdruck kein 0065', () => {
     const p = { ...planMit({ 14: 'ww', 36: 'x' }, { 36: 'SKM' }), abformung: 'scan' as const }
     const r = therapieAnwenden(regelversorgungErmitteln(p.zaehne, regelOptionen(p)), p.zaehne, p)

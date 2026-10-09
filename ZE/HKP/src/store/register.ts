@@ -148,11 +148,13 @@ export const registerLesen = (id: string) => anfrage<{ hkp: RegisterHkp }>(`/hkp
 export const registerDatei = (id: string, dateiId: string) =>
   anfrage<{ datei: { name: string; typ: string; inhalt: string } }>(`/hkp/${encodeURIComponent(id)}/datei/${encodeURIComponent(dateiId)}`).then((d) => d.datei)
 
-/** Zugang über einen Link aus MAS: t = lesen, f = freigeben (nur Karte in der Clara-App), c = Mandant */
-export interface LinkZugang { id: string; t: string; f?: string; c?: string }
+/** Zugang über einen Link aus MAS: t = lesen, f = freigeben (nur Karte in der Clara-App), b = bearbeiten (nur PlanR-Übersicht), c = Mandant */
+export interface LinkZugang { id: string; t: string; f?: string; b?: string; c?: string }
 
-const linkPfad = (z: LinkZugang) => `${BASIS}/hkp-link/${encodeURIComponent(z.id)}${z.c ? `?c=${encodeURIComponent(z.c)}` : ''}`
-const linkKopf = (z: LinkZugang): Record<string, string> => ({ 'X-PlanR-Link': z.t, ...(z.f ? { 'X-PlanR-Freigabe': z.f } : {}) })
+const linkPfad = (z: LinkZugang, unter = '') => `${BASIS}/hkp-link/${encodeURIComponent(z.id)}${unter}${z.c ? `?c=${encodeURIComponent(z.c)}` : ''}`
+const linkKopf = (z: LinkZugang): Record<string, string> => ({
+  'X-PlanR-Link': z.t, ...(z.f ? { 'X-PlanR-Freigabe': z.f } : {}), ...(z.b ? { 'X-PlanR-Bearbeiten': z.b } : {}),
+})
 
 async function linkAntwort<T>(r: Response): Promise<T> {
   const daten = await r.json().catch(() => ({ error: `HTTP ${r.status}` }))
@@ -173,6 +175,14 @@ export const freigebenPerLink = (z: LinkZugang, version: number, plan?: HkpPlan)
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...linkKopf(z) },
     body: JSON.stringify({ version, status: 'freigegeben', ...(plan ? { plan } : {}) }),
+  }).then((r) => linkAntwort<{ hkp: RegisterKopf }>(r)).then((d) => d.hkp)
+
+/** Plan aus dem Planer (über die PlanR-Übersicht geöffnet) speichern; MAS rechnet die Summen selbst */
+export const speichernPerLink = (z: LinkZugang, version: number, plan: HkpPlan) =>
+  fetch(linkPfad(z, '/plan'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...linkKopf(z) },
+    body: JSON.stringify({ version, plan }),
   }).then((r) => linkAntwort<{ hkp: RegisterKopf }>(r)).then((d) => d.hkp)
 
 export function summenVon(e: Ergebnis) {

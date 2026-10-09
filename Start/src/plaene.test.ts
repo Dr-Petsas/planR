@@ -74,6 +74,8 @@ describe('Pläne', () => {
     expect(k[0].oeffnen).toBe('hkp=abc&t=1791234567.Ab-c_d')
     const fremd = hkpKarten([{ id: 'abc', status: 'freigegeben', aktualisiert: '2026-10-07T10:00:00.000Z', link: { t: '1.x', c: 'praxis2' } }])
     expect(fremd[0].oeffnen).toBe('hkp=abc&t=1.x&c=praxis2')
+    const bearbeiten = hkpKarten([{ id: 'abc', status: 'freigegeben', aktualisiert: '2026-10-07T10:00:00.000Z', link: { t: '1.x', b: '2.y' } }])
+    expect(bearbeiten[0].oeffnen).toBe('hkp=abc&t=1.x&b=2.y')
     const kaputt = hkpKarten([{ id: 'abc', status: 'freigegeben', aktualisiert: '2026-10-07T10:00:00.000Z', link: { t: 'a&b=c' } }])
     expect(kaputt[0].oeffnen).toBe('hkp=abc')
   })
