@@ -27,6 +27,8 @@ import { euro } from './format'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useRegisterAbgleich } from './store/registerAbgleich'
 import { MasVerbindung } from './components/MasVerbindung'
+import { PvsVerbindung } from './components/PvsVerbindung'
+import { PvsPatientLeiste } from './components/PvsPatient'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { aktivSetzen, registerLesenPerLink, registerStatusSetzen, verbindungBereit, verbunden, type HkpStatus } from './store/register'
 
@@ -47,6 +49,7 @@ const BEISPIEL: Record<string, string> = { '16': 'ww', '15': 'k', '14': 'f', '13
 export default function App() {
   const [plan, setPlan] = usePlan()
   const alle = usePreislisten()
+  const [pvsPatientId, setPvsPatientId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('teil1')
   const [engineHinweise, setEngineHinweise] = useState<string[]>([])
   const importRef = useRef<HTMLInputElement>(null)
@@ -204,7 +207,7 @@ export default function App() {
       {hkpAnsicht && (
         <div className="werkzeuge">
           <button className="primaer" onClick={() => setTab('register')} title="HKPs aus dem Register (auch von Clara angelegte) öffnen und mit den Reglern durchspielen">📂 Erstellte HKPs laden</button>
-          <button onClick={() => { if (confirm('Aktuellen Plan verwerfen?')) { aktivSetzen(null); setPlan(() => neuerPlan(plan.einstellungen)); setEngineHinweise([]) } }}>Neuer Plan</button>
+          <button onClick={() => { if (confirm('Aktuellen Plan verwerfen?')) { aktivSetzen(null); setPvsPatientId(null); setPlan(() => neuerPlan(plan.einstellungen)); setEngineHinweise([]) } }}>Neuer Plan</button>
           <button onClick={() => setPlan((p) => ({ ...p, zaehne: Object.fromEntries(Object.keys(p.zaehne).map((z) => [z, { B: BEISPIEL[z] ?? '', R: '', TP: '' }])) }))}>
             Beispielbefund
           </button>
@@ -244,6 +247,9 @@ export default function App() {
 
       <main>
         <div className={tab === 'teil1' ? '' : 'nur-druck'}>
+          {tab === 'teil1' && (
+            <PvsPatientLeiste plan={plan} ergebnis={ergebnis} setPlan={setPlan} pvsPatientId={pvsPatientId} onPvsPatientId={setPvsPatientId} />
+          )}
           <Teil1 plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen}
             onAbformung={(wahl) => (plan.positionen.some((p) => p.auto) ? regelengine(wahl) : setPlan((p) => ({ ...p, ...wahl })))} />
         </div>
@@ -287,6 +293,7 @@ export default function App() {
             <MandantKarte />
             <EinstellungenSeite plan={plan} setEinstellung={setEinstellung} alle={alle} listen={listen} />
             <MasVerbindung alle={alle} eigen={eigenlabor} einstellungen={e} />
+            <PvsVerbindung />
           </div>
         )}
       </main>

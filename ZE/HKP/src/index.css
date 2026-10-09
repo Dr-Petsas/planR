@@ -317,6 +317,42 @@ button.es-freigeben:hover:not(:disabled) { filter: brightness(1.12); }
 .es-meldung.fehler { color: #b00; }
 @media (max-width: 1100px) { .es-kern { grid-template-columns: 1fr 1fr; } .es-labor { grid-column: 1 / -1; } }
 
+/* ---- PVS-Connector ---- */
+.pvs-leiste { margin: 0 0 10px; padding: 8px 12px; background: #fff8fb; border: 1px solid #ecd0de; border-radius: 6px; }
+.pvs-zeile { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; font-size: 13px; }
+.pvs-zeile > strong { color: var(--pink-dunkel); padding-top: 6px; }
+.pvs-zeile > button { font: inherit; font-size: 12.5px; padding: 4px 10px; border: 1px solid var(--pink-dunkel); border-radius: 5px; background: #fff; color: var(--pink-dunkel); cursor: pointer; margin-top: 1px; }
+.pvs-zeile > button:hover:not(:disabled) { background: var(--pink-dunkel); color: #fff; }
+.pvs-zeile > button:disabled { opacity: .45; cursor: not-allowed; }
+.pvs-suche { position: relative; flex: 1 1 220px; max-width: 360px; display: flex; align-items: stretch; }
+.pvs-suche input {
+  flex: 1; min-width: 0; padding: 5px 36px 5px 10px; border: 1px solid #e3c2d2; border-radius: 5px;
+  font: inherit; font-size: 13px; background: #fff; color: var(--text);
+}
+.pvs-suche input:focus { outline: 2px solid #f3c5d8; border-color: var(--pink-dunkel); }
+.pvs-lupe {
+  position: absolute; right: 2px; top: 2px; bottom: 2px; width: 32px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 4px; background: transparent; color: var(--pink-dunkel); cursor: pointer;
+}
+.pvs-lupe:hover:not(:disabled) { background: #fff0f6; }
+.pvs-lupe:disabled { opacity: .45; cursor: not-allowed; }
+.pvs-id { font-size: 12px; font-weight: 600; color: #1a7f37; padding-top: 6px; }
+.pvs-meldung { font-size: 12px; color: #333; padding-top: 6px; }
+.pvs-meldung.fehler { color: #b00; }
+.pvs-treffer {
+  position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 2px); margin: 0; padding: 4px 0;
+  list-style: none; display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow-y: auto;
+  background: #fff; border: 1px solid #ecd0de; border-radius: 5px; box-shadow: 0 6px 16px rgba(163, 25, 91, .12);
+}
+.pvs-treffer-leer { padding: 8px 12px; font-size: 12.5px; color: var(--grau); }
+.pvs-treffer button {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left;
+  padding: 7px 12px; border: 0; border-radius: 0; background: #fff; cursor: pointer; font: inherit; font-size: 13px; color: var(--text);
+}
+.pvs-treffer button:hover { background: #fff0f6; }
+.pvs-treffer span { font-size: 11.5px; color: var(--grau); }
+
 /* ---- Positionssuche mit Autovervollständigung ---- */
 .pos-suche { display: flex; gap: 6px; align-items: center; margin: 4px 0 12px; }
 .pos-suche input, .pos-suche select { padding: 5px 8px; border: 1px solid var(--rot-linie); border-radius: 4px; font: inherit; background: #fff; }
