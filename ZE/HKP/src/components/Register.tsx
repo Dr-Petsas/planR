@@ -25,19 +25,54 @@ async function dateiHerunterladen(hkpId: string, d: RegisterDateiKopf) {
   }
 }
 
-/** Zeile über dem Formular: Verknüpfung, Status, Freigabe, Konflikte */
-export function RegisterLeiste({ r, onStatus }: { r: RegisterAbgleich; onStatus: (s: HkpStatus) => void }) {
+/** Zeile über dem Formular: Speichern · Freigeben · Neu wie in den anderen Planern, dazu Status und Konflikte */
+export function RegisterLeiste({ r, plan, ergebnis, onStatus, onNeu }: {
+  r: RegisterAbgleich; plan: HkpPlan; ergebnis: Ergebnis; onStatus: (s: HkpStatus) => void; onNeu: () => void
+}) {
   const { aktiv, abgleich, geaendert } = r
-  if (!aktiv) return null
+  const istVerbunden = verbunden(useVerbindung())
+  const [legtAn, setLegtAn] = useState(false)
+  const ohneSchluessel = 'Zum Speichern im Register fehlt der MAS-Schlüssel (Einstellungen).'
+
+  async function anlegen(freigeben: boolean) {
+    if (!plan.patient.name) { alert('Bitte zuerst den Patienten eintragen.'); return }
+    if (freigeben && !confirm('HKP speichern und freigeben?')) return
+    setLegtAn(true)
+    try {
+      const h = await registerAnlegen(plan, ergebnis)
+      aktivSetzen({ id: h.id, version: h.version, status: h.status, label: h.patient.label, stand: planStand(plan) })
+      if (freigeben) {
+        const f = await registerStatusSetzen(h.id, h.version, 'freigegeben')
+        aktivSetzen({ id: h.id, version: f.version, status: f.status, label: h.patient.label, stand: planStand(plan) })
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLegtAn(false)
+    }
+  }
+
+  if (!aktiv) {
+    return (
+      <div className="register-leiste">
+        <span className="ablage-stand ungespeichert">nicht gespeichert</span>
+        <span className="klein">{istVerbunden ? 'Plan ist noch nicht im Register.' : ohneSchluessel}</span>
+        <span className="aktionen">
+          <button onClick={() => anlegen(false)} disabled={!istVerbunden || legtAn} title={istVerbunden ? 'Plan im Register speichern' : ohneSchluessel}>
+            {legtAn ? 'speichert …' : 'Speichern'}
+          </button>
+          <button onClick={() => anlegen(true)} disabled={!istVerbunden || legtAn} title={istVerbunden ? 'Speichern und freigeben' : ohneSchluessel}>Freigeben</button>
+          <button className="primaer" onClick={onNeu}>Neuer Plan</button>
+        </span>
+      </div>
+    )
+  }
+
+  const stand = abgleich.art === 'speichert' ? 'speichert …' : abgleich.art === 'fehler' ? `⚠ ${abgleich.text}` : abgleich.art === 'neu_geladen' ? abgleich.text : geaendert ? 'Änderungen werden gespeichert …' : 'gespeichert'
   return (
     <div className={`register-leiste ${abgleich.art === 'konflikt' ? 'konflikt' : ''}`}>
       <span>Register: <strong>{aktiv.label}</strong> · <span className={`status status-${aktiv.status}`}>{STATUS_TEXT[aktiv.status]}</span></span>
-      <span className="klein">
-        {abgleich.art === 'speichert' ? 'speichert …' : abgleich.art === 'fehler' ? `⚠ ${abgleich.text}` : abgleich.art === 'neu_geladen' ? abgleich.text : geaendert ? 'Änderungen werden gespeichert …' : 'gespeichert'}
-      </span>
-      {aktiv.status === 'wartet_auf_freigabe' && abgleich.art !== 'konflikt' && (
-        <button className="primaer" onClick={() => onStatus('freigegeben')} title="Nur hier – Clara kann nicht freigeben">✓ Freigeben</button>
-      )}
+      <span className={`ablage-stand ${aktiv.status === 'freigegeben' ? 'frei' : geaendert ? 'ungespeichert' : ''}`}>{stand}</span>
       {abgleich.art === 'konflikt' && (
         <>
           <span>⚠ Im Register geändert ({abgleich.aktuell.verlauf?.at(-1)?.wer}: {abgleich.aktuell.verlauf?.at(-1)?.was}), hier ebenfalls.</span>
@@ -45,7 +80,16 @@ export function RegisterLeiste({ r, onStatus }: { r: RegisterAbgleich; onStatus:
           <button onClick={() => r.ueberschreiben()}>Meinen Stand speichern</button>
         </>
       )}
-      <button className="klein" onClick={r.loesen} title="Plan bleibt in PlanR, wird aber nicht mehr abgeglichen">Verknüpfung lösen</button>
+      <span className="aktionen">
+        {abgleich.art !== 'konflikt' && (
+          <button onClick={() => r.jetztSpeichern()} disabled={!geaendert || abgleich.art === 'speichert'} title="Sofort im Register speichern (sonst automatisch nach 1,5 s)">Speichern</button>
+        )}
+        {aktiv.status === 'wartet_auf_freigabe' && abgleich.art !== 'konflikt' && (
+          <button onClick={() => onStatus('freigegeben')} title="Nur hier – Clara kann nicht freigeben">✓ Freigeben</button>
+        )}
+        <button className="klein" onClick={r.loesen} title="Plan bleibt in PlanR, wird aber nicht mehr abgeglichen">Verknüpfung lösen</button>
+        <button className="primaer" onClick={onNeu}>Neuer Plan</button>
+      </span>
     </div>
   )
 }

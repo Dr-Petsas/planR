@@ -24,13 +24,10 @@ import { eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useLinkAbgleich, useRegisterAbgleich, type LinkEintrag } from './store/registerAbgleich'
 import { MasVerbindung } from './components/MasVerbindung'
-import { PvsVerbindung } from './components/PvsVerbindung'
-import { PvsPatientLeiste } from './components/PvsPatient'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrZurueck } from './PlanrZurueck'
 import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
 import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, useAktiv, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
-
 import { LIVE_TITEL, PHASE_TEXT, liveAbonnieren, liveModus, liveSchritte, type LiveStand } from './store/live'
 
 /** Gesamtdauer, in der ein Live-Schritt von Clara sichtbar eingetragen wird */
@@ -57,7 +54,6 @@ type Tab = 'teil1' | 'teil2' | 'anlage' | 'eigenlabor' | 'register' | 'preislist
 export default function App() {
   const [plan, setPlan] = usePlan()
   const alle = usePreislisten()
-  const [pvsPatientId, setPvsPatientId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('teil1')
   const [engineHinweise, setEngineHinweise] = useState<string[]>([])
 
@@ -80,6 +76,20 @@ export default function App() {
   const linkAbgleich = useLinkAbgleich(plan, linkEintrag, setLinkEintrag)
   const [linkHinweis, setLinkHinweis] = useState('')
 
+  // Leerer Plan; ein offener freier Plan wird nur nach Rückfrage verworfen
+  function neuAnfangen() {
+    const offen = !register.aktiv && !linkEintrag && Object.values(plan.zaehne).some((z) => z.B || z.TP)
+    if (offen && !confirm('Neuen HKP anfangen? Der offene, nicht im Register gespeicherte Plan wird verworfen.')) return
+    const alt = plan
+    aktivSetzen(null)
+    setLinkListen(null)
+    setLinkEintrag(null)
+    setLinkHinweis('')
+    setPlan((p) => neuerPlan(p.einstellungen))
+    setTab('teil1')
+    if (offen) geloescht('Offener Plan verworfen', () => setPlan(alt))
+  }
+
   // SMS-Link von Clara: ?hkp=<id>&t=<token> öffnet den HKP direkt. Mit MAS-Schlüssel verknüpft
   // (Änderungen landen im Register), sonst als freie Kopie zum Probieren mit den Reglern.
   const linkGelesen = useRef(false)
@@ -87,22 +97,12 @@ export default function App() {
     if (linkGelesen.current) return
     linkGelesen.current = true
     const q = new URLSearchParams(window.location.search)
-    // „Neuer Plan erstellen“ in PlanR: leerer Plan, ein offener freier Plan nur nach Rückfrage
+    // „Neuer Plan erstellen“ in PlanR
     if (q.get('neu') === '1') {
       const u = new URL(window.location.href)
       u.searchParams.delete('neu')
       history.replaceState(history.state, '', u.pathname + u.search + u.hash)
-      const offen = !register.aktiv && Object.values(plan.zaehne).some((z) => z.B || z.TP)
-      if (!offen || confirm('Neuen HKP anfangen? Der offene, nicht im Register gespeicherte Plan wird verworfen.')) {
-        const alt = plan
-        aktivSetzen(null)
-        setPvsPatientId(null)
-        setLinkListen(null)
-        setLinkEintrag(null)
-        setPlan((p) => neuerPlan(p.einstellungen))
-        setTab('teil1')
-        if (offen) geloescht('Offener Plan verworfen', () => setPlan(alt))
-      }
+      neuAnfangen()
       return
     }
     const id = q.get('hkp')
@@ -279,7 +279,7 @@ export default function App() {
           </span>
         </div>
       )}
-      {hkpAnsicht && <RegisterLeiste r={register} onStatus={registerStatus} />}
+      {hkpAnsicht && !linkEintrag && <RegisterLeiste r={register} plan={plan} ergebnis={ergebnis} onStatus={registerStatus} onNeu={neuAnfangen} />}
       {linkHinweis && (
         <div className="register-leiste">
           <span>{linkHinweis}</span>
@@ -314,9 +314,6 @@ export default function App() {
 
       <main>
         <div className={tab === 'teil1' ? '' : 'nur-druck'}>
-          {tab === 'teil1' && (
-            <PvsPatientLeiste plan={plan} ergebnis={ergebnis} setPlan={setPlan} pvsPatientId={pvsPatientId} onPvsPatientId={setPvsPatientId} />
-          )}
           <Teil1 plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen}
             onAbformung={(wahl) => (plan.positionen.some((p) => p.auto) ? regelengine(wahl) : setPlan((p) => ({ ...p, ...wahl })))} />
         </div>
@@ -364,7 +361,6 @@ export default function App() {
             <MandantKarte />
             <EinstellungenSeite plan={plan} setEinstellung={setEinstellung} alle={alle} listen={listen} />
             <MasVerbindung alle={alle} eigen={eigenlabor} einstellungen={e} />
-            <PvsVerbindung />
           </div>
         )}
       </main>

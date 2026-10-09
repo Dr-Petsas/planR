@@ -38,28 +38,12 @@ const MAS_PROXY: Record<string, ProxyOptions> = {
   },
 }
 
-// DENS-Connector (pvsConnectoR) – nur lokal am Praxis-PC. Über den Tunnel (preview auf 5181 ist öffentlich)
-// gibt es 404: der Connector liest Patientendaten und schreibt in DENSoffice, und ohne Origin hält er jede Anfrage für lokal.
-const PVS_PROXY: Record<string, ProxyOptions> = {
-  '/pvs': {
-    target: 'http://127.0.0.1:8770',
-    changeOrigin: true,
-    bypass: (req) => (amPraxisPc(req) ? undefined : false),
-    rewrite: (p: string) => p.replace(/^\/pvs/, ''),
-    configure: (proxy) => proxy.on('proxyReq', (proxyReq) => {
-      proxyReq.removeHeader('Origin')
-    }),
-  },
-}
-
-const PROXIES = { ...MAS_PROXY, ...PVS_PROXY }
-
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   // F:\postcss.config.js gehört nicht zum Projekt und darf nicht geerbt werden
   css: { postcss: {} },
   // öffentlich nur der Build aus dist/: Cloudflare-Tunnel hkp.pickadoc-tunnel.com → 127.0.0.1:5181
-  preview: { host: '127.0.0.1', port: 5181, strictPort: true, allowedHosts: [TUNNEL_HOST], proxy: PROXIES },
-  server: { proxy: PROXIES },
+  preview: { host: '127.0.0.1', port: 5181, strictPort: true, allowedHosts: [TUNNEL_HOST], proxy: MAS_PROXY },
+  server: { proxy: MAS_PROXY },
 })

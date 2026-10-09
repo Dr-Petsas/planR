@@ -14,7 +14,7 @@ export type Abgleich =
   | { art: 'konflikt'; aktuell: RegisterKopf }
   | { art: 'neu_geladen'; text: string }
 
-/** HÃ¤lt den geÃ¶ffneten Register-HKP und den Plan in PlanR synchron. */
+/** Hält den geöffneten Register-HKP und den Plan in PlanR synchron. */
 export function useRegisterAbgleich(plan: HkpPlan, ergebnis: Ergebnis, setPlan: (f: (p: HkpPlan) => HkpPlan) => void) {
   const aktiv = useAktiv()
   const istVerbunden = verbunden(useVerbindung())
@@ -40,7 +40,7 @@ export function useRegisterAbgleich(plan: HkpPlan, ergebnis: Ergebnis, setPlan: 
       setAbgleich({ art: 'gespeichert' })
     } catch (e) {
       if (e instanceof RegisterFehler && e.status === 409) setAbgleich({ art: 'konflikt', aktuell: e.daten.aktuell as RegisterKopf })
-      else if (e instanceof RegisterFehler && e.status === 404) { aktivSetzen(null); setAbgleich({ art: 'fehler', text: 'Der HKP ist im Register nicht mehr vorhanden â€“ VerknÃ¼pfung gelÃ¶st.' }) }
+      else if (e instanceof RegisterFehler && e.status === 404) { aktivSetzen(null); setAbgleich({ art: 'fehler', text: 'Der HKP ist im Register nicht mehr vorhanden – Verknüpfung gelöst.' }) }
       else setAbgleich({ art: 'fehler', text: e instanceof Error ? e.message : String(e) })
     }
   }, [aktiv, plan, ergebnis, stand])
@@ -59,15 +59,16 @@ export function useRegisterAbgleich(plan: HkpPlan, ergebnis: Ergebnis, setPlan: 
         const h = liste.find((x) => x.id === aktiv.id)
         if (!h || h.version <= aktiv.version) return
         const letzte = h.verlauf?.[h.verlauf.length - 1]
-        if (!geaendert) await laden(h.id, `Im Register geÃ¤ndert (${letzte?.wer ?? '?'}: ${letzte?.was ?? ''}) â€“ neuer Stand geladen.`)
+        if (!geaendert) await laden(h.id, `Im Register geändert (${letzte?.wer ?? '?'}: ${letzte?.was ?? ''}) – neuer Stand geladen.`)
         else setAbgleich({ art: 'konflikt', aktuell: h })
-      } catch { /* nÃ¤chster Versuch */ }
+      } catch { /* nächster Versuch */ }
     }, 30000)
     return () => clearInterval(t)
   }, [aktiv, istVerbunden, geaendert, laden])
 
   return {
     aktiv, abgleich, geaendert, laden,
+    jetztSpeichern: () => aktiv && geaendert && abgleich.art !== 'konflikt' && speichern(aktiv.version),
     ueberschreiben: () => abgleich.art === 'konflikt' && speichern(abgleich.aktuell.version),
     registerStandLaden: () => aktiv && laden(aktiv.id),
     loesen: () => { aktivSetzen(null); setAbgleich({ art: 'aus' }) },
