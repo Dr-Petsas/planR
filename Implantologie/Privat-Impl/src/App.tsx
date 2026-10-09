@@ -14,6 +14,7 @@ import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } fr
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
+import { PlanrZurueck } from './PlanrZurueck'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
 import { patientName } from './stammdaten'
@@ -73,6 +74,7 @@ export default function App() {
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">
+            <PlanrZurueck />
             <span className="logo">IMPL</span>
             <div>
               <div className="titel">Privat-Implantologie-Planer <MandantName /></div>

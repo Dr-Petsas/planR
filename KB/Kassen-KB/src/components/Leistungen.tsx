@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
-import { VORLAGEN } from '../data/katalog'
-import { euro, neueId, vorlageAnwenden } from '../engine/kb'
+import { PRIVAT_LABOR, VORLAGEN } from '../data/katalog'
+import { abformungAnwenden, euro, neueId, vorlageAnwenden } from '../engine/kb'
 import { BEMA, belListeFuer, belNr } from '../engine/listen'
 import { kzvDerPraxis } from '../punktwerte'
 
@@ -26,30 +26,43 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   const [neuNr, setNeuNr] = useState('K1')
   const setPos = (positionen: Position[]) => setPlan({ ...plan, positionen })
   const aendern = (id: string, patch: Partial<Position>) => setPos(plan.positionen.map((p) => (p.id === id ? { ...p, ...patch } : p)))
-  const zeile = (id: string) => [...rechnung.honorar, ...rechnung.labor, ...rechnung.material].find((z) => z.id === id)
+  const zeile = (id: string) => [...rechnung.honorar, ...rechnung.labor, ...rechnung.material, ...rechnung.privat].find((z) => z.id === id)
+  const vorlageNehmen = (pos: Parameters<typeof vorlageAnwenden>[1]) => {
+    const neu = vorlageAnwenden(plan.positionen, pos)
+    setPos(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu)
+  }
   const liste = belListeFuer(kzvDerPraxis(einst.praxis) || '11', plan.datum)
   const belText = new Map((liste?.eintraege ?? []).map((e) => [e.nr, e.text] as const))
   const vorlagen = VORLAGEN.filter((v) => v.art === plan.angaben.art)
 
   const hinzufuegen = () => {
     const material = neuEbene === 'MATERIAL'
-    setPos([...plan.positionen, { id: neueId(), ebene: neuEbene, nr: material ? 'Mat.' : neuNr, anzahl: 1, ...(material ? { text: '', preis: 0 } : {}) }])
+    const frei = neuEbene === 'PRIVAT' && neuNr === 'frei'
+    setPos([...plan.positionen, {
+      id: neueId(), ebene: neuEbene, nr: material ? 'Mat.' : frei ? '' : neuNr, anzahl: 1,
+      ...(material || frei ? { text: '', preis: 0 } : {}),
+    }])
   }
 
   const gruppen = [
     { titel: 'Honorar (BEMA Teil 2 · GOÄ)', ebene: 'BEMA' as Ebene },
     { titel: `Labor (${rechnung.belListe})`, ebene: 'BEL' as Ebene },
     { titel: 'Material', ebene: 'MATERIAL' as Ebene },
+    { titel: 'Labor ohne BEL-Nummer – Privatanteil', ebene: 'PRIVAT' as Ebene },
   ]
+  const freiText = (p: Position) => (p.ebene === 'MATERIAL' && p.nr !== '605') || (p.ebene === 'PRIVAT' && !PRIVAT_LABOR[p.nr])
 
   return (
     <>
       <div className="block">
         <h3>Behandlung wählen</h3>
-        <p className="hilfe">Jede Vorlage fügt die BEMA-Leistungen und die übliche BEL-II-Laborkette hinzu – Anzahl und Preis bleiben einzeln änderbar.</p>
+        <p className="hilfe">
+          Jede Vorlage fügt die BEMA-Leistungen und die übliche BEL-II-Laborkette hinzu – Anzahl und Preis bleiben einzeln änderbar.
+          {plan.angaben.art === 'ukps' && ' Die drei Anfertigungsrouten sind die VDZI-Beispiele: nicht jede Zeile fällt immer an. Halteelement 521 0 und die Konfektionsteile je Auftrag ergänzen. Keine Abformpauschale.'}
+        </p>
         <div className="vorlagen">
           {vorlagen.map((v) => (
-            <button key={v.id} className="vorlage" onClick={() => setPos(vorlageAnwenden(plan.positionen, v.pos))}>
+            <button key={v.id} className="vorlage" onClick={() => vorlageNehmen(v.pos)}>
               <b>{v.titel}</b>
               <small>{v.text}</small>
             </button>
@@ -73,11 +86,12 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                   const z = zeile(p.id)
                   return (
                     <tr key={p.id} className={z?.ohnePreis ? 'mit-warnung' : ''}>
-                      <td className="mono nr">{p.ebene === 'BEL' ? belNr(p.nr) : p.ebene === 'MATERIAL' && p.nr !== '605' ? 'Mat.' : p.nr}</td>
+                      <td className="mono nr">{p.ebene === 'BEL' ? belNr(p.nr) : p.ebene === 'MATERIAL' && p.nr !== '605' ? 'Mat.' : p.nr || 'Lab.'}</td>
                       <td>
-                        {p.ebene === 'MATERIAL' && p.nr !== '605'
-                          ? <input className="text-feld" value={p.text ?? ''} placeholder="Material" onChange={(e) => aendern(p.id, { text: e.target.value })} />
+                        {freiText(p)
+                          ? <input className="text-feld" value={p.text ?? ''} placeholder={p.ebene === 'PRIVAT' ? 'Laborleistung' : 'Material'} onChange={(e) => aendern(p.id, { text: e.target.value })} />
                           : <span>{z?.text ?? p.nr}</span>}
+                        {p.ausXml && <span className="xml-marke" title="Preis aus dem Labor-XML">XML</span>}
                       </td>
                       <td className="r">
                         <input className="zahl-feld" type="number" min={0} step={1} value={p.anzahl}
@@ -107,12 +121,19 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
           <select value={neuEbene} onChange={(e) => {
             const eb = e.target.value as Ebene
             setNeuEbene(eb)
-            setNeuNr(eb === 'BEMA' ? 'K1' : eb === 'BEL' ? '0010' : '605')
+            setNeuNr(eb === 'BEMA' ? 'K1' : eb === 'BEL' ? '0010' : eb === 'PRIVAT' ? '0009' : '605')
           }}>
             <option value="BEMA">BEMA / GOÄ</option>
             <option value="BEL">Labor (BEL II)</option>
             <option value="MATERIAL">Material</option>
+            <option value="PRIVAT">Labor ohne BEL (privat)</option>
           </select>
+          {neuEbene === 'PRIVAT' && (
+            <select value={neuNr} onChange={(e) => setNeuNr(e.target.value)}>
+              {Object.entries(PRIVAT_LABOR).map(([nr, v]) => <option key={nr} value={nr}>{v.text}</option>)}
+              <option value="frei">sonstige Laborleistung</option>
+            </select>
+          )}
           {neuEbene === 'BEMA' && (
             <select value={neuNr} onChange={(e) => setNeuNr(e.target.value)}>
               {[...new Set(BEMA.map((b) => b.gruppe))].map((gr) => (

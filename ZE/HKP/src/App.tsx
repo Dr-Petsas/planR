@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan } from './types'
 import { usePlan, leererPlan, planNormalisieren } from './store/plan'
-import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, listenFuerPlan, usePreislisten, TYP_NAMEN } from './store/preislisten'
+import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, listenFuerPlan, stichtag, usePreislisten, TYP_NAMEN } from './store/preislisten'
 import { getPraxis, usePraxis } from './store/praxis'
 import type { Praxis } from './stammdaten'
 import { PraxisFelder } from './components/Stammdaten'
@@ -13,8 +13,6 @@ import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './eng
 import { privatStufeAnwenden, regelUebernehmen } from './engine/aufwertung'
 import { implantatZaehne } from './engine/implantat'
 import { AbformungFrage } from './components/ImplantatAngaben'
-import { alsAnsi, dpfAbgleich, dpfBefundDatei, dpfErgebnisLesen, dpfUebernehmen } from './engine/dpf'
-import { herunterladen } from './store/import'
 import { Teil1 } from './components/Teil1'
 import { Teil2 } from './components/Teil2'
 import { Anlage, Eigenlaborbeleg } from './components/Anlagen'
@@ -23,15 +21,22 @@ import { Preislisten } from './components/Preislisten'
 import { PreisRegler } from './components/PreisRegler'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
-import { euro } from './format'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useLinkAbgleich, useRegisterAbgleich, type LinkEintrag } from './store/registerAbgleich'
 import { MasVerbindung } from './components/MasVerbindung'
 import { MandantKarte, MandantName } from './components/Mandant'
-import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
+import { PlanrZurueck } from './PlanrZurueck'
+import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
+import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, useAktiv, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
 
 /** Breite des A4-Vordrucks (210 mm) in CSS-Pixeln */
 const BLATT_BREITE_PX = 793.7
+
+/** Was die Auswahl der Preislisten bestimmt (die Regler nicht) */
+const listenWahl = (p: HkpPlan) => {
+  const e = p.einstellungen
+  return [JSON.stringify(kzvBereich(e)), stichtag(p), e.bemaListe, e.gozListe, e.belListe, e.bebListe, e.fzListe].join('|')
+}
 
 /** Neuer Plan mit den Einstellungen des bisherigen und den Nummern aus den Praxis-Stammdaten */
 function neuerPlan(einstellungen: Einstellungen): HkpPlan {
@@ -42,27 +47,28 @@ function neuerPlan(einstellungen: Einstellungen): HkpPlan {
 
 type Tab = 'teil1' | 'teil2' | 'anlage' | 'eigenlabor' | 'register' | 'preislisten' | 'einstellungen'
 
-const BEISPIEL: Record<string, string> = { '16': 'ww', '15': 'k', '14': 'f', '13': 'k', '26': 'kw', '36': 'f', '35': 'kw', '37': 'k', '46': 'x', '48': 'f', '38': 'f', '18': 'f', '28': 'f' }
-
 export default function App() {
   const [plan, setPlan] = usePlan()
   const alle = usePreislisten()
   const [tab, setTab] = useState<Tab>('teil1')
   const [engineHinweise, setEngineHinweise] = useState<string[]>([])
-  const importRef = useRef<HTMLInputElement>(null)
-  const dpfRef = useRef<HTMLInputElement>(null)
 
   const e = plan.einstellungen
   const eigenlabor = useEigenlabor()
-  const listen: Listen = useMemo(
+  const lokaleListen: Listen = useMemo(
     () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor }),
     [alle, plan.verwaltung, e, eigenlabor],
   )
+  // Per Link geöffneter HKP: mit den Listen rechnen, mit denen MAS die Summen im Register gerechnet hat,
+  // solange die Listenwahl des Plans gleich bleibt
+  const [linkListen, setLinkListen] = useState<{ listen: Listen; wahl: string } | null>(null)
+  const verknuepft = useAktiv()
+  const [linkEintrag, setLinkEintrag] = useState<LinkEintrag | null>(null)
+  useEffect(() => { if (verknuepft) { setLinkListen(null); setLinkEintrag(null) } }, [verknuepft])
+  const listen = linkListen && !verknuepft && linkListen.wahl === listenWahl(plan) ? linkListen.listen : lokaleListen
 
   const ergebnis = useMemo(() => berechnen(plan, listen), [plan, listen])
   const register = useRegisterAbgleich(plan, ergebnis, setPlan)
-  const [linkEintrag, setLinkEintrag] = useState<LinkEintrag | null>(null)
-  useEffect(() => { if (register.aktiv) setLinkEintrag(null) }, [register.aktiv])
   const linkAbgleich = useLinkAbgleich(plan, linkEintrag, setLinkEintrag)
   const [linkHinweis, setLinkHinweis] = useState('')
 
@@ -73,9 +79,26 @@ export default function App() {
     if (linkGelesen.current) return
     linkGelesen.current = true
     const q = new URLSearchParams(window.location.search)
+    // „Neuer Plan erstellen“ in PlanR: leerer Plan, ein offener freier Plan nur nach Rückfrage
+    if (q.get('neu') === '1') {
+      const u = new URL(window.location.href)
+      u.searchParams.delete('neu')
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash)
+      const offen = !register.aktiv && Object.values(plan.zaehne).some((z) => z.B || z.TP)
+      if (!offen || confirm('Neuen HKP anfangen? Der offene, nicht im Register gespeicherte Plan wird verworfen.')) {
+        const alt = plan
+        aktivSetzen(null)
+        setLinkListen(null)
+        setLinkEintrag(null)
+        setPlan((p) => neuerPlan(p.einstellungen))
+        setTab('teil1')
+        if (offen) geloescht('Offener Plan verworfen', () => setPlan(alt))
+      }
+      return
+    }
     const id = q.get('hkp')
     if (!id) return
-    window.history.replaceState(null, '', window.location.pathname)
+    // Adresse bleibt stehen: Zurück, Vor und Neuladen treffen denselben Plan.
     ;(async () => {
       try {
         await verbindungBereit
@@ -88,9 +111,11 @@ export default function App() {
           } catch { /* Schlüssel falsch o. ä. – weiter mit dem Link */ }
         }
         const zugang: LinkZugang = { id, t: q.get('t') ?? '', b: q.get('b') || undefined, c: q.get('c') ?? undefined }
-        const h = (await hkpPerLink(zugang)).hkp
+        const d = await hkpPerLink(zugang)
+        const h = d.hkp
         const p = planNormalisieren(JSON.parse(h.planJson || '{}'))
         aktivSetzen(null)
+        setLinkListen(d.listen ? { listen: d.listen, wahl: listenWahl(p) } : null)
         setPlan(() => p)
         setLinkEintrag(zugang.b ? { zugang, version: h.version, stand: planStand(p) } : null)
         setLinkHinweis(zugang.b
@@ -98,7 +123,10 @@ export default function App() {
           : `${h.versorgungText ?? 'HKP'} für ${h.patient.label} aus dem Link geladen. Mit den Reglern frei probieren – ins Register gespeichert wird nur mit MAS-Schlüssel (Einstellungen).`)
         setTab('teil1')
       } catch (err) {
-        setLinkHinweis(`Der HKP aus dem Link konnte nicht geladen werden: ${err instanceof Error ? err.message : String(err)}`)
+        const name = `${plan.patient.vorname} ${plan.patient.name}`.trim()
+        setLinkHinweis(`⚠ Der HKP aus dem Link konnte nicht geladen werden (${err instanceof Error ? err.message : String(err)}). `
+          + `Angezeigt wird weiter der zuletzt hier offene Plan${name ? ` (${name})` : ''} – nicht der aus der Übersicht. `
+          + 'In der PlanR-Übersicht neu laden und erneut öffnen.')
       }
     })()
   }, [register, setPlan])
@@ -133,54 +161,9 @@ export default function App() {
     else regelengine()
   }
 
-  function planImportieren(f: File | undefined) {
-    if (!f) return
-    f.text().then((t) => {
-      try {
-        aktivSetzen(null)
-        setPlan(() => planNormalisieren(JSON.parse(t)))
-      } catch {
-        alert('Die Datei ist kein gültiger HKP-Plan (JSON).')
-      }
-    })
-    if (importRef.current) importRef.current.value = ''
-  }
-
-  function dpfExportieren() {
-    const datei = new Blob([alsAnsi(dpfBefundDatei(plan)) as BlobPart], { type: 'text/plain' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(datei)
-    a.download = `befund-${plan.patient.name || 'patient'}.dpf`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
-  function dpfImportieren(f: File | undefined) {
-    if (!f) return
-    f.arrayBuffer().then((buf) => {
-      const dpf = dpfErgebnisLesen(new TextDecoder('windows-1252').decode(buf))
-      if (!Object.keys(dpf.befund).length && !dpf.festzuschuss.length) {
-        alert('Die Datei enthält weder [Befund] noch [Festzuschuss] – ist es eine DPF-Datei?')
-        return
-      }
-      const zaehne = Object.fromEntries(Object.entries(plan.zaehne).map(([z, v]) => [z, {
-        ...v, B: dpf.befund[z] ?? v.B, TP: dpf.therapie[z] ?? v.TP,
-      }]))
-      const eigen = therapieAnwenden(regelversorgungErmitteln(zaehne, regelOptionen(plan)), zaehne, plan)
-      const unterschiede = dpfAbgleich(dpf, regelversorgungErmitteln(zaehne, regelOptionen(plan)))
-      setPlan((p) => dpfUebernehmen(p, dpf, eigen.positionen))
-      setEngineHinweise([
-        'DPF-Ergebnis übernommen (Zahnschema, Festzuschüsse, BEMA, GOZ). Laborpositionen stammen aus der eigenen Regelengine.',
-        ...(unterschiede.length ? unterschiede.map((u) => `Abgleich DPF ↔ Engine: ${u}`) : ['Abgleich DPF ↔ Engine: keine Abweichungen bei Regelversorgung, Festzuschüssen und BEMA.']),
-      ])
-    })
-    if (dpfRef.current) dpfRef.current.value = ''
-  }
-
   const setEinstellung = <K extends keyof Einstellungen>(k: K, v: Einstellungen[K]) =>
     setPlan((p) => ({ ...p, einstellungen: { ...p.einstellungen, [k]: v } }))
 
-  const s = ergebnis.summen
   const fehler = ergebnis.hinweise.filter((h) => h.stufe === 'fehler').length
   const hkpAnsicht = tab === 'teil1' || tab === 'teil2' || tab === 'anlage' || tab === 'eigenlabor'
   const hatEigenlabor = ergebnis.positionen.some((p) => p.labor === 'eigen' && (p.ebene === 'BEL' || p.ebene === 'BEB'))
@@ -201,33 +184,18 @@ export default function App() {
   return (
     <div className="app">
       <header className="kopfleiste">
-        <h1>HKP-Planer <span>Zahnersatz · BEMA · GOZ · BEL II · BEB</span><MandantName /></h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <PlanrZurueck />
+          <h1>HKP-Planer <span>Zahnersatz · BEMA · GOZ · BEL II · BEB</span><MandantName /></h1>
+        </div>
         <nav>
           {([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([t, n]) => (
             <button key={t} className={tab === t ? 'aktiv' : ''} onClick={() => setTab(t)}>{n}</button>
           ))}
+          {hkpAnsicht && <button className="drucken" onClick={() => window.print()} title="HKP drucken oder als PDF speichern">🖶 Drucken</button>}
         </nav>
       </header>
 
-      {hkpAnsicht && (
-        <div className="werkzeuge">
-          <button className="primaer" onClick={() => setTab('register')} title="HKPs aus dem Register (auch von Clara angelegte) öffnen und mit den Reglern durchspielen">📂 Erstellte HKPs laden</button>
-          <button onClick={() => { if (confirm('Aktuellen Plan verwerfen?')) { aktivSetzen(null); setPlan(() => neuerPlan(plan.einstellungen)); setEngineHinweise([]) } }}>Neuer Plan</button>
-          <button onClick={() => setPlan((p) => ({ ...p, zaehne: Object.fromEntries(Object.keys(p.zaehne).map((z) => [z, { B: BEISPIEL[z] ?? '', R: '', TP: '' }])) }))}>
-            Beispielbefund
-          </button>
-          <button onClick={() => herunterladen(`hkp-${plan.patient.name || 'plan'}-${plan.verwaltung.ausstellungsdatum}.json`, JSON.stringify({ ...plan, ergebnis }, null, 1), 'application/json')}>⬇ Plan als JSON</button>
-          <input ref={importRef} type="file" accept=".json" hidden onChange={(ev) => planImportieren(ev.target.files?.[0])} />
-          <button onClick={() => importRef.current?.click()}>⬆ Plan laden</button>
-          <button onClick={dpfExportieren} title="Befund als Übergabedatei für die Digitale Planungshilfe (DPF3) der KZBV speichern">⬇ Befund für DPF</button>
-          <input ref={dpfRef} type="file" accept=".dpf,.aus,.dat,.txt,.ini" hidden onChange={(ev) => dpfImportieren(ev.target.files?.[0])} />
-          <button onClick={() => dpfRef.current?.click()} title="Ergebnisdatei der DPF einlesen und mit der eigenen Regelengine abgleichen">⬆ DPF-Ergebnis laden</button>
-          <button onClick={() => window.print()}>🖶 Drucken / PDF</button>
-          <div className="kurzsumme">
-            Gesamt <strong>{euro(s.gesamt)}</strong> · Festzuschuss <strong>{euro(s.kassenanteil)}</strong> · Eigenanteil <strong>{euro(s.eigenanteil)}</strong>
-          </div>
-        </div>
-      )}
       {hkpAnsicht && <RegisterLeiste r={register} onStatus={registerStatus} />}
       {linkHinweis && (
         <div className="register-leiste">
@@ -280,7 +248,11 @@ export default function App() {
               listen={listen}
               berechnet={ergebnis.positionen}
               setPositionen={(f) => setPlan((p) => ({ ...p, positionen: f(p.positionen) }))}
-              zusatzAbwaehlen={(k) => setPlan((p) => ({ ...p, einstellungen: { ...p.einstellungen, gozZusatzAus: [...p.einstellungen.gozZusatzAus, k] } }))}
+              zusatzAbwaehlen={(k, text) => {
+                setPlan((p) => ({ ...p, einstellungen: { ...p.einstellungen, gozZusatzAus: [...p.einstellungen.gozZusatzAus, k] } }))
+                geloescht(`Zusatzleistung abgewählt: ${text}`, () =>
+                  setPlan((p) => ({ ...p, einstellungen: { ...p.einstellungen, gozZusatzAus: p.einstellungen.gozZusatzAus.filter((x) => x !== k) } })))
+              }}
             />
           </section>
         )}
@@ -311,6 +283,7 @@ export default function App() {
       </main>
       </div>
       </div>
+      <RueckgaengigLeiste />
       {abformungFrage && (
         <AbformungFrage
           implantate={abformungFrage} wahl={plan} implantat={plan.implantat} onAbbruch={() => setAbformungFrage(null)}

@@ -12,6 +12,7 @@ import Regler from './components/Regler'
 import Dokument from './components/Dokument'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
+import { PlanrZurueck } from './PlanrZurueck'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -54,6 +55,7 @@ export default function App() {
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">
+            <PlanrZurueck />
             <div className="logo">KB</div>
             <div>
               <div className="titel">Kassen-KB-Planer <MandantName /></div>

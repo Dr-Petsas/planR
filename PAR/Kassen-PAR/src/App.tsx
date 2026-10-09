@@ -11,6 +11,7 @@ import { fallMigrieren, neuerFall, useEinstellungen, useFall, useParAblage } fro
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
+import { PlanrZurueck } from './PlanrZurueck'
 import AntragReiter from './components/AntragReiter'
 import StreckeReiter from './components/StreckeReiter'
 import FormulareReiter from './components/FormulareReiter'
@@ -87,9 +88,12 @@ export default function App() {
   return (
     <div className="app">
       <header className="kopf keindruck">
-        <div>
-          <h1>Kassen-PAR-Planer <MandantName /></h1>
-          <span className="kopf-unter">{name || 'ohne Namen'} · {fall.nummer} · eFormular 5 · BEMA Teil 4</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <PlanrZurueck />
+          <div>
+            <h1>Kassen-PAR-Planer <MandantName /></h1>
+            <span className="kopf-unter">{name || 'ohne Namen'} · {fall.nummer} · eFormular 5 · BEMA Teil 4</span>
+          </div>
         </div>
         <div className="kopf-rechts">
           <span className="kopf-diag">

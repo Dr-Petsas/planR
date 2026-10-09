@@ -11,6 +11,7 @@ const KEY_LISTE = mk('kassen-kb.liste.v1')
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   praxis: standardPraxis(),
   labor: 'gewerbe',
+  fremdlaborName: '',
   kieferbruchKch: false,
   abformPauschale: 3,
   naechsteNummer: 1,
@@ -32,8 +33,17 @@ export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
     angaben: leereAngaben(),
     positionen: [],
     labor: einst.labor,
+    abformung: 'abdruck',
+    fremdlabor: { name: einst.fremdlaborName },
     bemerkung: '',
   }
+}
+
+/** Ältere Pläne führten die UKPS unter „Kiefergelenkserkrankung“. */
+function artMigrieren(p: Partial<Plan>, angaben: Angaben): Angaben {
+  const pos = Array.isArray(p.positionen) ? p.positionen : []
+  const nurUkps = pos.some((x) => x.ebene === 'BEMA' && x.nr.startsWith('UP')) && !pos.some((x) => x.ebene === 'BEMA' && /^K\d/.test(x.nr))
+  return p.angaben?.art === 'kiefergelenk' && nurUkps ? { ...angaben, art: 'ukps' } : angaben
 }
 
 export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
@@ -44,8 +54,10 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     ...basis,
     ...p,
     patient: patientMigrieren(p.patient),
-    angaben: { ...basis.angaben, ...p.angaben },
+    angaben: artMigrieren(p, { ...basis.angaben, ...p.angaben }),
     positionen: Array.isArray(p.positionen) ? p.positionen : [],
+    abformung: p.abformung === 'scan' ? 'scan' : 'abdruck',
+    fremdlabor: { ...basis.fremdlabor, ...p.fremdlabor },
     bemerkung: p.bemerkung ?? '',
   }
 }

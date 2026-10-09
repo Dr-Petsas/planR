@@ -7,6 +7,7 @@ import { mitDigital } from '../engine/digital'
 import { standardBegruendung } from '../engine/begruendung'
 import { lexikonEintrag, lexikonKurz, useLexikon } from '../engine/lexikon'
 import { eingabeZahl, euro, neueId, zahlDe } from '../format'
+import { geloescht, Tonne, wiederEinfuegen } from '../rueckgaengig'
 
 interface Abschnitt {
   key: string
@@ -126,7 +127,7 @@ interface Props {
   berechnet: BerechnetePosition[]
   setPositionen: (f: (p: Position[]) => Position[]) => void
   /** wählt eine vom Regler abgeleitete Zusatzleistung ab */
-  zusatzAbwaehlen: (schluessel: string) => void
+  zusatzAbwaehlen: (schluessel: string, text: string) => void
 }
 
 export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwaehlen }: Props) {
@@ -135,7 +136,14 @@ export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwae
     ebene === 'BEL' || ebene === 'BEB' ? lexikonKurz(lexikonEintrag(lex, ebene === 'BEL' ? 'bel' : 'beb', nr)) || undefined : undefined
   const aendern = (id: string, teil: Partial<Position>) =>
     setPositionen((ps) => ps.map((p) => (p.id === id ? { ...p, ...teil, auto: false } : p)))
-  const entfernen = (id: string) => setPositionen((ps) => ps.filter((p) => p.id !== id))
+  const entfernen = (p: BerechnetePosition) => {
+    const i = plan.positionen.findIndex((x) => x.id === p.id)
+    const alt = plan.positionen[i]
+    if (!alt) return
+    setPositionen((ps) => ps.filter((x) => x.id !== p.id))
+    const was = [p.ebene === 'MAT' ? (p.bezeichnung || 'Material') : `${p.ebene} ${p.nr || '(ohne Nr.)'}`, p.zahn && `Zahn ${p.zahn}`].filter(Boolean).join(', ')
+    geloescht(`Position entfernt: ${was}`, () => setPositionen((ps) => wiederEinfuegen(ps, alt, i, (a, b) => a.id === b.id)))
+  }
   const hinzufuegen = (a: Abschnitt) =>
     setPositionen((ps) => [
       ...ps,
@@ -190,8 +198,8 @@ export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwae
               </tr>
             </thead>
             <tbody>
-              {zeilen.map((p) => [p.material ? (
-                <tr key={p.id} className="zeile-material" title="Aus der Kronenmaterial-Wahl – Menge und Preis sind Mittelwerte; ändern unter „Kronenmaterial“">
+              {zeilen.map((p, nr) => [p.material ? (
+                <tr key={p.id} className={`zeile-material${nr % 2 ? ' zebra' : ''}`} title="Aus der Kronenmaterial-Wahl – Menge und Preis sind Mittelwerte; ändern unter „Kronenmaterial“">
                   <td>{p.zahn}</td>
                   <td>–</td>
                   <td><span className="leistungstext">{p.bezeichnung}<b className="badge-material">Material</b></span></td>
@@ -201,7 +209,7 @@ export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwae
                   <td />
                 </tr>
               ) : p.zusatz ? (
-                <tr key={p.id} className="zeile-zusatz" title={p.begruendung}>
+                <tr key={p.id} className={`zeile-zusatz${nr % 2 ? ' zebra' : ''}`} title={p.begruendung}>
                   <td>{p.zahn}</td>
                   <td>{p.nr}</td>
                   <td><span className="leistungstext">{p.bezeichnung}<b className="badge-zusatz">Zusatz</b></span></td>
@@ -210,13 +218,13 @@ export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwae
                   <td className="r">{zahlDe(p.einzelpreis)}</td>
                   <td className="r">{euro(p.betrag)}</td>
                   <td className="aktionen">
-                    <button className="x-btn" title="Zusatzleistung nicht ansetzen" onClick={() => zusatzAbwaehlen(`${p.nr}|${p.zahn}`)}>×</button>
+                    <Tonne titel={`Zusatzleistung GOZ ${p.nr}${p.zahn ? ` (Zahn ${p.zahn})` : ''} nicht ansetzen`} onClick={() => zusatzAbwaehlen(`${p.nr}|${p.zahn}`, `GOZ ${p.nr}${p.zahn ? `, Zahn ${p.zahn}` : ''}`)} />
                   </td>
                 </tr>
               ) : (
                 <tr
                   key={p.id}
-                  className={p.fehler ? 'zeile-fehler' : p.fakultativ ? 'zeile-fakultativ' : p.ausXml ? 'zeile-xml' : p.auto ? 'zeile-auto' : ''}
+                  className={`${p.fehler ? 'zeile-fehler' : p.fakultativ ? 'zeile-fakultativ' : p.ausXml ? 'zeile-xml' : p.auto ? 'zeile-auto' : ''}${nr % 2 ? ' zebra' : ''}`}
                   title={p.fehler ?? (p.fakultativ ? 'Fakultativ (DPF-Vorschlag „?“) – nur übernehmen, wenn die Leistung erbracht wird' : p.ausXml ? 'Preis aus der Labor-XML' : lexikonText(ebene, p.nr))}
                 >
                   <td><input value={p.zahn} onChange={(e) => aendern(p.id, { zahn: e.target.value })} /></td>
@@ -279,11 +287,11 @@ export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwae
                         title={a.labor === 'eigen' ? 'Ins Fremdlabor verschieben' : 'Ins Eigenlabor verschieben'}
                       >{a.labor === 'eigen' ? '→F' : '→E'}</button>
                     )}
-                    <button className="x-btn" title="Position entfernen" onClick={() => entfernen(p.id)}>×</button>
+                    <Tonne titel={`Position ${p.ebene} ${p.nr}${p.zahn ? ` (Zahn ${p.zahn})` : ''} entfernen`} onClick={() => entfernen(p)} />
                   </td>
                 </tr>
               ), p.faktorBegruendung && (
-                <tr key={`${p.id}-begr`} className="faktor-begruendung">
+                <tr key={`${p.id}-begr`} className={`faktor-begruendung${nr % 2 ? ' zebra' : ''}`}>
                   <td colSpan={2} className="klein r">Begründung § 10 GOZ</td>
                   <td colSpan={6}>
                     {p.zusatz ? <span className="klein">{p.faktorBegruendung}</span> : (

@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/kons'
 import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, useKonsAblage, usePlan } from './store'
 import { ungespeichert } from './ablage'
@@ -12,6 +12,7 @@ import Regler from './components/Regler'
 import Dokument from './components/Dokument'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
+import { PlanrZurueck } from './PlanrZurueck'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -52,6 +53,7 @@ export default function App() {
     <>
       <div className="kopfbereich">
         <header className="kopfleiste">
+            <PlanrZurueck />
           <div className="marke">
             <div className="logo">PK</div>
             <div>

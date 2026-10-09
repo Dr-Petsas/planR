@@ -13,6 +13,7 @@ import Regler from './components/Regler'
 import Vereinbarung from './components/Vereinbarung'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
+import { PlanrZurueck } from './PlanrZurueck'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -55,6 +56,7 @@ export default function App() {
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">
+            <PlanrZurueck />
             <div className="logo">MKV</div>
             <div>
               <div className="titel">Füllungs-MKV-Planer <MandantName /></div>

@@ -44,10 +44,18 @@ const HUB_MODUL: Record<string, { kuerzel: string; art: 'Kasse' | 'Privat' }> = 
   'privat-kons': { kuerzel: 'KONS', art: 'Privat' },
   'privat-kv': { kuerzel: 'ZE', art: 'Privat' },
   'privat-impl': { kuerzel: 'IMPL', art: 'Privat' },
+  'kassen-kfo': { kuerzel: 'KFO', art: 'Kasse' },
+  'privat-kfo': { kuerzel: 'KFO', art: 'Privat' },
 }
-const hubGemeldet = new Set<string>()
+/** In dieser Sitzung in der Ablage gelöschte Pläne – die Übersicht entfernt nur, was ausdrücklich gemeldet wird */
+const entfernt = new Map<string, { nummer: string; geaendert: string }[]>()
+function entfernenMerken(key: string, e: { nummer: string; geaendert: string }) {
+  const bisher = (entfernt.get(key) ?? []).filter((x) => x.nummer !== e.nummer)
+  entfernt.set(key, [...bisher, { nummer: e.nummer, geaendert: e.geaendert }])
+}
 
-const modulVon = (key: string) => key.split('@')[0].replace(/\.liste\.v\d+$/, '')
+/** Modul für die PlanR-Übersicht; andere Mandanten als der Standard bleiben ihr fern (sonst überschreiben sie sich). */
+const modulVon = (key: string) => (key.includes('@') ? '' : key.replace(/\.liste\.v\d+$/, ''))
 const hubAdresse = () => (typeof location !== 'undefined' && location.hostname.endsWith('.pickadoc-tunnel.com')
   ? 'https://planr.pickadoc-tunnel.com/api/plaene'
   : 'http://127.0.0.1:5189/api/plaene')
@@ -57,30 +65,76 @@ export function ohneGeloeschte<E extends { nummer: string; geaendert: string }>(
   return liste.filter((e) => !geloescht.some((g) => g.nummer === e.nummer && (e.geaendert || '') <= g.geaendert))
 }
 
-async function geloeschtHolen(modul: string): Promise<{ nummer: string; geaendert: string }[]> {
-  if (!HUB_MODUL[modul] || typeof fetch !== 'function') return []
+/** In der PlanR-Übersicht importierter Plan, den die Ablage übernehmen soll */
+export interface Import<P> {
+  nummer: string
+  patient: string
+  betrag: number
+  geaendert: string
+  plan: P
+}
+
+/** Gelöschte entfernen, Importe übernehmen (als Entwurf, mit dem Stand des Imports). */
+export function abgleichen<P>(liste: AblageEintrag<P>[], geloescht: { nummer: string; geaendert: string }[], eingang: Import<P>[]): AblageEintrag<P>[] {
+  let neu = ohneGeloeschte(liste, geloescht)
+  for (const e of eingang) {
+    const da = neu.find((x) => x.nummer === e.nummer)
+    if (da && (da.geaendert || '') >= e.geaendert) continue
+    const eintrag: AblageEintrag<P> = { nummer: e.nummer, patient: e.patient, betrag: e.betrag, geaendert: e.geaendert, status: 'entwurf', plan: e.plan }
+    neu = [eintrag, ...neu.filter((x) => x.nummer !== e.nummer)].slice(0, HOECHSTENS)
+  }
+  return neu
+}
+
+async function abgleichHolen<P>(modul: string): Promise<{ geloescht: { nummer: string; geaendert: string }[]; eingang: Import<P>[] }> {
+  const leer = { geloescht: [], eingang: [] }
+  if (!HUB_MODUL[modul] || typeof fetch !== 'function') return leer
   try {
-    const r = await fetch(`${hubAdresse()}?nur=geloescht`, { cache: 'no-store' })
-    const d = (await r.json()) as { geloescht?: { modul: string; nummer: string; geaendert: string }[] }
-    return (d.geloescht ?? []).filter((g) => g.modul === modul)
+    const r = await fetch(`${hubAdresse()}?nur=abgleich&modul=${encodeURIComponent(modul)}`, { cache: 'no-store' })
+    const d = (await r.json()) as { geloescht?: { modul: string; nummer: string; geaendert: string }[]; eingang?: (Import<P> & { modul: string })[] }
+    return {
+      geloescht: (d.geloescht ?? []).filter((g) => g.modul === modul),
+      eingang: (d.eingang ?? []).filter((e) => e.modul === modul && e.nummer && e.plan && typeof e.geaendert === 'string'),
+    }
   } catch {
-    return []
+    return leer
   }
 }
 
-/** Kopf der Ablage an die PlanR-Übersicht melden. Ein leerer Erstaufruf löscht nichts. */
+/** Zahnärztin/Zahnarzt aus dem Plan oder aus den Praxis-Einstellungen desselben Mandanten. */
+function behandlerVon(key: string, plan: unknown): string {
+  const aus = (x: unknown) => (typeof x === 'string' ? x.trim().slice(0, 80) : '')
+  if (plan && typeof plan === 'object') {
+    const p = plan as { praxis?: { zahnarzt?: unknown }; einstellungen?: { praxis?: { zahnarzt?: unknown } }; behandler?: unknown }
+    const name = aus(p.praxis?.zahnarzt) || aus(p.einstellungen?.praxis?.zahnarzt) || aus(p.behandler)
+    if (name) return name
+  }
+  if (typeof localStorage === 'undefined') return ''
+  try {
+    const roh = JSON.parse(localStorage.getItem(key.replace(/\.liste\.v\d+/, '.einstellungen.v1')) ?? 'null') as { praxis?: { zahnarzt?: unknown } } | null
+    return aus(roh?.praxis?.zahnarzt)
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Ablage an die PlanR-Übersicht melden (Kopf für die Liste, Inhalt für den Export). Die Übersicht führt
+ * die Meldungen aller Browser zusammen; was hier fehlt, bleibt dort stehen, bis es gelöscht gemeldet wird.
+ */
 function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
   const basis = modulVon(key)
   const meta = HUB_MODUL[basis]
   if (!meta || typeof fetch !== 'function') return
-  if (!liste.length && !hubGemeldet.has(key)) return
-  hubGemeldet.add(key)
+  const weg = entfernt.get(key) ?? []
+  if (!liste.length && !weg.length) return
   const hub = hubAdresse()
   const plaene = liste.map((e) => ({
     modul: basis, kuerzel: meta.kuerzel, art: meta.art,
     nummer: e.nummer, patient: e.patient, betrag: e.betrag, status: e.status, geaendert: e.geaendert,
+    behandler: behandlerVon(key, e.plan), plan: e.plan,
   }))
-  fetch(hub, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modul: basis, plaene }) }).catch(() => {})
+  fetch(hub, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modul: basis, plaene, entfernt: weg }) }).catch(() => {})
 }
 
 function lesen<P>(key: string): AblageEintrag<P>[] {
@@ -101,11 +155,11 @@ export function useAblage<P>(key: string): Ablage<P> {
   }, [key, liste])
   useEffect(() => {
     let vorbei = false
-    void geloeschtHolen(modulVon(key)).then((g) => {
-      if (vorbei || !g.length) return
+    void abgleichHolen<P>(modulVon(key)).then(({ geloescht, eingang }) => {
+      if (vorbei || (!geloescht.length && !eingang.length)) return
       setListe((alt) => {
-        const neu = ohneGeloeschte(alt, g)
-        return neu.length === alt.length ? alt : neu
+        const neu = abgleichen(alt, geloescht, eingang)
+        return neu.length === alt.length && neu.every((e, i) => e === alt[i]) ? alt : neu
       })
     })
     return () => { vorbei = true }
@@ -131,7 +185,11 @@ export function useAblage<P>(key: string): Ablage<P> {
   const zuruecknehmen = useCallback((nummer: string) => {
     setListe((alt) => alt.map((e) => (e.nummer === nummer ? { ...e, status: 'entwurf', freigegebenAm: undefined, geaendert: new Date().toISOString() } : e)))
   }, [])
-  const loeschen = useCallback((nummer: string) => setListe((alt) => alt.filter((e) => e.nummer !== nummer)), [])
+  const loeschen = useCallback((nummer: string) => setListe((alt) => {
+    const weg = alt.find((e) => e.nummer === nummer)
+    if (weg) entfernenMerken(key, weg)
+    return alt.filter((e) => e.nummer !== nummer)
+  }), [key])
 
   return { liste, eintrag, speichern, freigeben, zuruecknehmen, loeschen }
 }

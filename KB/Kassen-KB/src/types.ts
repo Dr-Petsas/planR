@@ -4,21 +4,32 @@
 
 import type { Patient, Praxis } from './stammdaten'
 import type { Leistungsbereich } from './punktwerte'
+import type { LaborImport } from './laborxml'
 
 export type { Kassenart, Patient, Praxis } from './stammdaten'
 
-export type Art = 'kiefergelenk' | 'kieferbruch'
+export type Art = 'kiefergelenk' | 'ukps' | 'kieferbruch'
+/** praxis = Eigenlabor (Praxispreis BEL II), gewerbe = Fremdlabor (gewerbliches Labor) */
 export type Labor = 'praxis' | 'gewerbe'
-export type Ebene = 'BEMA' | 'BEL' | 'MATERIAL'
+export type Abformung = 'abdruck' | 'scan'
+/** PRIVAT: Laborleistung ohne BEL-II-Nummer – trägt der Patient, nicht die Kasse */
+export type Ebene = 'BEMA' | 'BEL' | 'MATERIAL' | 'PRIVAT'
 
 export interface Position {
   id: string
   ebene: Ebene
   nr: string
   anzahl: number
-  /** eigener Preis (BEL/Material); leer = BEL-II-Liste bzw. Pauschale */
+  /** eigener Preis (BEL/Material/Privat); leer = BEL-II-Liste bzw. Pauschale */
   preis?: number
   text?: string
+  /** aus dem Labor-XML übernommen */
+  ausXml?: boolean
+}
+
+export interface Fremdlabor {
+  name: string
+  import?: LaborImport
 }
 
 export interface Angaben {
@@ -48,12 +59,16 @@ export interface Plan {
   angaben: Angaben
   positionen: Position[]
   labor: Labor
+  abformung: Abformung
+  fremdlabor: Fremdlabor
   bemerkung: string
 }
 
 export interface Einstellungen {
   praxis: Praxis
   labor: Labor
+  /** Fremdlabor der Praxis (Vorgabe für neue Pläne) */
+  fremdlaborName: string
   /** Kieferbruch-Leistungen (GOÄ) mit dem KCH-Punktwert statt KB (regionale Vorgabe) */
   kieferbruchKch: boolean
   /** Pauschale je Abformung (Ordnungsnummer 605) */
@@ -79,9 +94,13 @@ export interface Rechnung {
   honorar: Zeile[]
   labor: Zeile[]
   material: Zeile[]
+  /** Laborleistungen ohne BEL-II-Nummer (z. B. gedruckte Modelle) – Privatanteil */
+  privat: Zeile[]
   summeHonorar: number
   summeLabor: number
   summeMaterial: number
+  summePrivat: number
+  /** Kassenleistung */
   gesamt: number
   punktwertKb: number
   punktwertKch: number

@@ -27,7 +27,22 @@ export function praxisSetzen(p: Praxis) {
     /* Speicher voll oder gesperrt – Wert bleibt für diese Sitzung */
   }
   abonnenten.forEach((f) => f())
+  behandlerMelden()
 }
+
+/** Die PlanR-Übersicht filtert nach diesem Namen. HKPs tragen ihn nicht selbst. */
+function behandlerMelden() {
+  const name = praxis.zahnarzt.trim()
+  if (!name || typeof fetch !== 'function' || typeof location === 'undefined') return
+  const hub = location.hostname.endsWith('.pickadoc-tunnel.com')
+    ? 'https://planr.pickadoc-tunnel.com/api/plaene'
+    : 'http://127.0.0.1:5189/api/plaene'
+  fetch(hub, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modul: 'hkp', behandler: name, plaene: [] }),
+  }).catch(() => {})
+}
+behandlerMelden()
 
 export const getPraxis = () => praxis
 
