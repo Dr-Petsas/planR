@@ -27567,7 +27567,7 @@ function befundDateiName(d) {
 }
 //#endregion
 //#region src/clara/index.ts
-var ENGINE_STAND = "2026-10-09 08:32";
+var ENGINE_STAND = "2026-10-09 08:34";
 /** Preislisten für einen Plan wählen (KZV, Stichtag) – wie in der App */
 function listenFuer(plan, praxis = {}) {
 	const eigene = praxis.preislisten ?? [];

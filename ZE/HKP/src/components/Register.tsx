@@ -10,7 +10,7 @@ import type { RegisterAbgleich } from '../store/registerAbgleich'
 
 const datum = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('de-DE') : '')
 const zeit = (iso?: string) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '')
-const QUELLE: Record<string, string> = { lena01: 'Lena-Erstuntersuchung', gesprochen: 'gesprochen', 'gesprochen+lena01': 'gesprochen + Lena', pvs: 'Praxisprogramm', planr: 'PlanR' }
+const QUELLE: Record<string, string> = { lena01: 'Lena-Erstuntersuchung', gesprochen: 'gesprochen', 'gesprochen+lena01': 'gesprochen + Lena', pvs: 'Praxisprogramm', planr: 'PlanR', auftrag: 'aus dem Auftrag (Totalprothese: zahnlos)', keiner: 'aus dem Auftrag (Totalprothese: zahnlos)' }
 
 async function dateiHerunterladen(hkpId: string, d: RegisterDateiKopf) {
   try {
