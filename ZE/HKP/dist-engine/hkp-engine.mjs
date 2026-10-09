@@ -27536,7 +27536,7 @@ function befundDatei(plan, a) {
 		kuerzelliste: "KZBV – eHKP Zahnersatz, Liste zulässiger Befundkürzel",
 		zahnschema: "FDI",
 		erstellt: a.erstellt ?? (/* @__PURE__ */ new Date()).toISOString(),
-		erstelltVon: a.erstelltVon ?? "Clara (Sprachdiktat)",
+		erstelltVon: a.erstelltVon ?? "Clara",
 		hkpId: a.hkpId,
 		patient: {
 			name: plan.patient.name ?? "",
@@ -27567,7 +27567,7 @@ function befundDateiName(d) {
 }
 //#endregion
 //#region src/clara/index.ts
-var ENGINE_STAND = "2026-10-09 08:24";
+var ENGINE_STAND = "2026-10-09 08:32";
 /** Preislisten für einen Plan wählen (KZV, Stichtag) – wie in der App */
 function listenFuer(plan, praxis = {}) {
 	const eigene = praxis.preislisten ?? [];

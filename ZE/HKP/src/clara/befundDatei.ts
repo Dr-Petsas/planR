@@ -1,6 +1,7 @@
 /**
- * Diktierter Zahnbefund als eigene Datei am HKP (Chef 09.10.2026): Befundkürzel nach der
- * KZBV-Liste für den elektronischen HKP (_quellen/kuerzel.txt), Zähne nach FDI.
+ * Zahnbefund eines von Clara angelegten HKP als eigene Datei (Chef 09.10.2026) – diktiert, aus
+ * Lena-01 oder beides: Befundkürzel nach der KZBV-Liste für den elektronischen HKP
+ * (_quellen/kuerzel.txt), Zähne nach FDI.
  */
 import type { HkpPlan } from '../types'
 import { ALLE_ZAEHNE, BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER } from '../engine/zahnschema'
@@ -28,6 +29,7 @@ export interface BefundDatei {
   erstelltVon: string
   hkpId: string
   patient: { name: string; vorname: string; geburtsdatum: string }
+  /** art: gesprochen | lena01 | gesprochen+lena01 | pvs; diktat '' ohne Diktat */
   quelle: { art: string; datum?: string; diktat: string }
   /** Befundzeile B des HKP je Kiefer in Formularreihenfolge ('' = ohne Befund) */
   befundzeile: { oberkiefer: BefundReihe; unterkiefer: BefundReihe }
@@ -59,7 +61,7 @@ export function befundDatei(plan: HkpPlan, a: BefundDateiAngaben): BefundDatei {
     kuerzelliste: 'KZBV – eHKP Zahnersatz, Liste zulässiger Befundkürzel',
     zahnschema: 'FDI',
     erstellt: a.erstellt ?? new Date().toISOString(),
-    erstelltVon: a.erstelltVon ?? 'Clara (Sprachdiktat)',
+    erstelltVon: a.erstelltVon ?? 'Clara',
     hkpId: a.hkpId,
     patient: { name: plan.patient.name ?? '', vorname: plan.patient.vorname ?? '', geburtsdatum: plan.patient.geburtsdatum ?? '' },
     quelle: { ...a.quelle, diktat: a.diktat },

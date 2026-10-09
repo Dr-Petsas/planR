@@ -27,6 +27,14 @@ describe('Befund-Datei', () => {
     expect(befundDateiName(d)).toBe('Befund_Meier_Hans_2026-10-09.json')
   })
 
+  it('Befund nur aus Lena-01: Datei ohne Diktat, kein Zahn als diktiert markiert', () => {
+    if (r.status !== 'ok') return
+    const d = befundDatei(r.plan, { hkpId: 'h1', diktat: '', diktiert: [], quelle: { art: 'lena01', datum: '2026-09-01T10:00:00.000Z' } })
+    expect(d.quelle).toEqual({ art: 'lena01', datum: '2026-09-01T10:00:00.000Z', diktat: '' })
+    expect(d.zaehne.length).toBeGreaterThan(0)
+    expect(d.zaehne.some((z) => z.diktiert)).toBe(false)
+  })
+
   it('nicht diktierte Zähne (z. B. aus Lena-01) sind nicht als diktiert markiert', () => {
     if (r.status !== 'ok') return
     const d = befundDatei(r.plan, { hkpId: 'h1', diktat: '17 fehlt', diktiert: ['17'], quelle: { art: 'gesprochen+lena01' } })

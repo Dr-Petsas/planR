@@ -171,7 +171,7 @@ function RegisterZeile({ h, geoeffnet, offen, onToggle, onOeffnen, onStatus }: {
         <td><button className="link" onClick={onToggle}>{offen ? '▾' : '▸'} {h.patient.label}</button></td>
         <td>
           {h.versorgungText ?? 'HKP'}{h.kiefer ? ` ${h.kiefer}` : ''}{h.erstelltVon === 'clara' && <span className="badge-clara" title="per Sprache von Clara angelegt">Clara</span>}
-          {!!h.dateien?.length && <span className="badge-datei" title="Diktierter Befund als Datei angehängt – Details aufklappen">Befund-Datei</span>}
+          {!!h.dateien?.length && <span className="badge-datei" title="Befund als Datei angehängt – Details aufklappen">Befund-Datei</span>}
         </td>
         <td>{datum(h.erstellt)}</td>
         <td>
