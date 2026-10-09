@@ -1118,6 +1118,16 @@ describe('Therapieplanung nach den Berechnungsbeispielen des Kompendiums', () =>
     expect(leist(mitKronen, 'BEMA')).toEqual(['19 14', '19 16', '20a 16', '20b 14', '7b'])
   })
 
+  it('Versandkosten nur beim gewerblichen Labor, BEMA liefert den Punktwert mit', () => {
+    const { plan } = planen({ 36: 'f' }, { 36: 'SKM' })
+    const bel = (p: typeof plan) => berechnen(p, LISTEN).positionen.filter((x) => x.ebene === 'BEL').map((x) => x.nr)
+    expect(bel({ ...plan, einstellungen: { ...plan.einstellungen, labor: 'gewerbe' as const } })).toContain('9330')
+    const eigen = { ...plan, einstellungen: { ...plan.einstellungen, labor: 'praxis' as const } }
+    expect(bel(eigen)).not.toContain('9330')
+    const b7 = berechnen(eigen, LISTEN).positionen.find((x) => x.nr === '7b')!
+    expect(b7.punktwert).toBe(LISTEN.bema!.punktwert)
+  })
+
   it('Implantate statt Freiendprothese (S. 142): Prothese entfällt, Halteelemente auch', () => {
     const { r } = planen(fehlend('36', '37', '38', '46', '47', '48'), { 36: 'SKM', 46: 'SKM' })
     expect(leist(r, 'BEMA')).toEqual(['7b'])

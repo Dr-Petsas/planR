@@ -71,7 +71,7 @@ export function hkpFuerPvs(plan: Obj, ergebnis: Obj): string {
       versorgungsart: ergebnis.versorgungsart,
       summen: ergebnis.summen,
       befunde: ergebnis.befunde,
-      positionen: berechnet.map((p) => nur(p, ['id', 'betrag', 'einzelpreis', 'punkte', 'faktor'])),
+      positionen: berechnet.map((p) => nur(p, ['id', 'betrag', 'einzelpreis', 'punkte', 'punktwert', 'faktor'])),
     },
   })
 }

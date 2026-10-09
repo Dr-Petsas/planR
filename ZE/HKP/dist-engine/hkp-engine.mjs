@@ -25214,6 +25214,7 @@ function positionBerechnen(p, listen, plan) {
 				...basis,
 				bezeichnung: p.text || e?.text || "",
 				punkte: e?.punkte,
+				punktwert: p.preis === void 0 ? pw : void 0,
 				einzelpreis: einzel,
 				betrag: runden(einzel * anzahl)
 			};
@@ -25325,6 +25326,7 @@ function kronenmaterial(plan) {
 	return {
 		basis: plan.positionen.flatMap((p) => {
 			if (p.auto && p.ebene === "BEB" && p.nr === DIGITAL_BEB.sintern && ohneSintern.has(p.zahn)) return [];
+			if (p.auto && p.ebene === "BEL" && belNrNorm(p.nr) === "9330" && laborVon(p, plan) === "eigen") return [];
 			if (!abzug || p.ebene !== "BEL" || belNrNorm(p.nr) !== "9700") return [p];
 			const weg = Math.min(abzug, p.anzahl);
 			abzug -= weg;
@@ -27609,7 +27611,7 @@ function befundDateiName(d) {
 }
 //#endregion
 //#region src/clara/index.ts
-var ENGINE_STAND = "2026-10-09 11:20";
+var ENGINE_STAND = "2026-10-10 00:53";
 /** Preislisten für einen Plan wählen (KZV, Stichtag) – wie in der App */
 function listenFuer(plan, praxis = {}) {
 	const eigene = praxis.preislisten ?? [];

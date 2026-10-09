@@ -29,6 +29,8 @@ export interface BerechnetePosition extends Position {
   einzelpreis: number
   betrag: number
   punkte?: number
+  /** BEMA: Euro je Punkt, mit dem der Einzelpreis gerechnet wurde */
+  punktwert?: number
   /** Höchstpreis bzw. Listenpreis, an dem sich der Einzelpreis orientiert */
   listenpreis?: number
   /** Begründung einer Zusatzleistung */
@@ -209,7 +211,7 @@ export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): B
       const pw = listen.bema?.punktwert ?? 0
       if (!e && p.preis === undefined) return { ...basis, fehler: `BEMA-Nr. ${p.nr} nicht in der Liste` }
       const einzel = p.preis ?? runden((e?.punkte ?? 0) * pw)
-      return { ...basis, bezeichnung: p.text || e?.text || '', punkte: e?.punkte, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
+      return { ...basis, bezeichnung: p.text || e?.text || '', punkte: e?.punkte, punktwert: p.preis === undefined ? pw : undefined, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
     }
     case 'GOZ': {
       const e = finden<GozEintrag>(listen.goz, p.nr)
@@ -272,6 +274,8 @@ export function kronenmaterial(plan: HkpPlan) {
     .filter((e) => e.art === 'keramik' && werkstoffVon(e, plan.werkstoffe ?? {}).werkstoff !== 'zirkon').map((e) => e.zahn))
   const basis = plan.positionen.flatMap((p) => {
     if (p.auto && p.ebene === 'BEB' && p.nr === DIGITAL_BEB.sintern && ohneSintern.has(p.zahn)) return []
+    // Versandkosten berechnet nur das gewerbliche Labor (KZBV-Prüfmodul: unzulässig im Eigenlabor)
+    if (p.auto && p.ebene === 'BEL' && belNrNorm(p.nr) === '9330' && laborVon(p, plan) === 'eigen') return []
     if (!abzug || p.ebene !== 'BEL' || belNrNorm(p.nr) !== '9700') return [p]
     const weg = Math.min(abzug, p.anzahl)
     abzug -= weg
