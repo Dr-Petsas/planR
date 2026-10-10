@@ -458,7 +458,10 @@ export function therapieAnwenden(
   const r = therapieplanAnwenden(regel, zaehne)
   if (!plan) return r
   const mitR = { ...zaehne, ...Object.fromEntries(Object.entries(r.R).map(([z, R]) => [z, { ...(zaehne[z] ?? { B: '', TP: '' }), R }])) }
-  const imp = implantatPositionen(mitR, { ...plan.implantat, abformung: implantatAbformung(plan) }, plan.einstellungen.labor === 'gewerbe' ? 'fremd' : undefined)
-  const abf = abformungAnwenden([...r.positionen, ...imp.positionen], mitR, plan.abformung ?? '', plan.abformungProthese ?? '', plan.einstellungen.labor === 'praxis')
+  const implantatAbf = implantatAbformung(plan)
+  const imp = implantatPositionen(mitR, { ...plan.implantat, abformung: implantatAbf }, plan.einstellungen.labor === 'gewerbe' ? 'fremd' : undefined)
+  // Ein gescanntes Implantat bedeutet einen gescannten Kiefer – sonst stünden Gips- und gedrucktes Modell nebeneinander
+  const abformung = plan.abformung || (implantatAbf === 'scan' && imp.positionen.length ? 'scan' : '')
+  const abf = abformungAnwenden([...r.positionen, ...imp.positionen], mitR, abformung, plan.abformungProthese ?? '', plan.einstellungen.labor === 'praxis')
   return { ...r, positionen: abf.positionen, hinweise: [...r.hinweise, ...imp.hinweise, ...abf.hinweise] }
 }

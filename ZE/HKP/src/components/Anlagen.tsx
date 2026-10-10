@@ -95,7 +95,7 @@ export function Anlage({ plan, ergebnis }: Props) {
                 <td className="r">{euro(s.fremdNetto + s.fremdMwst)}</td>
               </tr>
             )}
-            {s.material !== 0 && <tr className="unterzeile"><td /><td>Praxismaterial / sonstige Kosten</td><td className="r">{euro(s.material)}</td></tr>}
+            {s.material !== 0 && <tr className="unterzeile"><td /><td>Praxismaterial / sonstige Kosten inkl. {zahlDe(plan.einstellungen.mwstLabor)} % MwSt.</td><td className="r">{euro(s.material + s.materialMwst)}</td></tr>}
             <tr className="summe"><td>5</td><td>Behandlungskosten insgesamt</td><td className="r">{euro(s.gesamt)}</td></tr>
           </tbody>
         </table>

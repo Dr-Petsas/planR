@@ -10,7 +10,7 @@ import { implantatZaehne } from './implantat'
 import { eigenFinden, type EigenPosition } from './eigenlabor'
 import { mitDigital } from './digital'
 import { kronenEinheiten, materialErmitteln, werkstoffVon } from './material'
-import { DIGITAL_BEB } from './abformung'
+import { DIGITAL_BEB, GIPSMODELL } from './abformung'
 
 export interface Listen {
   bema?: Preisliste<'bema'>
@@ -122,7 +122,9 @@ export interface Ergebnis {
     fremdNetto: number
     fremdMwst: number
     laborMwst: number
+    /** Praxismaterial (z. B. Implantatteile) netto */
     material: number
+    materialMwst: number
     materialUndLabor: number
     gesamt: number
     festzuschuss: number
@@ -313,7 +315,9 @@ export function berechnen(plan: HkpPlan, listen: Listen): Ergebnis {
   const fremdNetto = runden(fremdBel + fremdBeb + fremdMat)
   const eigenMwst = runden(eigenNetto * satz)
   const fremdMwst = runden(fremdNetto * satz)
-  const laborMwst = runden(eigenMwst + fremdMwst)
+  // Praxismaterial (z. B. Implantatteile) trägt dieselbe MwSt. wie Laborleistungen
+  const materialMwst = runden(material * satz)
+  const laborMwst = runden(eigenMwst + fremdMwst + materialMwst)
   const materialUndLabor = runden(eigenNetto + fremdNetto + laborMwst + material)
   const gesamt = runden(bemaHonorar + gozHonorar + materialUndLabor)
   const bemaPunkte = positionen.filter((p) => p.ebene === 'BEMA').reduce((s, p) => s + (p.punkte ?? 0) * p.anzahl, 0)
@@ -399,6 +403,8 @@ export function berechnen(plan: HkpPlan, listen: Listen): Ergebnis {
     })
   if (plan.zuschuss.haertefall && versorgungsart !== 'regel')
     hinweise.push({ stufe: 'info', text: 'Härtefall bei gleich-/andersartiger Versorgung: Zuschuss ist auf den Festzuschuss in Höhe von 100 % begrenzt.' })
+  if (positionen.some(GIPSMODELL) && positionen.some((p) => p.ebene === 'BEB' && p.nr === '0009'))
+    hinweise.push({ stufe: 'fehler', text: 'Gipsmodell und gedrucktes Modell (BEB 0009) zugleich – entweder klassische Abformung oder Intraoralscan, nie beide Modelle.' })
   if (!plan.verwaltung.herstellungsort.trim())
     hinweise.push({ stufe: 'warnung', text: 'Herstellungsort bzw. -land des Zahnersatzes fehlt.' })
 
@@ -408,7 +414,7 @@ export function berechnen(plan: HkpPlan, listen: Listen): Ergebnis {
     positionen,
     befunde,
     summen: {
-      bemaPunkte, bemaHonorar, gozHonorar, belNetto, bebNetto, laborMwst, material, materialUndLabor,
+      bemaPunkte, bemaHonorar, gozHonorar, belNetto, bebNetto, laborMwst, material, materialMwst, materialUndLabor,
       eigenBel, eigenBeb, eigenMat, eigenNetto, eigenMwst, fremdBel, fremdBeb, fremdMat, fremdNetto, fremdMwst,
       gesamt, festzuschuss, festzuschuss100, kassenanteil, eigenanteil, eigenanteilRegel,
     },

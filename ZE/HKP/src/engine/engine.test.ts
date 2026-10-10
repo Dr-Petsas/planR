@@ -121,7 +121,9 @@ describe('Gebührenberechnung', () => {
     p.positionen = [pos('BEL', '1021', { labor: 'eigen' }), pos('BEL', '1021', { id: 'b' }), pos('MAT', '', { id: 'c', labor: 'fremd', preis: 50 }), pos('MAT', '', { id: 'd', preis: 10 })]
     const s = berechnen(p, LISTEN).summen
     expect([s.eigenBel, s.fremdBel, s.fremdMat, s.material]).toEqual([99.31, 104.54, 50, 10])
-    expect(s.laborMwst).toBe(Math.round((99.31 + 154.54) * 7) / 100)
+    expect(s.materialMwst).toBe(0.7)
+    expect(s.laborMwst).toBe(Math.round((99.31 + 154.54) * 7) / 100 + 0.7)
+    expect(s.materialUndLabor).toBe(Math.round((99.31 + 154.54 + 10) * 107) / 100)
   })
 
   it('meldet BEL-Preise über dem Höchstpreis', () => {
@@ -732,6 +734,14 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
     expect(scan0065).toEqual(['OK rechts', 'UK links', 'UK rechts'].concat(['OK links']).sort())
     expect(new Set(scan0065).size).toBe(scan0065.length)
     expect(r.positionen.filter((x) => x.ebene === 'BEB' && x.nr === '0009').map((x) => x.zahn).sort()).toEqual(['OK', 'UK'])
+
+    for (const abformung of ['scan', ''] as const) {
+      const nur = { ...planMit({ 36: 'f' }, { 36: 'SKM' }), abformung, implantat: { ...p.implantat, abformung: 'scan' as const } }
+      const n = therapieAnwenden(regelversorgungErmitteln(nur.zaehne, regelOptionen(nur)), nur.zaehne, nur)
+      const modelle = n.positionen.filter((x) => (x.ebene === 'BEB' || x.ebene === 'BEL') && /^(0002|0010|0021|0051|0009)$/.test(x.nr)).map((x) => `${x.ebene} ${x.nr} ${x.zahn}`).sort()
+      expect(modelle, `Abformung „${abformung}“`).toEqual(['BEB 0009 OK', 'BEB 0009 UK'])
+      expect(berechnen({ ...nur, positionen: n.positionen }, LISTEN).hinweise.some((h) => h.text.includes('nie beide Modelle'))).toBe(false)
+    }
 
     const offen = { ...p, abformung: 'abdruck' as const, implantat: { ...p.implantat, abformung: 'offen' as const } }
     const r2 = therapieAnwenden(regelversorgungErmitteln(offen.zaehne, regelOptionen(offen)), offen.zaehne, offen)

@@ -55,7 +55,7 @@ const pos = (ebene: Position['ebene'], nr: string, zahn: string, extra: Partial<
 const KRONE = (p: Position) => /^\d\d$/.test(p.zahn) &&
   ((p.ebene === 'BEMA' && /^(20[abc]|91[abcd])$/.test(p.nr)) || (p.ebene === 'GOZ' && /^(22[012]0|50[0-4]0)$/.test(p.nr)))
 /** Gips-Arbeitsmodell (Sägemodell) und Gegenkiefermodell des festsitzenden Zahnersatzes */
-const GIPSMODELL = (p: Position) =>
+export const GIPSMODELL = (p: Position) =>
   ((p.ebene === 'BEL' && p.nr === '0051') || (p.ebene === 'BEB' && p.nr === '0021')) ||
   (p.zahn === '' && ((p.ebene === 'BEL' && p.nr === '0010') || (p.ebene === 'BEB' && p.nr === '0002')))
 
@@ -144,7 +144,8 @@ function zahnlosScannen(positionen: Position[]): { positionen: Position[]; hinwe
 
 /**
  * Erste Abformung (präparierte Zähne): Scan → GOZ 0065 je Bereich (mit Gegenkiefer) und gedruckte Modelle
- * statt Gipsmodellen; der Abdruck ändert nichts. Implantatkronen regelt implantatPositionen.
+ * statt Gipsmodellen (auch bei reinen Implantatkronen: nie Gips- und gedrucktes Modell zugleich); der Abdruck
+ * ändert nichts. Implantatspezifische Leistungen regelt implantatPositionen.
  * Danach die zweite Abformung für den herausnehmbaren Teil.
  */
 export function abformungAnwenden(
@@ -253,10 +254,11 @@ function digitalerWorkflow(positionen: Position[], zaehne: Record<string, ZahnZe
 function scanAnwenden(positionen: Position[], zaehne: Record<string, ZahnZeilen>): { positionen: Position[]; hinweise: string[] } {
   const implantat = (z: string) => /^S/i.test((zaehne[z]?.TP.trim() || zaehne[z]?.R || '').toUpperCase())
   const praepariert = [...new Set(positionen.filter(KRONE).map((p) => p.zahn))].filter((z) => !implantat(z))
+  const implantatKronen = [...new Set(positionen.filter((p) => /^\d\d$/.test(p.zahn) && implantat(p.zahn)).map((p) => p.zahn))]
   const hinweise: string[] = []
-  if (!praepariert.length) return { positionen, hinweise }
+  if (!praepariert.length && !implantatKronen.length) return { positionen, hinweise }
 
-  const bereiche = [...new Set(praepariert.map(bereich))]
+  const bereiche = [...new Set([...praepariert, ...implantatKronen].map(bereich))]
   const gescannt = new Set(positionen.filter((p) => p.ebene === 'GOZ' && p.nr === '0065').map((p) => p.zahn))
   const regionen = [...new Set([...bereiche, ...bereiche.map((b) => GEGENUEBER[b])])].filter((r) => !gescannt.has(r))
 
@@ -268,7 +270,7 @@ function scanAnwenden(positionen: Position[], zaehne: Record<string, ZahnZeilen>
     ...regionen.map((r) => pos('GOZ', '0065', r)),
     ...kiefer.map((k) => pos('BEB', '0009', k, labor ? { labor } : {})),
   ]
-  const arbeitsKiefer = [...new Set(praepariert.map(kieferVon))]
+  const arbeitsKiefer = [...new Set([...praepariert, ...implantatKronen].map(kieferVon))]
   hinweise.push(`Intraoralscan (${regionen.length ? regionen.join(', ') : 'bereits erfasst'}): GOZ 0065 statt konventioneller Abformung, gedruckte Modelle ${arbeitsKiefer.join('/')} mit Gegenkiefer (BEB 0009) statt Gips-/Sägemodell.`)
   return { positionen: [...positionen.filter((p) => !GIPSMODELL(p)), ...neu], hinweise }
 }
