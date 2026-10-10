@@ -56,16 +56,54 @@ type Obj = Record<string, unknown>
 const nur = (o: unknown, felder: string[]): Obj =>
   Object.fromEntries(felder.filter((f) => (o as Obj | undefined)?.[f] !== undefined).map((f) => [f, (o as Obj)[f]]))
 
+const KIEFER: Record<string, string[]> = {
+  OK: ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28'],
+  UK: ['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38'],
+}
+const PROTHESE_BEMA = /^9[6-8]/
+
+/** Zähne, die eine Position betrifft: Einzelzahn, Liste, Spanne „34-36“, Kiefer nur bei Prothesenleistungen */
+function zaehneDer(p: Obj): string[] {
+  const out: string[] = []
+  for (const teil of String(p.zahn ?? '').split(/[,\s]+/).filter(Boolean)) {
+    const kiefer = KIEFER[teil.toUpperCase()]
+    if (kiefer) {
+      if (p.ebene === 'BEMA' && PROTHESE_BEMA.test(String(p.nr ?? ''))) out.push(...kiefer)
+      continue
+    }
+    const [von, bis] = teil.split('-')
+    const reihe = Object.values(KIEFER).find((k) => k.includes(von) && (!bis || k.includes(bis)))
+    if (!reihe) continue
+    const [a, b] = [reihe.indexOf(von), reihe.indexOf(bis ?? von)]
+    out.push(...reihe.slice(Math.min(a, b), Math.max(a, b) + 1))
+  }
+  return out
+}
+
+/**
+ * Zeile TP, wie sie auf dem HKP steht: leeres TP heißt Regelversorgung – aber nur an Zähnen, die der Plan
+ * auch versorgt (Anker einer durch ein Implantat ersetzten Brücke bleiben leer).
+ */
+export function planungJeZahn(zaehne: Record<string, Obj>, positionen: Obj[]): Record<string, string> {
+  const versorgt = new Set(positionen.flatMap(zaehneDer))
+  return Object.fromEntries(Object.entries(zaehne).map(([z, v]) => {
+    const tp = String(v.TP ?? '').trim()
+    return [z, tp || (versorgt.has(z) ? String(v.R ?? '').trim() : '')]
+  }))
+}
+
 /**
  * HKP für den Connector: Positionen so, wie MAS sie berechnet hat (inkl. Material, Edelmetall und
  * Zusatzleistungen, Mengen nach Werkstoff) – die gespeicherten Planzeilen allein ergeben falsche Laborsummen.
  */
 export function hkpFuerPvs(plan: Obj, ergebnis: Obj): string {
   const berechnet = Array.isArray(ergebnis.positionen) ? (ergebnis.positionen as Obj[]) : []
+  const zaehne = (plan.zaehne ?? {}) as Record<string, Obj>
+  const planung = planungJeZahn(zaehne, berechnet)
   return JSON.stringify({
     verwaltung: nur(plan.verwaltung, ['ausstellungsdatum']),
     zuschuss: plan.zuschuss,
-    zaehne: plan.zaehne,
+    zaehne: Object.fromEntries(Object.entries(zaehne).map(([z, v]) => [z, { ...v, planung: planung[z] }])),
     positionen: berechnet.map((p) => nur(p, ['id', 'ebene', 'nr', 'anzahl', 'zahn', 'labor', 'eigen', 'bezeichnung'])),
     ergebnis: {
       versorgungsart: ergebnis.versorgungsart,

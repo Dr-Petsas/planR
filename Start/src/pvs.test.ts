@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { datumIso, hkpFuerPvs, patientWaehlen } from './pvs'
+import { datumIso, hkpFuerPvs, patientWaehlen, planungJeZahn } from './pvs'
 
 const t = (id: string, firstName: string, lastName: string, birthDate = '') => ({ id, firstName, lastName, birthDate })
 
@@ -55,5 +55,18 @@ describe('PVS-Export: HKP-Daten', () => {
     expect(d.verwaltung).toEqual({ ausstellungsdatum: '2026-10-09' })
     expect(d.patient).toBeUndefined()
     expect(d.ergebnis.hinweise).toBeUndefined()
+  })
+
+  it('Zeile TP: Implantat statt Regelbrücke lässt die Anker leer, Regelbrücke und Prothese bleiben', () => {
+    const implantat = planungJeZahn(
+      { 35: { R: 'K' }, 36: { B: 'f', R: 'B', TP: 'SK' }, 37: { R: 'K' } },
+      [{ ebene: 'GOZ', nr: '2270', zahn: '36' }, { ebene: 'BEB', nr: '0009', zahn: 'UK' }, { ebene: 'BEMA', nr: '19', zahn: '36' }],
+    )
+    expect(implantat).toEqual({ 35: '', 36: 'SK', 37: '' })
+    const regel = planungJeZahn(
+      { 34: { R: 'K' }, 35: { B: 'f', R: 'B' }, 36: { R: 'K' }, 31: { B: 'f', R: 'E' }, 41: { B: 'f', R: 'E' } },
+      [{ ebene: 'BEMA', nr: '91b', zahn: '34' }, { ebene: 'BEMA', nr: '91b', zahn: '36' }, { ebene: 'BEMA', nr: '92', zahn: '34-36' }, { ebene: 'BEMA', nr: '96a', zahn: 'UK' }],
+    )
+    expect(regel).toEqual({ 34: 'K', 35: 'B', 36: 'K', 31: 'E', 41: 'E' })
   })
 })
