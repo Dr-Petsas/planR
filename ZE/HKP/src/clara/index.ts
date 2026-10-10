@@ -17,6 +17,9 @@ import {
 export { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, planNormalisieren, berechnen, STANDARD_LISTEN }
 export { ausfuehrungIn, ausfuehrungSatz, ausfuehrungVon, systemSprech, LABOR_SPRECH, WERKSTOFF_SPRECH }
 export { befundDatei, befundDateiName } from './befundDatei'
+export { aufZielpreis, preisSpanne, EIGEN_KASSE_MIN, type ReglerStand, type ZielpreisErgebnis } from './zielpreis'
+export { ZUSATZ_STUFEN } from '../engine/zusatzleistungen'
+export { PRIVAT_STUFEN } from '../engine/aufwertung'
 export type { Befund, PlanOptionen, Rueckfrage, Ergebnis, HkpPlan, Ausfuehrung, AusfuehrungStand }
 export type { BefundDatei, BefundDateiAngaben } from './befundDatei'
 
