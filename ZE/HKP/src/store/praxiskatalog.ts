@@ -115,7 +115,7 @@ export async function praxiskatalogAbgleichen(): Promise<boolean> {
   for (const basis of datenBasen()) {
     try {
       const url = basis.replace(/daten\/$/, `api/praxiskatalog?mandant=${encodeURIComponent(MANDANT_ID)}`)
-      const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) })
+      const r = await fetch(url, { cache: 'no-store', credentials: 'include', signal: AbortSignal.timeout(8000) })
       if (!r.ok) continue
       const d = await r.json() as { katalog?: PraxisKatalog | null }
       const k = d.katalog

@@ -3,8 +3,15 @@ import type { HkpPlan } from '../types'
 import type { Ergebnis, Listen } from '../engine/berechnung'
 import { MANDANT_ID, STANDARD_ID, mk } from '../mandant'
 
-/** HKP-Register in MAS. PlanR spricht über den Vite-Proxy /mas (gleicher Ursprung, auch über den Tunnel). */
+/** HKP-Register in MAS über den Vite-Proxy /mas (gleicher Ursprung) – nur noch mit MAS-Schlüssel bzw. am Praxis-PC. */
 const BASIS = '/mas/planr'
+/**
+ * Bevorzugt: über den PlanR-Server mit der PlanR-Anmeldung. Der gibt nur das Register des eigenen Mandanten
+ * und die HKPs der eigenen Praxen heraus und stempelt neue HKPs mit Praxis und Bearbeiter.
+ */
+const HUB = typeof location === 'undefined' ? ''
+  : location.hostname.endsWith('.pickadoc-tunnel.com') ? 'https://planr.pickadoc-tunnel.com/api/register'
+    : `http://${location.hostname}:5189/api/register`
 /** Weitere Mandanten bekommen am Praxis-PC nicht automatisch den Schlüssel der Praxis (vite.config.ts) */
 const MANDANT_KOPF: Record<string, string> = MANDANT_ID === STANDARD_ID ? {} : { 'X-PlanR-Mandant': MANDANT_ID }
 const VERBINDUNG_KEY = mk('hkp.mas.v1')
@@ -79,8 +86,8 @@ function lesen<T>(key: string, leer: T): T {
   }
 }
 
-/** automatisch = am Praxis-PC trägt der PlanR-Server den Schlüssel selbst ein (vite.config.ts) */
-let verbindung = lesen<{ schluessel: string; automatisch?: boolean }>(VERBINDUNG_KEY, { schluessel: '' })
+/** automatisch = am Praxis-PC trägt der PlanR-Server den Schlüssel selbst ein (vite.config.ts); sitzung = über PlanR angemeldet */
+let verbindung = lesen<{ schluessel: string; automatisch?: boolean; sitzung?: boolean }>(VERBINDUNG_KEY, { schluessel: '' })
 let aktiv: AktiverEintrag | null = lesen<AktiverEintrag | null>(AKTIV_KEY, null)
 const abonnenten = new Set<() => void>()
 const melden = () => abonnenten.forEach((f) => f())
@@ -95,18 +102,21 @@ export function schluesselSetzen(schluessel: string) {
   melden()
 }
 
-export const verbunden = (v: { schluessel: string; automatisch?: boolean } = verbindung) => !!(v.schluessel || v.automatisch)
+export const verbunden = (v: { schluessel: string; automatisch?: boolean; sitzung?: boolean } = verbindung) => !!(v.schluessel || v.automatisch || v.sitzung)
 
-/** Erledigt, sobald geprüft ist, ob der PlanR-Server den Schlüssel selbst einträgt */
+const perSitzung = () => fetch(`${HUB}/status`, { credentials: 'include', cache: 'no-store' }).then((r) => r.ok)
+const perProxy = () => fetch(`${BASIS}/status`, { headers: { 'Content-Type': 'application/json', ...MANDANT_KOPF } }).then((r) => r.ok)
+
+/** Erledigt, sobald geprüft ist, ob eine PlanR-Anmeldung besteht bzw. der PlanR-Server den Schlüssel selbst einträgt */
 export const verbindungBereit: Promise<void> = typeof window === 'undefined' || typeof fetch !== 'function'
   ? Promise.resolve()
-  : fetch(`${BASIS}/status`, { headers: { 'Content-Type': 'application/json', ...MANDANT_KOPF } })
-    .then((r) => {
-      if (!r.ok) return
-      verbindung = { ...verbindung, automatisch: true }
+  : perSitzung().catch(() => false)
+    .then(async (sitzung) => {
+      if (sitzung) verbindung = { ...verbindung, sitzung: true }
+      else if (await perProxy().catch(() => false)) verbindung = { ...verbindung, automatisch: true }
+      else return
       melden()
     })
-    .catch(() => {})
 
 export function aktivSetzen(e: AktiverEintrag | null) {
   aktiv = e
@@ -129,14 +139,17 @@ export class RegisterFehler extends Error {
 }
 
 async function anfrage<T>(pfad: string, init: RequestInit = {}): Promise<T> {
-  if (!verbunden()) throw new RegisterFehler(401, { message: 'Kein MAS-Schlüssel eingetragen (Einstellungen).' })
-  const r = await fetch(`${BASIS}${pfad}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...MANDANT_KOPF, ...(verbindung.schluessel ? { 'X-PlanR-Key': verbindung.schluessel } : {}), ...init.headers },
-  })
+  if (!verbunden()) throw new RegisterFehler(401, { message: 'Bitte in PlanR anmelden (oder MAS-Schlüssel in den Einstellungen eintragen).' })
+  const sitzung = !!verbindung.sitzung
+  const r = sitzung
+    ? await fetch(`${HUB}${pfad}`, { ...init, credentials: 'include', headers: { 'Content-Type': 'application/json', ...init.headers } })
+    : await fetch(`${BASIS}${pfad}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...MANDANT_KOPF, ...(verbindung.schluessel ? { 'X-PlanR-Key': verbindung.schluessel } : {}), ...init.headers },
+    })
   const daten = await r.json().catch(() => ({ error: `HTTP ${r.status}` }))
   if (!r.ok || daten.ok === false) {
-    if (r.status === 401) throw new RegisterFehler(401, { message: 'MAS-Schlüssel ist falsch.' })
+    if (r.status === 401) throw new RegisterFehler(401, { message: sitzung ? String(daten.meldung ?? 'Die PlanR-Anmeldung ist abgelaufen – bitte neu anmelden.') : 'MAS-Schlüssel ist falsch.' })
     throw new RegisterFehler(r.status, daten)
   }
   return daten as T

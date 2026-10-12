@@ -24,7 +24,8 @@ const zeitDe = (d: Date) => d.toLocaleString('de-DE', { day: '2-digit', month: '
 /** Verbindung zu MAS (HKP-Register mit Clara) und Freigabe der Praxis-Preislisten */
 export function MasVerbindung({ alle, eigen, einstellungen }: { alle: Preisliste[]; eigen: EigenPosition[]; einstellungen: Einstellungen }) {
   const v = useVerbindung()
-  const { schluessel, automatisch } = v
+  const { schluessel, sitzung } = v
+  const automatisch = v.automatisch || sitzung
   const [eingabe, setEingabe] = useState(schluessel)
   const [meldung, setMeldung] = useState<{ text: string; fehler?: boolean } | null>(null)
   const [freigabe, setFreigabe] = useState<Freigabe | null>(null)
@@ -77,7 +78,7 @@ export function MasVerbindung({ alle, eigen, einstellungen }: { alle: Preisliste
       <header className="es-kopf">
         HKP-Register und Clara (MAS)
         <span className={`es-status${verbunden(v) ? ' ok' : ''}`}>
-          {automatisch ? '✓ Schlüssel fest eingetragen' : schluessel ? '✓ Schlüssel gespeichert' : 'kein Schlüssel'}
+          {sitzung ? '✓ über die PlanR-Anmeldung' : automatisch ? '✓ Schlüssel fest eingetragen' : schluessel ? '✓ Schlüssel gespeichert' : 'kein Schlüssel'}
         </span>
         <small>Clara rechnet ihre HKP-Entwürfe mit derselben Engine wie PlanR – mit den Praxiswerten, die Sie hier freigeben.</small>
       </header>

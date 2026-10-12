@@ -18,6 +18,8 @@ export interface PlanKarte {
   befund?: string
   /** HKP liegt schon im Praxisprogramm (Text für die Liste) */
   imPvs?: string
+  /** DS-Win-Praxis (1–9) in einer Praxisgemeinschaft; fehlt = Hauptpraxis des Mandanten */
+  praxis?: number
 }
 
 /** Name der Zahnärztin / des Zahnarztes, falls der Plan ihn selbst trägt. */
@@ -68,6 +70,7 @@ export function kartePrüfen(roh: unknown): PlanKarte | null {
   if (DATEI_ID.test(befund)) karte.befund = befund
   const behandler = String(e.behandler ?? '').trim().slice(0, 80) || behandlerAusPlan(e.plan)
   if (behandler) karte.behandler = behandler
+  if (Number.isInteger(e.praxis) && (e.praxis as number) >= 1 && (e.praxis as number) <= 9) karte.praxis = e.praxis as number
   return karte
 }
 
@@ -195,6 +198,7 @@ interface HkpKopf {
   /** Lese-Link aus MAS: ohne ihn öffnet der Planer über den Tunnel (kein Praxis-Schlüssel) den HKP nicht; b = Änderungen speichern */
   link?: { t?: string; b?: string; c?: string }
   dateien?: { id?: string; art?: string }[]
+  praxis?: unknown
 }
 
 /** Kennung der Befund-Datei eines HKP aus dem MAS-Register, sonst '' */
@@ -230,6 +234,7 @@ export function hkpKarten(liste: HkpKopf[]): PlanKarte[] {
       geaendert: h.aktualisiert || h.erstellt || new Date(0).toISOString(),
       oeffnen: hkpOeffnen(id, h.link),
       befund: befundDateiVon(h),
+      praxis: h.praxis,
     })
     if (karte) karten.push(karte)
   }

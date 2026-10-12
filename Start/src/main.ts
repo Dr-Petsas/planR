@@ -4,7 +4,8 @@ import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
 import { PVS_CONNECTOR, PVS_SUCHE } from './pvs'
 import { pvsImportOeffnen } from './pvsImport'
-import { pvsJson } from './geraet'
+import { apiJson } from './api'
+import { abmelden, anmeldeSeite, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const STATUS: Record<string, string> = {
@@ -31,7 +32,7 @@ let einstellungAuf = false
 let einstellungen: Einstellungen = LEER
 /** Bearbeitungsstand im offenen Dialog */
 let entwurf: Einstellungen = LEER
-/** PlanR-Agent auf dem Praxisserver (null = für diesen Mandanten keiner eingerichtet) */
+/** PlanR-Bridge auf dem Praxisserver (null = für diesen Mandanten keine eingerichtet) */
 let agent: { verbunden: boolean; pvs?: string; version?: string } | null = null
 interface KatalogInfo {
   pvs: string; stand: string; listeName: string; belListeName: string
@@ -45,7 +46,9 @@ interface KatalogInfo {
 /** Aus dem PVS übernommene Preise & Positionen (null = noch nie abgeglichen) */
 let katalog: KatalogInfo | null = null
 let katalogLaeuft = false
-const mandant = new URLSearchParams(location.search).get('mandant') || 'standard'
+let ich: Ich
+/** Benutzer und Praxen für den Praxis-Admin (null = nicht geladen / kein Admin) */
+let benutzer: { praxen: PraxisZeile[]; benutzer: BenutzerZeile[] } | null = null
 const heute = new Date()
 let jahr = heute.getFullYear()
 let monat = heute.getMonth()
@@ -194,8 +197,8 @@ async function insPvs(p: PlanKarte, ziel: string) {
   pvsLaeuft = true
   melden(`HKP von ${wer} geht an ${ziel} …`)
   try {
-    const r = await pvsJson<Antwort>(mandant, '/api/plaene/pvs', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...kennung(p), mandant }),
+    const r = await apiJson<Antwort>('/api/plaene/pvs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(kennung(p)),
     })
     if (r.ok) await laden()
     melden(r.meldung || (r.ok ? `HKP in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`))
@@ -369,7 +372,7 @@ function einstellungKarte(): string {
       <button type="button" class="wahl-grund" data-wahl-zu aria-label="Einstellungen schließen"></button>
       <form class="wahl-karte einstellungen" data-einst>
         <div class="wahl-kopf">
-          <h2>Einstellungen${mandant !== 'standard' ? ` <small>Mandant ${esc(mandant)}</small>` : ''}</h2>
+          <h2>Einstellungen${ich.konto.admin ? '' : ' <small>nur lesen – ändern darf der Praxis-Admin</small>'}</h2>
           <button type="button" data-wahl-zu aria-label="Schließen">✕</button>
         </div>
         <label class="feld">Praxisverwaltungssystem (PVS)
@@ -378,22 +381,23 @@ function einstellungKarte(): string {
             ${optionen}
           </select>
         </label>
-        ${p ? `<p class="pvs-info">Übergabe: ${esc(p.weg)}<span class="marke-bridge ${p.bereit ? 'bereit' : 'bald'}">${p.bereit ? 'Bridge verfügbar' : 'Bridge in Vorbereitung'}</span></p>` : ''}
+        ${p ? `<p class="pvs-info">Übergabe: ${esc(p.weg)}<span class="marke-bridge ${p.bereit ? 'bereit' : 'bald'}">${p.bereit ? 'Anbindung verfügbar' : 'Anbindung in Vorbereitung'}</span></p>` : ''}
         <label class="schalter${p ? '' : ' aus'}">
           <input type="checkbox" data-bridge${e.bridge ? ' checked' : ''}${p ? '' : ' disabled'}>
-          <span><b>Bridge aktivieren</b><small>${p ? `Pläne aus PlanR an ${esc(p.name)} übergeben.` : 'Zuerst das PVS wählen.'}</small></span>
+          <span><b>Mit ${p ? esc(p.name) : 'dem PVS'} verbinden</b><small>${p ? `Patienten suchen, HKPs übernehmen und Pläne an ${esc(p.name)} übergeben.` : 'Zuerst das PVS wählen.'}</small></span>
         </label>
         ${p?.ordner && e.bridge ? `<label class="feld">Übergabeordner
           <input type="text" data-ordner value="${esc(e.ordner)}" placeholder="z. B. C:\\DENS\\Import" autocomplete="off" spellcheck="false">
         </label>` : ''}
-        ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Bridge für dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
-        ${p && e.bridge ? `<p class="pvs-info">PlanR-Agent auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(agent.pvs ?? '')}, Version ${esc(agent.version ?? '?')})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
-          · <a href="/download" target="_blank" rel="noopener">Agent herunterladen</a></p>` : ''}
+        ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Anbindung an dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
+        ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(agent.pvs ?? '')}, Version ${esc(agent.version ?? '?')})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
+          · <a href="/download" target="_blank" rel="noopener">Bridge herunterladen</a></p>` : ''}
         ${katalogBlock()}
+        ${benutzerBlock(benutzer)}
         <div class="einst-fuss">
           <span>${einstellungen.geaendert ? `Gespeichert ${esc(zeit(einstellungen.geaendert))}` : 'Noch nicht gespeichert'}</span>
           <button type="button" class="import-knopf" data-wahl-zu>Abbrechen</button>
-          <button type="submit" class="neu-knopf"${geaendert ? '' : ' disabled'}>Speichern</button>
+          <button type="submit" class="neu-knopf"${geaendert && ich.konto.admin ? '' : ' disabled'}>Speichern</button>
     </div>
       </form>
     </div>`
@@ -446,8 +450,8 @@ function katalogBlock(): string {
 async function katalogSenden(body: Record<string, unknown>) {
   katalogLaeuft = true
   zeichnen()
-  const d = await pvsJson<{ info?: KatalogInfo }>(mandant, '/api/praxiskatalog', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mandant, ...body }),
+  const d = await apiJson<{ info?: KatalogInfo }>('/api/praxiskatalog', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   })
   katalogLaeuft = false
   if (d.ok && d.info) {
@@ -459,7 +463,7 @@ async function katalogSenden(body: Record<string, unknown>) {
 
 async function einstellungenSpeichern() {
   try {
-    const r = await fetch(`/api/einstellungen?mandant=${encodeURIComponent(mandant)}`, {
+    const r = await fetch('/api/einstellungen', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entwurf),
     })
     const d = await r.json() as { ok: boolean; einstellungen?: Einstellungen; meldung?: string }
@@ -467,7 +471,7 @@ async function einstellungenSpeichern() {
     einstellungen = entwurf = d.einstellungen
     auswahlSchliessen()
     const p = pvsVon(einstellungen.pvs)
-    melden(p ? `Gespeichert: ${p.name}, Bridge ${einstellungen.bridge ? 'aktiv' : 'aus'}.` : 'Gespeichert: kein PVS gewählt.')
+    melden(p ? `Gespeichert: ${p.name}, Verbindung ${einstellungen.bridge ? 'an' : 'aus'}.` : 'Gespeichert: kein PVS gewählt.')
   } catch {
     melden('Keine Verbindung.')
   }
@@ -490,11 +494,13 @@ function zeichnen() {
       </div>
       <div class="kopf-rechts">
         <span class="kopf-info">${sichtbar.length} von ${gesamt}</span>
-        <button type="button" class="import-knopf" data-einstellungen title="PVS und Bridge einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
+        <button type="button" class="konto-knopf" data-abmelden title="${esc(ich.konto.email)} – abmelden">${esc(ich.konto.name || ich.konto.email)}<small>Abmelden</small></button>
+        <button type="button" class="import-knopf" data-einstellungen title="PVS, Bridge und Benutzer einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
         <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen und HKP übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
         <button type="button" class="neu-knopf" data-neu>Neuer Plan erstellen</button>
     </div>
   </header>
+    ${ich.praxen?.length === 0 ? '<p class="freischalt-hinweis">Sie sind angemeldet, aber noch keiner Praxis zugeordnet. Der Praxis-Admin schaltet Sie in PlanR unter Einstellungen → Benutzer frei.</p>' : ''}
     <div class="seite">
       <aside class="filter">
         <label class="feld">Name
@@ -553,10 +559,10 @@ function zeichnen() {
     if (!ziel) return importWaehlen(null)
     if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && !agent?.verbunden) {
       return melden(agent
-        ? `Der PlanR-Agent auf dem Praxisserver ist gerade nicht verbunden – Import aus ${ziel} geht so nur direkt am Praxis-PC.`
-        : `Import aus ${ziel} über das Internet braucht den PlanR-Agenten auf dem Praxisserver (Einstellungen → Agent herunterladen).`)
+        ? `Die PlanR-Bridge auf dem Praxisserver ist gerade nicht verbunden – Import aus ${ziel} geht so nur direkt am Praxis-PC.`
+        : `Import aus ${ziel} über das Internet braucht die PlanR-Bridge auf dem Praxisserver (Einstellungen → Bridge herunterladen).`)
     }
-    pvsImportOeffnen({ pvsName: ziel, mandant, dateiWaehlen: () => importWaehlen(null), geoeffnet: ausPvsOeffnen })
+    pvsImportOeffnen({ pvsName: ziel, dateiWaehlen: () => importWaehlen(null), geoeffnet: ausPvsOeffnen })
   })
   app.querySelector<HTMLButtonElement>('[data-einstellungen]')!.addEventListener('click', () => {
     entwurf = einstellungen
@@ -565,6 +571,10 @@ function zeichnen() {
     urlSetzen('push')
     zeichnen()
     void katalogLaden().then(() => { if (einstellungAuf && !katalogLaeuft) zeichnen() })
+    if (ich.konto.admin) void benutzerLaden().then((b) => { benutzer = b; if (einstellungAuf) zeichnen() })
+  })
+  app.querySelector<HTMLButtonElement>('[data-abmelden]')!.addEventListener('click', () => {
+    if (confirm(`${ich.konto.email} auf diesem Gerät abmelden?`)) void abmelden()
   })
   const form = app.querySelector<HTMLFormElement>('[data-einst]')
   if (form) {
@@ -583,6 +593,13 @@ function zeichnen() {
       const knopf = form.querySelector<HTMLButtonElement>('button[type=submit]')!
       knopf.disabled = JSON.stringify(entwurf) === JSON.stringify(einstellungen)
     })
+    form.querySelectorAll<HTMLInputElement>('[data-zuordnung]').forEach((x) => x.addEventListener('change', async () => {
+      const uid = x.dataset.zuordnung!
+      const praxen = [...form.querySelectorAll<HTMLInputElement>('[data-zuordnung]')].filter((y) => y.dataset.zuordnung === uid && y.checked).map((y) => Number(y.value))
+      const fehler = await benutzerZuordnen(uid, praxen)
+      benutzer = await benutzerLaden()
+      melden(fehler || 'Zuordnung gespeichert. Sie gilt ab dem nächsten Laden der Seite des Benutzers.')
+    }))
     form.querySelector<HTMLButtonElement>('[data-kat-abgleich]')?.addEventListener('click', () => void katalogSenden({ abgleich: true }))
     const wahl = () => ({
       liste: Number(form.querySelector<HTMLSelectElement>('[data-kat-liste]')!.value),
@@ -660,14 +677,14 @@ async function laden() {
 
 async function katalogLaden() {
   try {
-    const k = await (await fetch(`/api/praxiskatalog?mandant=${encodeURIComponent(mandant)}&nur=info`, { cache: 'no-store' })).json() as { info?: KatalogInfo | null }
+    const k = await (await fetch('/api/praxiskatalog?nur=info', { cache: 'no-store' })).json() as { info?: KatalogInfo | null }
     katalog = k.info ?? null
   } catch { /* bleibt beim letzten Stand */ }
 }
 
 async function einstellungenLaden() {
   try {
-    const d = await (await fetch(`/api/einstellungen?mandant=${encodeURIComponent(mandant)}`, { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent }
+    const d = await (await fetch('/api/einstellungen', { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent }
     if (d.einstellungen) einstellungen = d.einstellungen
     agent = d.agent ?? null
   } catch { /* Maske startet leer */ }
@@ -675,5 +692,12 @@ async function einstellungenLaden() {
   entwurf = einstellungen
 }
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
-einstellungenLaden().then(laden).catch(() => { document.querySelector('#app')!.innerHTML = '<p class="leer">Die Planliste ist gerade nicht erreichbar.</p>' })
+const app = document.querySelector<HTMLDivElement>('#app')!
+app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
+ausPickadoc().then(ichLaden).then(async (wer) => {
+  if (!wer) return anmeldeSeite(app, sitzungHinweis)
+  ich = wer
+  sitzungBewachen()
+  await einstellungenLaden()
+  await laden()
+}).catch(() => { app.innerHTML = '<p class="leer">Die Planliste ist gerade nicht erreichbar.</p>' })

@@ -56,9 +56,10 @@ function entfernenMerken(key: string, e: { nummer: string; geaendert: string }) 
 
 /** Modul für die PlanR-Übersicht; andere Mandanten als der Standard bleiben ihr fern (sonst überschreiben sie sich). */
 const modulVon = (key: string) => (key.includes('@') ? '' : key.replace(/\.liste\.v\d+$/, ''))
-const hubAdresse = () => (typeof location !== 'undefined' && location.hostname.endsWith('.pickadoc-tunnel.com')
-  ? 'https://planr.pickadoc-tunnel.com/api/plaene'
-  : 'http://127.0.0.1:5189/api/plaene')
+/** PlanR-Übersicht; die Sitzung (Cookie) gilt für denselben Host, daher nicht fest 127.0.0.1 */
+const hubAdresse = () => (typeof location === 'undefined' ? 'http://127.0.0.1:5189/api/plaene'
+  : location.hostname.endsWith('.pickadoc-tunnel.com') ? 'https://planr.pickadoc-tunnel.com/api/plaene'
+    : `http://${location.hostname}:5189/api/plaene`)
 
 /** In der PlanR-Übersicht gelöschte Pläne; ein später erneut gespeicherter Stand bleibt. */
 export function ohneGeloeschte<E extends { nummer: string; geaendert: string }>(liste: E[], geloescht: { nummer: string; geaendert: string }[]): E[] {
@@ -90,7 +91,7 @@ async function abgleichHolen<P>(modul: string): Promise<{ geloescht: { nummer: s
   const leer = { geloescht: [], eingang: [] }
   if (!HUB_MODUL[modul] || typeof fetch !== 'function') return leer
   try {
-    const r = await fetch(`${hubAdresse()}?nur=abgleich&modul=${encodeURIComponent(modul)}`, { cache: 'no-store' })
+    const r = await fetch(`${hubAdresse()}?nur=abgleich&modul=${encodeURIComponent(modul)}`, { cache: 'no-store', credentials: 'include' })
     const d = (await r.json()) as { geloescht?: { modul: string; nummer: string; geaendert: string }[]; eingang?: (Import<P> & { modul: string })[] }
     return {
       geloescht: (d.geloescht ?? []).filter((g) => g.modul === modul),
@@ -134,7 +135,7 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
     nummer: e.nummer, patient: e.patient, betrag: e.betrag, status: e.status, geaendert: e.geaendert,
     behandler: behandlerVon(key, e.plan), plan: e.plan,
   }))
-  fetch(hub, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modul: basis, plaene, entfernt: weg }) }).catch(() => {})
+  fetch(hub, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modul: basis, plaene, entfernt: weg }) }).catch(() => {})
 }
 
 function lesen<P>(key: string): AblageEintrag<P>[] {

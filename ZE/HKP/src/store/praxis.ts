@@ -36,9 +36,9 @@ function behandlerMelden() {
   if (!name || typeof fetch !== 'function' || typeof location === 'undefined') return
   const hub = location.hostname.endsWith('.pickadoc-tunnel.com')
     ? 'https://planr.pickadoc-tunnel.com/api/plaene'
-    : 'http://127.0.0.1:5189/api/plaene'
+    : `http://${location.hostname}:5189/api/plaene`
   fetch(hub, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ modul: 'hkp', behandler: name, plaene: [] }),
   }).catch(() => {})
 }

@@ -1,12 +1,11 @@
 /** „Plan importieren“: Patient im PVS suchen, seine HKPs listen, Doppelklick übernimmt und öffnet den Plan. */
-import { pvsJson } from './geraet'
+import { apiJson } from './api'
 
 interface Patient { id: string; vorname: string; name: string; geburtsdatum: string; ort: string }
 interface Hkp { nummer: number; datum: string; planart: string; bezeichnung: string; status: string; betrag: number }
 
 export interface ImportUmgebung {
   pvsName: string
-  mandant: string
   /** übernommener HKP (Registernummer) → Liste neu laden und Planer öffnen */
   geoeffnet: (nummer: string, hinweise: string[]) => Promise<void>
   dateiWaehlen: () => void
@@ -17,8 +16,7 @@ const datum = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-')
 const euro = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 
 export function pvsImportOeffnen(u: ImportUmgebung) {
-  const m = encodeURIComponent(u.mandant)
-  const holen = <T,>(url: string, init?: RequestInit) => pvsJson<T>(u.mandant, url, init)
+  const holen = apiJson
   const dlg = document.createElement('div')
   dlg.className = 'wahl'
   dlg.setAttribute('role', 'dialog')
@@ -59,7 +57,7 @@ export function pvsImportOeffnen(u: ImportUmgebung) {
     busy = true
     status(`Plan ${h.nummer} von ${p.vorname} ${p.name} wird übernommen …`)
     const r = await holen<{ nummer?: string; hinweise?: string[] }>('/api/plaene/pvs-import', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patient: p.id, plan: h.nummer, mandant: u.mandant }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patient: p.id, plan: h.nummer }),
     })
     busy = false
     if (!r.ok || !r.nummer) return status(r.meldung || 'Import hat nicht geklappt.')
@@ -71,7 +69,7 @@ export function pvsImportOeffnen(u: ImportUmgebung) {
     const ziel = $('[data-hkps]')
     ziel.innerHTML = ''
     status(`HKPs von ${p.vorname} ${p.name} werden geladen …`)
-    const r = await holen<{ hkps?: Hkp[]; uebernehmbar?: boolean }>(`/api/pvs/hkps?patient=${encodeURIComponent(p.id)}&mandant=${m}`)
+    const r = await holen<{ hkps?: Hkp[]; uebernehmbar?: boolean }>(`/api/pvs/hkps?patient=${encodeURIComponent(p.id)}`)
     if (!r.ok) return status(r.meldung || 'HKPs ließen sich nicht laden.')
     const hkps = r.hkps ?? []
     if (!hkps.length) return status(`${p.vorname} ${p.name} hat in ${u.pvsName} keinen HKP.`)
@@ -107,7 +105,7 @@ export function pvsImportOeffnen(u: ImportUmgebung) {
       return status(text ? 'Noch ein Buchstabe …' : '')
     }
     status('Suche läuft …')
-    const r = await holen<{ patienten?: Patient[] }>(`/api/pvs/patienten?q=${encodeURIComponent(text)}&mandant=${m}`)
+    const r = await holen<{ patienten?: Patient[] }>(`/api/pvs/patienten?q=${encodeURIComponent(text)}`)
     if (nr !== suchNr) return
     $('[data-hkps]').innerHTML = ''
     liste.innerHTML = ''

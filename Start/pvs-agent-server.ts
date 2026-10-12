@@ -210,9 +210,11 @@ export class AgentHub {
 /** Was ein Agent im Connector aufrufen darf – alles andere lehnt PlanR schon vor dem Versand ab. */
 const PFADE: [Auftrag['method'], RegExp][] = [
   ['GET', /^\/patients\?[\w%=&.+-]{0,300}$/],
+  ['GET', /^\/patients\/\d{1,9}$/],
   ['GET', /^\/patients\/\d{1,9}\/(clinical|hkps)$/],
   ['GET', /^\/patients\/\d{1,9}\/hkps\/\d{1,5}\/planr$/],
   ['POST', /^\/patients\/\d{1,9}\/hkps(\/import)?$/],
   ['GET', /^\/praxis\/katalog$/],
+  ['GET', /^\/praxen$/],
 ]
 export const auftragErlaubt = (method: string, pfad: string) => PFADE.some(([m, re]) => m === method && re.test(pfad))
