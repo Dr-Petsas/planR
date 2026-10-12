@@ -218,6 +218,8 @@ body.hp-body {
 .hp-tier h3 { font-size: 22px; }
 .hp-preis { margin: 0; color: var(--hp-grau); }
 .hp-preis b { font-size: 40px; color: var(--hp-text); letter-spacing: -0.02em; }
+.hp-volumen { margin: 4px 0 0; color: var(--hp-grau); }
+.hp-volumen b { color: var(--hp-mint); font-size: 18px; }
 .hp-tier ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; flex: 1; color: #c6dad9; }
 .hp-tier li { padding-left: 26px; position: relative; }
 .hp-tier li::before { content: "✓"; position: absolute; left: 0; color: var(--hp-mint); font-weight: 800; }

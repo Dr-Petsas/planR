@@ -44,6 +44,9 @@ function umsatz(r: Regler): number {
 
 const euro = (n: number) => `${Math.round(n).toLocaleString('de-DE')} €`
 const komma = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+const PRO_PLAN = 1.59
+const kosten = (plaene: number) => PLANR + plaene * PRO_PLAN
 
 const HTML = `
 <div class="hp">
@@ -207,7 +210,7 @@ const HTML = `
           <input type="range" min="5" max="80" step="1" data-regler="plaene"></label>
         <div class="hp-monat">
           <div><small>Mehrumsatz im Monat</small><b data-monat>0 €</b></div>
-          <div><small>PlanR kostet</small><b>${PLANR} €</b></div>
+          <div><small>PlanR kostet</small><b data-kosten>${cent(kosten(20))}</b></div>
         </div>
         <p class="hp-roi" data-roi></p>
         <button class="hp-link" type="button" data-zurueck>Regler zurücksetzen</button>
@@ -275,7 +278,7 @@ const HTML = `
       </div>
       <div class="hp-vs-neu">
         <h3>Heute: PlanR</h3>
-        <ul><li>Feste ${PLANR} € im Monat, so viele Pläne du willst</li><li>Fertig, während der Patient noch im Stuhl sitzt</li><li>Deine Regler, dein Umsatz</li><li>Hosting in Deutschland, DSGVO-konform</li></ul>
+        <ul><li>${PLANR} € im Monat und ${cent(PRO_PLAN)} je Plan</li><li>Fertig, während der Patient noch im Stuhl sitzt</li><li>Deine Regler, dein Umsatz</li><li>Hosting in Deutschland, DSGVO-konform</li></ul>
       </div>
     </div>
   </section>
@@ -290,6 +293,7 @@ const HTML = `
       <article class="hp-tier">
         <h3>PlanR</h3>
         <p class="hp-preis"><b>${PLANR} €</b> / Monat</p>
+        <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
         <ul><li>Alle Planer: ZE, Implantologie, PAR, KB, KFO, Kons</li><li>Umsatz-Regler und Begründungen</li><li>Eigene Preislisten und Eigenlabor</li><li>PVS-Anbindung über die PlanR-Bridge</li><li>Freigabe am Handy</li></ul>
         <a class="hp-knopf" href="#kontakt">PlanR buchen</a>
       </article>
@@ -297,13 +301,15 @@ const HTML = `
         <span class="hp-band-tag">Beliebt</span>
         <h3>PlanR + Sprach-KI</h3>
         <p class="hp-preis"><b>${PLANR + 49} €</b> / Monat</p>
+        <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
         <ul><li>Alles aus PlanR</li><li>Clara als Sprach-App am Handy</li><li>Pläne per Sprache anlegen und ändern</li><li>Kopplung per QR-Code, ohne Installation am PC</li></ul>
         <a class="hp-knopf hp-knopf-voll" href="#kontakt">Mit Sprach-KI buchen</a>
       </article>
       <article class="hp-tier">
         <h3>Pickadoc MAS</h3>
         <p class="hp-preis"><b>PlanR inklusive</b></p>
-        <ul><li>Volle Clara als Leitstelle deiner Praxis</li><li>Acht KI-Spezialistinnen: Telefon, Recall, Post, QM, Doku, Abrechnung</li><li>PlanR direkt in Sophie, ohne zweite Anmeldung</li></ul>
+        <p class="hp-volumen"><b>Unbegrenzt</b> Pläne erstellen</p>
+        <ul><li>Volle Clara als Leitstelle deiner Praxis</li><li>Acht KI-Spezialistinnen: Telefon, Recall, Post, QM, Doku, Abrechnung</li><li>PlanR direkt in Sophie, ohne zweite Anmeldung</li><li>Unbegrenzt Pläne, ohne Preis je Plan</li></ul>
         <a class="hp-knopf" href="https://pickadoc.ai" target="_blank" rel="noopener">Auf pickadoc.ai ansehen</a>
       </article>
     </div>
@@ -490,8 +496,10 @@ function spielwieseStarten(wurzel: HTMLElement) {
     feld('[data-meter]').style.width = `${Math.round(((u - basis) / (max - basis)) * 100)}%`
     const monat = plus * r.plaene
     feld('[data-monat]').textContent = euro(monat)
-    feld('[data-roi]').textContent = monat > PLANR
-      ? `PlanR hat sich ${Math.floor(monat / PLANR).toLocaleString('de-DE')}-fach bezahlt gemacht.`
+    const preis = kosten(r.plaene)
+    feld('[data-kosten]').textContent = cent(preis)
+    feld('[data-roi]').textContent = monat > preis
+      ? `PlanR hat sich ${Math.floor(monat / preis).toLocaleString('de-DE')}-fach bezahlt gemacht.`
       : ''
     const hinweis = r.faktor > 2.3 ? 'Über 2,3: PlanR schlägt die Begründung je Position vor (§ 10 GOZ).'
       : r.privat > 0 ? 'Privatanteil: PlanR erstellt die Mehrkostenvereinbarung gleich mit.'
