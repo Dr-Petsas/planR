@@ -654,10 +654,11 @@ code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem
 <p>Der Agent verbindet DS-Win bzw. DENS auf dem Praxisserver mit PlanR. Er baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Python ist im Paket enthalten.</p>
 <p><a class="knopf" href="/download/PlanR-Agent.zip" download>PlanR-Agent.zip herunterladen</a></p>
 <h2>Einrichten (einmal, auf dem Server mit DS-Win bzw. DENS)</h2>
+<p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden. Geht auch an einem Arbeitsplatz-PC, der dauerhaft läuft; dann fragt die Installation nach einem Windows-Konto, das die Freigabe öffnen darf.</p>
 <ol>
-<li>ZIP auf den Server laden und entpacken.</li>
+<li>ZIP auf den Rechner laden und entpacken.</li>
 <li><code>Installieren.cmd</code> doppelklicken und die Admin-Abfrage bestätigen.</li>
-<li>Mandant und Agenten-Schlüssel eingeben (bekommen Sie von pickadoc).</li>
+<li>Mandant und Agenten-Schlüssel eingeben (bekommen Sie von pickadoc). Findet die Installation DS-Win nicht selbst, fragt sie nach dem Ordner (z. B. <code>D:\\TDAMP\\DS</code> oder <code>\\\\SERVER\\TDAMP\\DS</code>).</li>
 <li>Das Fenster meldet „Connector bereit“ und „PlanR verbunden“ – fertig. Der Dienst „PlanR-Agent“ startet ab jetzt mit dem Server.</li>
 </ol>
 <h2>An jedem Praxis-PC</h2>
