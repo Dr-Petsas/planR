@@ -81,7 +81,7 @@ body.hp-body {
 .hp-verlauf { background: linear-gradient(100deg, var(--hp-mint), #8ff3ff 55%, var(--hp-gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hp-lead { font-size: clamp(17px, 1.6vw, 20px); color: #c9dcdc; max-width: 40em; margin: 22px 0 14px; }
 .hp-gestern { font-size: 18px; font-weight: 650; margin: 0 0 30px; }
-.hp-gestern s { color: var(--hp-grau); text-decoration-color: #ff7a6b; text-decoration-thickness: 3px; }
+.hp-gestern s { color: #d6e4e4; text-decoration-color: rgba(255, 122, 107, 0.7); text-decoration-thickness: 1.5px; }
 .hp-ctas { display: flex; flex-wrap: wrap; gap: 12px; }
 .hp-klein { margin-top: 18px; font-size: 14px; color: var(--hp-grau); }
 
