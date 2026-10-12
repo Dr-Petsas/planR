@@ -1192,7 +1192,7 @@ function aussteller(): Aussteller {
   const e = (k: string) => process.env[k]?.trim() ?? ''
   return {
     name: 'Pickadoc GmbH',
-    anschrift: (e('PLANR_RECHNUNG_ANSCHRIFT') || 'Oststraße 34a|40211 Düsseldorf').split('|').map((s) => s.trim()).filter(Boolean),
+    anschrift: (e('PLANR_RECHNUNG_ANSCHRIFT') || 'Medical Center · c/o Dr. Petsas|Luise-Rainer-Str. 6–10|40235 Düsseldorf').split('|').map((s) => s.trim()).filter(Boolean),
     ustId: e('PLANR_RECHNUNG_USTID'),
     steuernummer: e('PLANR_RECHNUNG_STEUERNR'),
     register: 'Geschäftsführer: Dr. Michael Petsas · Amtsgericht Düsseldorf, HRB 99537',

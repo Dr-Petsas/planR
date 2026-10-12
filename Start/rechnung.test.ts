@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { abrechnen, leeresZaehlwerk, monatMerken, naechsteNummer, planeImMonat, rechnungErstellen, rechnungHtml, zaehlwerkAktualisieren, type Aussteller, type Gesehen } from './rechnung'
 
 const g = (nummer: string, datum: string, extra: Partial<Gesehen> = {}): Gesehen => ({ modul: 'hkp', kuerzel: 'HKP', art: 'Kasse', nummer, datum, ...extra })
-const AUS: Aussteller = { name: 'Pickadoc GmbH', anschrift: ['Oststraße 34a', '40211 Düsseldorf'], ustId: 'DE123456789', steuernummer: '', register: 'Amtsgericht Düsseldorf · HRB 99537', glaeubigerId: 'DE98ZZZ09999999999', email: 'info@pickadoc.de', telefon: '0211 3029 3035' }
+const AUS: Aussteller = { name: 'Pickadoc GmbH', anschrift: ['Medical Center · c/o Dr. Petsas', 'Luise-Rainer-Str. 6–10', '40235 Düsseldorf'], ustId: 'DE123456789', steuernummer: '', register: 'Amtsgericht Düsseldorf · HRB 99537', glaeubigerId: 'DE98ZZZ09999999999', email: 'info@pickadoc.de', telefon: '0211 3029 3035' }
 
 describe('Zählwerk', () => {
   it('erster Lauf: alles Vorhandene ist Altbestand und wird nie berechnet', () => {
