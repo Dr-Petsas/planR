@@ -330,14 +330,14 @@ const HTML = `
       <p>Die Online-Buchung startet in Kürze. Bis dahin richten wir PlanR persönlich ein – meist noch am selben Tag.</p>
     </div>
     <div class="hp-kontakt-wege">
-      <a class="hp-knopf hp-knopf-voll" href="mailto:dr.petsas@pickadoc.de?subject=PlanR%20buchen">E-Mail schreiben</a>
-      <a class="hp-knopf" href="tel:+4921130293029">0211 3029 3029</a>
+      <a class="hp-knopf hp-knopf-voll" href="mailto:info@pickadoc.de?subject=PlanR%20buchen">E-Mail schreiben</a>
+      <a class="hp-knopf" href="tel:+4921130293035">0211 3029 3035</a>
       <a class="hp-knopf" href="https://wa.me/491776004600" target="_blank" rel="noopener">WhatsApp</a>
     </div>
   </section>
 
   <footer class="hp-fuss">
-    <div><b>Pickadoc GmbH</b><br>Oststr. 34a, 40211 Düsseldorf</div>
+    <address><b>Pickadoc GmbH</b><br>Medical Center · c/o Dr. Petsas<br>Luise-Rainer-Str. 6–10, 40235 Düsseldorf<br><a href="tel:+4921130293035">0211 3029 3035</a> · <a href="mailto:info@pickadoc.de">info@pickadoc.de</a></address>
     <nav>
       <a href="https://pickadoc.ai/impressum.html" target="_blank" rel="noopener">Impressum</a>
       <a href="https://pickadoc.ai/datenschutz.html" target="_blank" rel="noopener">Datenschutz</a>

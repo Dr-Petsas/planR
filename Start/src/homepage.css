@@ -17,7 +17,7 @@ body.hp-body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--hp-text);
   line-height: 1.55;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 .hp *, .hp *::before, .hp *::after { box-sizing: border-box; }
 .hp a { color: inherit; }
@@ -229,6 +229,7 @@ body.hp-body {
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px;
   padding: 30px clamp(16px, 4vw, 48px); border-top: 1px solid var(--hp-linie); color: var(--hp-grau); font-size: 14px;
 }
+.hp-fuss address { font-style: normal; line-height: 1.7; }
 .hp-fuss nav { display: flex; flex-wrap: wrap; gap: 20px; }
 .hp-fuss a { text-decoration: none; }
 .hp-fuss a:hover { color: var(--hp-text); }
