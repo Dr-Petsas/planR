@@ -14,10 +14,14 @@ const AKTIV_FELD: Record<ListenTyp, keyof Einstellungen> = {
   bema: 'bemaListe', goz: 'gozListe', bel2: 'belListe', beb: 'bebListe', festzuschuss: 'fzListe',
 }
 
-type Spalte = { feld: string; titel: string; zahl?: boolean; breit?: boolean }
+/** `leer`: Feld darf fehlen (leer = Vorgabe aus den Einstellungen) */
+type Spalte = { feld: string; titel: string; zahl?: boolean; breit?: boolean; leer?: boolean }
 const SPALTEN: Record<ListenTyp, Spalte[]> = {
   bema: [{ feld: 'nr', titel: 'Nr.' }, { feld: 'text', titel: 'Leistung', breit: true }, { feld: 'punkte', titel: 'Punkte', zahl: true }],
-  goz: [{ feld: 'nr', titel: 'Nr.' }, { feld: 'text', titel: 'Leistung', breit: true }, { feld: 'punkte', titel: 'Punkte', zahl: true }],
+  goz: [
+    { feld: 'nr', titel: 'Nr.' }, { feld: 'kuerzel', titel: 'Kürzel' }, { feld: 'text', titel: 'Leistung', breit: true },
+    { feld: 'punkte', titel: 'Punkte', zahl: true }, { feld: 'faktor', titel: 'Faktor ab', zahl: true, leer: true },
+  ],
   bel2: [{ feld: 'nr', titel: 'BEL-Nr.' }, { feld: 'text', titel: 'Leistung', breit: true }, { feld: 'gewerbe', titel: 'Gewerbelabor €', zahl: true }, { feld: 'praxis', titel: 'Praxislabor €', zahl: true }],
   beb: [{ feld: 'nr', titel: 'BEB-Nr.' }, { feld: 'text', titel: 'Leistung', breit: true }, { feld: 'preis', titel: 'Preis €', zahl: true }],
   festzuschuss: [
@@ -71,7 +75,7 @@ export function Preislisten({ einstellungen, setAktiv, verwendet }: Props) {
     const q = suche.trim().toLowerCase()
     return liste.eintraege
       .map((e, i) => ({ e, i }))
-      .filter(({ e }) => !q || `${e.nr} ${e.text}`.toLowerCase().includes(q))
+      .filter(({ e }) => !q || `${e.nr} ${'kuerzel' in e ? e.kuerzel ?? '' : ''} ${e.text}`.toLowerCase().includes(q))
   }, [liste, suche])
 
   if (!liste) return <p>Keine Preislisten vorhanden.</p>
@@ -284,8 +288,10 @@ export function Preislisten({ einstellungen, setAktiv, verwendet }: Props) {
                         <input
                           className="r"
                           key={`${liste.id}-${i}-${s.feld}-${lesen(e, s.feld)}`}
-                          defaultValue={zahlDe(lesen(e, s.feld) as number)}
+                          defaultValue={s.leer && !lesen(e, s.feld) ? '' : zahlDe(lesen(e, s.feld) as number)}
+                          placeholder={s.leer ? 'Vorgabe' : undefined}
                           onBlur={(ev) => {
+                            if (s.leer && !ev.target.value.trim()) return lesen(e, s.feld) !== undefined && eintragAendern(i, s.feld, undefined)
                             const n = eingabeZahl(ev.target.value)
                             if (!Number.isNaN(n) && n !== lesen(e, s.feld)) eintragAendern(i, s.feld, n)
                           }}

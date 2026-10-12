@@ -9,6 +9,8 @@ import { mk } from '../mandant'
 import { aktuell, zusaetzliche } from '../daten'
 
 const SPEICHER_KEY = mk('hkp.preislisten.v1')
+/** GOZ 2012 plus Kürzel, Faktoren und eigene Positionen aus dem PVS (store/praxiskatalog); gilt statt goz-2012 */
+export const PRAXIS_GOZ_ID = 'goz-praxis'
 
 /** Jahres- und KZV-Listen, die der Aktualisierungsdienst (tools/listen-aktualisieren.ts) in src/data ablegt */
 const DATEIEN = import.meta.glob<Preisliste>(['../data/bel/*.json', '../data/fz/*.json', '../data/bema/*.json'], { eager: true, import: 'default' })
@@ -188,7 +190,8 @@ export function listenFuerPlan(alle: Preisliste[], plan: Pick<HkpPlan, 'verwaltu
   const e = plan.einstellungen
   const ort = { kzv: kzvBereich(e), stichtag: stichtag(plan) }
   const bema = listeWaehlen(alle, 'bema', e.bemaListe, ort)
-  const goz = listeWaehlen(alle, 'goz', e.gozListe, ort)
+  const gozId = e.gozListe === 'goz-2012' && alle.some((l) => l.id === PRAXIS_GOZ_ID) ? PRAXIS_GOZ_ID : e.gozListe
+  const goz = listeWaehlen(alle, 'goz', gozId, ort)
   const bel = listeWaehlen(alle, 'bel2', e.belListe, ort)
   const beb = listeWaehlen(alle, 'beb', e.bebListe, ort)
   const fz = listeWaehlen(alle, 'festzuschuss', e.fzListe, ort)

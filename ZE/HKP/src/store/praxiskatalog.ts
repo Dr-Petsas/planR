@@ -4,7 +4,7 @@ import type { EigenPosition } from '../engine/eigenlabor'
 import { MANDANT_ID, mk } from '../mandant'
 import { datenBasen } from '../daten'
 import { eigenlaborLesen, eigenlaborSpeichern } from './eigenlabor'
-import { getListen, listeLoeschen, listeSpeichern, STANDARD_LISTEN } from './preislisten'
+import { getListen, listeLoeschen, listeSpeichern, PRAXIS_GOZ_ID, STANDARD_LISTEN } from './preislisten'
 
 /**
  * Preise & Positionen aus dem PVS der Praxis (PlanR-Übersicht → Einstellungen, /api/praxiskatalog):
@@ -34,7 +34,6 @@ interface Stand {
   komplexe: Komplex[]
 }
 
-export const PRAXIS_GOZ_ID = 'goz-praxis'
 const kennung = (k: PraxisKatalog) => `${k.stand}|${JSON.stringify(k.wahl ?? null)}`
 const SPEICHER_KEY = mk('hkp.praxiskatalog.v1')
 

@@ -225,7 +225,7 @@ export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): B
         const einzel = p.preis ?? e.betrag
         return { ...basis, bezeichnung: p.text || e.text, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
       }
-      const eigen = p.faktor ?? e?.faktor ?? plan.einstellungen.gozFaktor
+      const eigen = p.faktor ?? (e?.faktor || plan.einstellungen.gozFaktor)
       const regler = Math.min(plan.einstellungen.honorarFaktor || 0, GOZ_HOECHSTSATZ)
       const faktor = Math.max(eigen, regler)
       // § 5 Abs. 1 GOZ: Rundung erst nach Multiplikation mit dem Steigerungsfaktor
@@ -249,12 +249,13 @@ export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): B
       const labor = laborVon(p, plan)
       const e = finden<BebEintrag>(listen.beb, p.nr, (s) => s.trim().padStart(4, '0'))
       const eigen = labor === 'eigen' || !e ? eigenFinden(mitDigital(listen.eigen), p.nr) : undefined
+      // Der Regler hebt nur an: der Preis der Praxis bzw. der BEB-Liste ist seine Untergrenze.
+      const aufschlag = labor === 'eigen' ? Math.min(Math.max(0, plan.einstellungen.eigenPrivatAufschlag || 0), BEB_AUFSCHLAG_MAX) : 0
       if (eigen) {
-        const einzel = p.preis ?? eigen.preis
+        const einzel = p.preis ?? runden(eigen.preis * (1 + aufschlag / 100))
         return { ...basis, labor, eigen: eigen.nr, bezeichnung: p.text || eigen.text, listenpreis: eigen.preis, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
       }
       if (!e && p.preis === undefined) return { ...basis, labor, fehler: `BEB-Nr. ${p.nr} nicht in der Liste` }
-      const aufschlag = labor === 'eigen' ? Math.min(Math.max(0, plan.einstellungen.eigenPrivatAufschlag || 0), BEB_AUFSCHLAG_MAX) : 0
       const einzel = p.preis ?? runden(e!.preis * (1 + aufschlag / 100))
       const richtpreis = p.preis === undefined && e?.richtpreis ? { richtpreis: true } : {}
       return { ...basis, labor, bezeichnung: p.text || e?.text || '', listenpreis: e?.preis, einzelpreis: einzel, betrag: runden(einzel * anzahl), ...richtpreis }

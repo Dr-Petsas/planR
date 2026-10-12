@@ -67,7 +67,8 @@ export function EigenlaborKatalog({ katalog, onChange, bebText }: Props) {
           <p className="el-info">
             Eigene Arbeitsschritte mit eigenen Preisen (netto), die keine BEB-Position abdeckt. Sie gelten für Leistungen
             aus dem Eigenlabor und lassen sich wie BEB-Positionen hinzufügen. Gleiche Nummer wie eine BEB-Position oder ein Eintrag bei
-            „statt BEB-Nr.“ ersetzt deren Preis und Text – auch bei automatisch geplanten Positionen, ohne BEB-Aufschlag.
+            „statt BEB-Nr.“ ersetzt deren Preis und Text – auch bei automatisch geplanten Positionen. Der Preis hier ist die Untergrenze;
+            der Aufschlag-Regler (Eigenlabor, Privat) hebt ihn an.
             Rechtlicher Rahmen: § 9 GOZ (tatsächlich entstandene, angemessene Kosten); die Rechnung muss jede Leistung mit Bezeichnung und Preis ausweisen.
           </p>
           {pvs && (
@@ -157,8 +158,9 @@ export function EigenlaborKatalog({ katalog, onChange, bebText }: Props) {
                     </td>
                     <td>
                       <input className="el-nr" value={e.ersetzt ?? ''} placeholder="–" onChange={(ev) => aendern(i, { ersetzt: ev.target.value.trim() || undefined })} />
-                      {e.ersetzt?.trim() && <span className={`el-klein ${ersetzt ? '' : 'el-fehler-text'}`}> {ersetzt ?? 'nicht in der BEB-Liste'}</span>}
+                      {e.ersetzt?.trim() && (ersetzt || e.quelle !== 'pvs') && <span className={`el-klein ${ersetzt ? '' : 'el-fehler-text'}`}> {ersetzt ?? 'nicht in der BEB-Liste'}</span>}
                       {gleich && <span className="el-klein"> ersetzt BEB {e.nr}: {gleich}</span>}
+                      {e.quelle === 'pvs' && <span className="el-klein" title="Aus dem Praxisprogramm übernommen; der nächste Abgleich ersetzt diese Zeile.">{ersetzt || gleich ? ' · ' : ' '}aus {pvs?.pvs ?? 'PVS'}</span>}
                     </td>
                     <td className="aktionen"><Tonne titel={`Eigenlabor-Position ${e.nr} löschen`} onClick={() => {
                       onChange(katalog.filter((_, j) => j !== i))
