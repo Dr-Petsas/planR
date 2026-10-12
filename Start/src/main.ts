@@ -531,6 +531,7 @@ function zeichnen() {
         <button type="button" class="konto-knopf" data-abmelden title="${esc(ich.konto.email)} – abmelden">${esc(ich.konto.name || ich.konto.email)}<small>Abmelden</small></button>
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
+        ${ich.konto.admin && ich.abo === 'planr' ? '<button type="button" class="import-knopf" data-rechnungen title="Ihr PlanR-Abo: laufender Monat und alle Rechnungen"><span>Rechnungen</span></button>' : ''}
         <button type="button" class="import-knopf" data-einstellungen title="PVS, Bridge und Benutzer einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
         <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen: neuen HKP erstellen oder vorhandenen übernehmen` : 'Patient suchen und neuen HKP erstellen'}">${LUPE}<span>Patientensuche</span></button>
         <button type="button" class="neu-knopf" data-neu>Neuen Plan erstellen</button>
@@ -615,6 +616,7 @@ function zeichnen() {
   })
   app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => void einrichtungZeigen())
   app.querySelector<HTMLButtonElement>('[data-clara-dialog]')?.addEventListener('click', () => void claraZeigen())
+  app.querySelector<HTMLButtonElement>('[data-rechnungen]')?.addEventListener('click', () => void rechnungenZeigen())
   app.querySelector<HTMLButtonElement>('[data-abmelden]')!.addEventListener('click', () => {
     if (confirm(`${ich.konto.email} auf diesem Gerät abmelden?`)) void abmelden()
   })
@@ -751,6 +753,11 @@ async function claraZeigen() {
   claraOeffnen({ admin: ich.konto.admin, stand, geaendert: (n) => { assistentin = n; zeichnen() } })
 }
 
+async function rechnungenZeigen() {
+  const { rechnungenOeffnen } = await import('./rechnungen')
+  await rechnungenOeffnen({ patient: (modul, nummer) => plaene.find((p) => p.modul === modul && p.nummer === nummer)?.patient ?? '' })
+}
+
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
 /** Ohne Anmeldung: Startseite für Besucher, #anmelden zeigt die Anmeldung */
@@ -793,7 +800,8 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   }
   // Neue Praxis ohne Praxissystem: Assistent startet von selbst (einmal je Tab), #einrichtung öffnet ihn jederzeit
   const neu = ich.konto.admin && !einstellungen.pvs && !sessionStorage.getItem('planr-einrichtung')
-  if (location.hash === '#einrichtung' || neu) {
+  if (location.hash === '#rechnungen' && ich.konto.admin && ich.abo === 'planr') void rechnungenZeigen()
+  else if (location.hash === '#einrichtung' || neu) {
     sessionStorage.setItem('planr-einrichtung', '1')
     void einrichtungZeigen()
   }

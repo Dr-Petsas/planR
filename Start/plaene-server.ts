@@ -12,7 +12,7 @@ import { PVS_CONNECTOR, PVS_SUCHE, hkpFuerPvs, patientWaehlen, vermerkText, type
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
 } from './pvs-agent-server.ts'
-import { buchungPruefen, infoMail, kundenMail, type Buchung } from './buchung.ts'
+import { buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, mandantVon, neuesToken, registerVon,
@@ -21,6 +21,11 @@ import {
 } from './anmeldung.ts'
 import { spawn } from 'node:child_process'
 import { stammdatenAusPvs } from './pvsPatient.ts'
+import {
+  UST_SATZ, abrechnen, ausstellerVollstaendig, euroText, leeresZaehlwerk, monatMerken, monatVon, monatsname, naechsteNummer, rechnungErstellen, rechnungHtml,
+  zaehlwerkAktualisieren, type Aussteller, type Empfaenger, type Gesehen, type Rechnung, type Zaehlwerk,
+} from './rechnung.ts'
+import type { Paket } from './src/paket.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
@@ -188,6 +193,7 @@ const werInfo = (w: Wer, z: Zugaenge) => ({
   praxen: w.praxen,
   praxisNamen: Object.fromEntries((z.mandanten[w.konto.clientId]?.praxen ?? []).map((p) => [p.nummer, p.name ?? `Praxis ${p.nummer}`])),
   clara: berechtigungen.get(w.konto.clientId)?.b.clara ?? 'aus',
+  abo: ((b) => (b?.mas ? 'mas' : b?.planr ? 'planr' : ''))(berechtigungen.get(w.konto.clientId)?.b),
 })
 
 /** GET: wer bin ich · POST {email, passwort}: anmelden · DELETE: abmelden */
@@ -1169,6 +1175,160 @@ async function claraEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
   json(res, 405, { ok: false })
 }
 
+// ---------- Rechnungen (PlanR-Kunden ohne MAS, rechnung.ts) ----------
+
+const ZAEHLWERK = (m: string) => `${ORDNER}/mandanten/${m}/zaehlwerk.json`
+const RECHNUNGEN = (m: string) => `${ORDNER}/mandanten/${m}/rechnungen.json`
+const RECHNUNGSLAUF = `${ORDNER}/rechnungsnummern.json`
+
+let rechnungKette: Promise<unknown> = Promise.resolve()
+function rechnungExklusiv<T>(fn: () => Promise<T>): Promise<T> {
+  const lauf = rechnungKette.then(fn, fn)
+  rechnungKette = lauf.then(() => undefined, () => undefined)
+  return lauf
+}
+
+function aussteller(): Aussteller {
+  const e = (k: string) => process.env[k]?.trim() ?? ''
+  return {
+    name: 'Pickadoc GmbH',
+    anschrift: (e('PLANR_RECHNUNG_ANSCHRIFT') || 'Oststraße 34a|40211 Düsseldorf').split('|').map((s) => s.trim()).filter(Boolean),
+    ustId: e('PLANR_RECHNUNG_USTID'),
+    steuernummer: e('PLANR_RECHNUNG_STEUERNR'),
+    register: 'Geschäftsführer: Dr. Michael Petsas · Amtsgericht Düsseldorf, HRB 99537',
+    glaeubigerId: e('PLANR_GLAEUBIGER_ID'),
+    email: 'info@pickadoc.de',
+    telefon: '0211 3029 3035',
+  }
+}
+
+/** Buchung der Praxis: fest zugeordnet (zugaenge.json mandanten[clientId].buchung), sonst über die E-Mail eines ihrer Konten */
+async function buchungFuer(z: Zugaenge, clientId: string): Promise<Buchung | null> {
+  const alle = await jsonLesen<Buchung[]>(BUCHUNGEN, [])
+  const liste = Array.isArray(alle) ? alle : []
+  const fest = (z.mandanten[clientId] as { buchung?: unknown } | undefined)?.buchung
+  if (typeof fest === 'string' && fest) return liste.find((b) => b.id === fest) ?? null
+  const mails = new Set(Object.values(z.benutzer).filter((b) => b.clientId === clientId).map((b) => b.email.toLowerCase()))
+  const passend = liste.filter((b) => mails.has(String(b.pickadocKonto ?? '').toLowerCase()) || mails.has(String(b.inhaber?.email ?? '').toLowerCase()))
+  return passend.sort((a, b) => b.eingang.localeCompare(a.eingang))[0] ?? null
+}
+
+const empfaengerAus = (b: Buchung): Empfaenger => ({
+  praxis: b.praxis.name,
+  zuHaenden: [b.inhaber.anrede, b.inhaber.titel, b.inhaber.vorname, b.inhaber.nachname].filter(Boolean).join(' '),
+  strasse: b.praxis.strasse,
+  plzOrt: `${b.praxis.plz} ${b.praxis.ort}`,
+  ustId: b.praxis.ustId,
+  email: b.praxis.email,
+  mandatsreferenz: b.sepa.mandatsreferenz,
+  iban: ibanVerdeckt(b.sepa.iban),
+})
+
+/** Alle Pläne des Mandanten (alle Praxen) fürs Zählwerk; HKPs nur, wenn MAS antwortet */
+async function planeFuerZaehlwerk(m: string, register: string): Promise<Gesehen[] | null> {
+  const lokal = (await dateiLesen(m)).filter((k) => k.modul !== 'hkp').map((k) => ({ modul: k.modul, kuerzel: k.kuerzel, art: k.art, nummer: k.nummer, datum: k.geaendert }))
+  const r = await masPlanr({ register } as Wer, '/hkp').catch(() => null)
+  if (!r?.ok || !Array.isArray(r.daten.hkps)) return null
+  const hkps = (r.daten.hkps as { id?: unknown; status?: unknown; erstellt?: unknown; aktualisiert?: unknown }[])
+    .filter((h) => typeof h.id === 'string' && h.id)
+    .map((h) => ({ modul: 'hkp', kuerzel: 'HKP', art: 'Kasse', nummer: String(h.id), datum: String(h.erstellt ?? h.aktualisiert ?? ''), verworfen: h.status === 'verworfen' }))
+  return [...lokal, ...hkps]
+}
+
+interface RechnungStand { aktiv: boolean; z?: Zaehlwerk; paket?: Paket; rechnungen?: Rechnung[]; hinweise?: string[] }
+
+/** Zählwerk nachführen und abgelaufene Monate abrechnen. Nur PlanR-Abo ohne MAS. */
+async function abrechnungPflegen(clientId: string, jetzt = new Date()): Promise<RechnungStand> {
+  const b = await berechtigung(clientId)
+  if (!b || !b.planr || b.mas) return { aktiv: false }
+  const paket: Paket = b.clara === 'planr' ? 'planr_clara' : 'planr'
+  return rechnungExklusiv(async () => {
+    const zg = await zugaengeLesen()
+    const m = mandantVon(zg, { clientId })
+    const roh = await jsonLesen<Zaehlwerk | null>(ZAEHLWERK(m), null)
+    const neu = !roh?.seit
+    const z: Zaehlwerk = neu ? leeresZaehlwerk(jetzt) : { seit: roh.seit, plaene: roh.plaene ?? {}, monate: roh.monate ?? {} }
+    const hinweise: string[] = []
+    const gesehen = await planeFuerZaehlwerk(m, registerVon(zg, { clientId }))
+    if (!gesehen) hinweise.push('Das HKP-Register war gerade nicht erreichbar – neue HKPs werden beim nächsten Abgleich gezählt.')
+    let geaendert = gesehen ? zaehlwerkAktualisieren(z, gesehen, jetzt, neu) : false
+    geaendert = monatMerken(z, monatVon(jetzt.toISOString()), paket) || geaendert || neu
+    if (geaendert && (gesehen || !neu)) await jsonSchreiben(ZAEHLWERK(m), z)
+
+    const rechnungen = await jsonLesen<Rechnung[]>(RECHNUNGEN(m), [])
+    const offen = Object.keys(z.monate).filter((mo) => mo < monatVon(jetzt.toISOString()) && !rechnungen.some((r) => r.monat === mo)).sort()
+    if (offen.length && process.env.PLANR_RECHNUNGEN === '1') {
+      const a = aussteller()
+      const buchung = await buchungFuer(zg, clientId)
+      if (!ausstellerVollstaendig(a)) hinweise.push('Rechnungen werden erstellt, sobald die Steuernummer der Pickadoc GmbH hinterlegt ist.')
+      else if (!buchung) hinweise.push('Ihre Buchung ist noch keiner Praxis zugeordnet – wir melden uns.')
+      else {
+        for (const mo of offen) {
+          const lauf = await jsonLesen<Record<string, number>>(RECHNUNGSLAUF, {})
+          const n = naechsteNummer(lauf, String(jetzt.getFullYear()))
+          await jsonSchreiben(RECHNUNGSLAUF, n.lauf)
+          const r = rechnungErstellen(abrechnen(z, mo, z.monate[mo].paket), { nummer: n.nummer, jetzt, mandant: m, clientId, buchung: buchung.id, aussteller: a, empfaenger: empfaengerAus(buchung) })
+          rechnungen.push(r)
+          await jsonSchreiben(RECHNUNGEN(m), rechnungen)
+          void rechnungMelden(r)
+        }
+      }
+    }
+    return { aktiv: true, z, paket, rechnungen, hinweise }
+  })
+}
+
+async function rechnungMelden(r: Rechnung) {
+  const text = [
+    `Guten Tag${r.empfaenger.zuHaenden ? ` ${r.empfaenger.zuHaenden}` : ''},`, '',
+    `Ihre PlanR-Rechnung ${r.nummer} für ${monatsname(r.monat)} über ${euroText(r.bruttoCent)} (inkl. ${UST_SATZ} % USt.) liegt in PlanR unter „Rechnungen“ bereit:`,
+    'https://planr.pickadoc.de/#rechnungen', '',
+    `Den Betrag ziehen wir am ${r.einzug.split('-').reverse().join('.')} per SEPA-Lastschrift ein (Mandatsreferenz ${r.empfaenger.mandatsreferenz}). Diese Nachricht ist zugleich die Vorabankündigung.`, '',
+    'Ihr PlanR-Team der Pickadoc GmbH', '0211 3029 3035 · info@pickadoc.de',
+  ].join('\n')
+  const betreff = `PlanR-Rechnung ${r.nummer} – ${monatsname(r.monat)}`
+  await Promise.all([
+    r.empfaenger.email ? mailSenden(ORDNER, { an: r.empfaenger.email, betreff, text, antwortAn: infoAdresse() }) : Promise.resolve(false),
+    mailSenden(ORDNER, { an: infoAdresse(), betreff: `[Kopie] ${betreff} · ${r.empfaenger.praxis}`, text }),
+  ]).catch((e) => console.error('[planr] Rechnung', r.nummer, 'Mail', e))
+}
+
+/** GET /api/rechnungen: laufender Monat + alle Rechnungen · GET /api/rechnungen/<nummer>: Druckansicht. Nur Praxis-Admins. */
+async function rechnungenEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Rechnungen sehen nur Praxis-Admins.' })
+  const s = await abrechnungPflegen(w.konto.clientId)
+  if (!s.aktiv || !s.z || !s.paket) return json(res, 200, { ok: true, aktiv: false })
+  const nummer = decodeURIComponent(url.slice('/api/rechnungen/'.length))
+  if (url.startsWith('/api/rechnungen/')) {
+    const r = s.rechnungen?.find((x) => x.nummer === nummer)
+    if (!r) return json(res, 404, { ok: false })
+    res.statusCode = 200
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'")
+    return void res.end(rechnungHtml(r))
+  }
+  const monat = monatVon(new Date().toISOString())
+  json(res, 200, {
+    ok: true, aktiv: true, hinweise: s.hinweise ?? [],
+    laufend: abrechnen(s.z, monat, s.paket),
+    seit: s.z.seit,
+    rechnungen: (s.rechnungen ?? []).map((r) => ({ nummer: r.nummer, monat: r.monat, datum: r.datum, einzug: r.einzug, bruttoCent: r.bruttoCent, plaene: r.plaene.length })).reverse(),
+  })
+}
+
+// Monatslauf nur auf dem Server, der die Kunden betreut (Strato: PLANR_RECHNUNGEN=1), nie zusätzlich am Praxis-PC
+if (process.env.PLANR_RECHNUNGEN === '1') {
+  const lauf = async () => {
+    const z = await zugaengeLesen()
+    const ids = new Set([...Object.keys(z.mandanten), ...Object.values(z.benutzer).map((b) => b.clientId)].filter(Boolean))
+    for (const id of ids) await abrechnungPflegen(id).catch((e) => console.error('[planr] Abrechnung', id, e))
+  }
+  setTimeout(() => void lauf(), 60_000).unref()
+  setInterval(() => void lauf(), 15 * 60_000).unref()
+}
+
 const fehler500 = (res: ServerResponse) => (e: unknown) => {
   console.error('[planr]', e instanceof Error ? e.stack : e)
   if (!res.headersSent) json(res, 500, { ok: false, meldung: 'Das hat gerade nicht geklappt.' })
@@ -1205,6 +1365,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
+  if (url === '/api/rechnungen' || /^\/api\/rechnungen\/PR-\d{4}-\d{4}$/.test(url)) return void rechnungenEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps' || url === '/api/pvs/patient') {
     if (req.method !== 'GET' || !eigeneSeite(req)) return json(res, 403, { ok: false })

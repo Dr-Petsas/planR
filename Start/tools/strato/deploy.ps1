@@ -53,7 +53,7 @@ if ($Daten) {
 
 $key = ((Get-Content F:\MAS-2\backend\.env) -match '^\s*PLANR_HKP_KEY\s*=' | Select-Object -First 1) -replace '^\s*PLANR_HKP_KEY\s*=\s*["'']?([^"''#]*).*', '$1'
 if (-not $key.Trim()) { throw 'PLANR_HKP_KEY fehlt in F:\MAS-2\backend\.env' }
-$umgebung = "PLANR_HKP_KEY=$($key.Trim())`nPLANR_MAS=https://mas.pickadoc-tunnel.com`nPLANR_DATEN=/srv/planr/data`nNODE_ENV=production`n"
+$umgebung = "PLANR_HKP_KEY=$($key.Trim())`nPLANR_MAS=https://mas.pickadoc-tunnel.com`nPLANR_DATEN=/srv/planr/data`nPLANR_RECHNUNGEN=1`nNODE_ENV=production`n"
 # Mailversand der Online-Buchung (SMTP, Gläubiger-ID) - liegt nur lokal in data\, nie im Repo
 $mail = Join-Path $wurzel 'Start\data\planr-mail.env'
 if (Test-Path $mail) {

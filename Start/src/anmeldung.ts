@@ -8,6 +8,8 @@ export interface Ich {
   praxisNamen: Record<string, string>
   /** Sprach-KI: volle Clara (MAS), HKP-Assistentin (PlanR mit Sprach-KI) oder keine */
   clara?: 'voll' | 'planr' | 'aus'
+  /** 'planr' = PlanR-Abo ohne MAS (eigene Rechnungen), 'mas' = über Pickadoc MAS */
+  abo?: 'planr' | 'mas' | ''
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
