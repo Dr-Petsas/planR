@@ -1379,10 +1379,9 @@ async function internPatienten(req: IncomingMessage, w: Wer, q: URLSearchParams,
   try {
     if (nummer) {
       const z = await rufen<PvsZeile>(`/patients/${nummer}`)
-      // Gesprochen "123", in DS-Win "00123": dann über die Suche, die auch die Nummer durchsucht
-      if (z.status === 404) return json(res, 200, { ok: true, pvs: c.name, patienten: (await suche(nummer)).filter((p) => Number(p.id) === Number(nummer)) })
-      if (!z.ok) return json(res, 502, { ok: false, meldung: `${c.name}: ${String((z.daten as { error?: unknown }).error ?? `HTTP ${z.status}`)}` })
-      return json(res, 200, { ok: true, pvs: c.name, patienten: [zeile({ ...z.daten, id: z.daten.id ?? nummer })] })
+      if (z.ok) return json(res, 200, { ok: true, pvs: c.name, patienten: [zeile({ ...z.daten, id: z.daten.id ?? nummer })] })
+      // Gesprochen "123", in DS-Win "00123" – oder ältere Bridge ohne Einzelabruf: die Suche durchsucht auch die Nummer
+      return json(res, 200, { ok: true, pvs: c.name, patienten: (await suche(nummer)).filter((p) => Number(p.id) === Number(nummer)) })
     }
     let patienten: ReturnType<typeof zeile>[] = []
     if (woerter.length) {
