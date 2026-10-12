@@ -1,14 +1,16 @@
 /**
  * Leistungsverzeichnisse der Praxis aus dem PVS (Connector-Route /praxis/katalog): Eigenlabor-Preise (BEB,
- * Materialkürzel), eigene GOZ-/Analogpositionen mit Kürzel und Faktor, private Kürzel und Leistungsketten.
+ * Materialkürzel), Kassen-Eigenlaborpreise (BEL), eigene GOZ-/Analogpositionen mit Kürzel und Faktor, private Kürzel und Leistungsketten.
  * Die Rohdaten bleiben gespeichert; welche Laborliste und Preisspalte gilt, wählt die Praxis in den Einstellungen.
  */
 
-export interface RohListe { nr: number; name: string; datei?: string; mitPreis: number[] }
+export interface RohListe { nr: number; name: string; datei?: string; mitPreis: number[]; art: 'BEL' | 'BEB' }
 export interface RohLabor {
   liste: number; code: string; text: string; preise: number[]; eigenlabor?: boolean
-  nr?: string; material?: string; werkstoff?: string
+  /** BEB-Nr. bzw. BEL-Nr. (4-stellig, '0010' = BEL 001 0) oder Materialart */
+  nr?: string; bel?: string; material?: string; werkstoff?: string
 }
+type Vorschlag = { liste: number; spalte: number; quelle?: string }
 export interface GozZeile {
   nr: string; text: string; punkte: number; eigen: boolean
   betrag?: number; kuerzel?: string; druckNr?: string; analogZu?: string; faktor?: number
@@ -17,25 +19,31 @@ export interface Komplex { kuerzel: string; text: string; positionen: { ebene: s
 export interface RohKatalog {
   pvs: string
   listen: RohListe[]
-  vorschlag?: { liste: number; spalte: number; quelle?: string } | null
+  /** Eigenlabor privat (BEB) bzw. Kasse (BEL) */
+  vorschlag?: Vorschlag | null
+  vorschlagKasse?: Vorschlag | null
   labor: RohLabor[]
   goz: GozZeile[]
   komplexe: Komplex[]
 }
 
-export interface Wahl { liste: number; spalte: number; faktoren: boolean }
+export interface Wahl { liste: number; spalte: number; faktoren: boolean; belListe: number; belSpalte: number }
 export interface EigenZeile { nr: string; text: string; preis: number; ersetzt?: string; material?: string; werkstoff?: string }
+export interface BelZeile { nr: string; text: string; preis: number }
 export interface PraxisKatalog {
   pvs: string
   stand: string
   wahl: Wahl
   listeName: string
+  belListeName: string
   eigenlabor: EigenZeile[]
+  /** Kassen-Eigenlaborpreise der Praxis: Untergrenze des BEL-Reglers, gedeckelt auf den KZV-Höchstpreis */
+  bel: BelZeile[]
   goz: GozZeile[]
   komplexe: Komplex[]
 }
 export interface Aenderungen { neu: number; geaendert: number; entfallen: number }
-export interface Ablage { roh: RohKatalog; wahl: Wahl; katalog: PraxisKatalog; aenderungen?: Record<'eigenlabor' | 'goz' | 'komplexe', Aenderungen> }
+export interface Ablage { roh: RohKatalog; wahl: Wahl; katalog: PraxisKatalog; aenderungen?: Record<'eigenlabor' | 'bel' | 'goz' | 'komplexe', Aenderungen> }
 
 const zahl = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : 0)
 const text = (x: unknown, n = 200) => (typeof x === 'string' ? x.trim().slice(0, n) : '')
@@ -52,12 +60,15 @@ export function rohPruefen(x: unknown): RohKatalog | null {
   const preise = (p: unknown) => [0, 1, 2, 3].map((i) => Math.max(0, zahl(Array.isArray(p) ? p[i] : 0)))
   const roh: RohKatalog = {
     pvs: text(d.pvs, 40) || 'PVS',
-    listen: liste(d.listen, (l) => (Number.isInteger(l.nr) ? { nr: l.nr as number, name: text(l.name, 80) || `Liste ${l.nr}`, mitPreis: preise(l.mitPreis) } : null), 20),
+    listen: liste(d.listen, (l) => (Number.isInteger(l.nr)
+      ? { nr: l.nr as number, name: text(l.name, 80) || `Liste ${l.nr}`, mitPreis: preise(l.mitPreis), art: l.art === 'BEL' ? 'BEL' as const : 'BEB' as const }
+      : null), 20),
     labor: liste(d.labor, (z) => {
       const code = text(z.code, 12)
       if (!Number.isInteger(z.liste) || !code) return null
       const r: RohLabor = { liste: z.liste as number, code, text: text(z.text), preise: preise(z.preise), eigenlabor: z.eigenlabor === true }
-      if (typeof z.nr === 'string' && /^\d{4}$/.test(z.nr)) r.nr = z.nr
+      if (typeof z.bel === 'string' && /^\d{4}$/.test(z.bel)) r.bel = z.bel
+      else if (typeof z.nr === 'string' && /^\d{4}$/.test(z.nr)) r.nr = z.nr
       else if (typeof z.material === 'string') r.material = text(z.material, 4)
       else return null
       if (typeof z.werkstoff === 'string') r.werkstoff = text(z.werkstoff, 40)
@@ -85,19 +96,31 @@ export function rohPruefen(x: unknown): RohKatalog | null {
       return kuerzel && positionen.length ? { kuerzel, text: text(k.text), positionen } : null
     }, 2000),
   }
-  const v = d.vorschlag as Record<string, unknown> | null | undefined
-  if (v && Number.isInteger(v.liste) && Number.isInteger(v.spalte)) roh.vorschlag = { liste: v.liste as number, spalte: v.spalte as number, quelle: text(v.quelle, 40) }
+  const vorschlag = (v: unknown): Vorschlag | null => {
+    const o = v as Record<string, unknown> | null | undefined
+    return o && Number.isInteger(o.liste) && Number.isInteger(o.spalte) ? { liste: o.liste as number, spalte: o.spalte as number, quelle: text(o.quelle, 40) } : null
+  }
+  roh.vorschlag = vorschlag(d.vorschlag)
+  roh.vorschlagKasse = vorschlag(d.vorschlagKasse)
   return roh
 }
 
-export function wahlPruefen(x: unknown, roh: RohKatalog, bisher?: Wahl): Wahl {
+export function wahlPruefen(x: unknown, roh: RohKatalog, bisher?: Partial<Wahl>): Wahl {
   const w = (x && typeof x === 'object' ? x : {}) as Partial<Wahl>
-  const basis = bisher ?? { liste: roh.vorschlag?.liste ?? roh.listen[0]?.nr ?? 3, spalte: roh.vorschlag?.spalte ?? 1, faktoren: true }
-  const listeOk = (n: unknown) => roh.listen.some((l) => l.nr === n)
+  const ersteListe = (art: RohListe['art']) => roh.listen.find((l) => (l.art ?? 'BEB') === art)?.nr ?? (art === 'BEL' ? 2 : 3)
+  const basis: Wahl = {
+    liste: roh.vorschlag?.liste ?? ersteListe('BEB'), spalte: roh.vorschlag?.spalte ?? 1, faktoren: true,
+    belListe: roh.vorschlagKasse?.liste ?? ersteListe('BEL'), belSpalte: roh.vorschlagKasse?.spalte ?? 1,
+    ...Object.fromEntries(Object.entries(bisher ?? {}).filter(([, v]) => v !== undefined)),
+  }
+  const listeOk = (n: unknown, art: RohListe['art']) => roh.listen.some((l) => l.nr === n && (l.art ?? 'BEB') === art)
+  const spalteOk = (n: unknown) => [1, 2, 3, 4].includes(n as number)
   return {
-    liste: listeOk(w.liste) ? w.liste! : listeOk(basis.liste) ? basis.liste : roh.listen[0]?.nr ?? basis.liste,
-    spalte: [1, 2, 3, 4].includes(w.spalte as number) ? w.spalte! : basis.spalte,
+    liste: listeOk(w.liste, 'BEB') ? w.liste! : listeOk(basis.liste, 'BEB') ? basis.liste : ersteListe('BEB'),
+    spalte: spalteOk(w.spalte) ? w.spalte! : basis.spalte,
     faktoren: typeof w.faktoren === 'boolean' ? w.faktoren : basis.faktoren,
+    belListe: listeOk(w.belListe, 'BEL') ? w.belListe! : listeOk(basis.belListe, 'BEL') ? basis.belListe : ersteListe('BEL'),
+    belSpalte: spalteOk(w.belSpalte) ? w.belSpalte! : basis.belSpalte,
   }
 }
 
@@ -105,7 +128,13 @@ export function wahlPruefen(x: unknown, roh: RohKatalog, bisher?: Wahl): Wahl {
 export function katalogBilden(roh: RohKatalog, wahl: Wahl, stand = new Date().toISOString()): PraxisKatalog {
   const eigenlabor: EigenZeile[] = []
   const gesehen = new Set<string>()
+  const bel: BelZeile[] = []
   for (const z of roh.labor) {
+    if (z.bel) {
+      const preis = z.preise[wahl.belSpalte - 1] ?? 0
+      if (z.liste === wahl.belListe && preis > 0 && !bel.some((b) => b.nr === z.bel)) bel.push({ nr: z.bel, text: z.text, preis })
+      continue
+    }
     const preis = z.preise[wahl.spalte - 1] ?? 0
     if (z.liste !== wahl.liste || preis <= 0) continue
     const nr = z.nr ?? z.code.toUpperCase()
@@ -122,7 +151,9 @@ export function katalogBilden(roh: RohKatalog, wahl: Wahl, stand = new Date().to
     stand,
     wahl,
     listeName: roh.listen.find((l) => l.nr === wahl.liste)?.name ?? `Liste ${wahl.liste}`,
+    belListeName: roh.listen.find((l) => l.nr === wahl.belListe)?.name ?? `Liste ${wahl.belListe}`,
     eigenlabor,
+    bel,
     goz: roh.goz.map((g) => {
       if (wahl.faktoren || g.faktor === undefined) return g
       const { faktor: _, ...ohne } = g
@@ -147,6 +178,7 @@ function vergleichen<T>(alt: T[], neu: T[], schluessel: (x: T) => string): Aende
 export function aenderungen(alt: PraxisKatalog | null | undefined, neu: PraxisKatalog): Ablage['aenderungen'] {
   return {
     eigenlabor: vergleichen(alt?.eigenlabor ?? [], neu.eigenlabor, (x) => x.nr),
+    bel: vergleichen(alt?.bel ?? [], neu.bel, (x) => x.nr),
     goz: vergleichen(alt?.goz ?? [], neu.goz, (x) => x.nr),
     komplexe: vergleichen(alt?.komplexe ?? [], neu.komplexe, (x) => x.kuerzel),
   }

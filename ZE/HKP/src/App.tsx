@@ -62,7 +62,7 @@ export default function App() {
   const eigenlabor = useEigenlabor()
   const praxiskatalog = usePraxiskatalog()
   const lokaleListen: Listen = useMemo(
-    () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor, komplexe: praxiskatalog?.komplexe }),
+    () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor, komplexe: praxiskatalog?.komplexe, belPraxis: praxiskatalog?.bel }),
     [alle, plan.verwaltung, e, eigenlabor, praxiskatalog],
   )
   // Preise & Positionen aus dem PVS: beim Start und beim Zurückkehren in den Tab (höchstens jede Minute)

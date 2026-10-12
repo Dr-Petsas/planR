@@ -74,7 +74,9 @@ export function EigenlaborKatalog({ katalog, onChange, bebText }: Props) {
           {pvs && (
             <p className="el-info">
               Aus {pvs.pvs} übernommen ({pvs.listeName}, Stand {new Date(pvs.stand).toLocaleDateString('de-DE')}): {katalog.filter((e) => e.quelle === 'pvs').length} Positionen,
-              dazu {pvs.goz} eigene GOZ-Positionen und {pvs.komplexe.length} Kürzel/Komplexe. Abgleich in der PlanR-Übersicht unter Einstellungen.
+              dazu {pvs.goz} eigene GOZ-Positionen und {pvs.komplexe.length} Kürzel/Komplexe.
+              {Object.keys(pvs.bel).length > 0 && <> Kasse: {Object.keys(pvs.bel).length} BEL-Preise{pvs.belListeName ? ` (${pvs.belListeName})` : ''} als unteres Ende des BEL-Reglers.</>}
+              {' '}Abgleich in der PlanR-Übersicht unter Einstellungen.
             </p>
           )}
         </div>

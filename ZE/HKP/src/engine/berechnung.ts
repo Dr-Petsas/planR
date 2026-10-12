@@ -22,6 +22,8 @@ export interface Listen {
   eigen?: EigenPosition[]
   /** Leistungskomplexe der Praxis aus dem PVS */
   komplexe?: Komplex[]
+  /** BEL-Preise des Praxislabors aus dem PVS (Nr → €): unteres Ende des Kassen-Schiebereglers */
+  belPraxis?: Record<string, number>
   /** Hinweise der Listenauswahl (KZV-Bereich, Stichtag, veraltete Listen) */
   hinweise?: Hinweis[]
 }
@@ -154,6 +156,18 @@ export const belNrAnzeige = (nr: string) => {
   return n.length === 4 ? `${n.slice(0, 3)} ${n[3]}` : n
 }
 
+/**
+ * Kassen-BEL im Praxislabor. Ohne Praxispreis: Höchstpreis × Regleranteil. Mit Praxispreis (aus dem PVS)
+ * spannt der Regler von diesem Preis (50 %) bis zum KZV-Höchstpreis (100 %) – nie darüber.
+ */
+export function belEigen(hoechst: number | undefined, praxis: number | undefined, anteil: number): number {
+  if (praxis === undefined || !(praxis > 0)) return runden(hoechst! * anteil)
+  if (hoechst === undefined) return praxis
+  const unten = Math.min(praxis, hoechst)
+  const t = Math.min(Math.max((anteil - 0.5) / 0.5, 0), 1)
+  return runden(unten + (hoechst - unten) * t)
+}
+
 function finden<T extends { nr: string }>(liste: { eintraege: T[] } | undefined, nr: string, norm = (s: string) => s.trim().toLowerCase()) {
   const n = norm(nr)
   return liste?.eintraege.find((e) => norm(e.nr) === n)
@@ -239,7 +253,7 @@ export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): B
       if (!e && p.preis === undefined) return { ...basis, labor, fehler: `BEL-Nr. ${belNrAnzeige(p.nr)} nicht in der Liste` }
       const hoechst = e ? (labor === 'eigen' ? e.praxis : e.gewerbe) : undefined
       const anteil = Math.min(Math.max(0, plan.einstellungen.eigenKasseProzent ?? 100), 100) / 100
-      const einzel = p.preis ?? (labor === 'eigen' ? runden(hoechst! * anteil) : hoechst!)
+      const einzel = p.preis ?? (labor === 'eigen' ? belEigen(hoechst, listen.belPraxis?.[belNrNorm(p.nr)], anteil) : hoechst!)
       const fehler = hoechst !== undefined && einzel > hoechst + 0.004
         ? `BEL ${belNrAnzeige(p.nr)} (${labor === 'eigen' ? 'Eigenlabor' : 'Fremdlabor'}): ${einzel.toFixed(2)} € über dem Höchstpreis ${hoechst.toFixed(2)} € der KZV-Liste`
         : undefined

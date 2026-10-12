@@ -119,7 +119,9 @@ export function Eigenlaborbeleg({ plan, ergebnis, listen }: Props & { listen: Li
         rechts={
           <div className="klein eigenlabor-angaben">
             Herstellungsort: <b>{plan.verwaltung.herstellungsort || '— (in Teil 1 eintragen)'}</b><br />
-            BEL II: {listen.bel?.name ?? '—'} · Praxislabor-Höchstpreis{e.eigenKasseProzent !== 100 ? ` × ${e.eigenKasseProzent} %` : ''}
+            BEL II: {listen.bel?.name ?? '—'} · {Object.keys(listen.belPraxis ?? {}).length
+              ? (e.eigenKasseProzent >= 100 ? 'Praxislabor-Höchstpreis' : e.eigenKasseProzent <= 50 ? 'Preise des Praxislabors' : 'zwischen Praxispreis und Höchstpreis')
+              : `Praxislabor-Höchstpreis${e.eigenKasseProzent !== 100 ? ` × ${e.eigenKasseProzent} %` : ''}`}
           </div>
         }
       />

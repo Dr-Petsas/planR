@@ -466,9 +466,10 @@ function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis>
 }
 
 const katalogInfo = (a: Ablage | null) => a && {
-  pvs: a.katalog.pvs, stand: a.katalog.stand, wahl: a.wahl, listeName: a.katalog.listeName,
-  listen: a.roh.listen, vorschlag: a.roh.vorschlag ?? null, aenderungen: a.aenderungen ?? null,
+  pvs: a.katalog.pvs, stand: a.katalog.stand, wahl: a.wahl, listeName: a.katalog.listeName, belListeName: a.katalog.belListeName ?? '',
+  listen: a.roh.listen, vorschlag: a.roh.vorschlag ?? null, vorschlagKasse: a.roh.vorschlagKasse ?? null, aenderungen: a.aenderungen ?? null,
   anzahl: {
+    bel: a.katalog.bel?.length ?? 0,
     eigenlabor: a.katalog.eigenlabor.filter((e) => e.ersetzt).length,
     material: a.katalog.eigenlabor.filter((e) => e.material).length,
     goz: a.katalog.goz.filter((g) => g.eigen).length,

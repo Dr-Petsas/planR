@@ -17,10 +17,13 @@ export interface PraxisKatalog {
   pvs: string
   stand: string
   listeName: string
-  wahl?: { liste: number; spalte: number; faktoren: boolean }
+  wahl?: { liste: number; spalte: number; faktoren: boolean; belListe?: number; belSpalte?: number }
   eigenlabor: { nr: string; text: string; preis: number; ersetzt?: string }[]
   goz: (GozEintrag & { eigen: boolean })[]
   komplexe: Komplex[]
+  /** BEL-Preise des Praxislabors (Kasse) – unteres Ende des Kassen-Schiebereglers */
+  belListeName?: string
+  bel?: { nr: string; text: string; preis: number }[]
 }
 
 interface Stand {
@@ -32,6 +35,15 @@ interface Stand {
   eigenlabor: number
   goz: number
   komplexe: Komplex[]
+  belListeName?: string
+  /** BEL-Nr → Preis des Praxislabors */
+  bel: Record<string, number>
+}
+
+export function belPreise(k: PraxisKatalog): Record<string, number> {
+  const bel: Record<string, number> = {}
+  for (const z of k.bel ?? []) if (z.preis > 0) bel[z.nr] = z.preis
+  return bel
 }
 
 const kennung = (k: PraxisKatalog) => `${k.stand}|${JSON.stringify(k.wahl ?? null)}`
@@ -40,7 +52,9 @@ const SPEICHER_KEY = mk('hkp.praxiskatalog.v1')
 function laden(): Stand | null {
   try {
     const d = JSON.parse(localStorage.getItem(SPEICHER_KEY) ?? 'null')
-    return d && typeof d.stand === 'string' ? { ...d, komplexe: Array.isArray(d.komplexe) ? d.komplexe : [] } : null
+    return d && typeof d.stand === 'string'
+      ? { ...d, komplexe: Array.isArray(d.komplexe) ? d.komplexe : [], bel: d.bel && typeof d.bel === 'object' ? d.bel : {} }
+      : null
   } catch {
     return null
   }
@@ -90,6 +104,7 @@ export function praxiskatalogAnwenden(k: PraxisKatalog) {
   stand = {
     kennung: kennung(k), pvs: k.pvs, stand: k.stand, listeName: k.listeName, komplexe: k.komplexe,
     eigenlabor: k.eigenlabor.length, goz: k.goz.filter((g) => g.eigen).length,
+    belListeName: k.belListeName, bel: belPreise(k),
   }
   localStorage.setItem(SPEICHER_KEY, JSON.stringify(stand))
   abonnenten.forEach((f) => f())

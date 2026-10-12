@@ -34,12 +34,13 @@ let entwurf: Einstellungen = LEER
 /** PlanR-Agent auf dem Praxisserver (null = für diesen Mandanten keiner eingerichtet) */
 let agent: { verbunden: boolean; pvs?: string; version?: string } | null = null
 interface KatalogInfo {
-  pvs: string; stand: string; listeName: string
-  wahl: { liste: number; spalte: number; faktoren: boolean }
-  listen: { nr: number; name: string; mitPreis: number[] }[]
+  pvs: string; stand: string; listeName: string; belListeName: string
+  wahl: { liste: number; spalte: number; faktoren: boolean; belListe?: number; belSpalte?: number }
+  listen: { nr: number; name: string; mitPreis: number[]; art?: 'BEL' | 'BEB' }[]
   vorschlag: { liste: number; spalte: number } | null
+  vorschlagKasse: { liste: number; spalte: number } | null
   aenderungen: Record<string, { neu: number; geaendert: number; entfallen: number }> | null
-  anzahl: { eigenlabor: number; material: number; goz: number; kuerzel: number; faktoren: number; komplexe: number }
+  anzahl: { bel: number; eigenlabor: number; material: number; goz: number; kuerzel: number; faktoren: number; komplexe: number }
 }
 /** Aus dem PVS übernommene Preise & Positionen (null = noch nie abgeglichen) */
 let katalog: KatalogInfo | null = null
@@ -406,18 +407,29 @@ function katalogBlock(): string {
   const k = katalog
   const a = k?.aenderungen
   const summe = a ? Object.values(a).reduce((s, x) => ({ neu: s.neu + x.neu, geaendert: s.geaendert + x.geaendert, entfallen: s.entfallen + x.entfallen }), { neu: 0, geaendert: 0, entfallen: 0 }) : null
-  const listen = k?.listen.map((l) => `<option value="${l.nr}"${l.nr === k.wahl.liste ? ' selected' : ''}>${esc(l.name)}${k.vorschlag?.liste === l.nr ? ' (in den HKPs genutzt)' : ''}</option>`).join('') ?? ''
-  const aktiv = k?.listen.find((l) => l.nr === k.wahl.liste)
-  const spalten = [1, 2, 3, 4].map((s) => `<option value="${s}"${s === k?.wahl.spalte ? ' selected' : ''}>${s}${s === 1 ? ' Eigenlabor' : s === 2 ? ' Fremdlabor' : ''} · ${aktiv?.mitPreis[s - 1] ?? 0} Preise</option>`).join('')
+  const listenVon = (art: 'BEL' | 'BEB', gewaehlt: number | undefined, genutzt: number | undefined) => k?.listen
+    .filter((l) => (l.art ?? 'BEB') === art)
+    .map((l) => `<option value="${l.nr}"${l.nr === gewaehlt ? ' selected' : ''}>${esc(l.name)}${genutzt === l.nr ? ' (in den HKPs genutzt)' : ''}</option>`).join('') ?? ''
+  const spaltenVon = (liste: number | undefined, gewaehlt: number | undefined) => {
+    const aktiv = k?.listen.find((l) => l.nr === liste)
+    return [1, 2, 3, 4].map((s) => `<option value="${s}"${s === gewaehlt ? ' selected' : ''}>${s}${s === 1 ? ' Eigenlabor' : s === 2 ? ' Fremdlabor' : ''} · ${aktiv?.mitPreis[s - 1] ?? 0} Preise</option>`).join('')
+  }
+  const listen = listenVon('BEB', k?.wahl.liste, k?.vorschlag?.liste)
+  const spalten = spaltenVon(k?.wahl.liste, k?.wahl.spalte)
+  const belListen = listenVon('BEL', k?.wahl.belListe, k?.vorschlagKasse?.liste)
   return `
         <fieldset class="katalog">
           <legend>Preise &amp; Positionen aus ${esc(p)}</legend>
           <p class="pvs-info">${k
-            ? `Stand ${esc(zeit(k.stand))}: ${mal(k.anzahl.eigenlabor, 'Eigenlabor-Preis', 'Eigenlabor-Preise')} (${esc(k.listeName)}), ${mal(k.anzahl.material, 'Material', 'Materialien')}, ${mal(k.anzahl.goz, 'eigene GOZ-/Analogposition', 'eigene GOZ-/Analogpositionen')}, ${mal(k.anzahl.kuerzel, 'Kürzel', 'Kürzel')}, ${mal(k.anzahl.komplexe, 'Komplex', 'Komplexe')}.`
-            : `Noch nicht übernommen. PlanR liest Eigenlabor-Preise, Materialkürzel, eigene GOZ-/Analogpositionen mit Faktor und die privaten Kürzel/Komplexe aus ${esc(p)} und legt sie hier an.`}</p>
+            ? `Stand ${esc(zeit(k.stand))}: ${mal(k.anzahl.bel ?? 0, 'BEL-Preis', 'BEL-Preise')}${k.anzahl.bel ? ` (${esc(k.belListeName)})` : ''}, ${mal(k.anzahl.eigenlabor, 'Eigenlabor-Preis', 'Eigenlabor-Preise')} (${esc(k.listeName)}), ${mal(k.anzahl.material, 'Material', 'Materialien')}, ${mal(k.anzahl.goz, 'eigene GOZ-/Analogposition', 'eigene GOZ-/Analogpositionen')}, ${mal(k.anzahl.kuerzel, 'Kürzel', 'Kürzel')}, ${mal(k.anzahl.komplexe, 'Komplex', 'Komplexe')}.`
+            : `Noch nicht übernommen. PlanR liest Eigenlabor-Preise (BEL und BEB), Materialkürzel, eigene GOZ-/Analogpositionen mit Faktor und die privaten Kürzel/Komplexe aus ${esc(p)} und legt sie hier an.`}</p>
           ${summe && (summe.neu || summe.geaendert || summe.entfallen) ? `<p class="pvs-info">Letzte Änderung: ${summe.neu} neu, ${summe.geaendert} geändert, ${summe.entfallen} entfallen.</p>` : ''}
-          ${k && k.listen.length ? `<div class="katalog-wahl">
-            <label class="feld">Eigenlabor-Preisliste<select data-kat-liste>${listen}</select></label>
+          ${k && k.listen.length ? `${belListen ? `<div class="katalog-wahl">
+            <label class="feld">Kasse · BEL-Preisliste<select data-kat-belliste>${belListen}</select></label>
+            <label class="feld">Preisspalte<select data-kat-belspalte>${spaltenVon(k.wahl.belListe, k.wahl.belSpalte)}</select></label>
+          </div>` : ''}
+          <div class="katalog-wahl">
+            <label class="feld">Privat · BEB-Preisliste<select data-kat-liste>${listen}</select></label>
             <label class="feld">Preisspalte<select data-kat-spalte>${spalten}</select></label>
           </div>
           <label class="schalter">
@@ -574,8 +586,12 @@ function zeichnen() {
       liste: Number(form.querySelector<HTMLSelectElement>('[data-kat-liste]')!.value),
       spalte: Number(form.querySelector<HTMLSelectElement>('[data-kat-spalte]')!.value),
       faktoren: form.querySelector<HTMLInputElement>('[data-kat-faktoren]')!.checked,
+      ...(form.querySelector('[data-kat-belliste]') ? {
+        belListe: Number(form.querySelector<HTMLSelectElement>('[data-kat-belliste]')!.value),
+        belSpalte: Number(form.querySelector<HTMLSelectElement>('[data-kat-belspalte]')!.value),
+      } : {}),
     })
-    form.querySelectorAll('[data-kat-liste], [data-kat-spalte], [data-kat-faktoren]')
+    form.querySelectorAll('[data-kat-liste], [data-kat-spalte], [data-kat-faktoren], [data-kat-belliste], [data-kat-belspalte]')
       .forEach((x) => x.addEventListener('change', () => void katalogSenden({ wahl: wahl() })))
   }
   app.querySelector<HTMLButtonElement>('[data-zurueck]')?.addEventListener('click', () => {

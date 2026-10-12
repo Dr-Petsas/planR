@@ -28,6 +28,7 @@ const ausPvs = (x: HkpPlan['positionen'][number]) => !!x.auto && /^(dens|dswin)-
 
 export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, onNeuRechnen, mobil = false }: Props) {
   const e = plan.einstellungen
+  const mitPraxisBel = Object.keys(listen.belPraxis ?? {}).length > 0
   const hatBefund = Object.values(plan.zaehne).some((z) => z.B.trim()) || plan.reparaturen.length > 0
   const xmlRef = useRef<HTMLInputElement>(null)
   const pStufe = Math.min(Math.max(0, e.eigenPrivatStufe ?? 0), PRIVAT_STUFE_MAX)
@@ -161,8 +162,12 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
           <button className={nFremdLab && !nEigen ? 'aktiv' : ''} onClick={() => laborWechseln('gewerbe')}>Fremdlabor</button>
           {nEigen > 0 && nFremdLab > 0 && <small>gemischt</small>}
         </div>
-        <label className="regler" title="BEL-Höchstpreis Praxislabor = 95 % der Gewerbepreise (§ 88 SGB V), mehr als 100 % ist nicht zulässig.">
-          <span className="regler-kopf">Kasse · BEL II <b>{e.eigenKasseProzent} %</b> <small>vom Höchstpreis</small></span>
+        <label className="regler" title={mitPraxisBel
+          ? 'Links die BEL-Preise Ihres Praxislabors aus dem PVS, rechts der KZV-Höchstpreis (95 % der Gewerbepreise, § 88 SGB V) – mehr ist nicht zulässig.'
+          : 'BEL-Höchstpreis Praxislabor = 95 % der Gewerbepreise (§ 88 SGB V), mehr als 100 % ist nicht zulässig.'}>
+          <span className="regler-kopf">Kasse · BEL II {mitPraxisBel
+            ? <><b>{e.eigenKasseProzent <= 50 ? 'Praxispreise' : e.eigenKasseProzent >= 100 ? 'Höchstpreis' : `${(e.eigenKasseProzent - 50) * 2} %`}</b> <small>{e.eigenKasseProzent > 50 && e.eigenKasseProzent < 100 ? 'von Praxis- zu Höchstpreis' : 'Praxispreise … Höchstpreis'}</small></>
+            : <><b>{e.eigenKasseProzent} %</b> <small>vom Höchstpreis</small></>}</span>
           <input type="range" min={50} max={100} step={1} value={e.eigenKasseProzent} disabled={!nEigenBel}
             onChange={(ev) => setEinstellung('eigenKasseProzent', Number(ev.target.value))} />
         </label>

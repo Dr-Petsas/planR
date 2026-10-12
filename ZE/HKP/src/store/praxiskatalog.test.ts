@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Preisliste } from '../types'
-import { eigenlaborMischen, praxisGozListe, type PraxisKatalog } from './praxiskatalog'
+import { belPreise, eigenlaborMischen, praxisGozListe, type PraxisKatalog } from './praxiskatalog'
 import { leererPlan } from './plan'
 import { listenFuerPlan } from './preislisten'
 import { berechnen } from '../engine/berechnung'
@@ -71,6 +71,26 @@ describe('Praxiskatalog im HKP-Planer', () => {
     expect(preis(hoch, 'beb').einzelpreis).toBe(13.2)
     expect(preis(hoch, 'goz').faktor).toBe(3.5)
     expect(preis({ ...hoch, einstellungen: { ...hoch.einstellungen, honorarFaktor: 3.5 } }, 'goz').faktor).toBe(3.5)
+  })
+
+  it('BEL-Preise der Praxis sind das untere Ende des Kassen-Reglers', () => {
+    const BEL: Preisliste<'bel2'> = {
+      id: 'bel', typ: 'bel2', name: 'BEL II', gueltigAb: '2026-01-01', standard: true,
+      eintraege: [{ nr: '0010', text: 'Modell', gewerbe: 10, praxis: 9.5 }, { nr: '0012', text: 'Sägemodell', gewerbe: 20, praxis: 19 }],
+    }
+    const bel = belPreise({ ...K, bel: [{ nr: '0010', text: 'Modell', preis: 4.75 }, { nr: '0012', text: 'teuer', preis: 25 }] })
+    const plan = leererPlan()
+    plan.positionen = [
+      { id: 'm', ebene: 'BEL', nr: '001 0', zahn: '', anzahl: 1, labor: 'eigen' },
+      { id: 's', ebene: 'BEL', nr: '0012', zahn: '', anzahl: 1, labor: 'eigen' },
+    ]
+    const preis = (prozent: number, id: string, mit = true) => berechnen(
+      { ...plan, einstellungen: { ...plan.einstellungen, eigenKasseProzent: prozent } }, { bel: BEL, ...(mit ? { belPraxis: bel } : {}) },
+    ).positionen.find((x) => x.id === id)!.einzelpreis
+    expect([preis(50, 'm'), preis(75, 'm'), preis(100, 'm')]).toEqual([4.75, 7.13, 9.5])
+    expect([preis(50, 's'), preis(100, 's')]).toEqual([19, 19])
+    expect(preis(50, 'm', false)).toBe(4.75)
+    expect(preis(80, 'm', false)).toBe(7.6)
   })
 
   it('findet Praxis-Kürzel und Komplexe in der Suche', () => {
