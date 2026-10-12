@@ -2,8 +2,9 @@ import './style.css'
 import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
-import { PVS_CONNECTOR } from './pvs'
+import { PVS_CONNECTOR, PVS_SUCHE } from './pvs'
 import { pvsImportOeffnen } from './pvsImport'
+import { pvsJson } from './geraet'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const STATUS: Record<string, string> = {
@@ -30,6 +31,8 @@ let einstellungAuf = false
 let einstellungen: Einstellungen = LEER
 /** Bearbeitungsstand im offenen Dialog */
 let entwurf: Einstellungen = LEER
+/** PlanR-Agent auf dem Praxisserver (null = für diesen Mandanten keiner eingerichtet) */
+let agent: { verbunden: boolean; pvs?: string; version?: string } | null = null
 const mandant = new URLSearchParams(location.search).get('mandant') || 'standard'
 const heute = new Date()
 let jahr = heute.getFullYear()
@@ -161,13 +164,16 @@ function pvsZiel(): string {
   return p && einstellungen.bridge && PVS_CONNECTOR[p.id] ? p.name : ''
 }
 
+/** Name des PVS, in dem „Plan importieren“ Patienten sucht */
+function pvsQuelle(): string {
+  const p = pvsVon(einstellungen.pvs)
+  return p && einstellungen.bridge && PVS_SUCHE[p.id] ? p.name : ''
+}
+
 let pvsLaeuft = false
 
 async function insPvs(p: PlanKarte, ziel: string) {
   if (pvsLaeuft) return
-  if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
-    return melden(`Export nach ${ziel} geht nur direkt am Praxis-PC (http://localhost:5189).`)
-  }
   const wer = p.patient || p.nummer
   const frage = p.imPvs
     ? `${p.imPvs}.\n\nTrotzdem noch einmal als neuen Plan in ${ziel} anlegen?`
@@ -176,9 +182,9 @@ async function insPvs(p: PlanKarte, ziel: string) {
   pvsLaeuft = true
   melden(`HKP von ${wer} geht an ${ziel} …`)
   try {
-    const r = await fetch('/api/plaene/pvs', {
+    const r = await pvsJson<Antwort>(mandant, '/api/plaene/pvs', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...kennung(p), mandant }),
-    }).then((x) => x.json() as Promise<Antwort>).catch((): Antwort => ({ ok: false, meldung: 'Keine Verbindung.' }))
+    })
     if (r.ok) await laden()
     melden(r.meldung || (r.ok ? `HKP in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`))
   } finally {
@@ -369,6 +375,8 @@ function einstellungKarte(): string {
           <input type="text" data-ordner value="${esc(e.ordner)}" placeholder="z. B. C:\\DENS\\Import" autocomplete="off" spellcheck="false">
         </label>` : ''}
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Bridge für dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
+        ${p && e.bridge ? `<p class="pvs-info">PlanR-Agent auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(agent.pvs ?? '')}, Version ${esc(agent.version ?? '?')})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
+          · <a href="/download" target="_blank" rel="noopener">Agent herunterladen</a></p>` : ''}
         <div class="einst-fuss">
           <span>${einstellungen.geaendert ? `Gespeichert ${esc(zeit(einstellungen.geaendert))}` : 'Noch nicht gespeichert'}</span>
           <button type="button" class="import-knopf" data-wahl-zu>Abbrechen</button>
@@ -412,7 +420,7 @@ function zeichnen() {
       <div class="kopf-rechts">
         <span class="kopf-info">${sichtbar.length} von ${gesamt}</span>
         <button type="button" class="import-knopf" data-einstellungen title="PVS und Bridge einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
-        <button type="button" class="import-knopf" data-import-neu title="${pvsZiel() ? `HKP aus ${esc(pvsZiel())} übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
+        <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen und HKP übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
         <button type="button" class="neu-knopf" data-neu>Neuer Plan erstellen</button>
     </div>
   </header>
@@ -470,7 +478,7 @@ function zeichnen() {
     if (p) importWaehlen(p)
   }))
   app.querySelector<HTMLButtonElement>('[data-import-neu]')!.addEventListener('click', () => {
-    const ziel = pvsZiel()
+    const ziel = pvsQuelle()
     if (!ziel) return importWaehlen(null)
     if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
       return melden(`Import aus ${ziel} geht nur direkt am Praxis-PC (http://localhost:5189).`)
@@ -566,8 +574,9 @@ async function laden() {
 
 async function einstellungenLaden() {
   try {
-    const d = await (await fetch(`/api/einstellungen?mandant=${encodeURIComponent(mandant)}`, { cache: 'no-store' })).json() as { einstellungen?: Einstellungen }
+    const d = await (await fetch(`/api/einstellungen?mandant=${encodeURIComponent(mandant)}`, { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent }
     if (d.einstellungen) einstellungen = d.einstellungen
+    agent = d.agent ?? null
   } catch { /* Maske startet leer */ }
   entwurf = einstellungen
 }

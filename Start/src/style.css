@@ -175,7 +175,6 @@ main { min-width: 0; }
   flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid var(--linie); border-radius: 10px;
 }
 .pvs-suche input:focus { outline: 2px solid var(--akzent); border-color: transparent; }
-.pvs-suche .neu-knopf { padding: 0 16px; }
 .pvs-bereich:empty { display: none; }
 .pvs-bereich { display: flex; flex-direction: column; gap: 4px; }
 .pvs-patient, .pvs-tabelle button {

@@ -3,7 +3,11 @@
 /** PVS mit fertigem HKP-Connector; die Adresse kennt nur der Server der Übersicht */
 export const PVS_CONNECTOR: Record<string, string> = {
   dens: 'http://127.0.0.1:8770',
+  dampsoft: 'http://127.0.0.1:8766',
 }
+
+/** PVS, in denen „Plan importieren“ Patienten sucht und ihre HKPs listet (Übernahme nur mit PVS_CONNECTOR) */
+export const PVS_SUCHE: Record<string, string> = { ...PVS_CONNECTOR }
 
 export interface PvsTreffer {
   id: string
