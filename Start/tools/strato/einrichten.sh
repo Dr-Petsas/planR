@@ -30,6 +30,8 @@ if [ "${DATEN:-0}" = "1" ] || [ -z "$(ls -A /srv/planr/data)" ]; then
   tar -xzf /tmp/data.tgz -C /srv/planr/data
   # Sitzungen gelten nur für die Domain, unter der sie entstanden sind (Cookie), und tragen Firebase-Tokens
   rm -f /srv/planr/data/sitzungen.json
+  # Gehören zum Tunnel am Praxis-PC: Weiterleitung hierher bzw. Cloudflare Access
+  rm -f /srv/planr/data/bridge-weiter.json /srv/planr/data/cf-access.json
   chown -R planr:planr /srv/planr/data
   chmod -R go-rwx /srv/planr/data
   echo "Daten übernommen"

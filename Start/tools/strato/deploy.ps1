@@ -47,7 +47,7 @@ tar -czf "$bau\start.tgz" -C "$bau\start" .
 tar -czf "$bau\planer.tgz" -C "$bau\planer" .
 $hoch = @("$bau\start.tgz", "$bau\planer.tgz")
 if ($Daten) {
-  tar -czf "$bau\data.tgz" --exclude=sitzungen.json -C (Join-Path $wurzel 'Start\data') .
+  tar -czf "$bau\data.tgz" --exclude=sitzungen.json --exclude=bridge-weiter.json --exclude=cf-access.json -C (Join-Path $wurzel 'Start\data') .
   $hoch += "$bau\data.tgz"
 }
 

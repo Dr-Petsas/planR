@@ -43,6 +43,8 @@ const PVS_VERMERKE = `${ORDNER}/pvs-export.json`
 const AGENTEN = `${ORDNER}/pvs-agenten.json`
 /** Cloudflare Access vor dem Tunnel: { team, aud } – sonst CF_ACCESS_TEAM / CF_ACCESS_AUD */
 const CF_ACCESS = `${ORDNER}/cf-access.json`
+/** { ziel: "https://planr.pickadoc.de" }: Bridges, die noch hier abholen, werden dorthin durchgereicht. Nicht mit auf den Zielserver kopieren. */
+const BRIDGE_WEITER = `${ORDNER}/bridge-weiter.json`
 /** Installationspaket für den Praxisserver (pvsConnectoR: agent/paket-bauen.ps1) */
 const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Agent.zip`
 const TUNNEL_HOST = 'planr.pickadoc-tunnel.com'
@@ -978,6 +980,7 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
   const schluessel = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
   if (!MANDANT_RE.test(mandant) || !schluesselPasst(await agentenLesen(), mandant, schluessel)) return json(res, 401, { ok: false })
   if (!amPraxisPc(req) && await accessEinstellung() && !await anmeldung(req)) return json(res, 401, { ok: false })
+  if (await bridgeWeiterleiten(req, res, url, query)) return
 
   if (url === '/api/pvs-agent/auftrag' && req.method === 'GET') {
     const q = new URLSearchParams(query)
@@ -1008,6 +1011,35 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     }
   }
   json(res, 405, { ok: false })
+}
+
+async function bridgeWeiterleiten(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
+  if (req.headers['x-planr-weitergeleitet']) return false
+  const { ziel } = await jsonLesen<{ ziel?: unknown }>(BRIDGE_WEITER, {})
+  if (typeof ziel !== 'string' || !/^https:\/\/[a-z0-9.-]+$/i.test(ziel)) return false
+  const kopf: Record<string, string> = { 'X-PlanR-Weitergeleitet': '1' }
+  for (const k of ['authorization', 'x-planr-mandant', 'user-agent', 'content-type']) {
+    const v = req.headers[k]
+    if (typeof v === 'string') kopf[k] = v
+  }
+  const body = req.method === 'POST' ? await lesenBody(req, 20_000_000) : undefined
+  // Legt die Bridge auf, muss auch der Long-Poll am Ziel enden, sonst geht dort ein Auftrag ins Leere.
+  const weg = new AbortController()
+  res.on('close', () => weg.abort())
+  try {
+    const r = await fetch(`${ziel}${url}${query ? `?${query}` : ''}`, {
+      method: req.method, headers: kopf, body, signal: AbortSignal.any([weg.signal, AbortSignal.timeout(40_000)]),
+    })
+    const daten = Buffer.from(await r.arrayBuffer())
+    if (res.writableEnded || res.destroyed) return true
+    res.statusCode = r.status
+    const art = r.headers.get('content-type')
+    if (art) res.setHeader('Content-Type', art)
+    res.end(daten)
+  } catch {
+    if (!res.headersSent && !res.destroyed) json(res, 502, { ok: false })
+  }
+  return true
 }
 
 const DOWNLOAD_SEITE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
