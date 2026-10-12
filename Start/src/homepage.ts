@@ -233,7 +233,7 @@ const HTML = `
           <li><b>Mehrumsatz sehen</b><span>Regler ziehen, Differenz ablesen – und den besseren Plan zurück ins PVS geben.</span></li>
         </ol>
         <div class="hp-ctas">
-          <a class="hp-knopf hp-knopf-voll" href="#kontakt">Jetzt connecten</a>
+          <a class="hp-knopf hp-knopf-voll" href="#buchen">Jetzt buchen &amp; connecten</a>
           <a class="hp-knopf" href="#spielwiese">Erst mal mit den Reglern spielen</a>
         </div>
       </div>
@@ -295,7 +295,7 @@ const HTML = `
         <p class="hp-preis"><b>${PLANR} €</b> / Monat</p>
         <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
         <ul><li>Alle Planer: ZE, Implantologie, PAR, KB, KFO, Kons</li><li>Umsatz-Regler und Begründungen</li><li>Eigene Preislisten und Eigenlabor</li><li>PVS-Anbindung über die PlanR-Bridge</li><li>Freigabe am Handy</li></ul>
-        <a class="hp-knopf" href="#kontakt">PlanR buchen</a>
+        <a class="hp-knopf" href="#buchen">PlanR buchen</a>
       </article>
       <article class="hp-tier hp-tier-top">
         <span class="hp-band-tag">Beliebt</span>
@@ -303,7 +303,7 @@ const HTML = `
         <p class="hp-preis"><b>${PLANR + 49} €</b> / Monat</p>
         <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
         <ul><li>Alles aus PlanR</li><li>Clara als Sprach-App am Handy</li><li>Pläne per Sprache anlegen und ändern</li><li>Kopplung per QR-Code, ohne Installation am PC</li></ul>
-        <a class="hp-knopf hp-knopf-voll" href="#kontakt">Mit Sprach-KI buchen</a>
+        <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Mit Sprach-KI buchen</a>
       </article>
       <article class="hp-tier">
         <h3>Pickadoc MAS</h3>
@@ -341,10 +341,11 @@ const HTML = `
   <section class="hp-sektion hp-kontakt" id="kontakt">
     <div class="hp-sektion-kopf">
       <h2>PlanR für deine Praxis</h2>
-      <p>Die Online-Buchung startet in Kürze. Bis dahin richten wir PlanR persönlich ein – meist noch am selben Tag.</p>
+      <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat. Freischaltung meist noch am selben Tag, danach führt dich der Einrichtungsassistent bis zum ersten HKP aus deinem PVS.</p>
     </div>
     <div class="hp-kontakt-wege">
-      <a class="hp-knopf hp-knopf-voll" href="mailto:info@pickadoc.de?subject=PlanR%20buchen">E-Mail schreiben</a>
+      <a class="hp-knopf hp-knopf-voll" href="#buchen">Jetzt online buchen</a>
+      <a class="hp-knopf" href="mailto:info@pickadoc.de?subject=PlanR%20buchen">E-Mail schreiben</a>
       <a class="hp-knopf" href="tel:+4921130293035">0211 3029 3035</a>
       <a class="hp-knopf" href="https://wa.me/491776004600" target="_blank" rel="noopener">WhatsApp</a>
     </div>

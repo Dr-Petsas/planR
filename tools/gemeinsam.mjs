@@ -29,7 +29,7 @@ const PLANER = {
 }
 
 const SAETZE = {
-  start: ['thema.ts'],
+  start: ['thema.ts', 'data/kzv.ts'],
   basis: [
     'mandant.ts', 'mandant.test.ts', 'components/Mandant.tsx',
     'stammdaten.ts', 'stammdaten.test.ts', 'components/Stammdaten.tsx',

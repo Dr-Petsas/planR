@@ -496,6 +496,7 @@ function zeichnen() {
       <div class="kopf-rechts">
         <span class="kopf-info">${sichtbar.length} von ${gesamt}</span>
         <button type="button" class="konto-knopf" data-abmelden title="${esc(ich.konto.email)} – abmelden">${esc(ich.konto.name || ich.konto.email)}<small>Abmelden</small></button>
+        ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         <button type="button" class="import-knopf" data-einstellungen title="PVS, Bridge und Benutzer einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
         <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen und HKP übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
         <button type="button" class="neu-knopf" data-neu>Neuer Plan erstellen</button>
@@ -574,6 +575,7 @@ function zeichnen() {
     void katalogLaden().then(() => { if (einstellungAuf && !katalogLaeuft) zeichnen() })
     if (ich.konto.admin) void benutzerLaden().then((b) => { benutzer = b; if (einstellungAuf) zeichnen() })
   })
+  app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => void einrichtungZeigen())
   app.querySelector<HTMLButtonElement>('[data-abmelden]')!.addEventListener('click', () => {
     if (confirm(`${ich.konto.email} auf diesem Gerät abmelden?`)) void abmelden()
   })
@@ -693,21 +695,36 @@ async function einstellungenLaden() {
   entwurf = einstellungen
 }
 
+async function einrichtungZeigen() {
+  const { einrichtungOeffnen } = await import('./einrichtung')
+  einrichtungOeffnen({
+    admin: ich.konto.admin,
+    einstellungen,
+    geaendert: () => void einstellungenLaden().then(zeichnen),
+    importieren: () => app.querySelector<HTMLButtonElement>('[data-import-neu]')?.click(),
+  })
+}
+
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
 /** Ohne Anmeldung: Startseite für Besucher, #anmelden zeigt die Anmeldung */
 function ohneAnmeldung() {
-  let anmelden: boolean | null = null
+  let ansicht = ''
   const zeigen = async () => {
-    const soll = location.hash === '#anmelden' || !!sitzungHinweis
-    if (soll === anmelden) return
-    anmelden = soll
+    const soll = location.hash === '#anmelden' || sitzungHinweis ? 'anmelden'
+      : location.hash === '#buchen' || location.hash === '#buchen-clara' ? location.hash : 'start'
+    if (soll === ansicht) return
+    ansicht = soll
     const hp = await import('./homepage')
-    if (soll) {
+    if (soll === 'anmelden') {
       hp.homepageVerlassen()
       document.title = 'PlanR – Anmelden'
       anmeldeSeite(app, sitzungHinweis)
       scrollTo(0, 0)
+    } else if (soll.startsWith('#buchen')) {
+      hp.homepageVerlassen()
+      const { buchungSeite } = await import('./buchung')
+      buchungSeite(app, soll === '#buchen-clara' ? 'planr_clara' : 'planr')
     } else hp.homepage(app)
   }
   addEventListener('hashchange', () => {
@@ -723,4 +740,10 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   sitzungBewachen()
   await einstellungenLaden()
   await laden()
+  // Neue Praxis ohne Praxissystem: Assistent startet von selbst (einmal je Tab), #einrichtung öffnet ihn jederzeit
+  const neu = ich.konto.admin && !einstellungen.pvs && !sessionStorage.getItem('planr-einrichtung')
+  if (location.hash === '#einrichtung' || neu) {
+    sessionStorage.setItem('planr-einrichtung', '1')
+    void einrichtungZeigen()
+  }
 }).catch(() => { app.innerHTML = '<p class="leer">Die Planliste ist gerade nicht erreichbar.</p>' })

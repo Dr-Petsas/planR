@@ -1,7 +1,7 @@
 # Logs
 logs
 # Patientennamen der gemeinsamen Planliste
-data
+/data
 *.log
 npm-debug.log*
 

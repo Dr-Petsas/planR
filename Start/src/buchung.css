@@ -1,0 +1,54 @@
+.bu-seite { min-height: 100vh; padding: 0 16px 48px; background: linear-gradient(160deg, var(--akzent-hell), #fff 55%); }
+.bu-kopf { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 18px 0 10px; }
+.bu-kopf .marke { text-decoration: none; color: inherit; }
+.bu-kopf h1 { margin: 0; font-size: 22px; }
+.bu-kopf p { margin: 0; color: var(--grau); font-size: 13px; }
+.bu-kopf .link-knopf { margin-left: 0; }
+.bu-schritte { max-width: 1080px; margin: 0 auto 16px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.bu-schritte li { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--grau); padding: 5px 12px 5px 5px; border-radius: 999px; background: #fff; border: 1px solid var(--linie); }
+.bu-schritte li span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #f1f3f4; font-weight: 700; font-size: 11.5px; }
+.bu-schritte li.aktiv { color: var(--akzent-dunkel); font-weight: 600; border-color: var(--akzent); }
+.bu-schritte li.aktiv span, .bu-schritte li.erledigt span { background: var(--akzent); color: #fff; }
+.bu-rumpf { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 1fr 280px; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .bu-rumpf { grid-template-columns: 1fr; } .bu-leiste { order: -1; } }
+.bu-karte { background: #fff; border: 1px solid var(--linie); border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(20, 40, 50, 0.06); }
+.bu-karte h2 { margin: 0 0 14px; font-size: 21px; }
+.bu-karte h3 { margin: 22px 0 10px; font-size: 16px; }
+.bu-text { margin: 0 0 14px; color: #3b464d; font-size: 14.5px; line-height: 1.55; }
+.bu-klein { margin: 10px 0 16px; font-size: 12.5px; color: var(--grau); line-height: 1.5; }
+.bu-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px 14px; }
+.bu-raster .breit { grid-column: 1 / -1; }
+.bu-karte .feld input, .bu-karte .feld select, .bu-karte .feld textarea { font: inherit; font-size: 14.5px; font-weight: 400; color: var(--text); padding: 9px 10px; border: 1px solid #d5dadd; border-radius: 8px; background: #fff; width: 100%; }
+.bu-karte .feld textarea { resize: vertical; }
+.bu-karte .feld.fehler input, .bu-karte .feld.fehler select, .bu-karte .feld.fehler textarea { border-color: var(--rot); }
+.bu-fehler { display: block; color: var(--rot); font-weight: 500; font-size: 12px; margin-top: 2px; }
+.bu-haken { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 0; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.bu-haken input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--akzent); flex: 0 0 auto; }
+.bu-haken a { color: var(--akzent-dunkel); }
+.bu-haken.fehler span { color: var(--rot); }
+.bu-pakete { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.bu-paket { display: flex; flex-direction: column; gap: 4px; padding: 16px; border: 1.5px solid var(--linie); border-radius: 14px; cursor: pointer; }
+.bu-paket input { position: absolute; opacity: 0; pointer-events: none; }
+.bu-paket.an { border-color: var(--akzent); background: var(--akzent-hell); }
+.bu-paket b { font-size: 16px; }
+.bu-paket small { color: var(--grau); font-size: 13px; line-height: 1.45; margin-top: 6px; }
+.bu-preis { font-size: 30px; font-weight: 750; letter-spacing: -0.02em; }
+.bu-preis small { font-size: 14px; font-weight: 500; color: var(--grau); margin: 0; }
+.bu-volumen { color: var(--akzent-dunkel); font-weight: 650; font-size: 14px; }
+.bu-leiste { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 4px; background: #fff; border: 1px solid var(--linie); border-radius: 16px; padding: 18px; }
+.bu-leiste p { margin: 8px 0 0; font-size: 13.5px; color: #3b464d; }
+.bu-leiste ul { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: var(--grau); display: flex; flex-direction: column; gap: 3px; }
+.bu-leiste a { color: var(--akzent-dunkel); }
+.bu-mandat { margin: 16px 0 0; padding: 14px 16px; border-radius: 10px; background: #f6f8f9; border: 1px solid var(--linie); font-size: 12.5px; line-height: 1.55; color: #3b464d; }
+.bu-zusammen { display: grid; grid-template-columns: 140px 1fr; gap: 8px 14px; margin: 0 0 8px; font-size: 14px; }
+.bu-zusammen dt { color: var(--grau); }
+.bu-zusammen dd { margin: 0; }
+@media (max-width: 560px) { .bu-zusammen { grid-template-columns: 1fr; } .bu-zusammen dd { margin-bottom: 6px; } }
+.bu-meldung { margin: 16px 0 0; padding: 9px 12px; border-radius: 8px; background: #fbeceb; color: var(--rot); font-size: 13.5px; }
+.bu-fuss { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--linie); }
+.bu-fuss .link-knopf { margin-left: 0; }
+.bu-fuss a.neu-knopf { text-decoration: none; }
+.bu-falle { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.bu-danke { max-width: 760px; margin: 10px auto 0; }
+.bu-haekchen { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 0 10px; border-radius: 50%; background: var(--akzent); color: #fff; font-size: 26px; font-weight: 700; }
+.bu-weiter { margin: 0 0 6px; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; line-height: 1.5; }

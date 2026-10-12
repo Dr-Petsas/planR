@@ -1,0 +1,44 @@
+.ein-schleier { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(20, 30, 36, 0.45); }
+.ein-karte { width: min(760px, 100%); max-height: calc(100vh - 32px); overflow: auto; display: flex; flex-direction: column; background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25); }
+.ein-kopf { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 24px 8px; }
+.ein-kopf h2 { margin: 0; font-size: 20px; }
+.ein-kopf p { margin: 2px 0 0; color: var(--grau); font-size: 14px; }
+.ein-zu { font-size: 26px; line-height: 1; background: none; border: 0; color: var(--grau); cursor: pointer; padding: 0 4px; }
+.ein-schritte { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 8px 24px 14px; border-bottom: 1px solid var(--linie); }
+.ein-schritte li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--grau); padding: 4px 10px 4px 4px; border-radius: 999px; background: #f4f6f7; }
+.ein-schritte li span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; font-weight: 700; font-size: 11px; }
+.ein-schritte li.aktiv { background: var(--akzent-hell); color: var(--akzent-dunkel); font-weight: 600; }
+.ein-schritte li.aktiv span { background: var(--akzent); color: #fff; }
+.ein-schritte li.erledigt span { background: var(--akzent-dunkel); color: #fff; }
+.ein-inhalt { padding: 18px 24px; }
+.ein-inhalt h3 { margin: 0 0 8px; font-size: 17px; }
+.ein-text { margin: 0 0 14px; color: #3b464d; font-size: 14.5px; line-height: 1.55; }
+.ein-klein { margin: 10px 0 0; font-size: 12.5px; color: var(--grau); }
+.ein-inhalt code { background: #eef2f4; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+.ein-liste { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5; }
+.ein-download { display: inline-flex; text-decoration: none; margin-bottom: 6px; }
+.ein-hinweis { margin: 0; padding: 12px 14px; border-radius: 10px; background: #fff7e6; color: #6d4a00; font-size: 14px; line-height: 1.5; }
+.ein-ok { margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: var(--akzent-hell); color: var(--akzent-dunkel); font-size: 14px; }
+.ein-ok.big { font-size: 16px; font-weight: 600; }
+.ein-warte { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 14.5px; }
+.ein-punkt { width: 12px; height: 12px; border-radius: 50%; background: var(--akzent); animation: ein-puls 1.2s ease-in-out infinite; flex: 0 0 auto; }
+@keyframes ein-puls { 50% { opacity: 0.25; transform: scale(0.7); } }
+@media (prefers-reduced-motion: reduce) { .ein-punkt { animation: none; } }
+.ein-pvs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.ein-pvs-wahl { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px; border: 1px solid var(--linie); border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.ein-pvs-wahl:hover { border-color: var(--akzent); }
+.ein-pvs-wahl.an { border-color: var(--akzent); box-shadow: 0 0 0 2px var(--akzent-hell); background: var(--akzent-hell); }
+.ein-pvs-wahl small { color: var(--grau); font-size: 12px; }
+.ein-pvs-wahl i { font-style: normal; font-size: 11px; font-weight: 600; margin-top: 6px; padding: 1px 8px; border-radius: 999px; }
+.ein-pvs-wahl i.bereit { background: #e3f4ea; color: #1f6b3d; }
+.ein-pvs-wahl i.bald { background: #f1f1f1; color: #777; }
+.ein-werte { display: flex; flex-direction: column; gap: 10px; }
+.ein-werte label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--grau); }
+.ein-werte span { display: flex; align-items: center; gap: 8px; }
+.ein-werte code { flex: 1; font-size: 13.5px; padding: 8px 10px; word-break: break-all; color: var(--text); }
+.ein-werte button { font: inherit; font-size: 12.5px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--akzent); background: #fff; color: var(--akzent-dunkel); cursor: pointer; }
+.ein-fertig { display: flex; flex-wrap: wrap; gap: 10px; }
+.ein-fertig a { text-decoration: none; }
+.ein-meldung { margin: 0 24px; padding: 8px 12px; border-radius: 8px; background: #fbeceb; color: var(--rot); font-size: 13px; }
+.ein-fuss { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 24px 20px; border-top: 1px solid var(--linie); }
+.ein-fuss .link-knopf { margin-left: 0; }

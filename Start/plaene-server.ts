@@ -10,8 +10,10 @@ import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import { PVS_CONNECTOR, PVS_SUCHE, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
 import {
-  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, schluesselPasst, type AccessEinstellung, type AgentListe,
+  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
 } from './pvs-agent-server.ts'
+import { buchungPruefen, infoMail, kundenMail, type Buchung } from './buchung.ts'
+import { infoAdresse, mailSenden } from './mail.ts'
 import {
   PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, mandantVon, neuesToken, registerVon,
   passwortVergessen, praxenVon, praxisNr, sitzungFinden, sitzungHash, sitzungenAufraeumen, zugaengePruefen,
@@ -45,6 +47,8 @@ const AGENTEN = `${ORDNER}/pvs-agenten.json`
 const CF_ACCESS = `${ORDNER}/cf-access.json`
 /** { ziel: "https://planr.pickadoc.de" }: Bridges, die noch hier abholen, werden dorthin durchgereicht. Nicht mit auf den Zielserver kopieren. */
 const BRIDGE_WEITER = `${ORDNER}/bridge-weiter.json`
+/** Buchungen von der Startseite (enthalten IBAN – bleiben im Datenordner) */
+const BUCHUNGEN = `${ORDNER}/buchungen.json`
 /** Installationspaket für den Praxisserver (pvsConnectoR: agent/paket-bauen.ps1) */
 const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Agent.zip`
 const TUNNEL_HOST = 'planr.pickadoc-tunnel.com'
@@ -1081,6 +1085,63 @@ function download(req: IncomingMessage, res: ServerResponse, url: string) {
   }).catch(() => json(res, 404, { ok: false, meldung: 'Das Bridge-Paket ist noch nicht gebaut (pvsConnectoR: agent/paket-bauen.ps1).' }))
 }
 
+const buchungBremse = new Bremse(5, 60 * 60_000)
+
+/** POST: Buchung von der Startseite – speichern, Info-Mail an Pickadoc, Bestätigung an die Praxis. Ohne Anmeldung. */
+async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+  if (buchungBremse.gesperrt(ip(req))) return json(res, 429, { ok: false, meldung: 'Zu viele Buchungen von diesem Anschluss. Bitte rufen Sie uns an: 0211 3029 3035.' })
+  const roh = JSON.parse(await lesenBody(req, 30_000)) as Record<string, unknown>
+  // Unsichtbares Feld: füllen nur Bots aus
+  if (String(roh.firma2 ?? '')) return json(res, 200, { ok: true, id: 'B-0' })
+  const r = buchungPruefen(roh)
+  if (!r.ok) return json(res, 400, { ok: false, fehler: r.fehler, meldung: 'Bitte die markierten Angaben prüfen.' })
+  buchungBremse.fehler(ip(req))
+  const b = r.buchung
+  await exklusiv(async () => {
+    const alle = await jsonLesen<Buchung[]>(BUCHUNGEN, [])
+    await jsonSchreiben(BUCHUNGEN, [...(Array.isArray(alle) ? alle : []), b])
+  })
+  const glaeubiger = process.env.PLANR_GLAEUBIGER_ID?.trim() ?? ''
+  const info = infoMail(b, glaeubiger)
+  const kunde = kundenMail(b, glaeubiger)
+  const [infoOk, kundeOk] = await Promise.all([
+    mailSenden(ORDNER, { an: infoAdresse(), betreff: info.betreff, text: info.text, antwortAn: b.inhaber.email }),
+    mailSenden(ORDNER, { an: b.inhaber.email, betreff: kunde.betreff, text: kunde.text, antwortAn: infoAdresse() }),
+  ])
+  if (!infoOk) console.error('[planr] Buchung', b.id, 'gespeichert, Info-Mail fehlt – data/buchungen.json prüfen')
+  json(res, 200, { ok: true, id: b.id, paket: b.paket, pvs: b.pvs.id, email: b.inhaber.email, bestaetigt: kundeOk })
+}
+
+/**
+ * Bridge-Schlüssel der eigenen Praxis (Einrichtungsassistent). GET: Stand · POST: neuen Schlüssel erzeugen (nur Admin).
+ * Der Schlüssel wird nur jetzt angezeigt; PlanR speichert den Hash. Ein neuer Schlüssel trennt eine laufende Bridge.
+ */
+async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  const m = w.mandant
+  if (req.method === 'GET') {
+    const alt = (await agentenLesen())[m]
+    const stand = alt ? hub.verbunden(m) : null
+    return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, pvs: stand?.pvs, version: stand?.version })
+  }
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Den Bridge-Schlüssel erzeugen dürfen nur Praxis-Admins.' })
+  const b = JSON.parse(await lesenBody(req, 1000) || '{}') as { neu?: unknown }
+  const schluesselNeu = neuerSchluessel()
+  const ergebnis = await exklusiv(async () => {
+    const liste = await agentenLesen()
+    const alt = liste[m]
+    if (alt && b.neu !== true) return 'vorhanden' as const
+    liste[m] = { ...alt, hash: schluesselHash(schluesselNeu), emails: alt?.emails ?? [], geraete: alt?.geraete ?? [], angelegt: new Date().toISOString() }
+    await jsonSchreiben(AGENTEN, liste)
+    return 'neu' as const
+  })
+  if (ergebnis === 'vorhanden') return json(res, 409, { ok: false, meldung: 'Für Ihre Praxis gibt es schon einen Bridge-Schlüssel. Ein neuer trennt die laufende Bridge.' })
+  json(res, 200, { ok: true, mandant: m, schluessel: schluesselNeu })
+}
+
 const fehler500 = (res: ServerResponse) => (e: unknown) => {
   console.error('[planr]', e instanceof Error ? e.stack : e)
   if (!res.headersSent) json(res, 500, { ok: false, meldung: 'Das hat gerade nicht geklappt.' })
@@ -1096,6 +1157,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip') return download(req, res, url)
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
+  if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
   if (!url.startsWith('/api/')) return next()
   kopf(res, herkunft(req))
   if (req.method === 'OPTIONS') {
@@ -1112,6 +1174,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
 function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, query: string, w: Wer, next: () => void) {
   const m = w.mandant
   if (url === '/api/einstellungen') return einstellungen(req, res, w)
+  if (url === '/api/bridge-schluessel') return void bridgeSchluessel(req, res, w).catch(fehler500(res))
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))

@@ -90,7 +90,7 @@ export function anmeldeSeite(app: HTMLElement, hinweis = '') {
         <p class="anmelde-meldung" role="alert" data-meldung>${esc(hinweis)}</p>
         <button type="submit" class="neu-knopf">Anmelden</button>
         <button type="button" class="link-knopf" data-vergessen>Passwort vergessen?</button>
-        <p class="anmelde-neu">Noch kein Konto? <a href="#preise">PlanR für Ihre Praxis buchen</a></p>
+        <p class="anmelde-neu">Noch kein Konto? <a href="#buchen">PlanR für Ihre Praxis buchen</a></p>
         <p class="anmelde-neu"><a href="#top">← Zur Startseite</a></p>
       </form>
     </div>`

@@ -40,7 +40,7 @@ foreach ($h in $planer.Keys) {
 Push-Location (Join-Path $wurzel 'Start')
 npm run build --silent
 if ($LASTEXITCODE) { Pop-Location; throw 'Startseite ließ sich nicht bauen.' }
-robocopy . "$bau\start" /E /XD node_modules data logs tools .vite /XF tsconfig.tsbuildinfo *.test.ts /NFL /NDL /NJH /NJS /NP | Out-Null
+robocopy . "$bau\start" /E /XD node_modules (Join-Path $wurzel 'Start\data') logs tools .vite /XF tsconfig.tsbuildinfo *.test.ts /NFL /NDL /NJH /NJS /NP | Out-Null
 Pop-Location
 
 tar -czf "$bau\start.tgz" -C "$bau\start" .
@@ -53,7 +53,14 @@ if ($Daten) {
 
 $key = ((Get-Content F:\MAS-2\backend\.env) -match '^\s*PLANR_HKP_KEY\s*=' | Select-Object -First 1) -replace '^\s*PLANR_HKP_KEY\s*=\s*["'']?([^"''#]*).*', '$1'
 if (-not $key.Trim()) { throw 'PLANR_HKP_KEY fehlt in F:\MAS-2\backend\.env' }
-[IO.File]::WriteAllText("$bau\planr.env", "PLANR_HKP_KEY=$($key.Trim())`nPLANR_MAS=https://mas.pickadoc-tunnel.com`nPLANR_DATEN=/srv/planr/data`nNODE_ENV=production`n", $utf8)
+$umgebung = "PLANR_HKP_KEY=$($key.Trim())`nPLANR_MAS=https://mas.pickadoc-tunnel.com`nPLANR_DATEN=/srv/planr/data`nNODE_ENV=production`n"
+# Mailversand der Online-Buchung (SMTP, Gläubiger-ID) - liegt nur lokal in data\, nie im Repo
+$mail = Join-Path $wurzel 'Start\data\planr-mail.env'
+if (Test-Path $mail) {
+  $umgebung += ((Get-Content $mail -Encoding UTF8) -match '^\s*PLANR_[A-Z_]+\s*=' | ForEach-Object { $_.Trim() }) -join "`n"
+  $umgebung += "`n"
+} else { Write-Warning "Keine $mail - Buchungen werden gespeichert, aber nicht gemailt." }
+[IO.File]::WriteAllText("$bau\planr.env", $umgebung, $utf8)
 $hoch += "$bau\planr.env"
 
 foreach ($s in 'einrichten.sh', 'caddy.sh', 'caddy-planr.txt') {
