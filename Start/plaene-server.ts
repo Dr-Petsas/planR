@@ -20,6 +20,7 @@ import {
   type Konto, type PraxisInfo, type Sitzung, type Zugaenge,
 } from './anmeldung.ts'
 import { spawn } from 'node:child_process'
+import { timingSafeEqual } from 'node:crypto'
 import { stammdatenAusPvs } from './pvsPatient.ts'
 import {
   UST_SATZ, abrechnen, ausstellerVollstaendig, euroText, leeresZaehlwerk, monatMerken, monatVon, monatsname, naechsteNummer, rechnungErstellen, rechnungHtml,
@@ -1329,6 +1330,28 @@ if (process.env.PLANR_RECHNUNGEN === '1') {
   setInterval(() => void lauf(), 15 * 60_000).unref()
 }
 
+/**
+ * GET /api/intern/pvs/patienten?clientId=&q= · /api/intern/pvs/patient?clientId=&patient=
+ * Für Clara (MAS) bei PlanR-Praxen ohne MAS: Patienten aus dem PVS der Praxis, nur über ihre verbundene Bridge.
+ * Schlüssel wie MAS→PlanR-Gegenrichtung (PLANR_HKP_KEY), nie mit Sitzungs-Cookie.
+ */
+async function internPvs(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
+  res.setHeader('Cache-Control', 'no-store')
+  const soll = Buffer.from(masSchluessel())
+  const ist = Buffer.from(String(req.headers['x-planr-key'] ?? ''))
+  if (!soll.length || soll.length !== ist.length || !timingSafeEqual(soll, ist)) return json(res, 401, { ok: false })
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  const q = new URLSearchParams(query)
+  const clientId = q.get('clientId') ?? ''
+  const z = await zugaengeLesen()
+  if (!/^[A-Za-z0-9_-]{2,64}$/.test(clientId) || !(clientId in z.mandanten || Object.values(z.benutzer).some((b) => b.clientId === clientId))) {
+    return json(res, 404, { ok: false, meldung: 'Praxis unbekannt.' })
+  }
+  const konto = { clientId } as Konto
+  const w: Wer = { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
+  await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
+}
+
 const fehler500 = (res: ServerResponse) => (e: unknown) => {
   console.error('[planr]', e instanceof Error ? e.stack : e)
   if (!res.headersSent) json(res, 500, { ok: false, meldung: 'Das hat gerade nicht geklappt.' })
@@ -1345,6 +1368,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
+  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient') return void internPvs(req, res, url, query).catch(fehler500(res))
   if (!url.startsWith('/api/')) return next()
   kopf(res, herkunft(req))
   if (req.method === 'OPTIONS') {
