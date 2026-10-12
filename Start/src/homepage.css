@@ -190,7 +190,8 @@ body.hp-body {
 .hp-karten h3 { font-size: 20px; margin-bottom: 8px; }
 .hp-karten p { margin: 0; color: #b9cfcf; }
 .hp-icon { display: inline-block; font-size: 28px; margin-bottom: 12px; }
-.hp-karten-produkte small { display: inline-block; margin-top: 14px; color: var(--hp-mint); font-weight: 650; }
+.hp-karten.hp-karten-produkte { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.hp-karten-produkte small { display: block; margin-bottom: 6px; color: var(--hp-mint); font-size: 12px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
 .hp-mitte { text-align: center; margin-top: 34px; }
 
 /* ---------- Vergleich ---------- */

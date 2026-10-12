@@ -312,14 +312,22 @@ const HTML = `
   <section class="hp-sektion hp-produkte" id="produkte">
     <div class="hp-sektion-kopf">
       <p class="hp-eyebrow">Ein Pickadoc-Produkt</p>
-      <h2>PlanR ist erst der Anfang.</h2>
-      <p>Pickadoc macht Praxen selbststeuernd – Modul für Modul. PlanR läuft für sich allein und wächst mit, wenn du mehr willst.</p>
+      <h2>Brauchst du mehr?</h2>
+      <p>PlanR ist erst der Anfang. Für jede Aufgabe in deiner Praxis hat Pickadoc eine KI-Kollegin – einzeln oder im Paket CORE, Frontdesk und MAS.</p>
     </div>
     <div class="hp-karten hp-karten-produkte">
-      <article><h3>CORE</h3><p>Kalender, Online-Buchung, digitale Aufklärung und Bewertungen – das Fundament.</p><small>ab 199 € / Monat</small></article>
-      <article><h3>Frontdesk</h3><p>Bianca nimmt jeden Anruf an, Lisa ruft heraus. Optional mit Self-Check-in-Stele.</p><small>baut auf CORE auf</small></article>
-      <article><h3>MAS</h3><p>Clara und ihr KI-Team übernehmen das Backoffice – gesteuert per Sprache. PlanR inklusive.</p><small>baut auf CORE und Frontdesk auf</small></article>
-      <article><h3>API</h3><p>Pickadoc in eigene Software, PVS oder Praxisnetz einbinden – mit SLA und Sandbox.</p><small>für Systemhäuser</small></article>
+      <article><small>Online-Termine</small><h3>CalendR</h3><p>Die beste Alternative zu Doctolib für Zahnärzte: Online-Buchung, Praxiskalender und Erinnerungen.</p></article>
+      <article><small>Aufklärung &amp; Unterschrift</small><h3>SignR</h3><p>Aufklärungs-KI und digitale Unterschriften – Bögen am Tablet erklären, unterschreiben, ablegen.</p></article>
+      <article><small>KI-Videos</small><h3>ClonR</h3><p>Videos mit deinem Gesicht und deiner Stimme – für Aufklärung, Website und Social Media, ohne Drehtag.</p></article>
+      <article><small>CallR · Telefon-KI eingehend</small><h3>Bianca</h3><p>Nimmt jeden Anruf an, vergibt Termine und beantwortet Fragen – rund um die Uhr.</p></article>
+      <article><small>CallR · Telefon-KI ausgehend</small><h3>Lisa</h3><p>Ruft für dich heraus: Recall, Terminerinnerungen und Rückrufe.</p></article>
+      <article><small>Post-KI</small><h3>Nadine</h3><p>Liest Briefe, E-Mails und Faxe, sortiert sie zu und bereitet Antworten vor.</p></article>
+      <article><small>Abrechnungs-KI</small><h3>Sophie</h3><p>Prüft die Abrechnung und findet vergessene Leistungen. PlanR läuft direkt in Sophie.</p></article>
+      <article><small>Ersthelferin am Handy</small><h3>Clara</h3><p>Deine Leitstelle per Sprache – sie kennt die Praxis und ruft die richtige Kollegin.</p></article>
+      <article><small>QM-KI</small><h3>Julia</h3><p>Qualitätsmanagement, Hygiene und Begehungen – Dokumente immer aktuell.</p></article>
+      <article><small>Arbeitszeit-KI</small><h3>Marie</h3><p>Erfasst Arbeitszeiten und behält Urlaub und Dienstplan im Blick.</p></article>
+      <article><small>Sprechzimmer-KI</small><h3>Lena</h3><p>Hört bei der Behandlung mit und schreibt die Dokumentation für dich.</p></article>
+      <article><small>Empfang</small><h3>Self-Check-in</h3><p>Patienten melden sich an der Stele selbst an – Karte stecken, Anamnese ausfüllen, fertig.</p></article>
     </div>
     <p class="hp-mitte"><a class="hp-knopf" href="https://pickadoc.ai" target="_blank" rel="noopener">Alle Produkte auf pickadoc.ai</a></p>
   </section>
