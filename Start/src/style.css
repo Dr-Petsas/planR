@@ -13,6 +13,7 @@
   background: #fff;
   -webkit-font-smoothing: antialiased;
 }
+html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: #e7f0fd; --kasse: #16202e; --kasse-hell: #eaf1fb; }
 
 * { box-sizing: border-box; }
 body { margin: 0; background: #fff; }

@@ -25,13 +25,15 @@ const PLANER = {
   'KB/Privat-KB': ['basis', 'ablage'],
   'KFO/Kassen-KFO': ['basis', 'ablage', 'kasse'],
   'KFO/Privat-KFO': ['basis', 'ablage'],
+  Start: ['start'],
 }
 
 const SAETZE = {
+  start: ['thema.ts'],
   basis: [
     'mandant.ts', 'mandant.test.ts', 'components/Mandant.tsx',
     'stammdaten.ts', 'stammdaten.test.ts', 'components/Stammdaten.tsx',
-    'daten.ts', 'components/Listen.tsx', 'gemeinsam.css',
+    'daten.ts', 'components/Listen.tsx', 'gemeinsam.css', 'thema.ts',
   ],
   ablage: ['ablage.ts', 'ablage.test.ts', 'components/Ablage.tsx'],
   kasse: ['data/kzv.ts', 'data/punktwerte.json', 'punktwerte.ts', 'punktwerte.test.ts', 'components/Punktwerte.tsx'],

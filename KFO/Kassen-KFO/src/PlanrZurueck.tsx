@@ -17,7 +17,7 @@ export function PlanrZurueck() {
         width: 40,
         height: 40,
         borderRadius: 10,
-        background: '#2f7f8f',
+        background: 'var(--akzent, #2f7f8f)',
         color: '#fff',
         fontWeight: 700,
         fontSize: 14,

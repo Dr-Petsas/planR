@@ -29,13 +29,14 @@ export async function ichLaden(): Promise<Ich | null> {
 const PICKADOC = ['https://cal.pickadoc.de', 'https://docgenda.web.app', 'https://docgenda.firebaseapp.com', 'http://localhost:3000']
 
 /**
- * Aus Pickadoc (Sophie) geöffnet (`#pickadoc`): PlanR meldet sich beim öffnenden Fenster und bekommt dessen
- * Firebase-Sitzung per postMessage – nie über die Adresse, damit nichts im Verlauf landet.
+ * Aus Pickadoc (Sophie) geöffnet (`#pickadoc`), als eigener Tab oder eingebettet unter der Pickadoc-Leiste:
+ * PlanR meldet sich beim öffnenden bzw. umgebenden Fenster und bekommt dessen Firebase-Sitzung per
+ * postMessage – nie über die Adresse, damit nichts im Verlauf landet.
  */
 export function ausPickadoc(): Promise<boolean> {
   if (location.hash !== '#pickadoc') return Promise.resolve(false)
   history.replaceState(null, '', location.pathname + location.search)
-  const opener = window.opener as Window | null
+  const opener = (window.opener as Window | null) ?? (window.parent !== window ? window.parent : null)
   if (!opener) return Promise.resolve(false)
   return new Promise((fertig) => {
     const ende = (ok: boolean) => { window.removeEventListener('message', empfang); clearTimeout(uhr); fertig(ok) }

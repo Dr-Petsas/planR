@@ -1,4 +1,5 @@
 import './style.css'
+import './thema'
 import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
