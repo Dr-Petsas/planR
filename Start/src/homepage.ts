@@ -302,7 +302,7 @@ const HTML = `
         <h3>PlanR + Sprach-KI</h3>
         <p class="hp-preis"><b>${PLANR + 49} €</b> / Monat</p>
         <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
-        <ul><li>Alles aus PlanR</li><li>Clara als Sprach-App am Handy</li><li>Pläne per Sprache anlegen und ändern</li><li>Kopplung per QR-Code, ohne Installation am PC</li></ul>
+        <ul><li>Alles aus PlanR</li><li>Clara als Sprach-App am Handy</li><li>Pläne per Sprache anlegen und ändern</li><li>Kopplung per QR-Code, ohne Installation am PC</li><li>Eigener Name für deine Assistentin</li></ul>
         <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Mit Sprach-KI buchen</a>
       </article>
       <article class="hp-tier">

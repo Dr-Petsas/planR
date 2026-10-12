@@ -42,3 +42,9 @@
 .ein-meldung { margin: 0 24px; padding: 8px 12px; border-radius: 8px; background: #fbeceb; color: var(--rot); font-size: 13px; }
 .ein-fuss { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 24px 20px; border-top: 1px solid var(--linie); }
 .ein-fuss .link-knopf { margin-left: 0; }
+.cl-name { display: flex; gap: 8px; }
+.cl-name input { flex: 1; max-width: 260px; font: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid var(--linie); border-radius: 10px; }
+.cl-abstand { margin-top: 20px; }
+.cl-qr { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.cl-qr img { border: 1px solid var(--linie); border-radius: 12px; }
+.cl-qr > div { flex: 1; min-width: 220px; }

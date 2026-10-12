@@ -48,6 +48,7 @@ interface KatalogInfo {
 let katalog: KatalogInfo | null = null
 let katalogLaeuft = false
 let ich: Ich
+let assistentin = 'Clara'
 /** Benutzer und Praxen für den Praxis-Admin (null = nicht geladen / kein Admin) */
 let benutzer: { praxen: PraxisZeile[]; benutzer: BenutzerZeile[] } | null = null
 const heute = new Date()
@@ -118,6 +119,7 @@ const TONNE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true
 const PFEIL = (d: string) => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`
 const EXPORT = PFEIL('M12 4v11M7 10l5 5 5-5M5 20h14')
 const IMPORT = PFEIL('M12 15V4M7 9l5-5 5 5M5 20h14')
+const MIKRO = PFEIL('M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3')
 const DELFIN = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 13.2C3.2 12.4 4 11.6 5 10.6 7.6 7.8 11.4 6.2 15 6.8L15.6 4.6 17.2 7.4C19.4 8.4 20.6 10.4 21 12.4L23 11.2 22 14.2 22.6 16.6 20.2 14.8C19.2 13.2 17.4 12 15 11.7 12 11.4 9 12.4 7 14.4L6 17 5.2 14.5C4 14.5 2.8 14.1 2 13.2Z"/><circle cx="6.4" cy="11.7" r=".65" fill="#fff"/></svg>'
 const ZAHNRAD = PFEIL('M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z')
 
@@ -497,6 +499,7 @@ function zeichnen() {
         <span class="kopf-info">${sichtbar.length} von ${gesamt}</span>
         <button type="button" class="konto-knopf" data-abmelden title="${esc(ich.konto.email)} – abmelden">${esc(ich.konto.name || ich.konto.email)}<small>Abmelden</small></button>
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
+        ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
         <button type="button" class="import-knopf" data-einstellungen title="PVS, Bridge und Benutzer einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
         <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen und HKP übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
         <button type="button" class="neu-knopf" data-neu>Neuen Plan erstellen</button>
@@ -576,6 +579,7 @@ function zeichnen() {
     if (ich.konto.admin) void benutzerLaden().then((b) => { benutzer = b; if (einstellungAuf) zeichnen() })
   })
   app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => void einrichtungZeigen())
+  app.querySelector<HTMLButtonElement>('[data-clara-dialog]')?.addEventListener('click', () => void claraZeigen())
   app.querySelector<HTMLButtonElement>('[data-abmelden]')!.addEventListener('click', () => {
     if (confirm(`${ich.konto.email} auf diesem Gerät abmelden?`)) void abmelden()
   })
@@ -705,6 +709,13 @@ async function einrichtungZeigen() {
   })
 }
 
+async function claraZeigen() {
+  const { claraLaden, claraOeffnen } = await import('./clara')
+  const stand = await claraLaden()
+  if (stand?.assistantName) assistentin = stand.assistantName
+  claraOeffnen({ admin: ich.konto.admin, stand, geaendert: (n) => { assistentin = n; zeichnen() } })
+}
+
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
 /** Ohne Anmeldung: Startseite für Besucher, #anmelden zeigt die Anmeldung */
@@ -740,6 +751,11 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   sitzungBewachen()
   await einstellungenLaden()
   await laden()
+  if (ich.clara === 'planr') {
+    void import('./clara').then((c) => c.claraLaden()).then((s) => {
+      if (s?.assistantName && s.assistantName !== assistentin) { assistentin = s.assistantName; zeichnen() }
+    })
+  }
   // Neue Praxis ohne Praxissystem: Assistent startet von selbst (einmal je Tab), #einrichtung öffnet ihn jederzeit
   const neu = ich.konto.admin && !einstellungen.pvs && !sessionStorage.getItem('planr-einrichtung')
   if (location.hash === '#einrichtung' || neu) {

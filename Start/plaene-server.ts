@@ -1142,6 +1142,27 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
   json(res, 200, { ok: true, mandant: m, schluessel: schluesselNeu })
 }
 
+/**
+ * HKP-Clara (nur PlanR ohne MAS): GET Stand + Ruf-Name · PUT {assistantName} (Admins) · POST kopplung → QR fürs Handy.
+ * Clara-Sitzungen laufen unter der Pickadoc-Praxis des Kontos, daher nicht über w.register.
+ */
+async function claraEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  const praxis: Wer = { ...w, register: w.konto.clientId }
+  const weiter = (r: Awaited<ReturnType<typeof masPlanr>>) => json(res, r.status, r.daten)
+  if (url === '/api/clara' && req.method === 'GET') return weiter(await masPlanr(praxis, '/clara'))
+  if (!eigeneSeite(req)) return json(res, 403, { ok: false })
+  if (url === '/api/clara' && req.method === 'PUT') {
+    if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Den Namen der Assistentin ändern dürfen nur Praxis-Admins.' })
+    const b = JSON.parse(await lesenBody(req, 1000) || '{}') as { assistantName?: unknown }
+    return weiter(await masPlanr(praxis, '/clara', { method: 'PUT', body: { assistantName: String(b.assistantName ?? '') } }))
+  }
+  if (url === '/api/clara/kopplung' && req.method === 'POST') {
+    return weiter(await masPlanr(praxis, '/clara/kopplung', { method: 'POST', body: { name: w.konto.name || w.konto.email, nutzer: w.konto.uid, role: w.konto.role } }))
+  }
+  json(res, 405, { ok: false })
+}
+
 const fehler500 = (res: ServerResponse) => (e: unknown) => {
   console.error('[planr]', e instanceof Error ? e.stack : e)
   if (!res.headersSent) json(res, 500, { ok: false, meldung: 'Das hat gerade nicht geklappt.' })
@@ -1177,6 +1198,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/bridge-schluessel') return void bridgeSchluessel(req, res, w).catch(fehler500(res))
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
+  if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps') {
     if (req.method !== 'GET' || !eigeneSeite(req)) return json(res, 403, { ok: false })

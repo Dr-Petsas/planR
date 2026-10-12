@@ -6,6 +6,8 @@ export interface Ich {
   /** DS-Win-Praxen, die der Benutzer sieht; null = alle, [] = noch nicht freigeschaltet */
   praxen: number[] | null
   praxisNamen: Record<string, string>
+  /** Sprach-KI: volle Clara (MAS), HKP-Assistentin (PlanR mit Sprach-KI) oder keine */
+  clara?: 'voll' | 'planr' | 'aus'
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
