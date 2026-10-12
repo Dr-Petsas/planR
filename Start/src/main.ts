@@ -5,7 +5,7 @@ import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
 import { PVS_CONNECTOR, PVS_SUCHE } from './pvs'
 import { pvsImportOeffnen } from './pvsImport'
 import { apiJson } from './api'
-import { abmelden, anmeldeSeite, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
+import { abmelden, anmeldeSeite, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const STATUS: Record<string, string> = {
@@ -694,8 +694,30 @@ async function einstellungenLaden() {
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
+/** Ohne Anmeldung: Startseite für Besucher, #anmelden zeigt die Anmeldung */
+function ohneAnmeldung() {
+  let anmelden: boolean | null = null
+  const zeigen = async () => {
+    const soll = location.hash === '#anmelden' || !!sitzungHinweis
+    if (soll === anmelden) return
+    anmelden = soll
+    const hp = await import('./homepage')
+    if (soll) {
+      hp.homepageVerlassen()
+      document.title = 'PlanR – Anmelden'
+      anmeldeSeite(app, sitzungHinweis)
+      scrollTo(0, 0)
+    } else hp.homepage(app)
+  }
+  addEventListener('hashchange', () => {
+    if (location.hash !== '#anmelden' && sitzungHinweis) sitzungHinweisLoeschen()
+    void zeigen()
+  })
+  return zeigen()
+}
+
 ausPickadoc().then(ichLaden).then(async (wer) => {
-  if (!wer) return anmeldeSeite(app, sitzungHinweis)
+  if (!wer) return ohneAnmeldung()
   ich = wer
   sitzungBewachen()
   await einstellungenLaden()
