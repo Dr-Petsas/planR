@@ -21,7 +21,7 @@ import {
 } from './anmeldung.ts'
 import { spawn } from 'node:child_process'
 import { timingSafeEqual } from 'node:crypto'
-import { stammdatenAusPvs } from './pvsPatient.ts'
+import { isoDatum, stammdatenAusPvs } from './pvsPatient.ts'
 import {
   UST_SATZ, abrechnen, ausstellerVollstaendig, euroText, leeresZaehlwerk, monatMerken, monatVon, monatsname, naechsteNummer, rechnungErstellen, rechnungHtml,
   zaehlwerkAktualisieren, type Aussteller, type Empfaenger, type Gesehen, type Rechnung, type Zaehlwerk,
@@ -1349,7 +1349,52 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   }
   const konto = { clientId } as Konto
   const w: Wer = { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
+  if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
+}
+
+/**
+ * Patienten für Clara: per Nummer (genau), per Name und/oder Geburtsdatum (q, geburt=JJJJ-MM-TT).
+ * Name + Datum: Namenstreffer mit diesem Datum, sonst alle mit dem Datum (Connector durchsucht das Geburtsdatum).
+ */
+async function internPatienten(req: IncomingMessage, w: Wer, q: URLSearchParams, res: ServerResponse) {
+  const c = await pvsConnector(req, w, 'suche')
+  if (!c.rufen) return wegFehler(res, c)
+  const rufen = c.rufen
+  const nummer = (q.get('nummer') ?? '').trim()
+  const geburt = (q.get('geburt') ?? '').trim()
+  const woerter = (q.get('q') ?? '').trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean).slice(0, 4)
+  if (nummer && !/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Die Patientennummer besteht nur aus Ziffern.' })
+  if (geburt && !/^\d{4}-\d{2}-\d{2}$/.test(geburt)) return json(res, 400, { ok: false, meldung: 'Geburtsdatum bitte als JJJJ-MM-TT.' })
+  if (!nummer && !geburt && !woerter.length) return json(res, 400, { ok: false, meldung: 'Name, Patientennummer oder Geburtsdatum fehlt.' })
+  const zeile = (p: PvsZeile) => ({
+    id: String(p.id ?? p.patientNumber ?? ''), vorname: p.firstName ?? '', name: p.lastName ?? '',
+    geburtsdatum: isoDatum(String(p.birthDate ?? '')), ort: p.city ?? p.postalCodeAndCity ?? '',
+  })
+  const suche = async (text: string) => {
+    const r = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: text, ...(c.id === 'dampsoft' ? { limit: '100' } : {}) })}`)
+    if (!r.ok) throw new Error(`${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}`)
+    return (r.daten.items ?? []).map(zeile).filter((p) => p.id)
+  }
+  try {
+    if (nummer) {
+      const z = await rufen<PvsZeile>(`/patients/${nummer}`)
+      // Gesprochen "123", in DS-Win "00123": dann über die Suche, die auch die Nummer durchsucht
+      if (z.status === 404) return json(res, 200, { ok: true, pvs: c.name, patienten: (await suche(nummer)).filter((p) => Number(p.id) === Number(nummer)) })
+      if (!z.ok) return json(res, 502, { ok: false, meldung: `${c.name}: ${String((z.daten as { error?: unknown }).error ?? `HTTP ${z.status}`)}` })
+      return json(res, 200, { ok: true, pvs: c.name, patienten: [zeile({ ...z.daten, id: z.daten.id ?? nummer })] })
+    }
+    let patienten: ReturnType<typeof zeile>[] = []
+    if (woerter.length) {
+      patienten = (await suche(woerter.reduce((a, b) => (b.length > a.length ? b : a))))
+        .filter((p) => woerter.every((x) => `${p.vorname} ${p.name}`.toLocaleLowerCase('de').includes(x)))
+      if (geburt) patienten = patienten.filter((p) => p.geburtsdatum === geburt)
+    }
+    if (geburt && !patienten.length) patienten = (await suche(geburt)).filter((p) => p.geburtsdatum === geburt)
+    return json(res, 200, { ok: true, pvs: c.name, patienten })
+  } catch (e) {
+    return e instanceof Error && e.message.startsWith(`${c.name}:`) ? json(res, 502, { ok: false, meldung: e.message }) : json(res, 503, { ok: false, meldung: stumm(c) })
+  }
 }
 
 const fehler500 = (res: ServerResponse) => (e: unknown) => {
