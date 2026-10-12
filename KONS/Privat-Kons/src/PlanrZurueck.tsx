@@ -2,7 +2,8 @@
 export function PlanrZurueck() {
   const mandant = new URLSearchParams(window.location.search).get('mandant')
   const q = mandant ? `?mandant=${encodeURIComponent(mandant)}` : ''
-  const href = window.location.hostname.endsWith('.pickadoc-tunnel.com')
+  const href = window.location.pathname.startsWith('/planer/') ? `/${q}`
+    : window.location.hostname.endsWith('.pickadoc-tunnel.com')
     ? `https://planr.pickadoc-tunnel.com/${q}`
     : `${window.location.protocol}//${window.location.hostname || '127.0.0.1'}:5189/${q}`
   return (

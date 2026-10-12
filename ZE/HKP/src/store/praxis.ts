@@ -34,7 +34,8 @@ export function praxisSetzen(p: Praxis) {
 function behandlerMelden() {
   const name = praxis.zahnarzt.trim()
   if (!name || typeof fetch !== 'function' || typeof location === 'undefined') return
-  const hub = location.hostname.endsWith('.pickadoc-tunnel.com')
+  const hub = location.pathname.startsWith('/planer/') ? `${location.origin}/api/plaene`
+    : location.hostname.endsWith('.pickadoc-tunnel.com')
     ? 'https://planr.pickadoc-tunnel.com/api/plaene'
     : `http://${location.hostname}:5189/api/plaene`
   fetch(hub, {

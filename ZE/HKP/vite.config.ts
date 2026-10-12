@@ -40,6 +40,8 @@ const MAS_PROXY: Record<string, ProxyOptions> = {
 
 // https://vite.dev/config/
 export default defineConfig({
+  // planr.pickadoc.de: Planer unter /planer/<name>/ (PLANR_BASE beim Bauen)
+  base: process.env.PLANR_BASE || '/',
   plugins: [react()],
   // F:\postcss.config.js gehört nicht zum Projekt und darf nicht geerbt werden
   css: { postcss: {} },

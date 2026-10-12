@@ -58,6 +58,7 @@ function entfernenMerken(key: string, e: { nummer: string; geaendert: string }) 
 const modulVon = (key: string) => (key.includes('@') ? '' : key.replace(/\.liste\.v\d+$/, ''))
 /** PlanR-Übersicht; die Sitzung (Cookie) gilt für denselben Host, daher nicht fest 127.0.0.1 */
 const hubAdresse = () => (typeof location === 'undefined' ? 'http://127.0.0.1:5189/api/plaene'
+  : location.pathname.startsWith('/planer/') ? `${location.origin}/api/plaene`
   : location.hostname.endsWith('.pickadoc-tunnel.com') ? 'https://planr.pickadoc-tunnel.com/api/plaene'
     : `http://${location.hostname}:5189/api/plaene`)
 

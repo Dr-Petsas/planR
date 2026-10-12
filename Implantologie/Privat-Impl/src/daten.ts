@@ -43,6 +43,7 @@ const melden = () => {
 export function datenBasen(): string[] {
   if (typeof location === 'undefined') return []
   const { protocol, hostname } = location
+  if (location.pathname.startsWith('/planer/')) return [`${location.origin}/daten/`]
   if (hostname.endsWith('.pickadoc-tunnel.com')) return ['https://planr.pickadoc-tunnel.com/daten/']
   return [`${protocol}//${hostname}:5189/daten/`, `${protocol}//${hostname}:5188/daten/`]
 }

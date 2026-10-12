@@ -21,5 +21,6 @@ export default defineConfig({
   // F:\postcss.config.js gehört nicht zum Projekt und darf nicht geerbt werden
   css: { postcss: {} },
   server: { port: 5188, strictPort: true, cors },
-  preview: { host: '127.0.0.1', port: 5189, strictPort: true, allowedHosts: ['planr.pickadoc-tunnel.com'], cors },
+  // planr.pickadoc.de: Caddy auf dem Strato-Server -> 127.0.0.1:5189, die Planer liefert Caddy unter /planer/ selbst aus
+  preview: { host: '127.0.0.1', port: 5189, strictPort: true, allowedHosts: ['planr.pickadoc-tunnel.com', 'planr.pickadoc.de'], cors },
 })

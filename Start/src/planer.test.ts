@@ -13,6 +13,15 @@ describe('Adressen', () => {
       .toBe('https://mkv.pickadoc-tunnel.com/?mandant=praxis2')
   })
 
+  it('auf planr.pickadoc.de der Pfad unter derselben Adresse', () => {
+    expect(adresse(mkv, { protocol: 'https:', hostname: 'planr.pickadoc.de', search: '' })).toBe('/planer/mkv/')
+  })
+
+  it('im Praxisnetz (IP oder Rechnername) der Port', () => {
+    expect(adresse(mkv, { protocol: 'http:', hostname: '192.168.0.20', search: '' })).toBe('http://192.168.0.20:5204/')
+    expect(adresse(mkv, { protocol: 'http:', hostname: 'praxis-pc', search: '' })).toBe('http://praxis-pc:5204/')
+  })
+
   it('ohne Host keine Adresse', () => {
     const kb = BEREICHE.flatMap((b) => b.planer).find((p) => p.kuerzel === 'KB')!
     expect(adresse({ ...kb, host: undefined, port: undefined }, { protocol: 'http:', hostname: 'localhost', search: '' })).toBeNull()

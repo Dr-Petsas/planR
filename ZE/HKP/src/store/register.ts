@@ -10,6 +10,7 @@ const BASIS = '/mas/planr'
  * und die HKPs der eigenen Praxen heraus und stempelt neue HKPs mit Praxis und Bearbeiter.
  */
 const HUB = typeof location === 'undefined' ? ''
+  : location.pathname.startsWith('/planer/') ? `${location.origin}/api/register`
   : location.hostname.endsWith('.pickadoc-tunnel.com') ? 'https://planr.pickadoc-tunnel.com/api/register'
     : `http://${location.hostname}:5189/api/register`
 /** Weitere Mandanten bekommen am Praxis-PC nicht automatisch den Schlüssel der Praxis (vite.config.ts) */

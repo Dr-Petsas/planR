@@ -166,7 +166,13 @@ const abgelehnt = new WeakSet<IncomingMessage>()
 
 const sicher = (req: IncomingMessage) => (req.headers['x-forwarded-proto'] === 'https' || String(req.headers.host ?? '').endsWith('.pickadoc-tunnel.com') ? '; Secure' : '')
 const anmeldeBremse = new Bremse(8, 15 * 60_000)
-const ip = (req: IncomingMessage) => String(req.headers['cf-connecting-ip'] ?? req.socket.remoteAddress ?? '')
+/** Absender: Cloudflare-Tunnel bzw. Caddy (nur wenn die Anfrage lokal ankommt, sonst ist der Kopf gefälscht) */
+const ip = (req: IncomingMessage) => {
+  const direkt = req.socket.remoteAddress ?? ''
+  const lokal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(direkt)
+  const weiter = lokal ? String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() : ''
+  return String(req.headers['cf-connecting-ip'] ?? '') || weiter || direkt
+}
 
 const werInfo = (w: Wer, z: Zugaenge) => ({
   ok: true,
@@ -285,7 +291,8 @@ async function benutzerEndpunkt(req: IncomingMessage, res: ServerResponse, w: We
 
 // ---------- HKP-Register in MAS ----------
 
-const MAS = 'http://127.0.0.1:4000/planr'
+/** MAS läuft am Praxis-PC; PlanR auf dem Server erreicht es über PLANR_MAS (z. B. https://mas.pickadoc-tunnel.com). */
+const MAS = `${process.env.PLANR_MAS?.trim().replace(/\/+$/, '') || 'http://127.0.0.1:4000'}/planr`
 interface HkpDoc { id?: string; status?: string; version?: number; planJson?: string; dateien?: { id?: string; art?: string }[] }
 
 /** HKP-Register des Mandanten (zugaenge.json, sonst die eigene Pickadoc-Praxis) – nie das einer anderen */
@@ -471,7 +478,9 @@ async function befundLaden(w: Wer, modul: string, nummer: string, res: ServerRes
 function amPraxisPc(req: IncomingMessage) {
   const host = String(req.headers.host ?? '').split(':')[0]
   const lokal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '')
-  return lokal && !req.headers['cf-connecting-ip'] && host !== TUNNEL_HOST
+  // Hinter Caddy (planr.pickadoc.de) kommt alles von 127.0.0.1 – das ist kein Praxis-PC
+  const weitergeleitet = !!req.headers['cf-connecting-ip'] || !!req.headers['x-forwarded-for']
+  return lokal && !weitergeleitet && host !== TUNNEL_HOST && ['127.0.0.1', 'localhost', '[::1]'].includes(host)
 }
 
 const hub = new AgentHub()
@@ -1017,7 +1026,7 @@ code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem
 <li>Das Fenster meldet „Connector bereit“ und „PlanR verbunden“ – fertig. Der Dienst startet ab jetzt mit dem Server.</li>
 </ol>
 <h2>Arbeiten mit PlanR</h2>
-<p>PlanR über <code>https://planr.pickadoc-tunnel.com</code> öffnen – am Praxis-PC, zu Hause oder am Handy – und mit dem <b>Pickadoc-Konto</b> anmelden. Jeder sieht nur die Patienten und Pläne seiner Praxis; in einer Praxisgemeinschaft ordnet der Praxis-Admin die Benutzer in PlanR unter Einstellungen → Benutzer zu.</p>
+<p>PlanR über <code>https://planr.pickadoc.de</code> öffnen – am Praxis-PC, zu Hause oder am Handy – und mit dem <b>Pickadoc-Konto</b> anmelden. Jeder sieht nur die Patienten und Pläne seiner Praxis; in einer Praxisgemeinschaft ordnet der Praxis-Admin die Benutzer in PlanR unter Einstellungen → Benutzer zu.</p>
 <p>Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Agent</code> anlegen. Entfernen: <code>Installieren.cmd /entfernen</code>.</p>
 </body></html>`
 

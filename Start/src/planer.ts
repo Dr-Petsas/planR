@@ -82,11 +82,17 @@ export function planerZuModul(modul: string): Planer | undefined {
   return BEREICHE.flatMap((b) => b.planer).find((p) => p.kuerzel === ziel.kuerzel && p.art === ziel.art)
 }
 
-/** Adresse eines Planers: über den Tunnel die Subdomain, am Praxis-PC der lokale Port; ?mandant= wird durchgereicht. */
+/**
+ * Adresse eines Planers: über den Tunnel die Subdomain, am Praxis-PC der lokale Port, auf dem Server
+ * (planr.pickadoc.de) der Pfad /planer/<host>/ derselben Adresse; ?mandant= wird durchgereicht.
+ */
 export function adresse(p: Planer, ort: { protocol: string; hostname: string; search: string }): string | null {
   if (!p.host || !p.port) return null
   const tunnel = ort.hostname.endsWith('.pickadoc-tunnel.com')
-  const basis = tunnel ? `https://${p.host}.pickadoc-tunnel.com/` : `${ort.protocol}//${ort.hostname || 'localhost'}:${p.port}/`
+  const lokal = !ort.hostname || ort.hostname === 'localhost' || /^[\d.]+$|^\[|^[^.]+$/.test(ort.hostname)
+  const basis = tunnel ? `https://${p.host}.pickadoc-tunnel.com/`
+    : lokal ? `${ort.protocol}//${ort.hostname || 'localhost'}:${p.port}/`
+      : `/planer/${p.host}/`
   const mandant = new URLSearchParams(ort.search).get('mandant')
   return mandant ? `${basis}?mandant=${encodeURIComponent(mandant)}` : basis
 }
