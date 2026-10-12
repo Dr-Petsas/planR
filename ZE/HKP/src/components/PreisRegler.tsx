@@ -15,13 +15,18 @@ interface Props {
   setEinstellung: <K extends keyof Einstellungen>(k: K, v: Einstellungen[K]) => void
   onMeldungen: (m: string[]) => void
   onBerechnen?: () => void
+  /** Plan neu durch die Regelengine (Positionen je Zahn, Listen nach Labor) */
+  onNeuRechnen?: (plan: HkpPlan) => void
   /** Handy: nur Regler und Summen (kein Berechnen, kein Labor-XML) */
   mobil?: boolean
 }
 
 const delta = (n: number) => (n > 0.004 ? `+${euro(n)}` : n < -0.004 ? `−${euro(-n)}` : '±0,00 €')
 
-export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, mobil = false }: Props) {
+/** Aus dem PVS übernommene Zeilen: Labor ohne Zahnbezug, Liste wie im PVS – erst die Regelengine ordnet sie Zähnen und Listen zu */
+const ausPvs = (x: HkpPlan['positionen'][number]) => !!x.auto && /^(dens|dswin)-/.test(x.id)
+
+export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, onNeuRechnen, mobil = false }: Props) {
   const e = plan.einstellungen
   const hatBefund = Object.values(plan.zaehne).some((z) => z.B.trim()) || plan.reparaturen.length > 0
   const xmlRef = useRef<HTMLInputElement>(null)
@@ -63,20 +68,23 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
     onMeldungen(r.hinweise)
   }
 
+  function laborUmstellen(p: HkpPlan, labor: Einstellungen['labor']): HkpPlan {
+    const q: HkpPlan = {
+      ...p,
+      einstellungen: { ...p.einstellungen, labor },
+      positionen: p.positionen.map((x) => {
+        if (x.ausXml || x.id.startsWith('aufw-')) return x
+        if (x.ebene === 'BEL' || x.ebene === 'BEB') return { ...x, labor: undefined }
+        if (x.ebene === 'MAT' && (x.id.startsWith('impl-') || ausPvs(x))) return { ...x, labor: labor === 'gewerbe' ? 'fremd' as const : undefined }
+        return x
+      }),
+    }
+    return labor === 'gewerbe' && (p.einstellungen.eigenPrivatStufe ?? 0) > 0 ? privatStufeAnwenden(q, 0).plan : q
+  }
+
   function laborWechseln(labor: Einstellungen['labor']) {
-    setPlan((p) => {
-      const q: HkpPlan = {
-        ...p,
-        einstellungen: { ...p.einstellungen, labor },
-        positionen: p.positionen.map((x) => {
-          if (x.ausXml || x.id.startsWith('aufw-')) return x
-          if (x.ebene === 'BEL' || x.ebene === 'BEB') return { ...x, labor: undefined }
-          if (x.ebene === 'MAT' && x.id.startsWith('impl-')) return { ...x, labor: labor === 'gewerbe' ? 'fremd' as const : undefined }
-          return x
-        }),
-      }
-      return labor === 'gewerbe' && (p.einstellungen.eigenPrivatStufe ?? 0) > 0 ? privatStufeAnwenden(q, 0).plan : q
-    })
+    if (onNeuRechnen && plan.positionen.some(ausPvs)) return onNeuRechnen(laborUmstellen(plan, labor))
+    setPlan((p) => laborUmstellen(p, labor))
   }
 
   function zuruecksetzen() {

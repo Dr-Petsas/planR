@@ -300,7 +300,7 @@ export default function App() {
 
       <div className={hkpAnsicht ? 'arbeitsflaeche' : ''}>
       {hkpAnsicht && (
-        <PreisRegler plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen} setEinstellung={setEinstellung} onMeldungen={setEngineHinweise} onBerechnen={berechnenKlick} />
+        <PreisRegler plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen} setEinstellung={setEinstellung} onMeldungen={setEngineHinweise} onBerechnen={berechnenKlick} onNeuRechnen={regelengine} />
       )}
 
       <div className="hauptspalte" ref={hauptRef}>
