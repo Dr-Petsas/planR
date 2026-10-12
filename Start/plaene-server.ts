@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -771,7 +771,7 @@ a.knopf{display:inline-block;background:#1f6feb;color:#fff;padding:.7rem 1.2rem;
 code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem 0}</style></head><body>
 <h1>PlanR-Agent für den Praxisserver</h1>
 <p>Der Agent verbindet DS-Win bzw. DENS auf dem Praxisserver mit PlanR. Er baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Python ist im Paket enthalten.</p>
-<p><a class="knopf" href="/download/PlanR-Agent.zip" download>PlanR-Agent.zip herunterladen</a></p>
+<p><a class="knopf" href="/download/PlanR-Agent.zip?v=STAND" download>PlanR-Agent.zip herunterladen</a></p>
 <h2>Einrichten (einmal, auf dem Server mit DS-Win bzw. DENS)</h2>
 <p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden. Geht auch an einem Arbeitsplatz-PC, der dauerhaft läuft; dann fragt die Installation nach einem Windows-Konto, das die Freigabe öffnen darf.</p>
 <ol>
@@ -787,9 +787,13 @@ code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem
 
 function download(req: IncomingMessage, res: ServerResponse, url: string) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { ok: false })
+  // Cloudflare hält .zip sonst zwischengespeichert und liefert nach einem Neubau das alte Paket.
+  res.setHeader('Cache-Control', 'no-store')
   if (url === '/download' || url === '/download/') {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    res.end(DOWNLOAD_SEITE)
+    stat(AGENT_PAKET).then((s) => Math.round(s.mtimeMs).toString(36), () => '0').then((stand) => {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.end(DOWNLOAD_SEITE.replace('STAND', stand))
+    })
     return
   }
   readFile(AGENT_PAKET).then((daten) => {
