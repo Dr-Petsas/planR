@@ -1,5 +1,5 @@
 import type {
-  BebEintrag, BelEintrag, BemaEintrag, FestzuschussEintrag, GozEintrag, HkpPlan, Labor, Position, Preisliste, Versorgungsart,
+  BebEintrag, BelEintrag, BemaEintrag, FestzuschussEintrag, GozEintrag, HkpPlan, Komplex, Labor, Position, Preisliste, Versorgungsart,
 } from '../types'
 import { kombinationenPruefen } from './kombinationen'
 import { zusatzleistungen } from './zusatzleistungen'
@@ -20,6 +20,8 @@ export interface Listen {
   fz?: Preisliste<'festzuschuss'>
   /** praxiseigene Laborpositionen */
   eigen?: EigenPosition[]
+  /** Leistungskomplexe der Praxis aus dem PVS */
+  komplexe?: Komplex[]
   /** Hinweise der Listenauswahl (KZV-Bereich, Stichtag, veraltete Listen) */
   hinweise?: Hinweis[]
 }
@@ -219,7 +221,11 @@ export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): B
       const e = finden<GozEintrag>(listen.goz, p.nr)
       const pw = listen.goz?.punktwert ?? 0.0562421
       if (!e && p.preis === undefined) return { ...basis, fehler: `GOZ-Nr. ${p.nr} nicht in der Liste` }
-      const eigen = p.faktor ?? plan.einstellungen.gozFaktor
+      if (e?.betrag !== undefined && !e.punkte) {
+        const einzel = p.preis ?? e.betrag
+        return { ...basis, bezeichnung: p.text || e.text, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
+      }
+      const eigen = p.faktor ?? e?.faktor ?? plan.einstellungen.gozFaktor
       const regler = Math.min(plan.einstellungen.honorarFaktor || 0, GOZ_HOECHSTSATZ)
       const faktor = Math.max(eigen, regler)
       // § 5 Abs. 1 GOZ: Rundung erst nach Multiplikation mit dem Steigerungsfaktor

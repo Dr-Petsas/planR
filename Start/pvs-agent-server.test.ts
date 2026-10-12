@@ -133,6 +133,8 @@ describe('erlaubte Connector-Aufrufe', () => {
     expect(auftragErlaubt('GET', '/patients/12/hkps')).toBe(true)
     expect(auftragErlaubt('GET', '/patients/2/clinical')).toBe(true)
     expect(auftragErlaubt('GET', '/patients/0/hkps/13/planr')).toBe(true)
+    expect(auftragErlaubt('GET', '/praxis/katalog')).toBe(true)
+    expect(auftragErlaubt('POST', '/praxis/katalog')).toBe(false)
     expect(auftragErlaubt('POST', '/patients/0/hkps/import')).toBe(true)
     expect(auftragErlaubt('POST', '/patients/2/hkps')).toBe(true)
     expect(auftragErlaubt('GET', '/patients/2/../../admin')).toBe(false)

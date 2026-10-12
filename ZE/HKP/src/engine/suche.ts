@@ -41,6 +41,17 @@ function kuerzelVorschlaege(q: string): Vorschlag[] {
   })
 }
 
+/** Private Kürzel und Leistungsketten der Praxis aus ihrem PVS */
+function komplexVorschlaege(q: string, listen: Listen): Vorschlag[] {
+  const n = norm(q)
+  const t = q.trim().toLowerCase()
+  return (listen.komplexe ?? [])
+    .map((k) => ({ k, rang: norm(k.kuerzel) === n ? 0 : norm(k.kuerzel).startsWith(n) ? 1 : t.length >= 3 && k.text.toLowerCase().includes(t) ? 2 : -1 }))
+    .filter((x) => x.rang >= 0)
+    .sort((a, b) => a.rang - b.rang || a.k.kuerzel.length - b.k.kuerzel.length)
+    .map(({ k }) => ({ key: `praxis-${k.kuerzel}`, art: 'kuerzel' as const, titel: k.kuerzel, text: `${k.text} (Praxis)`, positionen: k.positionen }))
+}
+
 function positionsVorschlaege(q: string, listen: Listen): Vorschlag[] {
   const n = norm(q)
   const t = q.trim().toLowerCase()
@@ -61,14 +72,15 @@ function positionsVorschlaege(q: string, listen: Listen): Vorschlag[] {
     })
   }
   for (const [ebene, eintraege] of quellen) {
-    for (const e of eintraege) {
+    for (const e of eintraege as { nr: string; text: string; kuerzel?: string }[]) {
       const nr = norm(e.nr)
-      const rang = nr === n ? 0 : nr.startsWith(n) ? 1 : t.length >= 3 && e.text.toLowerCase().includes(t) ? 2 : -1
+      const kz = e.kuerzel ? norm(e.kuerzel) : ''
+      const rang = nr === n || kz === n ? 0 : nr.startsWith(n) || (kz && kz.startsWith(n)) ? 1 : t.length >= 3 && e.text.toLowerCase().includes(t) ? 2 : -1
       if (rang < 0) continue
       treffer.push({
         rang,
         v: {
-          key: `p-${ebene}-${e.nr}`, art: 'position', titel: `${ebene} ${ebene === 'BEL' ? belNrAnzeige(e.nr) : e.nr}`, text: e.text,
+          key: `p-${ebene}-${e.nr}`, art: 'position', titel: `${ebene} ${ebene === 'BEL' ? belNrAnzeige(e.nr) : e.nr}${e.kuerzel ? ` (${e.kuerzel})` : ''}`, text: e.text,
           positionen: [ebene === 'GOZ' && e.nr === '9050' ? AUFBAU_WECHSEL : { ebene, nr: e.nr }],
         },
       })
@@ -80,5 +92,5 @@ function positionsVorschlaege(q: string, listen: Listen): Vorschlag[] {
 /** Vorschläge für die Positionssuche: Therapiekürzel (als Leistungspaket) und Einzelpositionen aller Listen. */
 export function vorschlaege(q: string, listen: Listen, max = 30): Vorschlag[] {
   if (!q.trim()) return []
-  return [...kuerzelVorschlaege(q), ...positionsVorschlaege(q, listen)].slice(0, max)
+  return [...komplexVorschlaege(q, listen), ...kuerzelVorschlaege(q), ...positionsVorschlaege(q, listen)].slice(0, max)
 }

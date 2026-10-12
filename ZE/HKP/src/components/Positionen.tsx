@@ -46,7 +46,7 @@ function PositionSuche({ plan, listen, setPositionen }: Pick<Props, 'plan' | 'li
 
   const neu = (v: Vorschlag): Position[] => v.positionen.map((x) => ({
     id: neueId(), ebene: x.ebene, nr: x.nr, zahn, anzahl: x.anzahl ?? 1,
-    ...(x.ebene === 'GOZ' ? { faktor: plan.einstellungen.gozFaktor } : {}),
+    ...(x.ebene === 'GOZ' ? { faktor: listen.goz?.eintraege.find((e) => e.nr === x.nr)?.faktor ?? plan.einstellungen.gozFaktor } : {}),
     ...(x.labor ? { labor: x.labor } : labor && (x.ebene === 'BEL' || x.ebene === 'BEB') ? { labor } : {}),
   }))
   const preise = useMemo(() => {

@@ -21,6 +21,7 @@ import { Preislisten } from './components/Preislisten'
 import { PreisRegler } from './components/PreisRegler'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
+import { praxiskatalogAbgleichen, usePraxiskatalog } from './store/praxiskatalog'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useLinkAbgleich, useRegisterAbgleich, type LinkEintrag } from './store/registerAbgleich'
 import { MasVerbindung } from './components/MasVerbindung'
@@ -59,10 +60,23 @@ export default function App() {
 
   const e = plan.einstellungen
   const eigenlabor = useEigenlabor()
+  const praxiskatalog = usePraxiskatalog()
   const lokaleListen: Listen = useMemo(
-    () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor }),
-    [alle, plan.verwaltung, e, eigenlabor],
+    () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor, komplexe: praxiskatalog?.komplexe }),
+    [alle, plan.verwaltung, e, eigenlabor, praxiskatalog],
   )
+  // Preise & Positionen aus dem PVS: beim Start und beim Zurückkehren in den Tab (höchstens jede Minute)
+  useEffect(() => {
+    let zuletzt = 0
+    const holen = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - zuletzt < 60_000) return
+      zuletzt = Date.now()
+      void praxiskatalogAbgleichen()
+    }
+    holen()
+    document.addEventListener('visibilitychange', holen)
+    return () => document.removeEventListener('visibilitychange', holen)
+  }, [])
   // Per Link geöffneter HKP: mit den Listen rechnen, mit denen MAS die Summen im Register gerechnet hat,
   // solange die Listenwahl des Plans gleich bleibt
   const [linkListen, setLinkListen] = useState<{ listen: Listen; wahl: string } | null>(null)

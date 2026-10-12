@@ -10,6 +10,8 @@ export interface EigenPosition {
   preis: number
   /** BEB-Nr., deren Preis und Text diese Position im Eigenlabor ersetzt */
   ersetzt?: string
+  /** 'pvs' = aus dem Praxisprogramm übernommen, wird beim nächsten Abgleich ersetzt */
+  quelle?: 'pvs'
 }
 
 export interface Kandidat {

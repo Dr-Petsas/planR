@@ -33,6 +33,17 @@ let einstellungen: Einstellungen = LEER
 let entwurf: Einstellungen = LEER
 /** PlanR-Agent auf dem Praxisserver (null = für diesen Mandanten keiner eingerichtet) */
 let agent: { verbunden: boolean; pvs?: string; version?: string } | null = null
+interface KatalogInfo {
+  pvs: string; stand: string; listeName: string
+  wahl: { liste: number; spalte: number; faktoren: boolean }
+  listen: { nr: number; name: string; mitPreis: number[] }[]
+  vorschlag: { liste: number; spalte: number } | null
+  aenderungen: Record<string, { neu: number; geaendert: number; entfallen: number }> | null
+  anzahl: { eigenlabor: number; material: number; goz: number; kuerzel: number; faktoren: number; komplexe: number }
+}
+/** Aus dem PVS übernommene Preise & Positionen (null = noch nie abgeglichen) */
+let katalog: KatalogInfo | null = null
+let katalogLaeuft = false
 const mandant = new URLSearchParams(location.search).get('mandant') || 'standard'
 const heute = new Date()
 let jahr = heute.getFullYear()
@@ -377,6 +388,7 @@ function einstellungKarte(): string {
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Bridge für dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
         ${p && e.bridge ? `<p class="pvs-info">PlanR-Agent auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(agent.pvs ?? '')}, Version ${esc(agent.version ?? '?')})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
           · <a href="/download" target="_blank" rel="noopener">Agent herunterladen</a></p>` : ''}
+        ${katalogBlock()}
         <div class="einst-fuss">
           <span>${einstellungen.geaendert ? `Gespeichert ${esc(zeit(einstellungen.geaendert))}` : 'Noch nicht gespeichert'}</span>
           <button type="button" class="import-knopf" data-wahl-zu>Abbrechen</button>
@@ -384,6 +396,53 @@ function einstellungKarte(): string {
     </div>
       </form>
     </div>`
+}
+
+const mal = (n: number, eins: string, viele: string) => `${n} ${n === 1 ? eins : viele}`
+
+function katalogBlock(): string {
+  const p = pvsZiel()
+  if (!p) return ''
+  const k = katalog
+  const a = k?.aenderungen
+  const summe = a ? Object.values(a).reduce((s, x) => ({ neu: s.neu + x.neu, geaendert: s.geaendert + x.geaendert, entfallen: s.entfallen + x.entfallen }), { neu: 0, geaendert: 0, entfallen: 0 }) : null
+  const listen = k?.listen.map((l) => `<option value="${l.nr}"${l.nr === k.wahl.liste ? ' selected' : ''}>${esc(l.name)}${k.vorschlag?.liste === l.nr ? ' (in den HKPs genutzt)' : ''}</option>`).join('') ?? ''
+  const aktiv = k?.listen.find((l) => l.nr === k.wahl.liste)
+  const spalten = [1, 2, 3, 4].map((s) => `<option value="${s}"${s === k?.wahl.spalte ? ' selected' : ''}>${s}${s === 1 ? ' Eigenlabor' : s === 2 ? ' Fremdlabor' : ''} · ${aktiv?.mitPreis[s - 1] ?? 0} Preise</option>`).join('')
+  return `
+        <fieldset class="katalog">
+          <legend>Preise &amp; Positionen aus ${esc(p)}</legend>
+          <p class="pvs-info">${k
+            ? `Stand ${esc(zeit(k.stand))}: ${mal(k.anzahl.eigenlabor, 'Eigenlabor-Preis', 'Eigenlabor-Preise')} (${esc(k.listeName)}), ${mal(k.anzahl.material, 'Material', 'Materialien')}, ${mal(k.anzahl.goz, 'eigene GOZ-/Analogposition', 'eigene GOZ-/Analogpositionen')}, ${mal(k.anzahl.kuerzel, 'Kürzel', 'Kürzel')}, ${mal(k.anzahl.komplexe, 'Komplex', 'Komplexe')}.`
+            : `Noch nicht übernommen. PlanR liest Eigenlabor-Preise, Materialkürzel, eigene GOZ-/Analogpositionen mit Faktor und die privaten Kürzel/Komplexe aus ${esc(p)} und legt sie hier an.`}</p>
+          ${summe && (summe.neu || summe.geaendert || summe.entfallen) ? `<p class="pvs-info">Letzte Änderung: ${summe.neu} neu, ${summe.geaendert} geändert, ${summe.entfallen} entfallen.</p>` : ''}
+          ${k && k.listen.length ? `<div class="katalog-wahl">
+            <label class="feld">Eigenlabor-Preisliste<select data-kat-liste>${listen}</select></label>
+            <label class="feld">Preisspalte<select data-kat-spalte>${spalten}</select></label>
+          </div>
+          <label class="schalter">
+            <input type="checkbox" data-kat-faktoren${k.wahl.faktoren ? ' checked' : ''}>
+            <span><b>GOZ-Faktoren der Praxis</b><small>${mal(k.anzahl.faktoren, 'voreingestellter Faktor', 'voreingestellte Faktoren')} aus ${esc(p)} übernehmen.</small></span>
+          </label>` : ''}
+          <div class="katalog-fuss">
+            <small>Läuft automatisch, sobald ein HKP aus ${esc(p)} Positionen enthält, die PlanR nicht kennt.</small>
+            <button type="button" class="import-knopf" data-kat-abgleich${katalogLaeuft ? ' disabled' : ''}>${katalogLaeuft ? 'Wird übernommen …' : k ? 'Erneut abgleichen' : 'Preise &amp; Positionen übernehmen'}</button>
+          </div>
+        </fieldset>`
+}
+
+async function katalogSenden(body: Record<string, unknown>) {
+  katalogLaeuft = true
+  zeichnen()
+  const d = await pvsJson<{ info?: KatalogInfo }>(mandant, '/api/praxiskatalog', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mandant, ...body }),
+  })
+  katalogLaeuft = false
+  if (d.ok && d.info) {
+    katalog = d.info
+    melden(body.abgleich ? `Preise & Positionen aus ${d.info.pvs} übernommen.` : 'Auswahl übernommen.')
+  } else melden(d.meldung || 'Das hat gerade nicht geklappt.')
+  zeichnen()
 }
 
 async function einstellungenSpeichern() {
@@ -491,6 +550,7 @@ function zeichnen() {
     auswahl = false
     urlSetzen('push')
     zeichnen()
+    void katalogLaden().then(() => { if (einstellungAuf && !katalogLaeuft) zeichnen() })
   })
   const form = app.querySelector<HTMLFormElement>('[data-einst]')
   if (form) {
@@ -509,6 +569,14 @@ function zeichnen() {
       const knopf = form.querySelector<HTMLButtonElement>('button[type=submit]')!
       knopf.disabled = JSON.stringify(entwurf) === JSON.stringify(einstellungen)
     })
+    form.querySelector<HTMLButtonElement>('[data-kat-abgleich]')?.addEventListener('click', () => void katalogSenden({ abgleich: true }))
+    const wahl = () => ({
+      liste: Number(form.querySelector<HTMLSelectElement>('[data-kat-liste]')!.value),
+      spalte: Number(form.querySelector<HTMLSelectElement>('[data-kat-spalte]')!.value),
+      faktoren: form.querySelector<HTMLInputElement>('[data-kat-faktoren]')!.checked,
+    })
+    form.querySelectorAll('[data-kat-liste], [data-kat-spalte], [data-kat-faktoren]')
+      .forEach((x) => x.addEventListener('change', () => void katalogSenden({ wahl: wahl() })))
   }
   app.querySelector<HTMLButtonElement>('[data-zurueck]')?.addEventListener('click', () => {
     const p = meldung?.zurueck
@@ -572,12 +640,20 @@ async function laden() {
   zeichnen()
 }
 
+async function katalogLaden() {
+  try {
+    const k = await (await fetch(`/api/praxiskatalog?mandant=${encodeURIComponent(mandant)}&nur=info`, { cache: 'no-store' })).json() as { info?: KatalogInfo | null }
+    katalog = k.info ?? null
+  } catch { /* bleibt beim letzten Stand */ }
+}
+
 async function einstellungenLaden() {
   try {
     const d = await (await fetch(`/api/einstellungen?mandant=${encodeURIComponent(mandant)}`, { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent }
     if (d.einstellungen) einstellungen = d.einstellungen
     agent = d.agent ?? null
   } catch { /* Maske startet leer */ }
+  await katalogLaden()
   entwurf = einstellungen
 }
 

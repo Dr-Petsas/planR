@@ -166,6 +166,13 @@ main { min-width: 0; }
 .schalter small { display: block; color: var(--grau); font-size: 12px; margin-top: 2px; }
 .schalter.aus { opacity: .55; cursor: not-allowed; }
 .pvs-hinweis { margin: 0; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: #fdf1dc; color: #6b4600; }
+.katalog { margin: 0; padding: 12px 14px 14px; border: 1px solid var(--linie); border-radius: 10px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.katalog legend { padding: 0 6px; font-size: 13px; font-weight: 650; }
+.katalog .pvs-info { margin: 0; }
+.katalog-wahl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.katalog-fuss { display: flex; align-items: center; gap: 10px; }
+.katalog-fuss small { margin-right: auto; font-size: 12px; color: var(--grau); }
+.katalog-fuss button:disabled { opacity: .55; cursor: default; }
 .einst-fuss { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .einst-fuss span { margin-right: auto; font-size: 12px; color: var(--grau); }
 .neu-knopf:disabled { opacity: .45; cursor: default; background: var(--akzent); }

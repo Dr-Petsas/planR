@@ -14,6 +14,7 @@ import {
   neuerSchluessel, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
 } from './pvs-agent-server.ts'
 import { spawn } from 'node:child_process'
+import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
 
 const ORDNER = 'F:/PlanR/Start/data'
 const DATEI = `${ORDNER}/plaene.json`
@@ -396,10 +397,127 @@ async function ausPvs(req: IncomingMessage, patient: string, planNr: string, man
     return json(res, 503, { ok: false, meldung: stumm(c) })
   }
   if (!r.ok || !r.daten.plan) return json(res, r.status === 404 ? 404 : 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? 'HKP ließ sich nicht lesen.'}` })
+  const hinweise = [...(r.daten.hinweise ?? [])]
+  const fehlen = unbekannte(r.daten.plan, bekannteListen(), (await katalogLesen(mandant))?.katalog)
+  if (fehlen.length) {
+    const k = await katalogAbgleichen(c, mandant)
+    const rest = k.ok ? unbekannte(r.daten.plan, bekannteListen(), k.ablage.katalog) : fehlen
+    if (!k.ok) hinweise.push(`Unbekannte Positionen (${fehlen.join(', ')}); Abgleich der Leistungsverzeichnisse mit ${c.name} hat nicht geklappt: ${k.meldung}`)
+    else if (rest.length) hinweise.push(`${rest.join(', ')} steht weder in den PlanR-Listen noch in den Leistungsverzeichnissen von ${c.name} – bitte im Plan prüfen.`)
+    else hinweise.push(`Preise & Positionen aus ${c.name} aktualisiert (${fehlen.join(', ')} waren PlanR noch unbekannt).`)
+  }
   const m = await mas('', { method: 'POST', body: { plan: r.daten.plan, status: 'wartet_auf_freigabe', versorgungText: `aus ${c.name} (Plan ${planNr})` } })
   const neu = m.daten.hkp as { id?: string } | undefined
   if (!m.ok || !neu?.id) return json(res, 400, { ok: false, meldung: String(m.daten.message ?? 'Der HKP konnte nicht angelegt werden.') })
-  json(res, 200, { ok: true, nummer: neu.id, hinweise: r.daten.hinweise ?? [] })
+  json(res, 200, { ok: true, nummer: neu.id, hinweise })
+}
+
+const katalogDatei = (mandant: string) => `${ORDNER}/praxiskatalog/${mandant}.json`
+
+async function katalogLesen(mandant: string): Promise<Ablage | null> {
+  const a = await jsonLesen<Ablage | null>(katalogDatei(mandant), null)
+  return a?.katalog && a.roh ? a : null
+}
+
+let bekannt: Bekannt | null = null
+/** Nummern der mitgelieferten GOZ- und BEB-Listen (Startseite /daten) */
+function bekannteListen(): Bekannt {
+  if (bekannt) return bekannt
+  const nummern = (datei: string) => {
+    try {
+      const d = JSON.parse(readFileSync(`F:/PlanR/Start/public/daten/${datei}`, 'utf8')) as { eintraege?: { nr?: string }[] }
+      return new Set((d.eintraege ?? []).map((e) => String(e.nr ?? '')))
+    } catch {
+      return new Set<string>()
+    }
+  }
+  bekannt = { goz: nummern('goz-2012.json'), beb: nummern('beb-itz-2024.json') }
+  return bekannt
+}
+
+type KatalogErgebnis = { ok: true; ablage: Ablage } | { ok: false; status: number; meldung: string }
+const abgleichLaeuft = new Map<string, Promise<KatalogErgebnis>>()
+
+/** Leistungsverzeichnisse aus dem PVS lesen und als Praxiskatalog ablegen; die Wahl (Liste/Spalte) bleibt erhalten. */
+function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis> {
+  const laeuft = abgleichLaeuft.get(mandant)
+  if (laeuft) return laeuft
+  const p = (async (): Promise<KatalogErgebnis> => {
+    let r
+    try {
+      r = await c.rufen!<Record<string, unknown>>('/praxis/katalog', { ms: 90_000 })
+    } catch {
+      return { ok: false, status: 503, meldung: stumm(c) }
+    }
+    if (r.status === 404) return { ok: false, status: 501, meldung: `${c.name} liefert seine Leistungsverzeichnisse noch nicht – PlanR-Agent bzw. Connector aktualisieren.` }
+    if (!r.ok) return { ok: false, status: 502, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` }
+    const roh = rohPruefen(r.daten)
+    if (!roh) return { ok: false, status: 502, meldung: `${c.name}: Antwort unvollständig.` }
+    return exklusiv(async () => {
+      const alt = await katalogLesen(mandant)
+      const katalog = katalogBilden(roh, wahlPruefen(null, roh, alt?.wahl))
+      const ablage: Ablage = { roh, wahl: katalog.wahl, katalog, aenderungen: aenderungen(alt?.katalog, katalog) }
+      await jsonSchreiben(katalogDatei(mandant), ablage)
+      return { ok: true as const, ablage }
+    })
+  })().finally(() => abgleichLaeuft.delete(mandant))
+  abgleichLaeuft.set(mandant, p)
+  return p
+}
+
+const katalogInfo = (a: Ablage | null) => a && {
+  pvs: a.katalog.pvs, stand: a.katalog.stand, wahl: a.wahl, listeName: a.katalog.listeName,
+  listen: a.roh.listen, vorschlag: a.roh.vorschlag ?? null, aenderungen: a.aenderungen ?? null,
+  anzahl: {
+    eigenlabor: a.katalog.eigenlabor.filter((e) => e.ersetzt).length,
+    material: a.katalog.eigenlabor.filter((e) => e.material).length,
+    goz: a.katalog.goz.filter((g) => g.eigen).length,
+    kuerzel: a.katalog.goz.filter((g) => g.kuerzel).length,
+    faktoren: a.katalog.goz.filter((g) => g.faktor).length,
+    komplexe: a.katalog.komplexe.length,
+  },
+}
+
+/**
+ * Praxiskatalog: GET für Planer und Übersicht (`nur=info` ohne die Listen), POST nur aus der Übersicht –
+ * `abgleich` liest die Verzeichnisse neu aus dem PVS, `wahl` stellt Laborliste/Preisspalte/Faktoren um.
+ */
+function praxiskatalog(req: IncomingMessage, res: ServerResponse, query: string) {
+  kopf(res, herkunft(req))
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.end()
+    return
+  }
+  const q = new URLSearchParams(query)
+  if (req.method === 'GET') {
+    const mandant = q.get('mandant') || 'standard'
+    if (!MANDANT_RE.test(mandant)) return json(res, 400, { ok: false })
+    katalogLesen(mandant)
+      .then((a) => json(res, 200, { ok: true, info: katalogInfo(a), ...(q.get('nur') === 'info' ? {} : { katalog: a?.katalog ?? null }) }))
+      .catch(() => json(res, 500, { ok: false }))
+    return
+  }
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
+  lesenBody(req, 2000).then(async (text) => {
+    const b = JSON.parse(text) as { mandant?: unknown; abgleich?: unknown; wahl?: unknown }
+    const mandant = String(b.mandant ?? 'standard')
+    if (!MANDANT_RE.test(mandant)) return json(res, 400, { ok: false })
+    if (b.abgleich === true) {
+      const c = await pvsConnector(req, mandant)
+      if (!c.rufen) return wegFehler(res, c)
+      const k = await katalogAbgleichen(c, mandant)
+      return k.ok ? json(res, 200, { ok: true, info: katalogInfo(k.ablage) }) : json(res, k.status, { ok: false, meldung: k.meldung })
+    }
+    return exklusiv(async () => {
+      const alt = await katalogLesen(mandant)
+      if (!alt) return json(res, 404, { ok: false, meldung: 'Noch keine Preise & Positionen aus dem PVS übernommen.' })
+      const katalog = katalogBilden(alt.roh, wahlPruefen(b.wahl, alt.roh, alt.wahl), alt.katalog.stand)
+      const ablage: Ablage = { roh: alt.roh, wahl: katalog.wahl, katalog, aenderungen: aenderungen(alt.katalog, katalog) }
+      await jsonSchreiben(katalogDatei(mandant), ablage)
+      json(res, 200, { ok: true, info: katalogInfo(ablage) })
+    })
+  }).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Das hat gerade nicht geklappt.' }) })
 }
 
 /**
@@ -685,6 +803,7 @@ function download(req: IncomingMessage, res: ServerResponse, url: string) {
 export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
   const [url, query = ''] = String(req.url ?? '').split('?')
   if (url === '/api/einstellungen') return einstellungen(req, res, query)
+  if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query)
   if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort') return agentEndpunkt(req, res, url, query)
   if (url === '/api/pvs-geraet') return geraetFreigeben(req, res)
   if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip') return download(req, res, url)

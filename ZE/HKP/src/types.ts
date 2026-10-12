@@ -15,6 +15,23 @@ export interface GozEintrag {
   punkte: number
   hinweis?: string
   abschnitt?: string
+  /** Felder aus dem PVS der Praxis (Praxiskatalog) */
+  kuerzel?: string
+  /** voreingestellter Steigerungsfaktor der Praxis */
+  faktor?: number
+  /** fester Betrag (Verbrauchsmaterial) statt Punkte × Punktwert × Faktor */
+  betrag?: number
+  /** praxiseigene bzw. Analogposition */
+  eigen?: boolean
+  druckNr?: string
+  analogZu?: string
+}
+
+/** Leistungskomplex der Praxis (private Kürzel, Leistungsketten) aus dem PVS */
+export interface Komplex {
+  kuerzel: string
+  text: string
+  positionen: { ebene: 'GOZ' | 'BEMA'; nr: string; anzahl?: number }[]
 }
 
 export interface BelEintrag {

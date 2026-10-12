@@ -3,6 +3,7 @@ import { jsonAnalysieren, uebernehmen, zeilenAnalysieren, type Analyse, type Eig
 import { dateiZeilen } from '../engine/eigenlabor-pdf'
 import { DIGITAL, DIGITAL_ERSETZT, DIGITAL_KATALOG } from '../engine/digital'
 import { eigenlaborLesen } from '../store/eigenlabor'
+import { usePraxiskatalog } from '../store/praxiskatalog'
 import { geloescht, Tonne, wiederEinfuegen } from '../rueckgaengig'
 
 interface Props {
@@ -21,6 +22,7 @@ export function EigenlaborKatalog({ katalog, onChange, bebText }: Props) {
   const [spalte, setSpalte] = useState(0)
   const [laedt, setLaedt] = useState(false)
   const [suche, setSuche] = useState('')
+  const pvs = usePraxiskatalog()
 
   async function dateiGewaehlt(f: File | undefined) {
     if (!f) return
@@ -68,6 +70,12 @@ export function EigenlaborKatalog({ katalog, onChange, bebText }: Props) {
             „statt BEB-Nr.“ ersetzt deren Preis und Text – auch bei automatisch geplanten Positionen, ohne BEB-Aufschlag.
             Rechtlicher Rahmen: § 9 GOZ (tatsächlich entstandene, angemessene Kosten); die Rechnung muss jede Leistung mit Bezeichnung und Preis ausweisen.
           </p>
+          {pvs && (
+            <p className="el-info">
+              Aus {pvs.pvs} übernommen ({pvs.listeName}, Stand {new Date(pvs.stand).toLocaleDateString('de-DE')}): {katalog.filter((e) => e.quelle === 'pvs').length} Positionen,
+              dazu {pvs.goz} eigene GOZ-Positionen und {pvs.komplexe.length} Kürzel/Komplexe. Abgleich in der PlanR-Übersicht unter Einstellungen.
+            </p>
+          )}
         </div>
         <div className="el-aktionen">
           <input ref={dateiRef} type="file" hidden accept=".pdf,.csv,.txt,.json,application/pdf" onChange={(e) => dateiGewaehlt(e.target.files?.[0])} />
