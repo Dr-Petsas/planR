@@ -551,8 +551,10 @@ function zeichnen() {
   app.querySelector<HTMLButtonElement>('[data-import-neu]')!.addEventListener('click', () => {
     const ziel = pvsQuelle()
     if (!ziel) return importWaehlen(null)
-    if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
-      return melden(`Import aus ${ziel} geht nur direkt am Praxis-PC (http://localhost:5189).`)
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && !agent?.verbunden) {
+      return melden(agent
+        ? `Der PlanR-Agent auf dem Praxisserver ist gerade nicht verbunden – Import aus ${ziel} geht so nur direkt am Praxis-PC.`
+        : `Import aus ${ziel} über das Internet braucht den PlanR-Agenten auf dem Praxisserver (Einstellungen → Agent herunterladen).`)
     }
     pvsImportOeffnen({ pvsName: ziel, mandant, dateiWaehlen: () => importWaehlen(null), geoeffnet: ausPvsOeffnen })
   })
