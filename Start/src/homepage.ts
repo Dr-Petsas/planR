@@ -1,6 +1,14 @@
 import './homepage.css'
+import './clara-handy.css'
 
 /** Öffentliche Startseite von PlanR für Besucher ohne Anmeldung. */
+
+const CLARA_SCHRITTE = ['Befund', 'Regelversorgung', 'Festzuschuss', 'BEMA', 'GOZ', 'BEL II', 'Begründung']
+const CLARA_ZUSTAENDE = [
+  { id: 'listening', zustand: 'Ich höre zu', unter: 'Patient und Befund sagen', hinweis: '„HKP für Frau Berger …“' },
+  { id: 'thinking', zustand: 'Clara rechnet …', unter: 'Befund · Zuschüsse · Regler', hinweis: '' },
+  { id: 'speaking', zustand: 'Clara spricht', unter: 'Plan steht · 4.380 €', hinweis: '„Soll ich ihn ins PVS geben?“' },
+]
 
 const PVS = ['Dampsoft DS-Win', 'CGM Z1.PRO', 'DENSoffice', 'solutio charly', 'evident', 'ivoris', 'VISIdent', 'Linudent', 'jedes PVS mit VDDS-Schnittstelle']
 
@@ -42,8 +50,9 @@ const HTML = `
   <header class="hp-nav">
     <a class="hp-marke" href="#top"><span class="hp-logo">PR</span><span>PlanR <small>by Pickadoc</small></span></a>
     <nav>
+      <a href="#sprach-ki">Sprach-KI</a>
       <a href="#spielwiese">Regler</a>
-      <a href="#funktionen">Funktionen</a>
+      <a href="#connect">Connect</a>
       <a href="#preise">Preise</a>
       <a href="#produkte">Pickadoc</a>
       <a class="hp-nav-anmelden" href="#anmelden">Anmelden</a>
@@ -55,27 +64,78 @@ const HTML = `
     <div class="hp-hero-text">
       <p class="hp-eyebrow">PlanR · Heil- und Kostenpläne mit Sprach-KI</p>
       <h1>Ab sofort macht <span class="hp-verlauf">HKP erstellen</span> Spaß.</h1>
-      <p class="hp-lead">Per Sprach-KI: Deine KI-Assistenz erstellt alle Pläne deiner Praxis – inklusive Schieberegler für maximalen Umsatz.
+      <p class="hp-lead">Per Sprach-KI: <b>Patient nennen, Befund sagen</b> – Clara erstellt den HKP und errechnet den <b>maximalen Umsatz</b> deiner Praxis.
         Praxisindividuell und vorbereitet für Dampsoft, Z1.PRO, DENSoffice und solutio.</p>
       <p class="hp-gestern"><s>HKP outsourcen für teuer Geld</s> war gestern.</p>
       <div class="hp-ctas">
-        <a class="hp-knopf hp-knopf-voll" href="#spielwiese">Mit den Reglern spielen</a>
-        <a class="hp-knopf" href="#preise">Ab 69 € im Monat</a>
+        <a class="hp-knopf hp-knopf-voll" href="#connect">Heute connecten</a>
+        <a class="hp-knopf" href="#sprach-ki">So geht's per Sprache</a>
       </div>
       <p class="hp-klein">Schon Kunde? <a href="#anmelden">Mit dem Pickadoc-Konto anmelden</a></p>
     </div>
-    <div class="hp-demo" aria-hidden="true">
-      <div class="hp-sprache">
-        <span class="hp-mic"><i></i><i></i><i></i><i></i><i></i></span>
-        <p data-diktat></p>
-      </div>
-      <div class="hp-plan" data-plan>
-        <div class="hp-plan-kopf"><b>HKP · Berger, Anna</b><span class="hp-pille">von Clara erstellt</span></div>
-        <div class="hp-plan-zeile"><span>14–16</span><span>Brücke, vollverblendet</span></div>
-        <div class="hp-plan-zeile"><span>26</span><span>Vollkeramikkrone</span></div>
-        <div class="hp-plan-zeile"><span>BEMA · GOZ · BEL II</span><span>24 Positionen</span></div>
-        <div class="hp-plan-summe"><span>Praxisumsatz</span><b data-demo-summe>0 €</b></div>
-        <div class="hp-plan-balken"><i data-demo-balken></i></div>
+    <div class="hp-handy">
+      <div class="cc-stage">
+        <div class="cc-phone" aria-label="Clara erstellt einen HKP per Sprache">
+          <div class="cc-phone__notch" aria-hidden="true"></div>
+          <div class="cc-flip">
+            <div class="cc-flip__inner">
+              <div class="cc-flip__face cc-flip__face--front">
+                <div class="cc-screen cc-screen--text">
+                  <div class="cc-brand"><b>Clara</b><small>HKP PER SPRACHE</small></div>
+                  <div class="cc-next">
+                    <div class="cc-next__tag">Neuer HKP</div>
+                    <div class="cc-next__name"><b>Anna Berger</b><span class="cc-next__time">Bonus 30 %</span></div>
+                    <div class="cc-next__why">Befund: 14–16 Brücke, 26 Krone</div>
+                  </div>
+                  <div class="cc-key">
+                    <div class="cc-key__h">Clara hat erledigt</div>
+                    <ul>
+                      <li class="is-info"><i>✓</i> Befund und Regelversorgung</li>
+                      <li class="is-info"><i>✓</i> Festzuschüsse ermittelt</li>
+                      <li class="is-info"><i>✓</i> BEMA, GOZ, BEL II – 24 Positionen</li>
+                      <li class="is-warn"><i>↑</i> Vollkeramik statt Kasse</li>
+                      <li class="is-warn"><i>↑</i> GOZ-Faktor 3,0 mit Begründung</li>
+                      <li class="is-alert"><i>✎</i> Mehrkostenvereinbarung bereit</li>
+                    </ul>
+                  </div>
+                  <div class="cc-headsup">
+                    <span class="cc-eq"><span></span><span></span><span></span><span></span></span>
+                    <span class="cc-headsup__long">Maximaler Umsatz · 4.380 €</span>
+                    <span class="cc-headsup__short">4.380 €</span>
+                  </div>
+                  <div class="cc-tabs"><span>Befund</span><span class="is-on">Plan</span><span>Regler</span><span>PVS</span></div>
+                </div>
+              </div>
+              <div class="cc-flip__face cc-flip__face--back">
+                <div class="cc-screen cc-screen--voice clara-phone__screen" data-clara="schirm" data-state="listening">
+                  <div class="cp-top">
+                    <small data-clara="unter">Patient und Befund sagen</small>
+                    <h4>Clara</h4>
+                  </div>
+                  <div class="cp-mid">
+                    <div class="cp-orb-wrap">
+                      <div class="cp-ring r1"></div>
+                      <div class="cp-ring r2"></div>
+                      <div class="cp-orb"><div class="cp-wave" aria-hidden="true"><span></span><span></span><span></span></div></div>
+                    </div>
+                    <div class="cp-state" data-clara="zustand">Ich höre zu</div>
+                    <div class="cp-hint" data-clara="hinweis"></div>
+                    <div class="cp-agents" aria-hidden="true">
+                      ${CLARA_SCHRITTE.map((s) => `<span>${s}</span>`).join('')}
+                    </div>
+                  </div>
+                  <div class="cp-mode" aria-hidden="true"><i class="is-on">🎙 Sprache</i><i>💬 Chat</i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cc-flip-labels" aria-hidden="true"><span class="is-text">Plan</span><span class="is-voice">Sprache</span></div>
+          <div class="mas-phone-dots cc-hero-dots" data-clara="punkte" aria-label="Clara Zustand">
+            <button type="button" class="is-active" data-i="0" aria-label="Hört zu"></button>
+            <button type="button" data-i="1" aria-label="Rechnet"></button>
+            <button type="button" data-i="2" aria-label="Spricht"></button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -85,6 +145,35 @@ const HTML = `
     <div class="hp-band-fenster">
       <div class="hp-band-spur">
         ${[...PVS, ...PVS].map((p) => `<span>${p}</span>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <section class="hp-sektion hp-sprachki" id="sprach-ki">
+    <div class="hp-sektion-kopf">
+      <p class="hp-eyebrow">HKP per Sprach-KI</p>
+      <h2>Sag es Clara. Der Plan steht.</h2>
+      <p>Kein Tippen, kein Nachschlagen, kein Abrechnungsdienst. Du sprichst – Clara erstellt den Heil- und Kostenplan und holt das Maximum für deine Praxis heraus.</p>
+    </div>
+    <div class="hp-sk">
+      <ol class="hp-schritte">
+        <li><span>1</span><div><h3>Patient nennen</h3><p>„Clara, HKP für Frau Berger.“ Clara holt die Patientin aus deinem Praxissystem – Kasse, Bonus und Vorgeschichte inklusive.</p></div></li>
+        <li><span>2</span><div><h3>Befund sagen</h3><p>„14 bis 16 Brücke, 26 Krone, Vollkeramik.“ Befund, Regelversorgung, Festzuschüsse und alle Positionen nach BEMA, GOZ und BEL II stehen in Sekunden.</p></div></li>
+        <li><span>3</span><div><h3>Maximalen Umsatz errechnen lassen</h3><p>Clara schlägt Zusatzleistungen, Faktor, Eigenlabor und Privatanteil vor – mit Begründungen und Mehrkostenvereinbarung. Du entscheidest per Regler.</p></div></li>
+      </ol>
+      <div class="hp-demo" aria-hidden="true">
+        <div class="hp-sprache">
+          <span class="hp-mic"><i></i><i></i><i></i><i></i><i></i></span>
+          <p data-diktat></p>
+        </div>
+        <div class="hp-plan" data-plan>
+          <div class="hp-plan-kopf"><b>HKP · Berger, Anna</b><span class="hp-pille">von Clara erstellt</span></div>
+          <div class="hp-plan-zeile"><span>14–16</span><span>Brücke, vollverblendet</span></div>
+          <div class="hp-plan-zeile"><span>26</span><span>Vollkeramikkrone</span></div>
+          <div class="hp-plan-zeile"><span>BEMA · GOZ · BEL II</span><span>24 Positionen</span></div>
+          <div class="hp-plan-summe"><span>Praxisumsatz</span><b data-demo-summe>0 €</b></div>
+          <div class="hp-plan-balken"><i data-demo-balken></i></div>
+        </div>
       </div>
     </div>
   </section>
@@ -126,6 +215,35 @@ const HTML = `
     </div>
     <p class="hp-fussnote">Vereinfachte Beispielrechnung. Im Planer rechnet PlanR mit deinen Preislisten, den Punktwerten deiner KZV und deinem Labor.
       Faktoren über 2,3 brauchen eine Begründung je Position (§ 10 GOZ) – die schlägt PlanR gleich mit vor.</p>
+  </section>
+
+  <section class="hp-sektion hp-connect" id="connect">
+    <div class="hp-connect-box">
+      <div class="hp-connect-text">
+        <p class="hp-eyebrow">Easy Connect</p>
+        <h2>Heute connecten. Morgen mehr Umsatz.</h2>
+        <p>PlanR verbindet sich mit deinem Praxissystem – in wenigen Minuten, ohne offenen Port, ohne IT-Projekt.
+          Exportiere deine ersten HKP und sieh schwarz auf weiß, <b>wie viel mehr Umsatz PlanR aus denselben Befunden holt.</b></p>
+        <ol class="hp-connect-schritte">
+          <li><b>Bridge installieren</b><span>Ein Doppelklick auf dem Praxisserver. Die Verbindung baut die Bridge selbst auf.</span></li>
+          <li><b>Erste HKP holen</b><span>Deine vorhandenen Pläne kommen direkt aus dem PVS in PlanR.</span></li>
+          <li><b>Mehrumsatz sehen</b><span>Regler ziehen, Differenz ablesen – und den besseren Plan zurück ins PVS geben.</span></li>
+        </ol>
+        <div class="hp-ctas">
+          <a class="hp-knopf hp-knopf-voll" href="#kontakt">Jetzt connecten</a>
+          <a class="hp-knopf" href="#spielwiese">Erst mal mit den Reglern spielen</a>
+        </div>
+      </div>
+      <div class="hp-connect-bild" aria-hidden="true">
+        <div class="hp-connect-pvs">${PVS.slice(0, 4).map((p) => `<span>${p}</span>`).join('')}</div>
+        <div class="hp-connect-linie"><i></i></div>
+        <div class="hp-connect-planr"><span class="hp-logo">PR</span><b>PlanR</b></div>
+        <div class="hp-connect-vergleich">
+          <div><small>HKP wie im PVS</small><b>2.950 €</b></div>
+          <div class="hp-connect-mehr"><small>Mit PlanR</small><b>4.380 €</b><em>+1.430 €</em></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="hp-sektion" id="funktionen">
@@ -282,6 +400,51 @@ function demoStarten(wurzel: HTMLElement) {
   })()
 }
 
+/** Rückseite des Handys: Zuhören → Rechnen (ein Schritt leuchtet) → Sprechen, wie auf pickadoc.ai. */
+function claraHandyStarten(wurzel: HTMLElement) {
+  const lauf = laeuft
+  const feld = (name: string) => wurzel.querySelector<HTMLElement>(`[data-clara="${name}"]`)!
+  const schirm = feld('schirm')
+  const chips = [...schirm.querySelectorAll<HTMLElement>('.cp-agents span')]
+  const punkte = [...feld('punkte').querySelectorAll<HTMLButtonElement>('button')]
+  let i = 0, schritt = 0, aktiv = 0
+  let takt: ReturnType<typeof setInterval> | undefined
+
+  const zeigen = (n: number) => {
+    const z = CLARA_ZUSTAENDE[n]
+    schirm.dataset.state = z.id
+    feld('zustand').textContent = z.zustand
+    feld('unter').textContent = z.unter
+    let hinweis = z.hinweis
+    for (const c of chips) c.classList.remove('is-asking', 'is-answered')
+    if (z.id === 'thinking') {
+      aktiv = schritt++ % chips.length
+      chips[aktiv].classList.add('is-asking')
+      hinweis = `prüfe ${chips[aktiv].textContent} …`
+    } else if (z.id === 'speaking') chips[aktiv].classList.add('is-answered')
+    feld('hinweis').textContent = hinweis
+    punkte.forEach((p, pi) => p.classList.toggle('is-active', pi === n))
+  }
+  const starten = () => {
+    if (takt) clearInterval(takt)
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    takt = setInterval(() => {
+      if (lauf !== laeuft || !document.body.contains(wurzel)) return clearInterval(takt)
+      i = (i + 1) % CLARA_ZUSTAENDE.length
+      zeigen(i)
+    }, 3200)
+  }
+  for (const p of punkte) {
+    p.addEventListener('click', () => {
+      i = Number(p.dataset.i)
+      zeigen(i)
+      starten()
+    })
+  }
+  zeigen(0)
+  starten()
+}
+
 function spielwieseStarten(wurzel: HTMLElement) {
   const r: Regler = { ...START }
   const regler = [...wurzel.querySelectorAll<HTMLInputElement>('[data-regler]')]
@@ -349,6 +512,7 @@ export function homepage(app: HTMLElement) {
   app.innerHTML = HTML
   const wurzel = app.querySelector<HTMLElement>('.hp')!
   demoStarten(wurzel)
+  claraHandyStarten(wurzel)
   spielwieseStarten(wurzel)
   const ziel = /^#[a-z-]+$/.test(location.hash) && location.hash !== '#top' ? wurzel.querySelector(location.hash) : null
   ziel?.scrollIntoView()

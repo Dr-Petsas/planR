@@ -233,6 +233,59 @@ body.hp-body {
 .hp-fuss a { text-decoration: none; }
 .hp-fuss a:hover { color: var(--hp-text); }
 
+/* ---------- Hero-Handy (clara-handy.css) ---------- */
+.hp-handy { display: flex; justify-content: center; }
+.hp-handy .cc-phone { width: min(100%, 320px); }
+.hp-handy .cc-flip-labels { position: relative; z-index: 3; }
+
+/* ---------- HKP per Sprach-KI ---------- */
+.hp-sk { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 4vw, 56px); align-items: center; }
+@media (max-width: 900px) { .hp-sk { grid-template-columns: 1fr; } }
+.hp-schritte { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.hp-schritte li {
+  display: flex; gap: 18px; align-items: flex-start;
+  padding: 22px; border-radius: 20px; background: var(--hp-flaeche); border: 1px solid var(--hp-linie);
+}
+.hp-schritte li > span {
+  flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--hp-mint), var(--hp-tuerkis)); color: #04211c; font-weight: 800; font-size: 18px;
+}
+.hp-schritte h3 { font-size: 20px; margin-bottom: 6px; }
+.hp-schritte p { margin: 0; color: #b9cfcf; }
+
+/* ---------- Easy Connect ---------- */
+.hp-connect-box {
+  display: grid; grid-template-columns: 1.15fr 0.85fr; gap: clamp(24px, 4vw, 56px); align-items: center;
+  padding: clamp(28px, 4vw, 52px); border-radius: 28px;
+  background: radial-gradient(120% 140% at 100% 0%, rgba(63, 216, 181, 0.16), transparent 55%), linear-gradient(160deg, #10323a, #0b242a);
+  border: 1px solid rgba(63, 216, 181, 0.25);
+}
+@media (max-width: 900px) { .hp-connect-box { grid-template-columns: 1fr; } }
+.hp-connect-text h2 { font-size: clamp(30px, 4vw, 46px); font-weight: 800; margin-bottom: 14px; }
+.hp-connect-text > p { color: #c9dcdc; font-size: 17px; margin: 0 0 22px; }
+.hp-connect-text b { color: var(--hp-text); }
+.hp-connect-schritte { margin: 0 0 26px; padding: 0; list-style: none; counter-reset: c; display: grid; gap: 12px; }
+.hp-connect-schritte li { counter-increment: c; display: grid; grid-template-columns: 34px 1fr; column-gap: 12px; }
+.hp-connect-schritte li::before {
+  content: counter(c); grid-row: span 2; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--hp-mint); color: var(--hp-mint); font-weight: 800;
+}
+.hp-connect-schritte span { color: var(--hp-grau); font-size: 15px; }
+.hp-connect-bild { display: grid; gap: 14px; justify-items: center; }
+.hp-connect-pvs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.hp-connect-pvs span { padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--hp-linie); font-size: 14px; font-weight: 600; }
+.hp-connect-linie { position: relative; width: 2px; height: 46px; background: rgba(63, 216, 181, 0.25); overflow: hidden; }
+.hp-connect-linie i { position: absolute; left: 0; width: 2px; height: 16px; background: var(--hp-mint); box-shadow: 0 0 10px var(--hp-mint); animation: hp-fluss 1.4s linear infinite; }
+@keyframes hp-fluss { from { top: -16px; } to { top: 46px; } }
+.hp-connect-planr { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 16px; background: var(--hp-karte); border: 1px solid rgba(63, 216, 181, 0.35); font-size: 18px; }
+.hp-connect-vergleich { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; margin-top: 8px; }
+.hp-connect-vergleich div { padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--hp-linie); }
+.hp-connect-vergleich small { display: block; color: var(--hp-grau); font-size: 13px; }
+.hp-connect-vergleich b { font-size: 26px; }
+.hp-connect-mehr { border-color: rgba(255, 200, 97, 0.45) !important; background: rgba(255, 200, 97, 0.08) !important; }
+.hp-connect-mehr b { color: var(--hp-gold); }
+.hp-connect-mehr em { display: block; font-style: normal; color: var(--hp-mint); font-weight: 700; }
+
 @media (prefers-reduced-motion: reduce) {
-  .hp-glow, .hp-band-spur, .hp-mic i { animation: none; }
+  .hp-glow, .hp-band-spur, .hp-mic i, .hp-connect-linie i { animation: none; }
 }
