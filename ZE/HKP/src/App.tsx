@@ -111,7 +111,7 @@ export default function App() {
     if (linkGelesen.current) return
     linkGelesen.current = true
     const q = new URLSearchParams(window.location.search)
-    // „Neuer Plan erstellen“ in PlanR
+    // „Neuen Plan erstellen“ in PlanR
     if (q.get('neu') === '1') {
       const u = new URL(window.location.href)
       u.searchParams.delete('neu')

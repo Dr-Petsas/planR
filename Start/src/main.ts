@@ -499,7 +499,7 @@ function zeichnen() {
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         <button type="button" class="import-knopf" data-einstellungen title="PVS, Bridge und Benutzer einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
         <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen und HKP übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
-        <button type="button" class="neu-knopf" data-neu>Neuer Plan erstellen</button>
+        <button type="button" class="neu-knopf" data-neu>Neuen Plan erstellen</button>
     </div>
   </header>
     ${ich.praxen?.length === 0 ? '<p class="freischalt-hinweis">Sie sind angemeldet, aber noch keiner Praxis zugeordnet. Der Praxis-Admin schaltet Sie in PlanR unter Einstellungen → Benutzer frei.</p>' : ''}
