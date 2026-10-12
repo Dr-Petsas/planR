@@ -30,6 +30,7 @@ import { PlanrZurueck } from './PlanrZurueck'
 import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
 import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, useAktiv, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
 import { LIVE_TITEL, PHASE_TEXT, liveAbonnieren, liveModus, liveSchritte, type LiveStand } from './store/live'
+import { patientAusFragment } from './store/patientUebergabe'
 
 /** Gesamtdauer, in der ein Live-Schritt von Clara sichtbar eingetragen wird */
 const LIVE_DAUER_MS = 5000
@@ -91,7 +92,7 @@ export default function App() {
   const [linkHinweis, setLinkHinweis] = useState('')
 
   // Leerer Plan; ein offener freier Plan wird nur nach Rückfrage verworfen
-  function neuAnfangen() {
+  function neuAnfangen(patient?: Partial<HkpPlan['patient']>) {
     const offen = !register.aktiv && !linkEintrag && Object.values(plan.zaehne).some((z) => z.B || z.TP)
     if (offen && !confirm('Neuen HKP anfangen? Der offene, nicht im Register gespeicherte Plan wird verworfen.')) return
     const alt = plan
@@ -99,7 +100,10 @@ export default function App() {
     setLinkListen(null)
     setLinkEintrag(null)
     setLinkHinweis('')
-    setPlan((p) => neuerPlan(p.einstellungen))
+    setPlan((p) => {
+      const neu = neuerPlan(p.einstellungen)
+      return patient ? { ...neu, patient: { ...neu.patient, ...patient } } : neu
+    })
     setTab('teil1')
     if (offen) geloescht('Offener Plan verworfen', () => setPlan(alt))
   }
@@ -113,10 +117,11 @@ export default function App() {
     const q = new URLSearchParams(window.location.search)
     // „Neuen Plan erstellen“ in PlanR
     if (q.get('neu') === '1') {
+      const patient = patientAusFragment(window.location.hash)
       const u = new URL(window.location.href)
       u.searchParams.delete('neu')
-      history.replaceState(history.state, '', u.pathname + u.search + u.hash)
-      neuAnfangen()
+      history.replaceState(history.state, '', u.pathname + u.search)
+      neuAnfangen(patient ?? undefined)
       return
     }
     const id = q.get('hkp')
@@ -293,7 +298,7 @@ export default function App() {
           </span>
         </div>
       )}
-      {hkpAnsicht && !linkEintrag && <RegisterLeiste r={register} plan={plan} ergebnis={ergebnis} onStatus={registerStatus} onNeu={neuAnfangen} />}
+      {hkpAnsicht && !linkEintrag && <RegisterLeiste r={register} plan={plan} ergebnis={ergebnis} onStatus={registerStatus} onNeu={() => neuAnfangen()} />}
       {linkHinweis && (
         <div className="register-leiste">
           <span>{linkHinweis}</span>

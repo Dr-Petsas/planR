@@ -57,7 +57,7 @@ const SCHRITTE = ['Praxissystem', 'Bridge-Schlüssel', 'Installieren', 'Verbindu
 
 /**
  * Assistent als eigenes Fenster über der Planliste. `geaendert` meldet neue Einstellungen bzw. Katalog an die Übersicht,
- * `importieren` öffnet am Ende „Plan importieren“.
+ * `importieren` öffnet am Ende die Patientensuche.
  */
 export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellungen; geaendert: () => void; importieren: () => void }) {
   document.querySelector('.ein-schleier')?.remove()
@@ -134,7 +134,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <h3>Fertig – PlanR ist eingerichtet.</h3>
         <p class="ein-text">Holen Sie jetzt den ersten HKP aus ${esc(p?.name ?? 'Ihrem Praxissystem')}, ziehen Sie die Regler und sehen Sie, wie viel mehr Umsatz im selben Befund steckt.</p>
         <div class="ein-fertig">
-          <button type="button" class="neu-knopf" data-importieren>Ersten HKP importieren</button>
+          <button type="button" class="neu-knopf" data-importieren>Patienten suchen und ersten HKP erstellen</button>
           <a class="import-knopf" href="/download" target="_blank" rel="noopener">Anleitung zur Bridge</a>
         </div>`
     }

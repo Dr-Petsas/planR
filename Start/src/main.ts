@@ -4,7 +4,7 @@ import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PlanDat
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
 import { PVS_CONNECTOR, PVS_SUCHE } from './pvs'
-import { pvsImportOeffnen } from './pvsImport'
+import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { apiJson } from './api'
 import { abmelden, anmeldeSeite, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 
@@ -119,6 +119,7 @@ const TONNE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true
 const PFEIL = (d: string) => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`
 const EXPORT = PFEIL('M12 4v11M7 10l5 5 5-5M5 20h14')
 const IMPORT = PFEIL('M12 15V4M7 9l5-5 5 5M5 20h14')
+const LUPE = PFEIL('M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.5 15.5 20 20')
 const MIKRO = PFEIL('M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3')
 const DELFIN = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 13.2C3.2 12.4 4 11.6 5 10.6 7.6 7.8 11.4 6.2 15 6.8L15.6 4.6 17.2 7.4C19.4 8.4 20.6 10.4 21 12.4L23 11.2 22 14.2 22.6 16.6 20.2 14.8C19.2 13.2 17.4 12 15 11.7 12 11.4 9 12.4 7 14.4L6 17 5.2 14.5C4 14.5 2.8 14.1 2 13.2Z"/><circle cx="6.4" cy="11.7" r=".65" fill="#fff"/></svg>'
 const ZAHNRAD = PFEIL('M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z')
@@ -182,7 +183,7 @@ function pvsZiel(): string {
   return p && einstellungen.bridge && PVS_CONNECTOR[p.id] ? p.name : ''
 }
 
-/** Name des PVS, in dem „Plan importieren“ Patienten sucht */
+/** Name des PVS, in dem die Patientensuche sucht */
 function pvsQuelle(): string {
   const p = pvsVon(einstellungen.pvs)
   return p && einstellungen.bridge && PVS_SUCHE[p.id] ? p.name : ''
@@ -208,6 +209,36 @@ async function insPvs(p: PlanKarte, ziel: string) {
   } finally {
     pvsLaeuft = false
   }
+}
+
+const klein = (s: string) => s.toLocaleLowerCase('de').normalize('NFC')
+
+/** PlanR-Pläne eines Patienten (Nachname und – falls bekannt – Vorname im Namen des Plans) */
+function planrPlaene(vorname: string, nachname: string): PlanTreffer[] {
+  const n = klein(nachname.trim())
+  const v = klein(vorname.trim().split(' ')[0] ?? '')
+  if (!n) return []
+  return plaene
+    .filter((p) => p.status !== 'verworfen')
+    .filter((p) => { const t = klein(p.patient); return t.includes(n) && (!v || t.includes(v)) })
+    .slice(0, 8)
+    .map((p) => ({
+      titel: `${p.kuerzel} ${p.art}`,
+      unter: [STATUS[p.status] ?? p.status, p.betrag ? euro(p.betrag) : '', p.geaendert ? zeit(p.geaendert) : ''].filter(Boolean).join(' · '),
+      url: planUrl(p),
+    }))
+}
+
+/** Neuer HKP auf einen Patienten: Anmeldedaten im Fragment (geht nie an einen Server), der Planer liest und löscht es. */
+function hkpNeuOeffnen(p: Stammdaten) {
+  const planer = BEREICHE.flatMap((b) => b.planer).find((x) => x.host === 'hkp')
+  const basis = planer && adresse(planer, location)
+  if (!basis) return melden('Der HKP-Planer ist hier nicht erreichbar.')
+  const url = new URL(basis, location.href)
+  url.searchParams.set('neu', '1')
+  const json = new TextEncoder().encode(JSON.stringify(p))
+  url.hash = `patient=${btoa(String.fromCharCode(...json)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`
+  location.href = url.toString()
 }
 
 /** Aus dem PVS übernommener HKP: Liste neu laden, dann den Planer mit dem Plan öffnen */
@@ -501,7 +532,7 @@ function zeichnen() {
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
         <button type="button" class="import-knopf" data-einstellungen title="PVS, Bridge und Benutzer einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
-        <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen und HKP übernehmen` : 'Plan aus einer JSON-Datei übernehmen'}">${IMPORT}<span>Plan importieren</span></button>
+        <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen: neuen HKP erstellen oder vorhandenen übernehmen` : 'Patient suchen und neuen HKP erstellen'}">${LUPE}<span>Patientensuche</span></button>
         <button type="button" class="neu-knopf" data-neu>Neuen Plan erstellen</button>
     </div>
   </header>
@@ -561,13 +592,17 @@ function zeichnen() {
   }))
   app.querySelector<HTMLButtonElement>('[data-import-neu]')!.addEventListener('click', () => {
     const ziel = pvsQuelle()
-    if (!ziel) return importWaehlen(null)
-    if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && !agent?.verbunden) {
-      return melden(agent
-        ? `Die PlanR-Bridge auf dem Praxisserver ist gerade nicht verbunden – Import aus ${ziel} geht so nur direkt am Praxis-PC.`
-        : `Import aus ${ziel} über das Internet braucht die PlanR-Bridge auf dem Praxisserver (Einstellungen → Bridge herunterladen).`)
-    }
-    pvsImportOeffnen({ pvsName: ziel, dateiWaehlen: () => importWaehlen(null), geoeffnet: ausPvsOeffnen })
+    const getrennt = !!ziel && !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && !agent?.verbunden
+    patientensucheOeffnen({
+      pvsName: ziel,
+      pvsHinweis: !getrennt ? undefined : agent
+        ? `Die PlanR-Bridge auf dem Praxisserver ist gerade nicht verbunden – die Suche in ${ziel} geht so nur direkt am Praxis-PC.`
+        : `Die Suche in ${ziel} über das Internet braucht die PlanR-Bridge auf dem Praxisserver (Einrichtung → Bridge).`,
+      planrPlaene,
+      neuerHkp: hkpNeuOeffnen,
+      dateiWaehlen: () => importWaehlen(null),
+      geoeffnet: ausPvsOeffnen,
+    })
   })
   app.querySelector<HTMLButtonElement>('[data-einstellungen]')!.addEventListener('click', () => {
     entwurf = einstellungen

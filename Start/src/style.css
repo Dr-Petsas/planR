@@ -200,6 +200,27 @@ main { min-width: 0; }
 .pvs-tabelle .pvs-bez { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--grau); }
 .pvs-tabelle .pvs-betrag { text-align: right; }
 .pvs-status { margin: 0; min-height: 1.2em; font-size: 13px; color: var(--grau); }
+.ps-karte { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--akzent); border-radius: 12px; background: #fbfdfd; }
+.ps-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ps-kopf > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ps-kopf b { font-size: 17px; }
+.ps-kopf span { font-size: 13px; color: var(--grau); }
+.ps-liste { display: flex; flex-direction: column; gap: 4px; }
+.ps-liste > a, .ps-liste > div { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border: 1px solid var(--linie); border-radius: 10px; background: #fff; color: var(--text); text-decoration: none; font-size: 14px; }
+.ps-liste span { color: var(--grau); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps-liste i { font-style: normal; font-size: 13px; font-weight: 600; color: var(--akzent-dunkel); }
+.ps-liste > a:hover { border-color: var(--akzent); background: var(--akzent-hell); }
+.ps-hkp { display: grid; grid-template-columns: 64px 86px 110px minmax(0, 1fr) 84px 90px auto; gap: 10px; align-items: center; padding: 8px 12px; border: 1px solid var(--linie); border-radius: 10px; background: #fff; font-size: 14px; }
+.ps-uebernehmen { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--akzent); background: #fff; color: var(--akzent-dunkel); cursor: pointer; }
+.ps-uebernehmen:hover { background: var(--akzent); color: #fff; }
+.ps-leer { margin: 0; font-size: 13px; color: var(--grau); }
+.pvs-titel small { text-transform: none; letter-spacing: 0; font-weight: 500; }
+@media (max-width: 700px) {
+  .ps-hkp { grid-template-columns: 1fr auto; }
+  .ps-hkp > span { display: none; }
+  .ps-liste > a, .ps-liste > div { grid-template-columns: 1fr auto; }
+  .ps-liste span { display: none; }
+}
 .link-knopf { margin-left: auto; font: inherit; font-size: 13px; color: var(--akzent-dunkel); background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 4px; }
 .wahl-spalten, .wahl-liste { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
 .wahl-spalten { padding: 0 8px; font-size: 12px; font-weight: 650; color: var(--akzent); }

@@ -20,6 +20,7 @@ import {
   type Konto, type PraxisInfo, type Sitzung, type Zugaenge,
 } from './anmeldung.ts'
 import { spawn } from 'node:child_process'
+import { stammdatenAusPvs } from './pvsPatient.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
@@ -649,6 +650,11 @@ async function pvsLesen(req: IncomingMessage, w: Wer, art: string, q: URLSearchP
     }
     const id = q.get('patient') ?? ''
     if (!(dampsoft ? /^\d{1,5}$/ : /^\d{1,9}$/).test(id)) return json(res, 400, { ok: false })
+    if (art === 'patient') {
+      const z = await c.rufen<Record<string, unknown>>(`/patients/${id}`)
+      if (!z.ok) return json(res, z.status === 404 ? 404 : 502, { ok: false, meldung: `${c.name}: ${String(z.daten.error ?? `HTTP ${z.status}`)}` })
+      return json(res, 200, { ok: true, patient: stammdatenAusPvs(z.daten) })
+    }
     const r = dampsoft
       ? await c.rufen<{ items?: Record<string, unknown>[] }>(`/patients/${id}/hkps`, { ms: 30_000 })
       : await c.rufen<{ hkps?: Record<string, unknown>[] }>(`/patients/${id}/clinical`, { ms: 30_000 })
@@ -1200,7 +1206,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
-  if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps') {
+  if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps' || url === '/api/pvs/patient') {
     if (req.method !== 'GET' || !eigeneSeite(req)) return json(res, 403, { ok: false })
     return void pvsLesen(req, w, url.slice('/api/pvs/'.length), new URLSearchParams(query), res).catch(fehler500(res))
   }

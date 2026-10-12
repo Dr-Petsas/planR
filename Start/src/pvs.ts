@@ -6,7 +6,7 @@ export const PVS_CONNECTOR: Record<string, string> = {
   dampsoft: 'http://127.0.0.1:8766',
 }
 
-/** PVS, in denen „Plan importieren“ Patienten sucht und ihre HKPs listet (Übernahme nur mit PVS_CONNECTOR) */
+/** PVS, in denen die Patientensuche sucht und ihre HKPs listet (Übernahme nur mit PVS_CONNECTOR) */
 export const PVS_SUCHE: Record<string, string> = { ...PVS_CONNECTOR }
 
 export interface PvsTreffer {
