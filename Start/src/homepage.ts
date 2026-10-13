@@ -101,6 +101,25 @@ const HKP_FORMULAR = `
     <div class="hkp-fuss"><span>Zahnarztpraxis Dr. Demo · Musterstraße 1 · 40235 Düsseldorf</span><span class="hkp-stempel">${logo('PlanR-Stempel')} von Clara erstellt</span></div>
   </div>`
 
+const HKP_MINI = `
+  <div class="hkp hkp--mini">
+    <div class="hkp-titel"><b>Heil- und Kostenplan</b><span>Teil 1 · Zahnersatz</span></div>
+    <div class="hkp-feld"><b>Berger, Anna</b><span>AOK Rheinland/Hamburg · Bonus 30 %</span></div>
+    <div class="hkp-abschnitt">I. Befund / Behandlungsplan</div>
+    <table class="hkp-gebiss">${gebissZeilen(OK, ['TP', 'R', 'B'], false)}</table>
+    <div class="hkp-abschnitt">II. Festzuschüsse</div>
+    <table class="hkp-tab">
+      ${FESTZUSCHUSS.map(([b, z, , w]) => `<tr><td>${b}</td><td>${z}</td><td>${w}</td></tr>`).join('')}
+    </table>
+    <div class="hkp-abschnitt">III. Kostenplanung</div>
+    <table class="hkp-tab">
+      <tr class="hkp-summe"><td>Gesamtkosten</td><td>4.380,00</td></tr>
+      <tr><td>Festzuschüsse</td><td>−1.656,23</td></tr>
+      <tr class="hkp-eigen"><td>Eigenanteil</td><td>2.723,77</td></tr>
+    </table>
+    <div class="hkp-fuss"><span class="hkp-stempel">${logo('PlanR-Stempel')} von Clara erstellt</span></div>
+  </div>`
+
 const FORMEN = '<div class="hp-formen" aria-hidden="true"><i class="f1"></i><i class="f2"></i><i class="f3"></i><i class="f4"></i><i class="f5"></i></div>'
 
 const euro = (n: number) => `${Math.round(n).toLocaleString('de-DE')} €`
@@ -143,35 +162,8 @@ const HTML = `
         <div class="cc-phone" aria-label="Clara erstellt einen HKP per Sprache">
           <div class="cc-phone__notch" aria-hidden="true"></div>
           <div class="cc-flip">
-            <div class="cc-flip__inner">
+            <div class="cc-flip__inner" data-clara="flip">
               <div class="cc-flip__face cc-flip__face--front">
-                <div class="cc-screen cc-screen--text">
-                  <div class="cc-brand"><b>Clara</b><small>HKP PER SPRACHE</small></div>
-                  <div class="cc-next">
-                    <div class="cc-next__tag">Neuer HKP</div>
-                    <div class="cc-next__name"><b>Anna Berger</b><span class="cc-next__time">Bonus 30 %</span></div>
-                    <div class="cc-next__why">Befund: 14–16 Brücke, 26 Krone</div>
-                  </div>
-                  <div class="cc-key">
-                    <div class="cc-key__h">Clara hat erledigt</div>
-                    <ul>
-                      <li class="is-info"><i>✓</i> Befund und Regelversorgung</li>
-                      <li class="is-info"><i>✓</i> Festzuschüsse ermittelt</li>
-                      <li class="is-info"><i>✓</i> BEMA, GOZ, BEL II – 24 Positionen</li>
-                      <li class="is-warn"><i>↑</i> Vollkeramik statt Kasse</li>
-                      <li class="is-warn"><i>↑</i> GOZ-Faktor 3,0 mit Begründung</li>
-                      <li class="is-alert"><i>✎</i> Mehrkostenvereinbarung bereit</li>
-                    </ul>
-                  </div>
-                  <div class="cc-headsup">
-                    <span class="cc-eq"><span></span><span></span><span></span><span></span></span>
-                    <span class="cc-headsup__long">Maximaler Umsatz · 4.380 €</span>
-                    <span class="cc-headsup__short">4.380 €</span>
-                  </div>
-                  <div class="cc-tabs"><span>Befund</span><span class="is-on">Plan</span><span>Regler</span><span>PVS</span></div>
-                </div>
-              </div>
-              <div class="cc-flip__face cc-flip__face--back">
                 <div class="cc-screen cc-screen--voice clara-phone__screen" data-clara="schirm" data-state="listening">
                   <div class="cp-top">
                     <small data-clara="unter">Patient und Befund sagen</small>
@@ -192,9 +184,12 @@ const HTML = `
                   <div class="cp-mode" aria-hidden="true"><i class="is-on">🎙 Sprache</i><i>💬 Chat</i></div>
                 </div>
               </div>
+              <div class="cc-flip__face cc-flip__face--back">
+                <div class="cc-screen hp-hkp-schirm">${HKP_MINI}</div>
+              </div>
             </div>
           </div>
-          <div class="cc-flip-labels" aria-hidden="true"><span class="is-text">Plan</span><span class="is-voice">Sprache</span></div>
+          <div class="cc-flip-labels" aria-hidden="true"><span class="is-voice">Clara</span><span class="is-text">HKP</span></div>
           <div class="mas-phone-dots cc-hero-dots" data-clara="punkte" aria-label="Clara Zustand">
             <button type="button" class="is-active" data-i="0" aria-label="Hört zu"></button>
             <button type="button" data-i="1" aria-label="Rechnet"></button>
@@ -216,7 +211,7 @@ const HTML = `
 
   <section class="hp-buehne" id="hkp">
     <div class="hp-buehne-innen">
-      <div class="hp-buehne-bild" aria-hidden="true">
+      <div class="hp-buehne-bild hp-buehne-bild--pink" aria-hidden="true">
         ${FORMEN}
         <div class="hp-tablet"><div class="hp-tablet-schirm">${HKP_FORMULAR}</div></div>
         <div class="hp-schwebe">
@@ -520,10 +515,11 @@ function demoStarten(wurzel: HTMLElement) {
   })()
 }
 
-/** Rückseite des Handys: Zuhören → Rechnen (ein Schritt leuchtet) → Sprechen, wie auf pickadoc.ai. */
+/** Hero-Handy: alle 3 s Flip zwischen Clara (Zuhören → Rechnen → Sprechen, wie auf pickadoc.ai) und dem pinken HKP. */
 function claraHandyStarten(wurzel: HTMLElement) {
   const lauf = laeuft
   const feld = (name: string) => wurzel.querySelector<HTMLElement>(`[data-clara="${name}"]`)!
+  const flip = feld('flip')
   const schirm = feld('schirm')
   const chips = [...schirm.querySelectorAll<HTMLElement>('.cp-agents span')]
   const punkte = [...feld('punkte').querySelectorAll<HTMLButtonElement>('button')]
@@ -547,16 +543,20 @@ function claraHandyStarten(wurzel: HTMLElement) {
   }
   const starten = () => {
     if (takt) clearInterval(takt)
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
     takt = setInterval(() => {
       if (lauf !== laeuft || !document.body.contains(wurzel)) return clearInterval(takt)
-      i = (i + 1) % CLARA_ZUSTAENDE.length
-      zeigen(i)
-    }, 3200)
+      const zumHkp = !flip.classList.contains('ist-hkp')
+      flip.classList.toggle('ist-hkp', zumHkp)
+      if (!zumHkp) {
+        i = (i + 1) % CLARA_ZUSTAENDE.length
+        zeigen(i)
+      }
+    }, 3000)
   }
   for (const p of punkte) {
     p.addEventListener('click', () => {
       i = Number(p.dataset.i)
+      flip.classList.remove('ist-hkp')
       zeigen(i)
       starten()
     })
