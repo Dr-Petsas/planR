@@ -425,7 +425,7 @@ function einstellungKarte(): string {
         </label>` : ''}
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Anbindung an dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
         ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(agent.pvs ?? '')}, Version ${esc(agent.version ?? '?')})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
-          · <a href="/download" target="_blank" rel="noopener">Bridge herunterladen</a></p>` : ''}
+          ${ich.konto.admin ? ' · <button type="button" class="link-knopf" data-bridge-laden>Bridge herunterladen</button>' : ' · Herunterladen kann sie der Praxis-Admin.'}</p>` : ''}
         ${katalogBlock()}
         ${benutzerBlock(benutzer)}
         <div class="einst-fuss">
@@ -707,6 +707,7 @@ function zeichnen() {
     }
   })
   app.querySelectorAll<HTMLButtonElement>('[data-wahl-zu]').forEach((b) => b.addEventListener('click', auswahlSchliessen))
+  app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', () => { auswahlSchliessen(); void einrichtungZeigen(true) })
 }
 
 ausUrl()
@@ -736,10 +737,11 @@ async function einstellungenLaden() {
   entwurf = einstellungen
 }
 
-async function einrichtungZeigen() {
+async function einrichtungZeigen(bridgeLaden = false) {
   const { einrichtungOeffnen } = await import('./einrichtung')
   einrichtungOeffnen({
     admin: ich.konto.admin,
+    bridgeLaden,
     einstellungen,
     geaendert: () => void einstellungenLaden().then(zeichnen),
     importieren: () => app.querySelector<HTMLButtonElement>('[data-import-neu]')?.click(),
@@ -801,8 +803,8 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   // Neue Praxis ohne Praxissystem: Assistent startet von selbst (einmal je Tab), #einrichtung öffnet ihn jederzeit
   const neu = ich.konto.admin && !einstellungen.pvs && !sessionStorage.getItem('planr-einrichtung')
   if (location.hash === '#rechnungen' && ich.konto.admin && ich.abo === 'planr') void rechnungenZeigen()
-  else if (location.hash === '#einrichtung' || neu) {
+  else if (location.hash === '#einrichtung' || location.hash === '#bridge' || neu) {
     sessionStorage.setItem('planr-einrichtung', '1')
-    void einrichtungZeigen()
+    void einrichtungZeigen(location.hash === '#bridge')
   }
 }).catch(() => { app.innerHTML = '<p class="leer">Die Planliste ist gerade nicht erreichbar.</p>' })

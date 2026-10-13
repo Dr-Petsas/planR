@@ -58,7 +58,7 @@ const SCHRITTE = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & Positi
  * Assistent als eigenes Fenster über der Planliste. `geaendert` meldet neue Einstellungen bzw. Katalog an die Übersicht,
  * `importieren` öffnet am Ende die Patientensuche.
  */
-export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellungen; geaendert: () => void; importieren: () => void }) {
+export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellungen; geaendert: () => void; importieren: () => void; bridgeLaden?: boolean }) {
   document.querySelector('.ein-schleier')?.remove()
   let schritt = 0
   let einst = o.einstellungen
@@ -121,7 +121,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <p class="ein-text">Holen Sie jetzt den ersten HKP aus ${esc(p?.name ?? 'Ihrem Praxissystem')}, ziehen Sie die Regler und sehen Sie, wie viel mehr Umsatz im selben Befund steckt.</p>
         <div class="ein-fertig">
           <button type="button" class="neu-knopf" data-importieren>Patienten suchen und ersten HKP erstellen</button>
-          <a class="import-knopf" href="/download" target="_blank" rel="noopener">Anleitung zur Bridge</a>
+          <button type="button" class="import-knopf" data-zur-bridge>Bridge erneut herunterladen</button>
         </div>`
     }
   }
@@ -201,6 +201,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       zeichnen()
     })
     $('[data-importieren]')?.addEventListener('click', () => { zu(); o.importieren() })
+    $('[data-zur-bridge]')?.addEventListener('click', () => { schritt = 1; meldung = ''; zeichnen() })
   }
 
   // Verbindung live verfolgen, solange der Assistent offen ist
@@ -213,7 +214,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   }, 4000)
 
   void standLaden().then(() => {
-    if (einst.pvs) schritt = stand?.verbunden ? 3 : 1
+    if (einst.pvs) schritt = stand?.verbunden && !o.bridgeLaden ? 3 : 1
     zeichnen()
   })
   zeichnen()

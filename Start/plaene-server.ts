@@ -1066,7 +1066,7 @@ a.knopf{display:inline-block;background:#1f6feb;color:#fff;padding:.7rem 1.2rem;
 code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem 0}</style></head><body>
 <h1>PlanR-Bridge für den Praxisserver</h1>
 <p>Die Bridge verbindet DS-Win bzw. DENS auf dem Praxisserver mit PlanR. Sie baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Python ist im Paket enthalten.</p>
-<p><a class="knopf" href="/#einrichtung">In PlanR anmelden und Bridge herunterladen</a></p>
+<p><a class="knopf" href="/#bridge">Bridge herunterladen</a></p>
 <p>Das Paket lädt der Praxis-Admin in PlanR unter <b>Einrichtung</b> herunter. Es kennt Ihre Praxis bereits – bei der Installation muss nichts eingegeben werden.</p>
 <h2>Einrichten (einmal, auf dem Server mit DS-Win bzw. DENS)</h2>
 <p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden.</p>
