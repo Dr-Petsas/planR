@@ -534,8 +534,10 @@ const praxenKopf = (praxen: number[] | null): Record<string, string> => (praxen 
 const agentRufer = (mandant: string, praxen: number[] | null): Rufer => async <T,>(pfad: string, init: Parameters<Rufer>[1] = {}) => {
   const method = init.method ?? 'GET'
   if (!auftragErlaubt(method, pfad)) throw new Error('auftrag_nicht_erlaubt')
+  const start = Date.now()
   const r = await hub.rufen(mandant, { method, pfad, body: init.body, headers: { ...init.headers, ...praxenKopf(praxen) }, ms: init.ms ?? 10_000 })
-    .catch((e: Error) => { bridgeMelden(mandant, `${method} ${pfad.split('?')[0]}: ${e.message}`); throw e })
+    .catch((e: Error) => { bridgeMelden(mandant, `${method} ${pfad.split('?')[0]}: ${e.message} nach ${Math.round((Date.now() - start) / 1000)} s`); throw e })
+  if (Date.now() - start > 5000) console.log('[planr] Bridge', mandant, method, pfad.split('?')[0], '->', r.status, 'nach', Math.round((Date.now() - start) / 1000), 's')
   if (!r.ok) bridgeMelden(mandant, `${method} ${pfad.split('?')[0]} -> ${r.status} ${String((r.daten as { error?: unknown }).error ?? '').slice(0, 160)}`)
   return r as { ok: boolean; status: number; daten: T & { error?: string } }
 }
@@ -1033,6 +1035,7 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
       res.end()
       return
     }
+    if (auftrag.ms > 30_000) console.log('[planr] Bridge', mandant, 'holt', auftrag.method, auftrag.pfad.split('?')[0])
     return json(res, 200, { auftrag })
   }
   if (url === '/api/pvs-agent/antwort' && req.method === 'POST') {
