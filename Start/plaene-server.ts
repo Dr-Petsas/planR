@@ -535,6 +535,8 @@ const agentRufer = (mandant: string, praxen: number[] | null): Rufer => async <T
   const method = init.method ?? 'GET'
   if (!auftragErlaubt(method, pfad)) throw new Error('auftrag_nicht_erlaubt')
   const r = await hub.rufen(mandant, { method, pfad, body: init.body, headers: { ...init.headers, ...praxenKopf(praxen) }, ms: init.ms ?? 10_000 })
+    .catch((e: Error) => { bridgeMelden(mandant, `${method} ${pfad.split('?')[0]}: ${e.message}`); throw e })
+  if (!r.ok) bridgeMelden(mandant, `${method} ${pfad.split('?')[0]} -> ${r.status} ${String((r.daten as { error?: unknown }).error ?? '').slice(0, 160)}`)
   return r as { ok: boolean; status: number; daten: T & { error?: string } }
 }
 
@@ -633,6 +635,10 @@ async function pvsConnector(req: IncomingMessage, w: Wer, zweck: 'suche' | 'hkp'
   const stand = agenten[mandant] ? hub.verbunden(mandant) : null
   if (stand?.pvs && stand.pvs !== pvs.id) return { status: 409, fehler: `Die PlanR-Bridge der Praxis arbeitet mit ${stand.pvs}, eingestellt ist ${pvs.name}.` }
   if (stand) return { id: pvs.id, name: pvs.name, agent: true, rufen: agentRufer(mandant, praxen) }
+  if (agenten[mandant]) {
+    const zuletzt = hub.zuletzt(mandant)
+    bridgeMelden(mandant, `nicht verbunden (${zuletzt ? `zuletzt vor ${Math.round((Date.now() - zuletzt) / 1000)} s` : 'seit dem Serverstart nie'})`)
+  }
   if (!amPraxisPc(req)) return { status: 503, fehler: `Die PlanR-Bridge der Praxis ist nicht verbunden – läuft der Dienst „PlanR-Bridge“ auf dem ${pvs.name}-Server?` }
   return {
     id: pvs.id, name: pvs.name, agent: false,
@@ -651,7 +657,7 @@ async function pvsLesen(req: IncomingMessage, w: Wer, art: string, q: URLSearchP
     if (art === 'patienten') {
       const woerter = (q.get('q') ?? '').trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean).slice(0, 4)
       if (!woerter.length) return json(res, 400, { ok: false, meldung: 'Vor- und/oder Nachname eingeben.' })
-      const r = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: woerter.reduce((a, b) => (b.length > a.length ? b : a)) })}`)
+      const r = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: woerter.reduce((a, b) => (b.length > a.length ? b : a)) })}`, { ms: 45_000 })
       if (!r.ok) return json(res, 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
       const patienten = (r.daten.items ?? [])
         .filter((p) => woerter.every((w) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.toLocaleLowerCase('de').includes(w)))
@@ -748,7 +754,7 @@ function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis>
   const p = (async (): Promise<KatalogErgebnis> => {
     let r
     try {
-      r = await c.rufen!<Record<string, unknown>>('/praxis/katalog', { ms: 90_000 })
+      r = await c.rufen!<Record<string, unknown>>('/praxis/katalog', { ms: 540_000 })
     } catch {
       return { ok: false, status: 503, meldung: stumm(c) }
     }

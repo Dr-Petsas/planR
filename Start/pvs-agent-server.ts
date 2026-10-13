@@ -146,6 +146,10 @@ export class AgentHub {
     return s && jetzt - s.am < ONLINE_MS ? s : null
   }
 
+  zuletzt(mandant: string): number | null {
+    return this.stand.get(mandant)?.am ?? null
+  }
+
   /** Long-Poll des Agenten: nächster Auftrag oder null nach `ms`. `abbruch` meldet eine abgerissene Verbindung. */
   abholen(mandant: string, ms: number, info: Omit<AgentStand, 'am'> = {}, abbruch?: (weg: () => void) => void): Promise<Auftrag | null> {
     this.stand.set(mandant, { ...info, am: Date.now() })

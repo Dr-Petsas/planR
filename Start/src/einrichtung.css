@@ -24,6 +24,11 @@
 .ein-punkt { width: 12px; height: 12px; border-radius: 50%; background: var(--akzent); animation: ein-puls 1.2s ease-in-out infinite; flex: 0 0 auto; }
 @keyframes ein-puls { 50% { opacity: 0.25; transform: scale(0.7); } }
 @media (prefers-reduced-motion: reduce) { .ein-punkt { animation: none; } }
+.ein-fortschritt { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border-radius: 10px; background: var(--akzent-hell); color: var(--akzent-dunkel); font-size: 14px; line-height: 1.5; }
+.ein-fortschritt p { margin: 4px 0 0; }
+.ein-spinner { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 50%; border: 3px solid rgba(0, 0, 0, 0.1); border-top-color: var(--akzent); animation: ein-dreh 0.9s linear infinite; }
+@keyframes ein-dreh { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ein-spinner { animation-duration: 3s; } }
 .ein-pvs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 .ein-pvs-wahl { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px; border: 1px solid var(--linie); border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
 .ein-pvs-wahl:hover { border-color: var(--akzent); }

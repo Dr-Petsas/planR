@@ -6,6 +6,7 @@ import './einrichtung.css'
 import { PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
+const dauer = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min` }
 
 interface Anleitung { rechner: string; ordner: string; schritte: string[]; preise: string }
 
@@ -87,11 +88,15 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   let laeuft = false
   let meldung = ''
   let uhr = 0
+  let katalogSeit = 0
+  let katalogUhr = 0
 
   const schleier = document.createElement('div')
   schleier.className = 'ein-schleier'
   document.body.append(schleier)
-  const zu = () => { clearInterval(uhr); schleier.remove(); removeEventListener('keydown', taste); if (location.hash === '#einrichtung') history.replaceState(null, '', location.pathname + location.search) }
+  const zu = () => {
+    if (katalogSeit && !confirm('Preise & Positionen werden gerade übernommen. Wirklich schließen? Der Vorgang läuft auf dem Server weiter; das Ergebnis sehen Sie später unter Einstellungen → Preise & Positionen.')) return
+    clearInterval(uhr); clearInterval(katalogUhr); schleier.remove(); removeEventListener('keydown', taste); if (location.hash === '#einrichtung') history.replaceState(null, '', location.pathname + location.search) }
   const taste = (e: KeyboardEvent) => { if (e.key === 'Escape') zu() }
   addEventListener('keydown', taste)
   schleier.addEventListener('click', (e) => { if (e.target === schleier) zu() })
@@ -133,8 +138,14 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
           ? `<p class="ein-ok">✓ Übernommen: ${Object.entries({ bel: 'BEL-Preise', eigenlabor: 'Eigenlabor-Preise', material: 'Materialien', goz: 'eigene GOZ-/Analogpositionen', kuerzel: 'Kürzel', komplexe: 'Komplexe' })
             .map(([k, n]) => `${katalog!.anzahl![k] ?? 0} ${n}`).join(', ')}.</p>
              <p class="ein-klein">Preisliste und Preisspalte (Eigen- oder Fremdlabor) stellen Sie unter Einstellungen → Preise &amp; Positionen ein.</p>`
-          : `<button type="button" class="neu-knopf" data-katalog${laeuft || !stand?.verbunden ? ' disabled' : ''}>${laeuft ? 'Wird übernommen …' : 'Jetzt übernehmen'}</button>
-             ${stand?.verbunden ? '' : '<p class="ein-klein">Geht, sobald die Bridge verbunden ist.</p>'}`}`
+          : katalogSeit
+            ? `<div class="ein-fortschritt" role="status" aria-live="polite">
+                 <span class="ein-spinner" aria-hidden="true"></span>
+                 <div><b>Preise &amp; Positionen werden aus ${esc(p?.name ?? 'dem Praxissystem')} gelesen …</b>
+                   <p>Läuft seit <span data-katalog-uhr>${dauer(Date.now() - katalogSeit)}</span>. Dauert ca. 5 Minuten – bitte das Fenster offen lassen und den Vorgang nicht abbrechen.</p></div>
+               </div>`
+            : `<button type="button" class="neu-knopf" data-katalog${laeuft || !stand?.verbunden ? ' disabled' : ''}>Jetzt übernehmen</button>
+               <p class="ein-klein">Dauert ca. 5 Minuten.${stand?.verbunden ? '' : ' Geht, sobald die Bridge verbunden ist.'}</p>`}`
       default: return `
         <h3>Fertig – PlanR ist eingerichtet.</h3>
         <p class="ein-text">Holen Sie jetzt den ersten HKP aus ${esc(p?.name ?? 'Ihrem Praxissystem')}, ziehen Sie die Regler und sehen Sie, wie viel mehr Umsatz im selben Befund steckt.</p>
@@ -164,8 +175,8 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <div class="ein-inhalt">${inhalt()}</div>
         ${meldung ? `<p class="ein-meldung" role="status">${esc(meldung)}</p>` : ''}
         <footer class="ein-fuss">
-          ${schritt > 0 ? '<button type="button" class="link-knopf" data-zurueck>← Zurück</button>' : '<span></span>'}
-          ${schritt < fertigBis ? `<button type="button" class="neu-knopf" data-weiter${weiterErlaubt() ? '' : ' disabled'}>Weiter</button>` : '<button type="button" class="neu-knopf" data-zu>Schließen</button>'}
+          ${schritt > 0 ? `<button type="button" class="link-knopf" data-zurueck${katalogSeit ? ' disabled' : ''}>← Zurück</button>` : '<span></span>'}
+          ${schritt < fertigBis ? `<button type="button" class="neu-knopf" data-weiter${weiterErlaubt() && !katalogSeit ? '' : ' disabled'}>Weiter</button>` : '<button type="button" class="neu-knopf" data-zu>Schließen</button>'}
         </footer>
       </div>`
     const $ = <T extends Element = HTMLElement>(s: string) => schleier.querySelector<T>(s)
@@ -200,8 +211,17 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
     })
     $('[data-katalog]')?.addEventListener('click', async () => {
       laeuft = true
+      meldung = ''
+      katalogSeit = Date.now()
+      katalogUhr = window.setInterval(() => {
+        const z = schleier.querySelector('[data-katalog-uhr]')
+        if (z) z.textContent = dauer(Date.now() - katalogSeit)
+      }, 1000)
       zeichnen()
       const r = await post('/api/praxiskatalog', { abgleich: true })
+        .catch(() => ({ status: 0, d: { meldung: 'Die Verbindung zu PlanR ist abgerissen. Bitte „Jetzt übernehmen“ noch einmal klicken.' } as Record<string, unknown> }))
+      clearInterval(katalogUhr)
+      katalogSeit = 0
       laeuft = false
       if (r.d.ok) { katalog = r.d.info as Katalog; o.geaendert() } else meldung = String(r.d.meldung ?? 'Das hat gerade nicht geklappt.')
       zeichnen()
