@@ -9,7 +9,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
 
 const SCHRITTE = ['Paket', 'Praxis', 'KZV & PVS', 'SEPA-Mandat', 'Prüfen & buchen'] as const
-const SCHRITT_VON: [RegExp, number][] = [[/^paket/, 0], [/^(praxis|inhaber)\./, 1], [/^(kzv|pvs)\.|^benutzer|^pickadocKonto|^hinweis/, 2], [/^sepa\./, 3], [/^zustimmung\./, 4]]
+const SCHRITT_VON: [RegExp, number][] = [[/^paket/, 0], [/^(praxis|inhaber)\./, 1], [/^(kzv|pvs)\.|^hinweis/, 2], [/^sepa\./, 3], [/^zustimmung\./, 4]]
 
 type Werte = Record<string, string | boolean>
 const PFLICHT: Record<number, [string, string][]> = {
@@ -109,11 +109,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
           ${auswahl(w, f, 'pvs.server', 'Wo kann die Bridge laufen?', Object.entries(SERVER))}
           ${feld(w, f, 'pvs.it', 'IT-Betreuer (optional, Name und Telefon)')}
         </div>
-        <h3>Zugänge</h3>
         <div class="bu-raster">
-          <label class="feld breit${f.benutzer ? ' fehler' : ''}">Weitere Benutzer (optional, E-Mail-Adressen, je Zeile eine)
-            <textarea name="benutzer" rows="2">${esc(String(w.benutzer ?? ''))}</textarea>${f.benutzer ? `<small class="bu-fehler">${esc(f.benutzer)}</small>` : ''}</label>
-          ${feld(w, f, 'pickadocKonto', 'Pickadoc-Konto, falls vorhanden', 'email')}
           <label class="feld breit">Nachricht an uns (optional)<textarea name="hinweis" rows="2">${esc(String(w.hinweis ?? ''))}</textarea></label>
         </div>`
       case 3: return `
@@ -217,7 +213,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     return {
       paket: paket(), praxis: teil('praxis'), inhaber: teil('inhaber'),
       kzv: { ...teil('kzv'), zahnaerzte: Number(g('kzv.zahnaerzte')), praxen: Number(g('kzv.praxen') || 1), eigenlabor: w['kzv.eigenlabor'] === true },
-      pvs: teil('pvs'), pickadocKonto: g('pickadocKonto'), benutzer: g('benutzer'), hinweis: g('hinweis'),
+      pvs: teil('pvs'), hinweis: g('hinweis'),
       sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'),
       firma2: (app.querySelector<HTMLInputElement>('[name=firma2]')?.value ?? ''),
     }
