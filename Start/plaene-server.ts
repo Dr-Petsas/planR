@@ -235,6 +235,12 @@ async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   const frei = await berechtigung(konto.clientId)
   if (!frei) return json(res, 503, { ok: false, meldung: 'Die Freischaltung lässt sich gerade nicht prüfen. Bitte in ein paar Minuten erneut versuchen.' })
   if (!frei.erlaubt) return json(res, 403, { ok: false, meldung: NICHT_GEBUCHT })
+  const z = await sitzungStarten(req, res, konto, refresh)
+  json(res, 200, werInfo(werAus(z, konto), z))
+}
+
+/** Konto vermerken, Sitzung anlegen und das Cookie setzen (Anmeldung und frisch gebuchte Praxis). */
+async function sitzungStarten(req: IncomingMessage, res: ServerResponse, konto: Konto, refresh: string): Promise<Zugaenge> {
   const z = await sitzungExklusiv(async () => {
     const neu = benutzerVermerken(await zugaengeLesen(), konto)
     await jsonSchreiben(ZUGAENGE, neu)
@@ -244,7 +250,7 @@ async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   const jetzt = Date.now()
   await sitzungExklusiv((liste) => sitzungenSpeichern([...liste, { hash: sitzungHash(token), konto, erneuern: refresh, seit: new Date(jetzt).toISOString(), geprueft: jetzt, zuletzt: jetzt }]))
   res.setHeader('Set-Cookie', `${SITZUNG_COOKIE}=${token}; Path=/; Max-Age=${SITZUNG_TAGE * 86400}; HttpOnly; SameSite=Lax${sicher(req)}`)
-  json(res, 200, werInfo(werAus(z, konto), z))
+  return z
 }
 
 async function passwortEndpunkt(req: IncomingMessage, res: ServerResponse) {
@@ -993,7 +999,7 @@ function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
  * Anmeldung: X-PlanR-Mandant + Bearer-Schlüssel; über den Tunnel zusätzlich das Access-Token seines Service-Tokens.
  */
 async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
-  res.setHeader('Cache-Control', 'no-store')
+    res.setHeader('Cache-Control', 'no-store')
   const mandant = String(req.headers['x-planr-mandant'] ?? '')
   const schluessel = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
   if (!MANDANT_RE.test(mandant) || !schluesselPasst(await agentenLesen(), mandant, schluessel)) return json(res, 401, { ok: false })
@@ -1007,8 +1013,8 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     const auftrag = await hub.abholen(mandant, 25_000, { pvs, version }, (weg) => res.on('close', weg))
     if (res.writableEnded || res.destroyed) {
       if (auftrag) hub.zurueckstellen(mandant, auftrag)
-      return
-    }
+    return
+  }
     if (!auftrag) {
       res.statusCode = 204
       res.end()
@@ -1125,7 +1131,21 @@ async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
     mailSenden(ORDNER, { an: b.inhaber.email, betreff: kunde.betreff, text: kunde.text, antwortAn: infoAdresse() }),
   ])
   if (!infoOk) console.error('[planr] Buchung', b.id, 'gespeichert, Info-Mail fehlt – data/buchungen.json prüfen')
-  json(res, 200, { ok: true, id: b.id, paket: b.paket, pvs: b.pvs.id, email: b.inhaber.email, bestaetigt: kundeOk, konto: b.konto.status })
+  let angemeldet = false
+  if (b.konto.status === 'angelegt' && b.konto.clientId) {
+    // Praxissystem aus der Buchung übernehmen und gleich anmelden: Die Bestätigungsseite lädt die Bridge direkt.
+    const mandant = mandantVon(await zugaengeLesen(), { clientId: b.konto.clientId })
+    await exklusiv(async () => {
+      const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
+      if (!alle[mandant]) await jsonSchreiben(EINSTELLUNGEN, { ...alle, [mandant]: { ...einstellungenPruefen({ pvs: b.pvs.id, bridge: true }), geaendert: new Date().toISOString() } })
+    }).catch(() => undefined)
+    const a = await einloggen(b.inhaber.email, r.passwort).catch(() => null)
+    if (a?.ok && a.wert.konto.clientId === b.konto.clientId) {
+      await sitzungStarten(req, res, a.wert.konto, a.wert.erneuern)
+      angemeldet = true
+    }
+  }
+  json(res, 200, { angemeldet, ok: true, id: b.id, paket: b.paket, pvs: b.pvs.id, email: b.inhaber.email, bestaetigt: kundeOk, konto: b.konto.status })
 }
 
 /** Praxis und Admin-Konto in Pickadoc anlegen (über MAS); Abo planr ist damit gesetzt, die Anmeldung geht sofort. */

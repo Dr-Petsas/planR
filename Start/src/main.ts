@@ -766,7 +766,7 @@ app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
 function ohneAnmeldung() {
   let ansicht = ''
   const zeigen = async () => {
-    const soll = location.hash === '#anmelden' || sitzungHinweis ? 'anmelden'
+    const soll = ['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis ? 'anmelden'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' ? location.hash : 'start'
     if (soll === ansicht) return
     ansicht = soll
@@ -774,7 +774,7 @@ function ohneAnmeldung() {
     if (soll === 'anmelden') {
       hp.homepageVerlassen()
       document.title = 'PlanR – Anmelden'
-      anmeldeSeite(app, sitzungHinweis)
+      anmeldeSeite(app, sitzungHinweis || (location.hash === '#bridge' ? 'Bitte als Praxis-Admin anmelden – danach laden Sie die Bridge herunter.' : ''))
       scrollTo(0, 0)
     } else if (soll.startsWith('#buchen')) {
       hp.homepageVerlassen()

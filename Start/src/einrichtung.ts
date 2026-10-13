@@ -49,6 +49,25 @@ export function anleitungHtml(pvsId: string, mitDownload = false): string {
     <p class="ein-klein">Entfernen: <code>Entfernen.cmd</code> im entpackten Ordner doppelklicken. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>`
 }
 
+/** Persönliches Bridge-Paket holen und speichern. status 401/403: nicht (als Admin) angemeldet. */
+export async function bridgePaketLaden(): Promise<{ ok: true } | { ok: false; status: number; meldung: string }> {
+  try {
+    const r = await fetch('/api/bridge-paket', { method: 'POST' })
+    if (!r.ok) return { ok: false, status: r.status, meldung: String(((await r.json().catch(() => ({}))) as { meldung?: string }).meldung ?? 'Der Download hat nicht geklappt.') }
+    const adresse = URL.createObjectURL(await r.blob())
+    const a = document.createElement('a')
+    a.href = adresse
+    a.download = 'PlanR-Bridge.zip'
+    document.body.append(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(adresse), 60_000)
+    return { ok: true }
+  } catch {
+    return { ok: false, status: 0, meldung: 'Der Download hat nicht geklappt. Bitte die Internetverbindung prüfen.' }
+  }
+}
+
 interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; pvs?: string; version?: string }
 interface Katalog { anzahl?: Record<string, number>; pvs?: string }
 
@@ -171,24 +190,11 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       laeuft = true
       meldung = ''
       zeichnen()
-      try {
-        const r = await fetch('/api/bridge-paket', { method: 'POST' })
-        if (!r.ok) meldung = String(((await r.json().catch(() => ({}))) as { meldung?: string }).meldung ?? 'Der Download hat nicht geklappt.')
-        else {
-          const adresse = URL.createObjectURL(await r.blob())
-          const a = document.createElement('a')
-          a.href = adresse
-          a.download = 'PlanR-Bridge.zip'
-          document.body.append(a)
-          a.click()
-          a.remove()
-          setTimeout(() => URL.revokeObjectURL(adresse), 60_000)
-          paketGeladen = true
-          stand = { ...(stand ?? { mandant: '', verbunden: false }), eingerichtet: true }
-        }
-      } catch {
-        meldung = 'Der Download hat nicht geklappt. Bitte die Internetverbindung prüfen.'
-      }
+      const r = await bridgePaketLaden()
+      if (r.ok) {
+        paketGeladen = true
+        stand = { ...(stand ?? { mandant: '', verbunden: false }), eingerichtet: true }
+      } else meldung = r.meldung
       laeuft = false
       zeichnen()
     })

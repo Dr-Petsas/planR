@@ -3,7 +3,7 @@ import './buchung.css'
 import { KZVEN } from './data/kzv'
 import { PVS_LISTE, pvsVon } from './einstellungen'
 import { PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './paket'
-import { anleitungHtml } from './einrichtung'
+import { anleitungHtml, anleitungVon, bridgePaketLaden } from './einrichtung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
@@ -235,9 +235,9 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     zeichnen()
     try {
       const r = await fetch('/api/buchung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten()) })
-      const d = await r.json() as { ok: boolean; id?: string; email?: string; pvs?: string; konto?: string; fehler?: Record<string, string>; meldung?: string }
+      const d = await r.json() as { ok: boolean; id?: string; email?: string; pvs?: string; konto?: string; angemeldet?: boolean; fehler?: Record<string, string>; meldung?: string }
       sendet = false
-      if (d.ok) return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']), String(d.konto ?? 'manuell'))
+      if (d.ok) return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']), String(d.konto ?? 'manuell'), d.angemeldet === true)
       fehler = d.fehler ?? {}
       const erster = Object.keys(fehler)[0]
       if (erster) schritt = SCHRITT_VON.find(([re]) => re.test(erster))?.[1] ?? schritt
@@ -253,9 +253,11 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
   scrollTo(0, 0)
 }
 
-function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string, konto: string) {
+function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string, konto: string, angemeldet: boolean) {
   const pvs = pvsVon(pvsId)
-  const zugang = konto === 'angelegt'
+  const zugang = angemeldet
+    ? `<li><b>Zugang:</b> Ihr Konto ist eingerichtet und Sie sind schon angemeldet. Später melden Sie sich mit ${esc(email)} und Ihrem Passwort an.</li>`
+    : konto === 'angelegt'
     ? `<li><b>Zugang:</b> Ihr Konto ist eingerichtet. Melden Sie sich jetzt mit ${esc(email)} und Ihrem Passwort an.</li>`
     : konto === 'vorhanden'
       ? `<li><b>Freischaltung:</b> Für ${esc(email)} gibt es schon ein Pickadoc-Konto. Wir schalten PlanR dafür frei – meist noch am selben Werktag. Danach melden Sie sich mit Ihrem bestehenden Pickadoc-Passwort an.</li>`
@@ -272,11 +274,25 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
           ${zugang}
           <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Installation der Bridge, Verbindung, Preise &amp; Positionen.</li>
         </ol>
-        <h3>Schon vorbereiten: ${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
+        <h3>${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
+        ${anleitungVon(pvsId) ? `<p><button type="button" class="neu-knopf" data-bridge-laden>PlanR-Bridge herunterladen</button></p>
+          <p class="bu-klein" data-bridge-meldung>${angemeldet ? 'Das Paket ist für Ihre Praxis vorbereitet – bei der Installation muss nichts eingegeben werden.' : 'Zum Herunterladen melden Sie sich kurz an; danach startet der Download.'}</p>` : ''}
         ${anleitungHtml(pvsId)}
-        <p class="bu-klein">Die Bridge laden Sie nach der Anmeldung in PlanR unter <b>Einrichtung</b> herunter – fertig für Ihre Praxis, ohne Eingaben.</p>
-        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a><a class="neu-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a></div>
+        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a>${angemeldet ? '<a class="neu-knopf" href="/#einrichtung">Zu PlanR</a>' : `<a class="neu-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a>`}</div>
       </div>
     </div>`
+  const knopf = app.querySelector<HTMLButtonElement>('[data-bridge-laden]')
+  const hinweis = app.querySelector<HTMLElement>('[data-bridge-meldung]')
+  knopf?.addEventListener('click', async () => {
+    if (!angemeldet) { location.hash = '#bridge'; return }
+    knopf.disabled = true
+    knopf.textContent = 'Paket wird erstellt …'
+    const r = await bridgePaketLaden()
+    knopf.disabled = false
+    knopf.textContent = r.ok ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'
+    if (r.ok) { if (hinweis) hinweis.textContent = '✓ Heruntergeladen (Ordner „Downloads“). Jetzt auf den Server kopieren, entpacken und Installieren.cmd doppelklicken.' }
+    else if (r.status === 401 || r.status === 403) location.hash = '#bridge'
+    else if (hinweis) hinweis.textContent = r.meldung
+  })
   scrollTo(0, 0)
 }
