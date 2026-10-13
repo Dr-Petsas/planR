@@ -486,6 +486,13 @@ body.hp-body {
 /* ---------- Sprach-KI: Handy von der anderen Seite ---------- */
 .hp-buehne-bild--rechts { --winkel: 24deg; }
 .hp-buehne-bild--rechts .hp-formen { transform: scaleX(-1) rotate(-50deg); }
+.hp-buehne--sk .hp-buehne-bild { --p-glanz: rgba(255, 122, 168, 0.3); }
+.hp-buehne--sk .hp-formen .f3 { background: linear-gradient(90deg, rgba(255, 140, 180, 0.2), rgba(255, 255, 255, 0.04)); }
+.hp-buehne--sk .hp-buehne-bild::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 520px; height: 520px; margin: -260px 0 0 -260px; z-index: 0; pointer-events: none;
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 122, 168, 0.18), transparent);
+}
+.hp-buehne--sk .hp-eyebrow { color: var(--hp-pink); }
 .hp-schraeg-handy { position: relative; z-index: 1; width: min(100%, 310px); transform: perspective(1600px) rotateY(12deg) rotate(-20deg); }
 .hp-schraeg-handy .cc-phone { width: 100%; }
 .hp-chat { gap: 12px; min-height: 560px; }
