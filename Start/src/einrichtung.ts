@@ -1,5 +1,5 @@
 /**
- * Einrichtungsassistent: Praxissystem wählen, Bridge-Schlüssel erzeugen, Bridge installieren, Verbindung prüfen,
+ * Einrichtungsassistent: Praxissystem wählen, persönliches Bridge-Paket laden und installieren, Verbindung prüfen,
  * Preise & Positionen übernehmen. Die Anleitung je PVS zeigt auch die Bestätigungsseite der Buchung.
  */
 import './einrichtung.css'
@@ -10,10 +10,9 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 interface Anleitung { rechner: string; ordner: string; schritte: string[]; preise: string }
 
 const BRIDGE_SCHRITTE = (ordner: string) => [
-  '<b>PlanR-Bridge herunterladen</b> (ZIP, etwa 15 MB – Python ist enthalten) und auf dem Rechner entpacken.',
-  '<code>Installieren.cmd</code> doppelklicken und die Admin-Abfrage von Windows bestätigen.',
-  'Nach <b>Mandant</b> und <b>Bridge-Schlüssel</b> gefragt: die beiden Werte aus dem Schritt „Bridge-Schlüssel“ im Einrichtungsassistenten einfügen.',
-  `Findet die Installation das Praxisprogramm nicht selbst, nach dem Ordner fragen lassen – ${ordner}.`,
+  '<b>PlanR-Bridge herunterladen</b> (ZIP, etwa 15 MB), auf den Rechner kopieren und entpacken (Rechtsklick → „Alle extrahieren“).',
+  '<code>Installieren.cmd</code> doppelklicken und die Windows-Abfrage mit „Ja“ bestätigen. Eingaben sind nicht nötig – das Paket kennt Ihre Praxis.',
+  `Nur falls die Installation das Praxisprogramm nicht selbst findet, fragt sie nach dem Ordner – ${ordner}.`,
   'Das Fenster meldet „Connector bereit“ und „PlanR verbunden“. Der Dienst startet ab jetzt mit dem Rechner; am Server wird kein Port geöffnet.',
 ]
 
@@ -35,7 +34,7 @@ const ANLEITUNGEN: Record<string, Anleitung> = {
 export const anleitungVon = (pvs: string) => ANLEITUNGEN[pvs] ?? null
 
 /** Anleitung als HTML (Bestätigungsseite und Assistent) */
-export function anleitungHtml(pvsId: string, mitDownload = true): string {
+export function anleitungHtml(pvsId: string, mitDownload = false): string {
   const pvs = pvsVon(pvsId)
   const a = anleitungVon(pvsId)
   if (!pvs) return ''
@@ -45,15 +44,15 @@ export function anleitungHtml(pvsId: string, mitDownload = true): string {
   }
   return `
     <p class="ein-text"><b>Wo installieren?</b> ${a.rechner}</p>
-    ${mitDownload ? '<p><a class="neu-knopf ein-download" href="/download/PlanR-Agent.zip" download>PlanR-Bridge herunterladen</a></p>' : ''}
+    ${mitDownload ? '<div data-paket-platz></div>' : ''}
     <ol class="ein-liste">${a.schritte.map((s) => `<li>${s}</li>`).join('')}</ol>
-    <p class="ein-klein">Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Agent</code> anlegen. Entfernen: <code>Installieren.cmd /entfernen</code>.</p>`
+    <p class="ein-klein">Entfernen: <code>Entfernen.cmd</code> im entpackten Ordner doppelklicken. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>`
 }
 
 interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; pvs?: string; version?: string }
 interface Katalog { anzahl?: Record<string, number>; pvs?: string }
 
-const SCHRITTE = ['Praxissystem', 'Bridge-Schlüssel', 'Installieren', 'Verbindung', 'Preise & Positionen', 'Fertig'] as const
+const SCHRITTE = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & Positionen', 'Fertig'] as const
 
 /**
  * Assistent als eigenes Fenster über der Planliste. `geaendert` meldet neue Einstellungen bzw. Katalog an die Übersicht,
@@ -64,7 +63,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   let schritt = 0
   let einst = o.einstellungen
   let stand: Stand | null = null
-  let schluessel = ''
+  let paketGeladen = false
   let katalog: Katalog | null = null
   let laeuft = false
   let meldung = ''
@@ -101,27 +100,14 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <div class="ein-pvs">${PVS_LISTE.map((x) => `<button type="button" class="ein-pvs-wahl${x.id === einst.pvs ? ' an' : ''}" data-pvs="${x.id}">
           <b>${esc(x.name)}</b><small>${esc(x.hersteller)}</small><i class="${x.bereit ? 'bereit' : 'bald'}">${x.bereit ? 'Anbindung verfügbar' : 'in Vorbereitung'}</i></button>`).join('')}</div>
         ${o.admin ? '' : '<p class="ein-hinweis">Das Praxissystem stellt der Praxis-Admin ein.</p>'}`
-      case 1: return !anbindbar() ? anleitungHtml(einst.pvs) : `
-        <h3>Bridge-Schlüssel für Ihre Praxis</h3>
-        <p class="ein-text">Mit Mandant und Schlüssel meldet sich die Bridge auf Ihrem Praxisserver bei PlanR an. Der Schlüssel wird <b>nur jetzt</b> angezeigt – am besten gleich in die Installation einfügen oder sicher notieren.</p>
-        ${schluessel ? `
-          <div class="ein-werte">
-            <label>Mandant<span><code>${esc(stand?.mandant ?? '')}</code><button type="button" data-kopie="${esc(stand?.mandant ?? '')}">Kopieren</button></span></label>
-            <label>Bridge-Schlüssel<span><code>${esc(schluessel)}</code><button type="button" data-kopie="${esc(schluessel)}">Kopieren</button></span></label>
-          </div>`
-        : stand?.eingerichtet ? `
-          <p class="ein-ok">Für Ihre Praxis ist schon ein Schlüssel eingerichtet${stand.verbunden ? ' und die Bridge ist verbunden' : ''}.</p>
-          ${o.admin ? '<button type="button" class="import-knopf" data-schluessel-neu>Neuen Schlüssel erzeugen (trennt die laufende Bridge)</button>' : ''}`
-        : o.admin ? '<button type="button" class="neu-knopf" data-schluessel>Bridge-Schlüssel erzeugen</button>'
-        : '<p class="ein-hinweis">Den Schlüssel erzeugt der Praxis-Admin.</p>'}`
-      case 2: return `<h3>Bridge auf dem Praxisserver installieren</h3>${anleitungHtml(einst.pvs)}`
-      case 3: return `
+      case 1: return !anbindbar() ? anleitungHtml(einst.pvs) : `<h3>Bridge auf dem Praxisserver installieren</h3>${anleitungHtml(einst.pvs, true)}`
+      case 2: return `
         <h3>Verbindung prüfen</h3>
         ${stand?.verbunden
           ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>`
           : `<p class="ein-warte"><span class="ein-punkt"></span> Warte auf die Bridge … Sobald die Installation „PlanR verbunden“ meldet, geht es hier weiter.</p>
-             <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und ist der Schlüssel aus Schritt 2 eingetragen? Wir helfen gern: 0211 3029 3035.</p>`}`
-      case 4: return `
+             <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und wurde das zuletzt heruntergeladene Paket installiert? Wir helfen gern: 0211 3029 3035.</p>`}`
+      case 3: return `
         <h3>Preise &amp; Positionen übernehmen</h3>
         <p class="ein-text">${esc(anleitungVon(einst.pvs)?.preise ?? '')} So rechnet PlanR von Anfang an mit Ihren eigenen Preisen.</p>
         ${katalog?.anzahl
@@ -143,7 +129,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   function weiterErlaubt(): boolean {
     if (schritt === 0) return !!einst.pvs
     if (!anbindbar() && schritt >= 1) return false
-    if (schritt === 1) return !!schluessel || !!stand?.eingerichtet
+    if (schritt === 1) return paketGeladen || !!stand?.eingerichtet
     return true
   }
 
@@ -174,19 +160,38 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       if (r.d.ok) { einst = r.d.einstellungen as Einstellungen; meldung = ''; o.geaendert() } else meldung = String(r.d.meldung ?? 'Speichern hat nicht geklappt.')
       zeichnen()
     }))
-    const erzeugen = async (neu: boolean) => {
-      if (neu && !confirm('Neuen Bridge-Schlüssel erzeugen? Die laufende Bridge ist danach getrennt, bis der neue Schlüssel eingetragen ist.')) return
-      const r = await post('/api/bridge-schluessel', { neu })
-      if (r.d.ok) { schluessel = String(r.d.schluessel); stand = { ...(stand ?? { verbunden: false }), mandant: String(r.d.mandant), eingerichtet: true, verbunden: false }; meldung = '' }
-      else meldung = String(r.d.meldung ?? 'Das hat nicht geklappt.')
-      zeichnen()
+    const platz = $('[data-paket-platz]')
+    if (platz) {
+      platz.innerHTML = !o.admin ? '<p class="ein-hinweis">Das Paket lädt der Praxis-Admin herunter – es enthält den Zugang Ihrer Praxis.</p>'
+        : `<p><button type="button" class="neu-knopf ein-download" data-paket${laeuft ? ' disabled' : ''}>${laeuft ? 'Paket wird erstellt …' : paketGeladen ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'}</button></p>
+           ${paketGeladen ? '<p class="ein-ok">✓ Heruntergeladen (Ordner „Downloads“). Bitte nur dieses Paket installieren – ältere Downloads sind damit ungültig.</p>' : ''}`
     }
-    $('[data-schluessel]')?.addEventListener('click', () => void erzeugen(false))
-    $('[data-schluessel-neu]')?.addEventListener('click', () => void erzeugen(true))
-    schleier.querySelectorAll<HTMLButtonElement>('[data-kopie]').forEach((b) => b.addEventListener('click', async () => {
-      await navigator.clipboard?.writeText(b.dataset.kopie ?? '').catch(() => undefined)
-      b.textContent = 'Kopiert'
-    }))
+    $('[data-paket]')?.addEventListener('click', async () => {
+      if (stand?.verbunden && !confirm('Die Bridge ist gerade verbunden. Ein neues Paket ersetzt ihren Zugang; sie verbindet sich erst wieder, wenn es auf dem Server installiert ist. Trotzdem herunterladen?')) return
+      laeuft = true
+      meldung = ''
+      zeichnen()
+      try {
+        const r = await fetch('/api/bridge-paket', { method: 'POST' })
+        if (!r.ok) meldung = String(((await r.json().catch(() => ({}))) as { meldung?: string }).meldung ?? 'Der Download hat nicht geklappt.')
+        else {
+          const adresse = URL.createObjectURL(await r.blob())
+          const a = document.createElement('a')
+          a.href = adresse
+          a.download = 'PlanR-Bridge.zip'
+          document.body.append(a)
+          a.click()
+          a.remove()
+          setTimeout(() => URL.revokeObjectURL(adresse), 60_000)
+          paketGeladen = true
+          stand = { ...(stand ?? { mandant: '', verbunden: false }), eingerichtet: true }
+        }
+      } catch {
+        meldung = 'Der Download hat nicht geklappt. Bitte die Internetverbindung prüfen.'
+      }
+      laeuft = false
+      zeichnen()
+    })
     $('[data-katalog]')?.addEventListener('click', async () => {
       laeuft = true
       zeichnen()
@@ -201,14 +206,14 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   // Verbindung live verfolgen, solange der Assistent offen ist
   uhr = window.setInterval(async () => {
     if (!schleier.isConnected) return clearInterval(uhr)
-    if (schritt < 2 || schritt > 4) return
+    if (schritt < 1 || schritt > 3) return
     const vorher = stand?.verbunden
     await standLaden()
     if (stand?.verbunden !== vorher && !laeuft) zeichnen()
   }, 4000)
 
   void standLaden().then(() => {
-    if (einst.pvs) schritt = stand?.verbunden ? 4 : stand?.eingerichtet ? 2 : 1
+    if (einst.pvs) schritt = stand?.verbunden ? 3 : 1
     zeichnen()
   })
   zeichnen()

@@ -22,6 +22,7 @@ import {
 import { spawn } from 'node:child_process'
 import { timingSafeEqual } from 'node:crypto'
 import { isoDatum, stammdatenAusPvs } from './pvsPatient.ts'
+import { zipMitDatei } from './zipAnhang.ts'
 import {
   UST_SATZ, abrechnen, ausstellerVollstaendig, euroText, leeresZaehlwerk, monatMerken, monatVon, monatsname, naechsteNummer, rechnungErstellen, rechnungHtml,
   zaehlwerkAktualisieren, type Aussteller, type Empfaenger, type Gesehen, type Rechnung, type Zaehlwerk,
@@ -57,7 +58,7 @@ const BRIDGE_WEITER = `${ORDNER}/bridge-weiter.json`
 /** Buchungen von der Startseite (enthalten IBAN – bleiben im Datenordner) */
 const BUCHUNGEN = `${ORDNER}/buchungen.json`
 /** Installationspaket für den Praxisserver (pvsConnectoR: agent/paket-bauen.ps1) */
-const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Agent.zip`
+const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Bridge.zip`
 const TUNNEL_HOST = 'planr.pickadoc-tunnel.com'
 const HERKUNFT = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$|^https:\/\/[a-z0-9-]+\.pickadoc-tunnel\.com$/
 const MODUL_RE = /^[a-z0-9-]{1,40}$/
@@ -745,7 +746,7 @@ function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis>
     } catch {
       return { ok: false, status: 503, meldung: stumm(c) }
     }
-    if (r.status === 404) return { ok: false, status: 501, meldung: `${c.name} liefert seine Leistungsverzeichnisse noch nicht – PlanR-Agent bzw. Connector aktualisieren.` }
+    if (r.status === 404) return { ok: false, status: 501, meldung: `${c.name} liefert seine Leistungsverzeichnisse noch nicht – PlanR-Bridge bzw. Connector aktualisieren.` }
     if (!r.ok) return { ok: false, status: 502, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` }
     const roh = rohPruefen(r.daten)
     if (!roh) return { ok: false, status: 502, meldung: `${c.name}: Antwort unvollständig.` }
@@ -1065,18 +1066,18 @@ a.knopf{display:inline-block;background:#1f6feb;color:#fff;padding:.7rem 1.2rem;
 code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem 0}</style></head><body>
 <h1>PlanR-Bridge für den Praxisserver</h1>
 <p>Die Bridge verbindet DS-Win bzw. DENS auf dem Praxisserver mit PlanR. Sie baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Python ist im Paket enthalten.</p>
-<p><a class="knopf" href="/download/PlanR-Agent.zip?v=STAND" download>PlanR-Bridge herunterladen</a></p>
+<p><a class="knopf" href="/#einrichtung">In PlanR anmelden und Bridge herunterladen</a></p>
+<p>Das Paket lädt der Praxis-Admin in PlanR unter <b>Einrichtung</b> herunter. Es kennt Ihre Praxis bereits – bei der Installation muss nichts eingegeben werden.</p>
 <h2>Einrichten (einmal, auf dem Server mit DS-Win bzw. DENS)</h2>
-<p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden. Geht auch an einem Arbeitsplatz-PC, der dauerhaft läuft; dann fragt die Installation nach einem Windows-Konto, das die Freigabe öffnen darf.</p>
+<p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden.</p>
 <ol>
-<li>ZIP auf den Rechner laden und entpacken.</li>
-<li><code>Installieren.cmd</code> doppelklicken und die Admin-Abfrage bestätigen.</li>
-<li>Mandant und Bridge-Schlüssel eingeben (bekommen Sie von pickadoc). Findet die Installation DS-Win nicht selbst, fragt sie nach dem Ordner (z. B. <code>D:\\TDAMP\\DS</code> oder <code>\\\\SERVER\\TDAMP\\DS</code>).</li>
-<li>Das Fenster meldet „Connector bereit“ und „PlanR verbunden“ – fertig. Der Dienst startet ab jetzt mit dem Server.</li>
+<li>ZIP auf den Server kopieren und entpacken (Rechtsklick → „Alle extrahieren“).</li>
+<li><code>Installieren.cmd</code> doppelklicken und die Windows-Abfrage mit „Ja“ bestätigen.</li>
+<li>Das Fenster meldet „Connector bereit“ und „PlanR verbunden“ – fertig. Die Bridge startet ab jetzt mit dem Server.</li>
 </ol>
 <h2>Arbeiten mit PlanR</h2>
 <p>PlanR über <code>https://planr.pickadoc.de</code> öffnen – am Praxis-PC, zu Hause oder am Handy – und mit dem <b>Pickadoc-Konto</b> anmelden. Jeder sieht nur die Patienten und Pläne seiner Praxis; in einer Praxisgemeinschaft ordnet der Praxis-Admin die Benutzer in PlanR unter Einstellungen → Benutzer zu.</p>
-<p>Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Agent</code> anlegen. Entfernen: <code>Installieren.cmd /entfernen</code>.</p>
+<p>Entfernen: <code>Entfernen.cmd</code> im entpackten Ordner doppelklicken. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>
 </body></html>`
 
 function download(req: IncomingMessage, res: ServerResponse, url: string) {
@@ -1092,7 +1093,7 @@ function download(req: IncomingMessage, res: ServerResponse, url: string) {
   }
   readFile(AGENT_PAKET).then((daten) => {
     res.setHeader('Content-Type', 'application/zip')
-    res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Agent.zip"')
+    res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge-allgemein.zip"')
     res.setHeader('Content-Length', String(daten.length))
     res.end(req.method === 'HEAD' ? undefined : daten)
   }).catch(() => json(res, 404, { ok: false, meldung: 'Das Bridge-Paket ist noch nicht gebaut (pvsConnectoR: agent/paket-bauen.ps1).' }))
@@ -1153,6 +1154,40 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
   })
   if (ergebnis === 'vorhanden') return json(res, 409, { ok: false, meldung: 'Für Ihre Praxis gibt es schon einen Bridge-Schlüssel. Ein neuer trennt die laufende Bridge.' })
   json(res, 200, { ok: true, mandant: m, schluessel: schluesselNeu })
+}
+
+/**
+ * POST: persönliches Bridge-Paket (nur Admin). Erzeugt einen neuen Schlüssel und legt ihn mit Mandant als
+ * einrichtung.json ins ZIP – die Installation braucht so keine Eingaben. Eine laufende Bridge braucht danach das neue Paket.
+ */
+async function bridgePaket(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Bridge laden nur Praxis-Admins herunter.' })
+  const basis = await readFile(AGENT_PAKET).catch(() => null)
+  if (!basis || basis.length < 30 || basis.readUInt32LE(0) !== 0x04034b50) {
+    return json(res, 503, { ok: false, meldung: 'Das Bridge-Paket ist gerade nicht verfügbar. Bitte rufen Sie uns an: 0211 3029 3035.' })
+  }
+  const erster = basis.subarray(30, 30 + basis.readUInt16LE(26)).toString('utf8')
+  const trenner = erster.includes('\\') ? '\\' : '/'
+  const wurzel = erster.split(/[\\/]/)[0] || 'PlanR-Bridge'
+  const m = w.mandant
+  const schluesselNeu = neuerSchluessel()
+  await exklusiv(async () => {
+    const liste = await agentenLesen()
+    const alt = liste[m]
+    liste[m] = { ...alt, hash: schluesselHash(schluesselNeu), emails: alt?.emails ?? [], geraete: alt?.geraete ?? [], angelegt: new Date().toISOString() }
+    await jsonSchreiben(AGENTEN, liste)
+  })
+  const z = await zugaengeLesen()
+  const praxis = z.mandanten[w.konto.clientId]?.praxen?.[0]?.name ?? ''
+  const einrichtung = { planr: `https://${req.headers.host ?? 'planr.pickadoc.de'}`, mandant: m, schluessel: schluesselNeu, praxis }
+  const daten = zipMitDatei(basis, [wurzel, 'programm', 'agent', 'einrichtung.json'].join(trenner), Buffer.from(JSON.stringify(einrichtung, null, 2)))
+  console.log('[planr] Bridge-Paket für', m, 'von', w.konto.email)
+  res.setHeader('Content-Type', 'application/zip')
+  res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge.zip"')
+  res.setHeader('Content-Length', String(daten.length))
+  res.end(daten)
 }
 
 /**
@@ -1408,7 +1443,7 @@ const fehler500 = (res: ServerResponse) => (e: unknown) => {
 export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
   const [url, query = ''] = String(req.url ?? '').split('?')
   if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort') return agentEndpunkt(req, res, url, query)
-  if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip') return download(req, res, url)
+  if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip' || url === '/download/PlanR-Bridge.zip') return download(req, res, url)
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
@@ -1430,6 +1465,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   const m = w.mandant
   if (url === '/api/einstellungen') return einstellungen(req, res, w)
   if (url === '/api/bridge-schluessel') return void bridgeSchluessel(req, res, w).catch(fehler500(res))
+  if (url === '/api/bridge-paket') return void bridgePaket(req, res, w).catch(fehler500(res))
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))

@@ -263,11 +263,11 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
         <ol class="bu-weiter">
           <li><b>Freischaltung:</b> Wir richten PlanR für Ihre Praxis ein – meist noch am selben Werktag.</li>
           <li><b>Passwort:</b> Sie bekommen eine E-Mail, mit der Sie das Passwort für ${esc(email)} festlegen.</li>
-          <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Bridge-Schlüssel, Installation, Verbindung, Preise &amp; Positionen.</li>
+          <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Installation der Bridge, Verbindung, Preise &amp; Positionen.</li>
         </ol>
         <h3>Schon vorbereiten: ${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
         ${anleitungHtml(pvsId)}
-        <p class="bu-klein">Den Bridge-Schlüssel erzeugen Sie nach der Freischaltung in PlanR unter <b>Einrichtung</b>.</p>
+        <p class="bu-klein">Die Bridge laden Sie nach der Freischaltung in PlanR unter <b>Einrichtung</b> herunter – fertig für Ihre Praxis, ohne Eingaben.</p>
         <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a><a class="neu-knopf" href="#anmelden">Zur Anmeldung</a></div>
       </div>
     </div>`
