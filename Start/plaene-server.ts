@@ -1002,8 +1002,15 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     res.setHeader('Cache-Control', 'no-store')
   const mandant = String(req.headers['x-planr-mandant'] ?? '')
   const schluessel = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
-  if (!MANDANT_RE.test(mandant) || !schluesselPasst(await agentenLesen(), mandant, schluessel)) return json(res, 401, { ok: false })
-  if (!amPraxisPc(req) && await accessEinstellung() && !await anmeldung(req)) return json(res, 401, { ok: false })
+  if (!MANDANT_RE.test(mandant) || !schluesselPasst(await agentenLesen(), mandant, schluessel)) {
+    bridgeMelden(mandant, 'abgewiesen: Schlüssel passt nicht (älteres Paket installiert?)')
+    return json(res, 401, { ok: false })
+  }
+  if (!amPraxisPc(req) && await accessEinstellung() && !await anmeldung(req)) {
+    bridgeMelden(mandant, 'abgewiesen: Access-Anmeldung fehlt')
+    return json(res, 401, { ok: false })
+  }
+  if (!hub.verbunden(mandant)) bridgeMelden(mandant, `meldet sich an (${String(req.headers['user-agent'] ?? '').slice(0, 40)})`)
   if (await bridgeWeiterleiten(req, res, url, query)) return
 
   if (url === '/api/pvs-agent/auftrag' && req.method === 'GET') {
@@ -1035,6 +1042,15 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     }
   }
   json(res, 405, { ok: false })
+}
+
+const bridgeGemeldet = new Map<string, number>()
+/** Höchstens einmal je Minute, Praxis und Meldung ins Protokoll – eine abgewiesene Bridge fragt alle paar Sekunden. */
+function bridgeMelden(mandant: string, text: string) {
+  const k = `${mandant}|${text}`
+  if (Date.now() - (bridgeGemeldet.get(k) ?? 0) < 60_000) return
+  bridgeGemeldet.set(k, Date.now())
+  console.log('[planr] Bridge', MANDANT_RE.test(mandant) ? mandant : '(ohne Mandant)', text)
 }
 
 async function bridgeWeiterleiten(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
