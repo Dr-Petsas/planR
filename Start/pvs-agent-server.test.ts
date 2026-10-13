@@ -2,7 +2,7 @@ import { generateKeyPairSync, sign } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import {
   AgentHub, Bremse, accessPruefen, auftragErlaubt, codeHash, codePasst, cookieWert, emailErlaubt, geraetPasst, neuerPraxisCode,
-  neuerSchluessel, schluesselHash, schluesselPasst, type AgentListe,
+  FRUEHER_TAGE, neuerSchluessel, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AgentListe,
 } from './pvs-agent-server.ts'
 
 const schluessel = neuerSchluessel()
@@ -52,6 +52,20 @@ describe('Agenten-Schlüssel', () => {
     expect(schluesselPasst(liste, 'praxis', neuerSchluessel())).toBe(false)
     expect(schluesselPasst(liste, 'andere', schluessel)).toBe(false)
     expect(schluesselPasst(liste, 'praxis', '')).toBe(false)
+  })
+
+  it('ein neues Paket hängt die installierte Bridge nicht ab, aber nur für FRUEHER_TAGE', () => {
+    const jetzt = Date.parse('2026-10-13T12:00:00Z')
+    const [erster, zweiter, dritter] = [neuerSchluessel(), neuerSchluessel(), neuerSchluessel()]
+    let e = paketSchluesselSetzen(undefined, schluesselHash(erster), jetzt)
+    e = paketSchluesselSetzen(e, schluesselHash(zweiter), jetzt + 60_000)
+    e = paketSchluesselSetzen(e, schluesselHash(dritter), jetzt + 120_000)
+    const l: AgentListe = { praxis: e }
+    for (const s of [erster, zweiter, dritter]) expect(schluesselPasst(l, 'praxis', s, jetzt + 180_000)).toBe(true)
+    expect(schluesselPasst(l, 'praxis', erster, jetzt + (FRUEHER_TAGE + 1) * 86_400_000)).toBe(false)
+    expect(schluesselPasst(l, 'praxis', dritter, jetzt + (FRUEHER_TAGE + 1) * 86_400_000)).toBe(true)
+    expect(schluesselPasst(l, 'andere', erster, jetzt)).toBe(false)
+    expect(schluesselPasst({ praxis: { ...e, hash: schluesselHash(dritter), frueher: [] } }, 'praxis', erster, jetzt)).toBe(false)
   })
 
   it('gibt Adressen und Domains frei', () => {

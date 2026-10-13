@@ -7,6 +7,8 @@ import { createHash, createPublicKey, randomBytes, timingSafeEqual, verify, type
  */
 export interface AgentEintrag {
   hash: string
+  /** Schlüssel früher geladener Pakete: Wer das Paket mehrmals lädt, soll die schon installierte Bridge nicht abhängen. */
+  frueher?: { hash: string; bis: string }[]
   /** Wer über den Tunnel (Cloudflare Access) an dieses PVS darf: volle Adresse oder „@domain“ */
   emails?: string[]
   /** Praxis-Code, mit dem ein PC sich einmal freigibt */
@@ -23,7 +25,20 @@ export const neuerSchluessel = () => randomBytes(32).toString('base64url')
 const gleich = (hash: string | undefined, wert: string) =>
   !!hash && /^[0-9a-f]{64}$/.test(hash) && !!wert && timingSafeEqual(Buffer.from(schluesselHash(wert), 'hex'), Buffer.from(hash, 'hex'))
 
-export const schluesselPasst = (liste: AgentListe, mandant: string, schluessel: string) => gleich(liste[mandant]?.hash, schluessel)
+export const schluesselPasst = (liste: AgentListe, mandant: string, schluessel: string, jetzt = Date.now()) => {
+  const e = liste[mandant]
+  return gleich(e?.hash, schluessel) || (e?.frueher ?? []).some((f) => Date.parse(f.bis) > jetzt && gleich(f.hash, schluessel))
+}
+
+export const FRUEHER_TAGE = 14
+
+/** Neuer Paket-Schlüssel: der bisherige bleibt FRUEHER_TAGE gültig (höchstens fünf ältere). */
+export function paketSchluesselSetzen(alt: AgentEintrag | undefined, hash: string, jetzt = Date.now()): AgentEintrag {
+  const bis = new Date(jetzt + FRUEHER_TAGE * 86_400_000).toISOString()
+  const frueher = [...(alt?.hash ? [{ hash: alt.hash, bis }] : []), ...(alt?.frueher ?? [])]
+    .filter((f) => Date.parse(f.bis) > jetzt).slice(0, 5)
+  return { ...alt, hash, frueher, emails: alt?.emails ?? [], geraete: alt?.geraete ?? [], angelegt: new Date(jetzt).toISOString() }
+}
 
 /** Ohne leicht verwechselbare Zeichen (0/O, 1/I/L); 15 Zeichen ≈ 74 Bit */
 const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -130,7 +145,7 @@ export async function accessSchluessel(team: string): Promise<Jwk[]> {
 
 export interface Auftrag { id: string; method: 'GET' | 'POST'; pfad: string; body?: unknown; headers?: Record<string, string>; ms: number }
 export interface Antwort { ok: boolean; status: number; daten: Record<string, unknown> }
-export interface AgentStand { am: number; pvs?: string; version?: string }
+export interface AgentStand { am: number; pvs?: string; version?: string; status?: string }
 
 /** Ein Agent gilt als verbunden, solange er spätestens alle ONLINE_MS wieder abholt. */
 export const ONLINE_MS = 60_000

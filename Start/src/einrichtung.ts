@@ -69,7 +69,7 @@ export async function bridgePaketLaden(): Promise<{ ok: true } | { ok: false; st
   }
 }
 
-interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; pvs?: string; version?: string }
+interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; pvs?: string; version?: string; status?: string }
 interface Katalog { anzahl?: Record<string, number>; pvs?: string }
 
 const SCHRITTE = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & Positionen', 'Fertig'] as const
@@ -114,6 +114,8 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
 
   const pvs = () => pvsVon(einst.pvs)
   const anbindbar = () => !!anleitungVon(einst.pvs)
+  /** Ältere Bridges melden keinen Zustand – dann gilt verbunden als bereit. */
+  const bridgeBereit = () => !!stand?.verbunden && (!stand.status || stand.status === 'bereit')
 
   function inhalt(): string {
     const p = pvs()
@@ -128,9 +130,11 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       case 2: return `
         <h3>Verbindung prüfen</h3>
         ${stand?.verbunden
-          ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>`
+          ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>
+             ${bridgeBereit() ? '' : `<p class="ein-warte"><span class="ein-punkt"></span> Die Bridge meldet: ${esc(stand.status ?? '')}</p>
+             <p class="ein-klein">Der Connector braucht nach der Installation bis zu einer Minute. Bleibt die Meldung, rufen Sie uns an: 0211 3029 3035.</p>`}`
           : `<p class="ein-warte"><span class="ein-punkt"></span> Warte auf die Bridge … Sobald die Installation „PlanR verbunden“ meldet, geht es hier weiter.</p>
-             <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und wurde das zuletzt heruntergeladene Paket installiert? Wir helfen gern: 0211 3029 3035.</p>`}`
+             <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und hat die Installation „PlanR verbunden“ gemeldet? Wir helfen gern: 0211 3029 3035.</p>`}`
       case 3: return `
         <h3>Preise &amp; Positionen übernehmen</h3>
         <p class="ein-text">${esc(anleitungVon(einst.pvs)?.preise ?? '')} So rechnet PlanR von Anfang an mit Ihren eigenen Preisen.</p>
@@ -144,8 +148,8 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
                  <div><b>Preise &amp; Positionen werden aus ${esc(p?.name ?? 'dem Praxissystem')} gelesen …</b>
                    <p>Läuft seit <span data-katalog-uhr>${dauer(Date.now() - katalogSeit)}</span>. Dauert ca. 5 Minuten – bitte das Fenster offen lassen und den Vorgang nicht abbrechen.</p></div>
                </div>`
-            : `<button type="button" class="neu-knopf" data-katalog${laeuft || !stand?.verbunden ? ' disabled' : ''}>Jetzt übernehmen</button>
-               <p class="ein-klein">Dauert ca. 5 Minuten.${stand?.verbunden ? '' : ' Geht, sobald die Bridge verbunden ist.'}</p>`}`
+            : `<button type="button" class="neu-knopf" data-katalog${laeuft || !stand?.verbunden || !bridgeBereit() ? ' disabled' : ''}>Jetzt übernehmen</button>
+               <p class="ein-klein">Dauert ca. 5 Minuten.${!stand?.verbunden ? ' Geht, sobald die Bridge verbunden ist.' : bridgeBereit() ? '' : ` Geht, sobald die Bridge bereit ist – sie meldet: ${esc(stand.status ?? '')}`}</p>`}`
       default: return `
         <h3>Fertig – PlanR ist eingerichtet.</h3>
         <p class="ein-text">Holen Sie jetzt den ersten HKP aus ${esc(p?.name ?? 'Ihrem Praxissystem')}, ziehen Sie die Regler und sehen Sie, wie viel mehr Umsatz im selben Befund steckt.</p>
@@ -194,10 +198,9 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
     if (platz) {
       platz.innerHTML = !o.admin ? '<p class="ein-hinweis">Das Paket lädt der Praxis-Admin herunter – es enthält den Zugang Ihrer Praxis.</p>'
         : `<p><button type="button" class="neu-knopf ein-download" data-paket${laeuft ? ' disabled' : ''}>${laeuft ? 'Paket wird erstellt …' : paketGeladen ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'}</button></p>
-           ${paketGeladen ? '<p class="ein-ok">✓ Heruntergeladen (Ordner „Downloads“). Bitte nur dieses Paket installieren – ältere Downloads sind damit ungültig.</p>' : ''}`
+           ${paketGeladen ? '<p class="ein-ok">✓ Heruntergeladen (Ordner „Downloads“). Eine schon installierte Bridge läuft weiter.</p>' : ''}`
     }
     $('[data-paket]')?.addEventListener('click', async () => {
-      if (stand?.verbunden && !confirm('Die Bridge ist gerade verbunden. Ein neues Paket ersetzt ihren Zugang; sie verbindet sich erst wieder, wenn es auf dem Server installiert ist. Trotzdem herunterladen?')) return
       laeuft = true
       meldung = ''
       zeichnen()
@@ -234,9 +237,9 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   uhr = window.setInterval(async () => {
     if (!schleier.isConnected) return clearInterval(uhr)
     if (schritt < 1 || schritt > 3) return
-    const vorher = stand?.verbunden
+    const vorher = `${stand?.verbunden}|${stand?.status}`
     await standLaden()
-    if (stand?.verbunden !== vorher && !laeuft) zeichnen()
+    if (`${stand?.verbunden}|${stand?.status}` !== vorher && !laeuft) zeichnen()
   }, 4000)
 
   void standLaden().then(() => {

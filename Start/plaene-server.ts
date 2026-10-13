@@ -10,7 +10,7 @@ import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import { PVS_CONNECTOR, PVS_SUCHE, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
 import {
-  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
+  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
@@ -1025,7 +1025,12 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     const q = new URLSearchParams(query)
     const pvs = /^[a-z]{1,20}$/.test(q.get('pvs') ?? '') ? q.get('pvs')! : undefined
     const version = (q.get('version') ?? '').slice(0, 40) || undefined
-    const auftrag = await hub.abholen(mandant, 25_000, { pvs, version }, (weg) => res.on('close', weg))
+    const status = (q.get('status') ?? '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 160) || undefined
+    if (status !== bridgeStatus.get(mandant)) {
+      bridgeStatus.set(mandant, status)
+      console.log('[planr] Bridge', mandant, 'Zustand:', status ?? '(ohne Angabe)')
+    }
+    const auftrag = await hub.abholen(mandant, 25_000, { pvs, version, status }, (weg) => res.on('close', weg))
     if (res.writableEnded || res.destroyed) {
       if (auftrag) hub.zurueckstellen(mandant, auftrag)
     return
@@ -1054,6 +1059,7 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
 }
 
 const bridgeGemeldet = new Map<string, number>()
+const bridgeStatus = new Map<string, string | undefined>()
 /** Höchstens einmal je Minute, Praxis und Meldung ins Protokoll – eine abgewiesene Bridge fragt alle paar Sekunden. */
 function bridgeMelden(mandant: string, text: string) {
   const k = `${mandant}|${text}`
@@ -1206,7 +1212,7 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
   if (req.method === 'GET') {
     const alt = (await agentenLesen())[m]
     const stand = alt ? hub.verbunden(m) : null
-    return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, pvs: stand?.pvs, version: stand?.version })
+    return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, pvs: stand?.pvs, version: stand?.version, status: stand?.status })
   }
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
   if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Den Bridge-Schlüssel erzeugen dürfen nur Praxis-Admins.' })
@@ -1216,7 +1222,7 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
     const liste = await agentenLesen()
     const alt = liste[m]
     if (alt && b.neu !== true) return 'vorhanden' as const
-    liste[m] = { ...alt, hash: schluesselHash(schluesselNeu), emails: alt?.emails ?? [], geraete: alt?.geraete ?? [], angelegt: new Date().toISOString() }
+    liste[m] = { ...alt, hash: schluesselHash(schluesselNeu), frueher: [], emails: alt?.emails ?? [], geraete: alt?.geraete ?? [], angelegt: new Date().toISOString() }
     await jsonSchreiben(AGENTEN, liste)
     return 'neu' as const
   })
@@ -1226,7 +1232,7 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
 
 /**
  * POST: persönliches Bridge-Paket (nur Admin). Erzeugt einen neuen Schlüssel und legt ihn mit Mandant als
- * einrichtung.json ins ZIP – die Installation braucht so keine Eingaben. Eine laufende Bridge braucht danach das neue Paket.
+ * einrichtung.json ins ZIP – die Installation braucht so keine Eingaben. Schlüssel früherer Pakete bleiben eine Weile gültig.
  */
 async function bridgePaket(req: IncomingMessage, res: ServerResponse, w: Wer) {
   res.setHeader('Cache-Control', 'no-store')
@@ -1243,8 +1249,7 @@ async function bridgePaket(req: IncomingMessage, res: ServerResponse, w: Wer) {
   const schluesselNeu = neuerSchluessel()
   await exklusiv(async () => {
     const liste = await agentenLesen()
-    const alt = liste[m]
-    liste[m] = { ...alt, hash: schluesselHash(schluesselNeu), emails: alt?.emails ?? [], geraete: alt?.geraete ?? [], angelegt: new Date().toISOString() }
+    liste[m] = paketSchluesselSetzen(liste[m], schluesselHash(schluesselNeu))
     await jsonSchreiben(AGENTEN, liste)
   })
   const z = await zugaengeLesen()
