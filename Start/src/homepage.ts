@@ -120,6 +120,40 @@ const HKP_MINI = `
     <div class="hkp-fuss"><span class="hkp-stempel">${logo('PlanR-Stempel')} von Clara erstellt</span></div>
   </div>`
 
+const PLAENE = [
+  { bild: 'hkp', pfad: 'hkp', titel: 'Kassen-HKP', unter: 'Zahnersatz · BEMA, GOZ, BEL II',
+    text: 'Befund, Regelversorgung, Festzuschüsse und Bonus – der Heil- und Kostenplan nach Vordruck, mit Eigenlabor und Mehrkosten.' },
+  { bild: 'privat-ze', pfad: 'privat-hkp', titel: 'Privat-ZE', unter: 'Kostenvoranschlag · GOZ & BEB',
+    text: 'Kronen, Brücken, Veneers und Implantatkronen für Privatpatienten – Material, Labor und Abformung gleich mit.' },
+  { bild: 'implantologie', pfad: 'implantologie', titel: 'Implantologie', unter: 'GOZ, GOÄ & Analog',
+    text: 'Implantate, Augmentation, Extraktion, DVT und Sedierung – mit System, Durchmesser und Länge je Implantat.' },
+  { bild: 'par', pfad: 'par', titel: 'Kassen-PAR', unter: 'eFormular 5 · BEMA Teil 4',
+    text: 'Parodontalstatus Blatt 1 und 2 mit Stadium und Grad, AIT, CPT und der kompletten UPT-Strecke.' },
+  { bild: 'privat-par', pfad: 'privat-par', titel: 'Privat-PAR', unter: 'GOZ Abschnitt E & Analog',
+    text: 'Parodontitistherapie für Privatpatienten – von der Diagnostik über die CPT bis zur UPT.' },
+  { bild: 'kfo', pfad: 'kfo', titel: 'KFO', unter: 'BEMA Teil 3 · BEL II · Kasse & privat',
+    text: 'Behandlungsplan mit KIG, Punkteraster für 119 und 120, Bausteinen und Mehrleistungen nach Vordruck 4d.' },
+  { bild: 'kb', pfad: 'kb', titel: 'Schienen & Kieferbruch', unter: 'KB · BEMA Teil 2 · Kasse & privat',
+    text: 'Aufbissbehelf, Michigan-Schiene und Kontrollen – mit der passenden BEL-II-Laborkette.' },
+  { bild: 'kons', pfad: 'kons', titel: 'Privat-Kons', unter: 'Füllung, Endo, Bleaching · GOZ',
+    text: 'Füllungen, Endo, Vitalerhaltung, Veneers und Bleaching als Kostenvoranschlag mit allen Zusatzleistungen.' },
+  { bild: 'mkv', pfad: 'mkv', titel: 'Mehrkosten (MKV)', unter: 'Füllungen · § 28 Abs. 2 SGB V',
+    text: 'Mehrkostenvereinbarung für Komposit und Inlays – der Kassenanteil wird automatisch abgezogen.' },
+]
+
+const PVS_RUECK = [
+  { name: 'Dampsoft DS-Win', farbe: '#2f6db3' },
+  { name: 'CGM Z1.PRO', farbe: '#0f8a6e' },
+  { name: 'DENSoffice', farbe: '#b3462f' },
+  { name: 'solutio charly', farbe: '#6a4bb3' },
+]
+const RUECK_PLAENE = [
+  { art: 'HKP', text: 'Brücke 14–16, Krone 26', summe: '4.380,00 €' },
+  { art: 'PAR', text: 'AIT, CPT 16 17 26 36 46', summe: '2.048,30 €' },
+  { art: 'KFO', text: 'Multiband OK/UK, 12 Quartale', summe: '2.228,19 €' },
+  { art: 'Implantat', text: 'Implantate 24, 36, 45', summe: '3.000,59 €' },
+]
+
 const FORMEN = '<div class="hp-formen" aria-hidden="true"><i class="f1"></i><i class="f2"></i><i class="f3"></i><i class="f4"></i><i class="f5"></i></div>'
 
 const euro = (n: number) => `${Math.round(n).toLocaleString('de-DE')} €`
@@ -134,6 +168,8 @@ const HTML = `
     <a class="hp-marke" href="#top"><span class="hp-logo">${logo()}</span>${wortmarke()}<small>by Pickadoc</small></a>
     <nav>
       <a href="#hkp">HKP</a>
+      <a href="#plaene">Alle Pläne</a>
+      <a href="#pvs">Ins PVS</a>
       <a href="#sprach-ki">Sprach-KI</a>
       <a href="#spielwiese">Regler</a>
       <a href="#connect">Connect</a>
@@ -236,6 +272,81 @@ const HTML = `
         <p class="hp-klein">Beispiel mit Demo-Patientin.</p>
       </div>
     </div>
+  </section>
+
+  <section class="hp-sektion" id="plaene">
+    <div class="hp-sektion-kopf">
+      <p class="hp-eyebrow">Nicht nur HKP</p>
+      <h2>Alle Pläne deiner Praxis. Ein Werkzeug.</h2>
+      <p>Von Zahnersatz über Implantologie, Parodontitis und Kieferorthopädie bis zur Füllung – jeder Plan mit Kassen- oder Privatlogik,
+        deinen Preisen und deinem Labor. Das sind echte Screenshots aus PlanR.</p>
+    </div>
+    <div class="hp-galerie" data-galerie>
+      <div class="hp-galerie-wahl" role="tablist" aria-label="Plantyp">
+        ${PLAENE.map((p, i) => `<button type="button" role="tab" data-i="${i}" aria-selected="${i === 0}"${i === 0 ? ' class="aktiv"' : ''}>
+          <b>${p.titel}</b><small>${p.unter}</small></button>`).join('')}
+      </div>
+      <div class="hp-galerie-buehne">
+        <div class="hp-fenster">
+          <div class="hp-fenster-kopf"><i></i><i></i><i></i><span data-galerie-pfad>planr.pickadoc.de/planer/${PLAENE[0].pfad}</span></div>
+          <div class="hp-fenster-bild">
+            ${PLAENE.map((p, i) => `<img src="/bilder/planer-${p.bild}.jpg" width="1272" height="906" alt="PlanR ${p.titel}-Planer mit Demo-Patientin"
+              loading="${i === 0 ? 'eager' : 'lazy'}"${i === 0 ? ' class="aktiv"' : ''}>`).join('')}
+          </div>
+        </div>
+        <div class="hp-galerie-text">
+          <b data-galerie-titel>${PLAENE[0].titel}</b>
+          <p data-galerie-text>${PLAENE[0].text}</p>
+          <a class="hp-link" data-galerie-link href="/planer/${PLAENE[0].pfad}/" target="_blank" rel="noopener">Planer live ausprobieren →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="hp-sektion hp-rueck" id="pvs">
+    <div class="hp-sektion-kopf">
+      <p class="hp-eyebrow">Zurück ins Praxisprogramm</p>
+      <h2>Fertig geplant. Steht sofort in deinem PVS.</h2>
+      <p>Freigegebene Pläne schreibt PlanR über die PlanR-Bridge direkt in die Patientenakte deines eigenen Praxisverwaltungssystems –
+        mit allen Positionen. Kein Abtippen, kein Export, kein offener Port. Abgerechnet wird wie gewohnt im PVS.</p>
+    </div>
+    <div class="hp-rueck-fluss" data-rueck>
+      <div class="hp-rueck-planr">
+        <div class="hp-rueck-kopf"><span class="hp-logo">${logo()}</span>${wortmarke()}</div>
+        <div class="hp-rueck-plan">
+          <small>Plan freigegeben</small>
+          <div><b data-rueck-art>HKP</b> · Berger, Anna</div>
+          <span data-rueck-text>${RUECK_PLAENE[0].text}</span>
+          <em data-rueck-summe>${RUECK_PLAENE[0].summe}</em>
+        </div>
+        <span class="hp-rueck-knopf">Ins PVS übertragen ✓</span>
+      </div>
+      <div class="hp-rueck-bruecke" aria-hidden="true">
+        <div class="hp-rueck-bahn"><i class="hp-rueck-paket">${logo()}</i></div>
+        <small>PlanR-Bridge · verschlüsselt · ohne offenen Port</small>
+      </div>
+      <div class="hp-rueck-pvs" data-rueck-pvs style="--pvs:${PVS_RUECK[0].farbe}">
+        <div class="hp-rueck-titel"><span data-rueck-pvs-name>${PVS_RUECK[0].name}</span><i></i><i></i><i></i></div>
+        <div class="hp-rueck-akte">
+          <div class="hp-rueck-patient"><b>Berger, Anna</b><small>* 18.04.1971 · AOK Rheinland/Hamburg</small></div>
+          <div class="hp-rueck-reiter"><span>Stammdaten</span><span>Befund</span><span class="an">Pläne</span><span>Leistungen</span></div>
+          <table>
+            <thead><tr><th>Datum</th><th>Art</th><th>Inhalt</th><th>Betrag</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr class="hp-rueck-neu"><td>13.10.2026</td><td data-rueck-z-art>HKP</td><td data-rueck-z-text>${RUECK_PLAENE[0].text}</td>
+                <td data-rueck-z-summe>${RUECK_PLAENE[0].summe}</td><td><span class="hp-rueck-von">von PlanR ✓</span></td></tr>
+              <tr><td>02.09.2025</td><td>PZR</td><td>Professionelle Zahnreinigung</td><td>98,00 €</td><td>abgerechnet</td></tr>
+              <tr><td>12.03.2025</td><td>Kons</td><td>Füllung 46 mod</td><td>142,60 €</td><td>abgerechnet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <ol class="hp-rueck-schritte">
+      <li><b>Plan in PlanR freigeben</b><span>Am PC oder per Link am Handy – egal welcher Plantyp.</span></li>
+      <li><b>Bridge überträgt</b><span>Die PlanR-Bridge auf deinem Praxisserver holt den Plan verschlüsselt ab.</span></li>
+      <li><b>Steht im PVS</b><span>Mit allen Positionen in der Patientenakte – ${PVS_RUECK.map((p) => p.name).join(', ')} und weitere.</span></li>
+    </ol>
   </section>
 
   <section class="hp-buehne hp-buehne--sk" id="sprach-ki">
@@ -565,6 +676,67 @@ function claraHandyStarten(wurzel: HTMLElement) {
   starten()
 }
 
+/** Plan-Galerie: Klick wählt den Plantyp, sonst wechselt sie alle 5 s von selbst, bis jemand klickt. */
+function galerieStarten(wurzel: HTMLElement) {
+  const lauf = laeuft
+  const galerie = wurzel.querySelector<HTMLElement>('[data-galerie]')!
+  const knoepfe = [...galerie.querySelectorAll<HTMLButtonElement>('[role=tab]')]
+  const bilder = [...galerie.querySelectorAll<HTMLImageElement>('.hp-fenster-bild img')]
+  const feld = (name: string) => galerie.querySelector<HTMLElement>(`[data-galerie-${name}]`)!
+  let i = 0
+  const zeigen = (n: number) => {
+    i = n
+    const p = PLAENE[n]
+    knoepfe.forEach((k, ki) => { k.classList.toggle('aktiv', ki === n); k.setAttribute('aria-selected', String(ki === n)) })
+    knoepfe[n].parentElement!.scrollTo({ left: knoepfe[n].offsetLeft - 12, behavior: 'smooth' })
+    bilder.forEach((b, bi) => b.classList.toggle('aktiv', bi === n))
+    feld('pfad').textContent = `planr.pickadoc.de/planer/${p.pfad}`
+    feld('titel').textContent = p.titel
+    feld('text').textContent = p.text
+    feld('link').setAttribute('href', `/planer/${p.pfad}/`)
+  }
+  const takt = setInterval(() => {
+    if (lauf !== laeuft || !document.body.contains(galerie)) return clearInterval(takt)
+    zeigen((i + 1) % PLAENE.length)
+  }, 5000)
+  for (const k of knoepfe) {
+    k.addEventListener('click', () => {
+      clearInterval(takt)
+      zeigen(Number(k.dataset.i))
+    })
+  }
+}
+
+/** Rückschreiben: alle 4,5 s fliegt ein anderer Plan über die Bridge in ein anderes PVS und erscheint dort als neue Zeile. */
+function rueckStarten(wurzel: HTMLElement) {
+  const lauf = laeuft
+  const fluss = wurzel.querySelector<HTMLElement>('[data-rueck]')!
+  const pvs = fluss.querySelector<HTMLElement>('[data-rueck-pvs]')!
+  const feld = (name: string) => fluss.querySelector<HTMLElement>(`[data-rueck-${name}]`)!
+  let n = 0
+  const zeigen = () => {
+    const plan = RUECK_PLAENE[n % RUECK_PLAENE.length]
+    const system = PVS_RUECK[n % PVS_RUECK.length]
+    feld('art').textContent = plan.art
+    feld('text').textContent = plan.text
+    feld('summe').textContent = plan.summe
+    feld('pvs-name').textContent = system.name
+    pvs.style.setProperty('--pvs', system.farbe)
+    feld('z-art').textContent = plan.art
+    feld('z-text').textContent = plan.text
+    feld('z-summe').textContent = plan.summe
+    fluss.classList.remove('laeuft')
+    void fluss.offsetWidth
+    fluss.classList.add('laeuft')
+  }
+  zeigen()
+  const takt = setInterval(() => {
+    if (lauf !== laeuft || !document.body.contains(fluss)) return clearInterval(takt)
+    n++
+    zeigen()
+  }, 4500)
+}
+
 function spielwieseStarten(wurzel: HTMLElement) {
   const r: Regler = { ...START }
   const regler = [...wurzel.querySelectorAll<HTMLInputElement>('[data-regler]')]
@@ -635,6 +807,8 @@ export function homepage(app: HTMLElement) {
   const wurzel = app.querySelector<HTMLElement>('.hp')!
   demoStarten(wurzel)
   claraHandyStarten(wurzel)
+  galerieStarten(wurzel)
+  rueckStarten(wurzel)
   spielwieseStarten(wurzel)
   const ziel = /^#[a-z-]+$/.test(location.hash) && location.hash !== '#top' ? wurzel.querySelector(location.hash) : null
   ziel?.scrollIntoView()
