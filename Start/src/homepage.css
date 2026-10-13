@@ -73,6 +73,51 @@ body.hp-body {
   }
 }
 
+/* ---------- Dezente pinke Hintergrund-Pillen und Lichter ---------- */
+#funktionen, .hp-vergleich, #preise, #produkte, #kontakt { position: relative; isolation: isolate; }
+#funktionen::before, #preise::before, #produkte::before, #kontakt::before, .hp-vergleich::before,
+#funktionen::after, #preise::after, #produkte::after {
+  content: ""; position: absolute; z-index: -1; pointer-events: none; border-radius: 999px;
+}
+#funktionen::before {
+  right: -18%; top: -6%; width: 760px; height: 170px; transform: rotate(-32deg);
+  background: linear-gradient(90deg, rgba(224, 64, 123, 0), rgba(224, 64, 123, 0.2) 60%, rgba(255, 122, 168, 0.3));
+}
+#funktionen .hp-eyebrow, #preise .hp-eyebrow, #produkte .hp-eyebrow { color: var(--hp-pink); }
+#funktionen::after {
+  left: -10%; bottom: 6%; width: 420px; height: 420px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 122, 168, 0.12), transparent);
+}
+.hp-vergleich::before {
+  right: 8%; top: 50%; width: 520px; height: 300px; margin-top: -150px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 122, 168, 0.13), transparent);
+}
+#preise::before {
+  left: 50%; top: 38%; width: 640px; height: 640px; margin-left: -320px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 122, 168, 0.14), transparent);
+}
+#preise::after {
+  left: -18%; top: 12%; width: 680px; height: 130px; transform: rotate(-32deg);
+  background: linear-gradient(90deg, rgba(255, 122, 168, 0.2), rgba(224, 64, 123, 0.1) 45%, rgba(224, 64, 123, 0));
+  border: 1px solid rgba(255, 122, 168, 0.12);
+}
+#produkte::before {
+  right: -16%; top: 30%; width: 820px; height: 190px; transform: rotate(-32deg);
+  background: linear-gradient(90deg, rgba(224, 64, 123, 0), rgba(224, 64, 123, 0.12) 55%, rgba(255, 122, 168, 0.18));
+}
+#produkte::after {
+  left: -8%; bottom: 8%; width: 520px; height: 110px; transform: rotate(-32deg);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 122, 168, 0.06));
+  border: 1px solid rgba(255, 122, 168, 0.14);
+}
+#kontakt::before {
+  left: 50%; top: 50%; width: 700px; height: 360px; margin: -180px 0 0 -350px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 122, 168, 0.15), transparent);
+}
+.hp .hp-tier-top { border-color: rgba(255, 122, 168, 0.45); box-shadow: 0 30px 80px -40px rgba(224, 64, 123, 0.55); }
+.hp .hp-vs-neu li::before { color: var(--hp-pink); }
+.hp .hp-karten-produkte small { color: var(--hp-pink); }
+
 /* ---------- Nach oben ---------- */
 .hp-hoch {
   position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 30;
