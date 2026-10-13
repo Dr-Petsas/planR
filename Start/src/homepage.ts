@@ -1,5 +1,6 @@
 import './homepage.css'
 import './clara-handy.css'
+import { logo, wortmarke } from './logo'
 
 /** Öffentliche Startseite von PlanR für Besucher ohne Anmeldung. */
 
@@ -42,6 +43,66 @@ function umsatz(r: Regler): number {
   return BEMA + goz + bel + beb
 }
 
+/** Demo-HKP (Anna Berger): Brücke 14–16, Krone 26, Vollkeramik. */
+const OK = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28]
+const UK = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38]
+type Reihe = 'TP' | 'R' | 'B'
+const GEBISS: Record<number, Partial<Record<Reihe, string>>> = {
+  14: { TP: 'KM', R: 'KV', B: 'ww' }, 15: { TP: 'BM', R: 'BV', B: 'f' }, 16: { TP: 'KM', R: 'KV', B: 'ww' },
+  26: { TP: 'KM', R: 'K', B: 'ww' }, 46: { B: 'k' }, 36: { B: 'k' }, 38: { B: 'f' }, 48: { B: 'f' },
+}
+const FESTZUSCHUSS = [['2.1', '14–16', '1', '1.012,41'], ['2.7', '14, 16', '2', '205,10'], ['1.1', '26', '1', '375,52'], ['1.3', '26', '1', '63,20']]
+const KOSTEN = [['BEMA-Honorar', '742,18'], ['GOZ-Honorar', '1.284,60'], ['Material- und Laborkosten', '2.353,22']]
+
+function gebissZeilen(zaehne: number[], reihen: Reihe[], nummernZuerst: boolean): string {
+  const nummern = `<tr class="hkp-nr"><th></th>${zaehne.map((z) => `<td>${z}</td>`).join('')}</tr>`
+  const zeilen = reihen.map((r) => `<tr><th>${r}</th>${zaehne.map((z) => {
+    const w = GEBISS[z]?.[r] ?? ''
+    return `<td${w && r === 'TP' ? ' class="hkp-plan"' : ''}>${w}</td>`
+  }).join('')}</tr>`).join('')
+  return nummernZuerst ? nummern + zeilen : zeilen + nummern
+}
+
+const HKP_FORMULAR = `
+  <div class="hkp">
+    <div class="hkp-kopf">
+      <div class="hkp-feld">
+        <small>Krankenkasse bzw. Kostenträger</small><b>AOK Rheinland/Hamburg</b>
+        <small>Name, Vorname des Versicherten</small><b>Berger, Anna</b>
+        <span>geb. 14.03.1968 · Vers.-Nr. A123456789</span>
+      </div>
+      <div class="hkp-titel"><b>Heil- und Kostenplan</b><span>Teil 1 · Zahnersatz</span><em>Bonus 30 %</em></div>
+    </div>
+    <div class="hkp-abschnitt">I. Befund des gesamten Gebisses / Behandlungsplan</div>
+    <table class="hkp-gebiss">
+      ${gebissZeilen(OK, ['TP', 'R', 'B'], false)}
+      <tr class="hkp-trenner"><td colspan="17"></td></tr>
+      ${gebissZeilen(UK, ['B', 'R', 'TP'], true)}
+    </table>
+    <div class="hkp-unten">
+      <div>
+        <div class="hkp-abschnitt">II. Befunde für Festzuschüsse</div>
+        <table class="hkp-tab">
+          <tr><th>Befund</th><th>Zahn/Gebiet</th><th>Anz.</th><th>Betrag €</th></tr>
+          ${FESTZUSCHUSS.map((z) => `<tr>${z.map((w) => `<td>${w}</td>`).join('')}</tr>`).join('')}
+          <tr class="hkp-summe"><td colspan="3">Festzuschüsse gesamt</td><td>1.656,23</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="hkp-abschnitt">III. Kostenplanung</div>
+        <table class="hkp-tab">
+          ${KOSTEN.map(([t, w], i) => `<tr><td>${i + 1}</td><td>${t}</td><td>${w}</td></tr>`).join('')}
+          <tr class="hkp-summe"><td>4</td><td>Gesamtkosten</td><td>4.380,00</td></tr>
+          <tr><td>5</td><td>Festzuschüsse</td><td>−1.656,23</td></tr>
+          <tr class="hkp-eigen"><td>6</td><td>Eigenanteil</td><td>2.723,77</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="hkp-fuss"><span>Zahnarztpraxis Dr. Demo · Musterstraße 1 · 40235 Düsseldorf</span><span class="hkp-stempel">${logo('PlanR-Stempel')} von Clara erstellt</span></div>
+  </div>`
+
+const FORMEN = '<div class="hp-formen" aria-hidden="true"><i class="f1"></i><i class="f2"></i><i class="f3"></i><i class="f4"></i><i class="f5"></i></div>'
+
 const euro = (n: number) => `${Math.round(n).toLocaleString('de-DE')} €`
 const komma = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
@@ -51,8 +112,9 @@ const kosten = (plaene: number) => PLANR + plaene * PRO_PLAN
 const HTML = `
 <div class="hp">
   <header class="hp-nav">
-    <a class="hp-marke" href="#top"><span class="hp-logo">PR</span><span>PlanR <small>by Pickadoc</small></span></a>
+    <a class="hp-marke" href="#top"><span class="hp-logo">${logo()}</span>${wortmarke()}<small>by Pickadoc</small></a>
     <nav>
+      <a href="#hkp">HKP</a>
       <a href="#sprach-ki">Sprach-KI</a>
       <a href="#spielwiese">Regler</a>
       <a href="#connect">Connect</a>
@@ -152,7 +214,37 @@ const HTML = `
     </div>
   </section>
 
-  <section class="hp-sektion hp-sprachki" id="sprach-ki">
+  <section class="hp-buehne" id="hkp">
+    <div class="hp-buehne-innen">
+      <div class="hp-buehne-bild" aria-hidden="true">
+        ${FORMEN}
+        <div class="hp-tablet"><div class="hp-tablet-schirm">${HKP_FORMULAR}</div></div>
+        <div class="hp-schwebe">
+          <small>Mit PlanR</small><b>4.380 €</b><em>+1.430 € gegenüber dem PVS-Plan</em>
+          <ul><li>Festzuschüsse ermittelt</li><li>GOZ-Faktor 3,0 begründet</li><li>Mehrkostenvereinbarung bereit</li></ul>
+        </div>
+      </div>
+      <div class="hp-buehne-text">
+        <p class="hp-eyebrow">Der Heil- und Kostenplan</p>
+        <h2>Ein echter HKP. In Sekunden.</h2>
+        <p>Befund, Regelversorgung, Therapieplanung, Festzuschüsse und Kostenplanung – PlanR füllt den Heil- und Kostenplan komplett aus.
+          Mit den Punktwerten deiner KZV, deinem Eigenlabor und deinen Preisen.</p>
+        <ul class="hp-haken">
+          <li>Kassen-HKP, Privat-ZE, Implantologie, PAR, KB und KFO</li>
+          <li>Festzuschüsse und Bonus automatisch</li>
+          <li>Drucken oder fertig zurück ins PVS</li>
+        </ul>
+        <div class="hp-ctas">
+          <a class="hp-knopf hp-knopf-voll" href="#buchen">PlanR buchen</a>
+          <a class="hp-knopf" href="#spielwiese">Umsatz-Regler ausprobieren</a>
+        </div>
+        <p class="hp-klein">Beispiel mit Demo-Patientin.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="hp-buehne hp-buehne--sk" id="sprach-ki">
+   <div class="hp-sektion hp-sprachki">
     <div class="hp-sektion-kopf">
       <p class="hp-eyebrow">HKP per Sprach-KI</p>
       <h2>Sag es Clara. Der Plan steht.</h2>
@@ -164,21 +256,34 @@ const HTML = `
         <li><span>2</span><div><h3>Befund sagen</h3><p>„14 bis 16 Brücke, 26 Krone, Vollkeramik.“ Befund, Regelversorgung, Festzuschüsse und alle Positionen nach BEMA, GOZ und BEL II stehen in Sekunden.</p></div></li>
         <li><span>3</span><div><h3>Maximalen Umsatz errechnen lassen</h3><p>Clara schlägt Zusatzleistungen, Faktor, Eigenlabor und Privatanteil vor – mit Begründungen und Mehrkostenvereinbarung. Du entscheidest per Regler.</p></div></li>
       </ol>
-      <div class="hp-demo" aria-hidden="true">
-        <div class="hp-sprache">
-          <span class="hp-mic"><i></i><i></i><i></i><i></i><i></i></span>
-          <p data-diktat></p>
-        </div>
-        <div class="hp-plan" data-plan>
-          <div class="hp-plan-kopf"><b>HKP · Berger, Anna</b><span class="hp-pille">von Clara erstellt</span></div>
-          <div class="hp-plan-zeile"><span>14–16</span><span>Brücke, vollverblendet</span></div>
-          <div class="hp-plan-zeile"><span>26</span><span>Vollkeramikkrone</span></div>
-          <div class="hp-plan-zeile"><span>BEMA · GOZ · BEL II</span><span>24 Positionen</span></div>
-          <div class="hp-plan-summe"><span>Praxisumsatz</span><b data-demo-summe>0 €</b></div>
-          <div class="hp-plan-balken"><i data-demo-balken></i></div>
+      <div class="hp-buehne-bild hp-buehne-bild--rechts" aria-hidden="true">
+        ${FORMEN}
+        <div class="hp-schraeg-handy">
+          <div class="cc-phone">
+            <div class="cc-phone__notch"></div>
+            <div class="cc-screen hp-chat">
+              <div class="hp-chat-kopf"><span class="hp-chat-orb"></span><div><b>Clara</b><small>HKP PER SPRACHE</small></div></div>
+              <div class="hp-sprache">
+                <span class="hp-mic"><i></i><i></i><i></i><i></i><i></i></span>
+                <p data-diktat></p>
+              </div>
+              <div class="hp-plan" data-plan>
+                <div class="hp-plan-kopf"><b>HKP · Berger, Anna</b><span class="hp-pille">fertig</span></div>
+                <div class="hp-plan-zeile"><span>14–16</span><span>Brücke, Vollkeramik</span></div>
+                <div class="hp-plan-zeile"><span>26</span><span>Vollkeramikkrone</span></div>
+                <div class="hp-plan-zeile"><span>Festzuschüsse</span><span>1.656,23 €</span></div>
+                <div class="hp-plan-zeile"><span>BEMA · GOZ · BEL II</span><span>24 Positionen</span></div>
+                <div class="hp-plan-summe"><span>Praxisumsatz</span><b data-demo-summe>0 €</b></div>
+                <div class="hp-plan-balken"><i data-demo-balken></i></div>
+                <p class="hp-chat-antwort">„Plan steht. Soll ich ihn ins PVS geben?“</p>
+              </div>
+              <div class="cp-mode"><i class="is-on">🎙 Sprache</i><i>💬 Chat</i></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+   </div>
   </section>
 
   <section class="hp-sektion hp-spielwiese" id="spielwiese">
@@ -240,7 +345,7 @@ const HTML = `
       <div class="hp-connect-bild" aria-hidden="true">
         <div class="hp-connect-pvs">${PVS.slice(0, 4).map((p) => `<span>${p}</span>`).join('')}</div>
         <div class="hp-connect-linie"><i></i></div>
-        <div class="hp-connect-planr"><span class="hp-logo">PR</span><b>PlanR</b></div>
+        <div class="hp-connect-planr"><span class="hp-logo">${logo()}</span>${wortmarke()}</div>
         <div class="hp-connect-vergleich">
           <div><small>HKP wie im PVS</small><b>2.950 €</b></div>
           <div class="hp-connect-mehr"><small>Mit PlanR</small><b>4.380 €</b><em>+1.430 €</em></div>

@@ -6,6 +6,7 @@ import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
 import { PVS_CONNECTOR, PVS_SUCHE } from './pvs'
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { apiJson } from './api'
+import { logo } from './logo'
 import { abmelden, anmeldeSeite, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
@@ -520,7 +521,7 @@ function zeichnen() {
   app.innerHTML = `
   <header class="kopf">
     <div class="marke">
-      <span class="logo">PR</span>
+      <span class="logo">${logo()}</span>
       <div>
         <h1>PlanR</h1>
           <p>Alle gespeicherten Pläne</p>

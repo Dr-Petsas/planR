@@ -1,5 +1,7 @@
 /** Anmeldung mit dem Pickadoc-Konto; neue Praxen registrieren sich über die PlanR-Startseite. */
 
+import { logo } from './logo'
+
 export interface Ich {
   konto: { name: string; email: string; admin: boolean }
   mandant: string
@@ -82,7 +84,7 @@ export function anmeldeSeite(app: HTMLElement, hinweis = '') {
   app.innerHTML = `
     <div class="anmelde-seite">
       <form class="wahl-karte anmelde-karte" data-anmelden novalidate>
-        <div class="marke"><span class="logo">PR</span><div><h1>PlanR</h1><p>Heil- und Kostenpläne</p></div></div>
+        <div class="marke"><span class="logo">${logo()}</span><div><h1>PlanR</h1><p>Heil- und Kostenpläne</p></div></div>
         <h2>Anmelden</h2>
         <p class="anmelde-text">Mit Ihrem Pickadoc-Konto – am Praxis-PC, zu Hause oder am Handy.</p>
         <label class="feld">E-Mail-Adresse

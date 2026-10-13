@@ -4,6 +4,7 @@ import { KZVEN } from './data/kzv'
 import { PVS_LISTE, pvsVon } from './einstellungen'
 import { PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './paket'
 import { anleitungHtml, anleitungVon, bridgePaketLaden } from './einrichtung'
+import { logo } from './logo'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
@@ -166,7 +167,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     app.innerHTML = `
       <div class="bu-seite">
         <header class="bu-kopf">
-          <a class="marke" href="#top"><span class="logo">PR</span><div><h1>PlanR</h1><p>Buchen</p></div></a>
+          <a class="marke" href="#top"><span class="logo">${logo()}</span><div><h1>PlanR</h1><p>Buchen</p></div></a>
           <a class="link-knopf" href="#anmelden">Schon Kunde? Anmelden</a>
         </header>
         <ol class="bu-schritte">${SCHRITTE.map((s, i) => `<li class="${i < schritt ? 'erledigt' : i === schritt ? 'aktiv' : ''}"><span>${i + 1}</span>${s}</li>`).join('')}</ol>
@@ -265,7 +266,7 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
   document.title = 'PlanR – Buchung eingegangen'
   app.innerHTML = `
     <div class="bu-seite">
-      <header class="bu-kopf"><a class="marke" href="#top"><span class="logo">PR</span><div><h1>PlanR</h1><p>Buchung eingegangen</p></div></a></header>
+      <header class="bu-kopf"><a class="marke" href="#top"><span class="logo">${logo()}</span><div><h1>PlanR</h1><p>Buchung eingegangen</p></div></a></header>
       <div class="bu-karte bu-danke">
         <p class="bu-haekchen">✓</p>
         <h2>Vielen Dank – Ihre Buchung ist eingegangen.</h2>
