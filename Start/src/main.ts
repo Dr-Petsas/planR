@@ -7,7 +7,7 @@ import { PVS_CONNECTOR, PVS_SUCHE } from './pvs'
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { apiJson } from './api'
 import { logo } from './logo'
-import { abmelden, anmeldeSeite, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
+import { abmelden, anmeldePopup, anmeldePopupEntfernen, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const STATUS: Record<string, string> = {
@@ -770,18 +770,26 @@ function ohneAnmeldung() {
     const soll = ['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis ? 'anmelden'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' ? location.hash : 'start'
     if (soll === ansicht) return
+    const vorher = ansicht
     ansicht = soll
     const hp = await import('./homepage')
     if (soll === 'anmelden') {
-      hp.homepageVerlassen()
-      document.title = 'PlanR – Anmelden'
-      anmeldeSeite(app, sitzungHinweis || (location.hash === '#bridge' ? 'Bitte als Praxis-Admin anmelden – danach laden Sie die Bridge herunter.' : ''))
-      scrollTo(0, 0)
+      if (vorher !== 'start') hp.homepage(app)
+      anmeldePopup(sitzungHinweis || (location.hash === '#bridge' ? 'Bitte als Praxis-Admin anmelden – danach laden Sie die Bridge herunter.' : ''), () => {
+        ansicht = 'start'
+        sitzungHinweisLoeschen()
+        history.replaceState(null, '', location.pathname + location.search)
+      })
     } else if (soll.startsWith('#buchen')) {
+      anmeldePopupEntfernen()
       hp.homepageVerlassen()
       const { buchungSeite } = await import('./buchung')
       buchungSeite(app, soll === '#buchen-clara' ? 'planr_clara' : 'planr')
-    } else hp.homepage(app)
+      scrollTo(0, 0)
+    } else {
+      anmeldePopupEntfernen()
+      if (vorher !== 'anmelden') hp.homepage(app)
+    }
   }
   addEventListener('hashchange', () => {
     if (location.hash !== '#anmelden' && sitzungHinweis) sitzungHinweisLoeschen()

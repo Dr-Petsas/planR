@@ -80,11 +80,10 @@ export function sitzungBewachen() {
   }
 }
 
-export function anmeldeSeite(app: HTMLElement, hinweis = '') {
-  app.innerHTML = `
-    <div class="anmelde-seite">
+const formular = (hinweis: string, popup: boolean) => `
       <form class="wahl-karte anmelde-karte" data-anmelden novalidate>
-        <div class="marke"><span class="logo">${logo()}</span><div><h1>PlanR</h1><p>Heil- und Kostenpläne</p></div></div>
+        ${popup ? '<button type="button" class="anmelde-zu" aria-label="Schließen" data-zu>×</button>' : ''}
+        <div class="marke"><span class="logo">${logo()}</span><div><h1 id="anmelde-titel">PlanR</h1><p>Heil- und Kostenpläne</p></div></div>
         <h2>Anmelden</h2>
         <p class="anmelde-text">Mit Ihrem Pickadoc-Konto – am Praxis-PC, zu Hause oder am Handy.</p>
         <label class="feld">E-Mail-Adresse
@@ -97,10 +96,47 @@ export function anmeldeSeite(app: HTMLElement, hinweis = '') {
         <button type="submit" class="neu-knopf">Anmelden</button>
         <button type="button" class="link-knopf" data-vergessen>Passwort vergessen?</button>
         <p class="anmelde-neu">Noch kein Konto? <a href="#buchen">PlanR für Ihre Praxis buchen</a></p>
-        <p class="anmelde-neu"><a href="#top">← Zur Startseite</a></p>
-      </form>
-    </div>`
-  const form = app.querySelector<HTMLFormElement>('[data-anmelden]')!
+        ${popup ? '' : '<p class="anmelde-neu"><a href="#top">← Zur Startseite</a></p>'}
+      </form>`
+
+export function anmeldeSeite(app: HTMLElement, hinweis = '') {
+  app.innerHTML = `<div class="anmelde-seite">${formular(hinweis, false)}</div>`
+  formularVerdrahten(app.querySelector<HTMLFormElement>('[data-anmelden]')!)
+}
+
+let popupSchliessen: (() => void) | undefined
+
+/** Anmeldung als Fenster über der Startseite; `zu` läuft, wenn der Besucher es schließt. */
+export function anmeldePopup(hinweis: string, zu: () => void) {
+  anmeldePopupEntfernen()
+  const huelle = document.createElement('div')
+  huelle.className = 'anmelde-popup'
+  huelle.setAttribute('role', 'dialog')
+  huelle.setAttribute('aria-modal', 'true')
+  huelle.setAttribute('aria-labelledby', 'anmelde-titel')
+  huelle.innerHTML = `<div class="anmelde-popup-hg" data-zu></div>${formular(hinweis, true)}`
+  document.body.append(huelle)
+  document.body.classList.add('popup-offen')
+  const form = huelle.querySelector<HTMLFormElement>('[data-anmelden]')!
+  formularVerdrahten(form)
+  const taste = (e: KeyboardEvent) => { if (e.key === 'Escape') schliessen() }
+  const schliessen = () => { anmeldePopupEntfernen(); zu() }
+  for (const el of huelle.querySelectorAll('[data-zu]')) el.addEventListener('click', schliessen)
+  document.addEventListener('keydown', taste)
+  popupSchliessen = () => {
+    document.removeEventListener('keydown', taste)
+    huelle.remove()
+    document.body.classList.remove('popup-offen')
+  }
+  form.querySelector<HTMLInputElement>('[name=email]')!.focus()
+}
+
+export function anmeldePopupEntfernen() {
+  popupSchliessen?.()
+  popupSchliessen = undefined
+}
+
+function formularVerdrahten(form: HTMLFormElement) {
   const meldung = (text: string) => { form.querySelector('[data-meldung]')!.textContent = text }
   const feld = (n: string) => form.querySelector<HTMLInputElement>(`[name=${n}]`)!
   form.addEventListener('submit', async (ev) => {

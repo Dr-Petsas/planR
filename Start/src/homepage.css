@@ -30,9 +30,10 @@ body.hp-body {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 14px clamp(16px, 4vw, 48px);
-  background: rgba(7, 26, 31, 0.78);
-  backdrop-filter: blur(12px);
+  background: rgba(6, 22, 26, 0.94);
+  backdrop-filter: blur(14px) saturate(1.2);
   border-bottom: 1px solid var(--hp-linie);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.7);
 }
 .hp-marke { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; }
 .hp-marke small { font-weight: 500; color: var(--hp-grau); font-size: 13px; }
@@ -41,9 +42,22 @@ body.hp-body {
 .pr-wort { font-weight: 850; font-size: 21px; letter-spacing: -0.03em; color: var(--hp-text); }
 .pr-wort b { background: linear-gradient(135deg, var(--hp-mint), var(--hp-gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hp-nav nav { display: flex; align-items: center; gap: clamp(10px, 2vw, 26px); font-size: 15px; }
-.hp-nav nav a { text-decoration: none; color: var(--hp-grau); }
-.hp-nav nav a:hover { color: var(--hp-text); }
-.hp-nav nav .hp-nav-anmelden { color: var(--hp-text); border: 1px solid var(--hp-linie); padding: 7px 14px; border-radius: 999px; }
+.hp-nav nav a {
+  position: relative; padding: 6px 0; text-decoration: none;
+  color: #e4f1ef; font-weight: 600; letter-spacing: 0.005em; transition: color 0.15s;
+}
+.hp-nav nav a:not(.hp-nav-anmelden)::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 1px;
+  background: var(--hp-pink); transform: scaleX(0); transition: transform 0.2s;
+}
+.hp-nav nav a:hover { color: #fff; }
+.hp-nav nav a:hover::after { transform: scaleX(1); }
+.hp-nav nav .hp-nav-anmelden {
+  color: #fff; padding: 8px 18px; border-radius: 999px; font-weight: 700;
+  background: linear-gradient(135deg, var(--hp-pink-tief), var(--hp-pink));
+  box-shadow: 0 8px 22px -10px rgba(224, 64, 123, 0.8);
+}
+.hp-nav nav .hp-nav-anmelden:hover { filter: brightness(1.08); }
 .hp-burger { display: none; }
 @media (max-width: 1020px) {
   .hp-marke small { display: none; }
@@ -67,6 +81,7 @@ body.hp-body {
   .hp-menue-offen .hp-nav nav { opacity: 1; visibility: visible; transform: none; }
   .hp-nav nav a { padding: 12px 4px; border-bottom: 1px solid var(--hp-linie); color: var(--hp-text); }
   .hp-nav nav a:hover { color: var(--hp-pink); }
+  .hp-nav nav a::after { display: none; }
   .hp-nav nav .hp-nav-anmelden {
     margin-top: 14px; text-align: center; border: 0; padding: 13px; font-weight: 700;
     background: linear-gradient(135deg, var(--hp-pink-tief), var(--hp-pink)); color: #fff;

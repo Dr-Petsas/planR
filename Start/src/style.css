@@ -277,6 +277,24 @@ main { min-width: 0; }
 .anmelde-karte .link-knopf { margin: -6px auto 0; }
 .anmelde-neu { margin: 4px 0 0; padding-top: 14px; border-top: 1px solid var(--linie); font-size: 14px; text-align: center; color: var(--grau); }
 .anmelde-neu a { color: var(--akzent-dunkel); font-weight: 600; }
+
+body.popup-offen { overflow: hidden; }
+.anmelde-popup { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px 16px; overflow-y: auto; }
+.anmelde-popup-hg { position: fixed; inset: 0; background: rgba(4, 16, 19, 0.72); backdrop-filter: blur(6px); animation: popup-hg 0.2s ease-out; }
+.anmelde-popup .anmelde-karte {
+  position: relative; border-top: 4px solid #ff7aa8; color: var(--text); background: #fff;
+  box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.8), 0 0 60px -20px rgba(224, 64, 123, 0.55);
+  animation: popup-karte 0.25s cubic-bezier(.2, .8, .2, 1);
+}
+.anmelde-zu {
+  position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--grau); font-size: 26px; line-height: 1; cursor: pointer;
+}
+.anmelde-zu:hover { background: var(--akzent-hell); color: var(--text); }
+.anmelde-popup .marke h1 { color: var(--text); }
+.anmelde-popup .marke p { color: var(--grau); }
+@keyframes popup-hg { from { opacity: 0; } }
+@keyframes popup-karte { from { opacity: 0; transform: translateY(14px) scale(0.97); } }
 .konto-knopf { display: inline-flex; flex-direction: column; align-items: flex-end; font: inherit; font-size: 13px; font-weight: 600; color: var(--text); background: none; border: 0; padding: 2px 6px; cursor: pointer; max-width: 180px; }
 .konto-knopf small { font-weight: 400; color: var(--grau); }
 .konto-knopf:hover small { color: var(--rot); text-decoration: underline; }
