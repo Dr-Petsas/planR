@@ -446,7 +446,7 @@ body.hp-body {
 /* ---------- Sprach-KI: Handy von der anderen Seite ---------- */
 .hp-buehne-bild--rechts { --winkel: 24deg; }
 .hp-buehne-bild--rechts .hp-formen { transform: scaleX(-1) rotate(-50deg); }
-.hp-schraeg-handy { position: relative; z-index: 1; width: min(100%, 310px); transform: perspective(1600px) rotateY(-12deg) rotate(10deg); }
+.hp-schraeg-handy { position: relative; z-index: 1; width: min(100%, 310px); transform: perspective(1600px) rotateY(12deg) rotate(-20deg); }
 .hp-schraeg-handy .cc-phone { width: 100%; }
 .hp-chat { gap: 12px; min-height: 560px; }
 .hp-chat-kopf { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
