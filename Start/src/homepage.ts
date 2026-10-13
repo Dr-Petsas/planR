@@ -245,7 +245,7 @@ const HTML = `
     </div>
   </section>
 
-  <section class="hp-buehne" id="hkp">
+  <section class="hp-buehne hp-pink" id="hkp">
     <div class="hp-buehne-innen">
       <div class="hp-buehne-bild hp-buehne-bild--pink" aria-hidden="true">
         ${FORMEN}
@@ -274,10 +274,11 @@ const HTML = `
     </div>
   </section>
 
-  <section class="hp-sektion" id="plaene">
+  <section class="hp-buehne hp-buehne--plaene hp-pink" id="plaene">
+   <div class="hp-sektion">
     <div class="hp-sektion-kopf">
       <p class="hp-eyebrow">Nicht nur HKP</p>
-      <h2>Alle Pläne deiner Praxis. Ein Werkzeug.</h2>
+      <h2><em>Alle Pläne</em> deiner Praxis. Ein Werkzeug.</h2>
       <p>Von Zahnersatz über Implantologie, Parodontitis und Kieferorthopädie bis zur Füllung – jeder Plan mit Kassen- oder Privatlogik,
         deinen Preisen und deinem Labor. Das sind echte Screenshots aus PlanR.</p>
     </div>
@@ -287,6 +288,7 @@ const HTML = `
           <b>${p.titel}</b><small>${p.unter}</small></button>`).join('')}
       </div>
       <div class="hp-galerie-buehne">
+        <div class="hp-galerie-formen hp-buehne-bild--pink" aria-hidden="true">${FORMEN}</div>
         <div class="hp-fenster">
           <div class="hp-fenster-kopf"><i></i><i></i><i></i><span data-galerie-pfad>planr.pickadoc.de/planer/${PLAENE[0].pfad}</span></div>
           <div class="hp-fenster-bild">
@@ -301,12 +303,13 @@ const HTML = `
         </div>
       </div>
     </div>
+   </div>
   </section>
 
-  <section class="hp-sektion hp-rueck" id="pvs">
+  <section class="hp-sektion hp-rueck hp-pink" id="pvs">
     <div class="hp-sektion-kopf">
       <p class="hp-eyebrow">Zurück ins Praxisprogramm</p>
-      <h2>Fertig geplant. Steht sofort in deinem PVS.</h2>
+      <h2>Fertig geplant. Steht sofort in <em>deinem PVS.</em></h2>
       <p>Freigegebene Pläne schreibt PlanR über die PlanR-Bridge direkt in die Patientenakte deines eigenen Praxisverwaltungssystems –
         mit allen Positionen. Kein Abtippen, kein Export, kein offener Port. Abgerechnet wird wie gewohnt im PVS.</p>
     </div>
