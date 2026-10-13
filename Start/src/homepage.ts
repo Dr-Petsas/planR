@@ -166,7 +166,8 @@ const HTML = `
 <div class="hp">
   <header class="hp-nav">
     <a class="hp-marke" href="#top"><span class="hp-logo">${logo()}</span>${wortmarke()}<small>by Pickadoc</small></a>
-    <nav>
+    <button class="hp-burger" type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="hp-menue" data-burger><i></i><i></i><i></i></button>
+    <nav id="hp-menue">
       <a href="#hkp">HKP</a>
       <a href="#plaene">Alle Pläne</a>
       <a href="#pvs">Ins PVS</a>
@@ -575,6 +576,9 @@ const HTML = `
       <a href="#anmelden">Anmelden</a>
     </nav>
   </footer>
+  <button class="hp-hoch" type="button" aria-label="Nach oben" data-hoch>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
 </div>`
 
 const DIKTAT = '„Clara, HKP für Frau Berger: 14 bis 16 Brücke, 26 Krone – Vollkeramik.“'
@@ -740,6 +744,32 @@ function rueckStarten(wurzel: HTMLElement) {
   }, 4500)
 }
 
+let aufraeumen: (() => void) | undefined
+
+/** Handy-Menü und Nach-oben-Pfeil. */
+function navigationStarten(wurzel: HTMLElement) {
+  const burger = wurzel.querySelector<HTMLButtonElement>('[data-burger]')!
+  const menue = wurzel.querySelector<HTMLElement>('#hp-menue')!
+  const hoch = wurzel.querySelector<HTMLButtonElement>('[data-hoch]')!
+  const schalten = (offen: boolean) => {
+    wurzel.classList.toggle('hp-menue-offen', offen)
+    burger.setAttribute('aria-expanded', String(offen))
+    burger.setAttribute('aria-label', offen ? 'Menü schließen' : 'Menü öffnen')
+  }
+  burger.addEventListener('click', () => schalten(!wurzel.classList.contains('hp-menue-offen')))
+  menue.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('a')) schalten(false) })
+  hoch.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }))
+  const beimScrollen = () => hoch.classList.toggle('sichtbar', window.scrollY > window.innerHeight * 1.2)
+  const taste = (e: KeyboardEvent) => { if (e.key === 'Escape') schalten(false) }
+  window.addEventListener('scroll', beimScrollen, { passive: true })
+  window.addEventListener('keydown', taste)
+  beimScrollen()
+  aufraeumen = () => {
+    window.removeEventListener('scroll', beimScrollen)
+    window.removeEventListener('keydown', taste)
+  }
+}
+
 function spielwieseStarten(wurzel: HTMLElement) {
   const r: Regler = { ...START }
   const regler = [...wurzel.querySelectorAll<HTMLInputElement>('[data-regler]')]
@@ -808,6 +838,8 @@ export function homepage(app: HTMLElement) {
   document.title = 'PlanR – HKP erstellen per Sprach-KI'
   app.innerHTML = HTML
   const wurzel = app.querySelector<HTMLElement>('.hp')!
+  aufraeumen?.()
+  navigationStarten(wurzel)
   demoStarten(wurzel)
   claraHandyStarten(wurzel)
   galerieStarten(wurzel)
@@ -819,5 +851,7 @@ export function homepage(app: HTMLElement) {
 
 export function homepageVerlassen() {
   laeuft++
+  aufraeumen?.()
+  aufraeumen = undefined
   document.body.classList.remove('hp-body')
 }
