@@ -341,7 +341,7 @@ const HTML = `
   <section class="hp-sektion hp-kontakt" id="kontakt">
     <div class="hp-sektion-kopf">
       <h2>PlanR für deine Praxis</h2>
-      <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat. Freischaltung meist noch am selben Tag, danach führt dich der Einrichtungsassistent bis zum ersten HKP aus deinem PVS.</p>
+      <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat, Passwort. Danach sofort anmelden: Der Einrichtungsassistent führt dich bis zum ersten HKP aus deinem PVS.</p>
     </div>
     <div class="hp-kontakt-wege">
       <a class="hp-knopf hp-knopf-voll" href="#buchen">Jetzt online buchen</a>

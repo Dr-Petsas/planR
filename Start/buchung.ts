@@ -24,6 +24,8 @@ export interface Buchung {
   benutzer: string[]
   sepa: { inhaber: string; anschrift: string; iban: string; bic: string; bank: string; mandatsreferenz: string; unterschrift: string }
   hinweis: string
+  /** Pickadoc-Konto: sofort angelegt, schon vorhanden (Freischaltung von Hand) oder Anlage fehlgeschlagen */
+  konto?: { status: 'angelegt' | 'vorhanden' | 'manuell'; clientId?: string }
 }
 
 type Roh = Record<string, unknown>
@@ -41,7 +43,7 @@ export function neueMandatsreferenz(jetzt = new Date()): string {
 }
 
 /** Prüft die Eingaben des Buchungsformulars. Fehler je Feld (Schlüssel wie im Formular), sonst die Buchung. */
-export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; buchung: Buchung } | { ok: false; fehler: Record<string, string> } {
+export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; buchung: Buchung; passwort: string } | { ok: false; fehler: Record<string, string> } {
   const r = obj(roh)
   const p = obj(r.praxis), i = obj(r.inhaber), k = obj(r.kzv), v = obj(r.pvs), s = obj(r.sepa), z = obj(r.zustimmung)
   const f: Record<string, string> = {}
@@ -71,6 +73,9 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
   pflicht(inhaber.vorname, 'inhaber.vorname', 'den Vornamen')
   pflicht(inhaber.nachname, 'inhaber.nachname', 'den Nachnamen')
   if (!EMAIL_RE.test(inhaber.email)) f['inhaber.email'] = 'Bitte die E-Mail-Adresse für die Anmeldung angeben.'
+  // Das Passwort geht nur an die Kontoanlage und wird nirgends gespeichert.
+  const passwort = String(r.passwort ?? '')
+  if (passwort.length < 8 || passwort.length > 128) f.passwort = 'Das Passwort braucht mindestens 8 Zeichen.'
 
   const kzv = {
     nr: text(k.nr, 2), abrechnungsnr: text(k.abrechnungsnr, 12).replace(/\s/g, ''),
@@ -112,6 +117,7 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
   if (Object.keys(f).length || !paket) return { ok: false, fehler: f }
   return {
     ok: true,
+    passwort,
     buchung: {
       id: `B-${jetzt.toISOString().slice(0, 10).replace(/-/g, '')}-${randomBytes(3).toString('hex').toUpperCase()}`,
       eingang: jetzt.toISOString(), paket, praxis, inhaber, kzv, pvs, pickadocKonto, benutzer, sepa, hinweis: text(r.hinweis, 1000),
@@ -181,11 +187,17 @@ export function infoMail(b: Buchung, glaeubigerId: string): { betreff: string; t
     'ZUSTIMMUNG: AGB, Datenschutzhinweise und Auftragsverarbeitung (Art. 28 DSGVO) bestätigt.',
     ...(b.hinweis ? ['', 'NACHRICHT DER PRAXIS', `  ${b.hinweis}`] : []),
     '',
-    'ZU TUN FÜR DIE FREISCHALTUNG',
-    `  1. Praxis in Pickadoc anlegen bzw. finden${b.pickadocKonto ? ` (Konto ${b.pickadocKonto})` : ''}; Konto ${b.inhaber.email} als Admin.`,
-    `  2. Billing: subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung} }, SEPA-Mandat ${b.sepa.mandatsreferenz} hinterlegen.`,
-    '  3. Passwort-Mail an die Praxis auslösen (PlanR-Anmeldung → „Passwort vergessen“ geht auch).',
-    '  4. Die Praxis richtet danach selbst ein: PlanR → Einrichtung (PVS, Bridge-Schlüssel, Preise & Positionen).',
+    ...(b.konto?.status === 'angelegt' ? [
+      'FREISCHALTUNG: automatisch erledigt',
+      `  Praxis in Pickadoc angelegt (clientId ${b.konto.clientId}), Admin-Konto ${b.inhaber.email} mit selbst gewähltem Passwort,`,
+      `  subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung} }. Die Praxis kann sich sofort anmelden.`,
+      `  Bitte nur prüfen: Buchung plausibel? SEPA-Mandat ${b.sepa.mandatsreferenz} ins Lastschriftverfahren übernehmen.`,
+    ] : [
+      `ZU TUN FÜR DIE FREISCHALTUNG (${b.konto?.status === 'vorhanden' ? 'für diese E-Mail gibt es schon ein Pickadoc-Konto' : 'automatische Anlage hat nicht geklappt'})`,
+      `  1. Praxis in Pickadoc finden bzw. anlegen; Konto ${b.inhaber.email} als Admin.`,
+      `  2. Billing: subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung} }, SEPA-Mandat ${b.sepa.mandatsreferenz} hinterlegen.`,
+      `  3. ${b.konto?.status === 'vorhanden' ? 'Der Praxis Bescheid geben: Anmeldung mit dem bestehenden Pickadoc-Passwort.' : 'Passwort-Mail an die Praxis auslösen (PlanR-Anmeldung → „Passwort vergessen“).'}`,
+    ]),
   ]
   return { betreff: `PlanR-Buchung: ${b.praxis.name} – ${PAKETE[b.paket].name} (${b.id})`, text: zeilen.join('\n') }
 }
@@ -204,10 +216,16 @@ export function kundenMail(b: Buchung, glaeubigerId: string, basis = 'https://pl
       `Paket: ${preisText(b.paket)}.`,
       '',
       'So geht es weiter:',
-      `  1. Wir schalten PlanR für Ihre Praxis frei – meist noch am selben Werktag.`,
-      `  2. Sie bekommen eine E-Mail, mit der Sie das Passwort für ${b.inhaber.email} festlegen.`,
-      `  3. Danach melden Sie sich unter ${basis} an. Der Einrichtungsassistent führt Sie durch die Verbindung mit ${pvs?.name ?? 'Ihrem Praxissystem'}: Bridge herunterladen, auf dem Praxisserver installieren, Preise & Positionen übernehmen.`,
-      pvs?.bereit ? `     Die Bridge können Sie schon jetzt herunterladen: ${basis}/download` : `     Die Anbindung an ${pvs?.name ?? 'Ihr PVS'} ist in Vorbereitung – wir melden uns zur Einrichtung bei Ihnen.`,
+      ...(b.konto?.status === 'angelegt' ? [
+        `  1. Ihr Zugang ist eingerichtet: Melden Sie sich unter ${basis} mit ${b.inhaber.email} und dem Passwort aus der Buchung an.`,
+      ] : b.konto?.status === 'vorhanden' ? [
+        `  1. Für ${b.inhaber.email} gibt es schon ein Pickadoc-Konto. Wir schalten PlanR dafür frei – meist noch am selben Werktag – und melden uns.`,
+        `     Danach melden Sie sich unter ${basis} mit Ihrem bestehenden Pickadoc-Passwort an.`,
+      ] : [
+        `  1. Wir schalten PlanR für Ihre Praxis frei – meist noch am selben Werktag. Sie bekommen dann eine E-Mail, mit der Sie das Passwort für ${b.inhaber.email} festlegen.`,
+      ]),
+      `  2. Nach der Anmeldung führt Sie der Einrichtungsassistent durch die Verbindung mit ${pvs?.name ?? 'Ihrem Praxissystem'}: Bridge herunterladen, auf dem Praxisserver installieren (ohne Eingaben), Preise & Positionen übernehmen.`,
+      ...(pvs?.bereit ? [] : [`     Die Anbindung an ${pvs?.name ?? 'Ihr PVS'} ist in Vorbereitung – wir melden uns zur Einrichtung bei Ihnen.`]),
       '',
       'Ihr SEPA-Lastschriftmandat:',
       '',

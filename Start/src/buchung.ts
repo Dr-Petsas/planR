@@ -9,7 +9,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
 
 const SCHRITTE = ['Paket', 'Praxis', 'KZV & PVS', 'SEPA-Mandat', 'Prüfen & buchen'] as const
-const SCHRITT_VON: [RegExp, number][] = [[/^paket/, 0], [/^(praxis|inhaber)\./, 1], [/^(kzv|pvs)\.|^hinweis/, 2], [/^sepa\./, 3], [/^zustimmung\./, 4]]
+const SCHRITT_VON: [RegExp, number][] = [[/^paket/, 0], [/^(praxis|inhaber)\.|^passwort/, 1], [/^(kzv|pvs)\.|^hinweis/, 2], [/^sepa\./, 3], [/^zustimmung\./, 4]]
 
 type Werte = Record<string, string | boolean>
 const PFLICHT: Record<number, [string, string][]> = {
@@ -92,7 +92,10 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
           ${feld(w, f, 'inhaber.nachname', 'Nachname', 'text', 'autocomplete="family-name"')}
           ${feld(w, f, 'inhaber.email', 'E-Mail für die Anmeldung (Praxis-Admin)', 'email')}
           ${feld(w, f, 'inhaber.mobil', 'Mobil (optional)', 'tel')}
-        </div>`
+          ${feld(w, f, 'passwort', 'Passwort für PlanR (mind. 8 Zeichen)', 'password', 'autocomplete="new-password" minlength="8"')}
+          ${feld(w, f, 'passwort2', 'Passwort wiederholen', 'password', 'autocomplete="new-password"')}
+        </div>
+        <p class="bu-klein">Mit dieser E-Mail-Adresse und dem Passwort melden Sie sich direkt nach der Buchung in PlanR an.</p>`
       case 2: return `
         <h2>KZV und Praxissystem</h2>
         <div class="bu-raster">
@@ -199,6 +202,10 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     const f: Record<string, string> = {}
     for (const [name, text] of PFLICHT[schritt] ?? []) if (!String(w[name] ?? '').trim()) f[name] = `Bitte ${text} angeben.`
     if (schritt === 1 && w['praxis.plz'] && !/^\d{5}$/.test(String(w['praxis.plz']))) f['praxis.plz'] = 'Bitte eine fünfstellige Postleitzahl angeben.'
+    if (schritt === 1) {
+      if (String(w.passwort ?? '').length < 8) f.passwort = 'Das Passwort braucht mindestens 8 Zeichen.'
+      else if (w.passwort !== w.passwort2) f.passwort2 = 'Die beiden Passwörter stimmen nicht überein.'
+    }
     if (schritt === 3) {
       if (w['sepa.iban'] && !ibanGueltig(String(w['sepa.iban']))) f['sepa.iban'] = 'Die IBAN ist nicht gültig – bitte prüfen.'
       if (w['sepa.mandat'] !== true) f['sepa.mandat'] = 'Bitte das SEPA-Lastschriftmandat erteilen.'
@@ -213,7 +220,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     return {
       paket: paket(), praxis: teil('praxis'), inhaber: teil('inhaber'),
       kzv: { ...teil('kzv'), zahnaerzte: Number(g('kzv.zahnaerzte')), praxen: Number(g('kzv.praxen') || 1), eigenlabor: w['kzv.eigenlabor'] === true },
-      pvs: teil('pvs'), hinweis: g('hinweis'),
+      pvs: teil('pvs'), hinweis: g('hinweis'), passwort: String(w.passwort ?? ''),
       sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'),
       firma2: (app.querySelector<HTMLInputElement>('[name=firma2]')?.value ?? ''),
     }
@@ -228,9 +235,9 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     zeichnen()
     try {
       const r = await fetch('/api/buchung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten()) })
-      const d = await r.json() as { ok: boolean; id?: string; email?: string; pvs?: string; fehler?: Record<string, string>; meldung?: string }
+      const d = await r.json() as { ok: boolean; id?: string; email?: string; pvs?: string; konto?: string; fehler?: Record<string, string>; meldung?: string }
       sendet = false
-      if (d.ok) return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']))
+      if (d.ok) return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']), String(d.konto ?? 'manuell'))
       fehler = d.fehler ?? {}
       const erster = Object.keys(fehler)[0]
       if (erster) schritt = SCHRITT_VON.find(([re]) => re.test(erster))?.[1] ?? schritt
@@ -246,8 +253,13 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
   scrollTo(0, 0)
 }
 
-function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string) {
+function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string, konto: string) {
   const pvs = pvsVon(pvsId)
+  const zugang = konto === 'angelegt'
+    ? `<li><b>Zugang:</b> Ihr Konto ist eingerichtet. Melden Sie sich jetzt mit ${esc(email)} und Ihrem Passwort an.</li>`
+    : konto === 'vorhanden'
+      ? `<li><b>Freischaltung:</b> Für ${esc(email)} gibt es schon ein Pickadoc-Konto. Wir schalten PlanR dafür frei – meist noch am selben Werktag. Danach melden Sie sich mit Ihrem bestehenden Pickadoc-Passwort an.</li>`
+      : `<li><b>Freischaltung:</b> Wir richten Ihren Zugang ein – meist noch am selben Werktag. Sie bekommen dann eine E-Mail, mit der Sie das Passwort für ${esc(email)} festlegen.</li>`
   document.title = 'PlanR – Buchung eingegangen'
   app.innerHTML = `
     <div class="bu-seite">
@@ -257,14 +269,13 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
         <h2>Vielen Dank – Ihre Buchung ist eingegangen.</h2>
         <p class="bu-text">Buchungsnummer <b>${esc(id)}</b>. Die Bestätigung mit Ihrem SEPA-Mandat geht an <b>${esc(email)}</b>.</p>
         <ol class="bu-weiter">
-          <li><b>Freischaltung:</b> Wir richten PlanR für Ihre Praxis ein – meist noch am selben Werktag.</li>
-          <li><b>Passwort:</b> Sie bekommen eine E-Mail, mit der Sie das Passwort für ${esc(email)} festlegen.</li>
+          ${zugang}
           <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Installation der Bridge, Verbindung, Preise &amp; Positionen.</li>
         </ol>
         <h3>Schon vorbereiten: ${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
         ${anleitungHtml(pvsId)}
-        <p class="bu-klein">Die Bridge laden Sie nach der Freischaltung in PlanR unter <b>Einrichtung</b> herunter – fertig für Ihre Praxis, ohne Eingaben.</p>
-        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a><a class="neu-knopf" href="#anmelden">Zur Anmeldung</a></div>
+        <p class="bu-klein">Die Bridge laden Sie nach der Anmeldung in PlanR unter <b>Einrichtung</b> herunter – fertig für Ihre Praxis, ohne Eingaben.</p>
+        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a><a class="neu-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a></div>
       </div>
     </div>`
   scrollTo(0, 0)

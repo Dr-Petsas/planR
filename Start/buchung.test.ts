@@ -10,6 +10,7 @@ const gueltig = {
   benutzer: 'team@example.de, rezeption@example.de',
   sepa: { inhaber: 'Dr. Anna Muster', iban: 'DE89 3704 0044 0532 0130 00', mandat: true, unterschrift: 'Anna Muster' },
   zustimmung: { agb: true, datenschutz: true, avv: true },
+  passwort: 'geheim-123',
 }
 
 describe('IBAN', () => {
@@ -33,6 +34,13 @@ describe('Buchung prüfen', () => {
     expect(r.buchung.sepa.iban).toBe('DE89370400440532013000')
     expect(r.buchung.benutzer).toEqual(['team@example.de', 'rezeption@example.de'])
     expect(r.buchung.sepa.anschrift).toBe('Hauptstr. 1, 40235 Düsseldorf')
+    expect(r.passwort).toBe('geheim-123')
+    expect(JSON.stringify(r.buchung)).not.toContain('geheim-123')
+  })
+  it('verlangt ein Passwort mit mindestens 8 Zeichen', () => {
+    const r = buchungPruefen({ ...gueltig, passwort: 'kurz' })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.fehler.passwort).toBeTruthy()
   })
   it('meldet fehlende Angaben je Feld', () => {
     const r = buchungPruefen({ ...gueltig, paket: 'gold', kzv: { ...gueltig.kzv, nr: '99' }, sepa: { ...gueltig.sepa, iban: 'DE00 1234', mandat: false }, zustimmung: {} })
@@ -64,7 +72,13 @@ describe('Mails', () => {
     expect(m.text).not.toContain('0532 0130')
     expect(m.text).toContain('DE89 •••• •••• 3000')
     expect(m.text).toContain('Sehr geehrte Frau Dr. Muster')
-    expect(m.text).toContain('https://planr.pickadoc.de/download')
     expect(m.text).toContain('wird mit der ersten Rechnung mitgeteilt')
+  })
+  it('mit sofort angelegtem Konto: Anmeldung gleich, keine Freischaltung von Hand', () => {
+    const mit = { ...b, konto: { status: 'angelegt' as const, clientId: 'abc123' } }
+    expect(kundenMail(mit, '').text).toContain('Passwort aus der Buchung an')
+    expect(infoMail(mit, '').text).toContain('automatisch erledigt')
+    expect(infoMail(mit, '').text).toContain('abc123')
+    expect(infoMail({ ...b, konto: { status: 'vorhanden' } }, '').text).toContain('ZU TUN')
   })
 })

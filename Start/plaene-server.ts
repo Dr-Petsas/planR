@@ -12,7 +12,7 @@ import { PVS_CONNECTOR, PVS_SUCHE, hkpFuerPvs, patientWaehlen, vermerkText, type
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
 } from './pvs-agent-server.ts'
-import { buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
+import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, mandantVon, neuesToken, registerVon,
@@ -1112,7 +1112,7 @@ async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   const r = buchungPruefen(roh)
   if (!r.ok) return json(res, 400, { ok: false, fehler: r.fehler, meldung: 'Bitte die markierten Angaben prüfen.' })
   buchungBremse.fehler(ip(req))
-  const b = r.buchung
+  const b = { ...r.buchung, konto: await kontoAnlegen(r.buchung, r.passwort) }
   await exklusiv(async () => {
     const alle = await jsonLesen<Buchung[]>(BUCHUNGEN, [])
     await jsonSchreiben(BUCHUNGEN, [...(Array.isArray(alle) ? alle : []), b])
@@ -1125,7 +1125,30 @@ async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
     mailSenden(ORDNER, { an: b.inhaber.email, betreff: kunde.betreff, text: kunde.text, antwortAn: infoAdresse() }),
   ])
   if (!infoOk) console.error('[planr] Buchung', b.id, 'gespeichert, Info-Mail fehlt – data/buchungen.json prüfen')
-  json(res, 200, { ok: true, id: b.id, paket: b.paket, pvs: b.pvs.id, email: b.inhaber.email, bestaetigt: kundeOk })
+  json(res, 200, { ok: true, id: b.id, paket: b.paket, pvs: b.pvs.id, email: b.inhaber.email, bestaetigt: kundeOk, konto: b.konto.status })
+}
+
+/** Praxis und Admin-Konto in Pickadoc anlegen (über MAS); Abo planr ist damit gesetzt, die Anmeldung geht sofort. */
+async function kontoAnlegen(b: Buchung, passwort: string): Promise<NonNullable<Buchung['konto']>> {
+  try {
+    const r = await fetch(`${MAS}/registrieren`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-PlanR-Key': masSchluessel() },
+      body: JSON.stringify({
+        email: b.inhaber.email, passwort, titel: b.inhaber.titel, vorname: b.inhaber.vorname, nachname: b.inhaber.nachname,
+        praxis: { name: b.praxis.name, strasse: b.praxis.strasse, plz: b.praxis.plz, ort: b.praxis.ort },
+        paket: b.paket, sprachsteuerung: PAKETE[b.paket].sprachsteuerung, buchung: b.id, mandatsreferenz: b.sepa.mandatsreferenz,
+      }),
+      signal: AbortSignal.timeout(20_000),
+    })
+    const d = await r.json().catch(() => ({})) as { ok?: boolean; clientId?: string; error?: string }
+    if (r.ok && d.ok && d.clientId) return { status: 'angelegt', clientId: d.clientId }
+    if (r.status === 409) return { status: 'vorhanden' }
+    console.error('[planr] Konto für Buchung', b.id, 'nicht angelegt:', r.status, d.error ?? '')
+  } catch (e) {
+    console.error('[planr] Konto für Buchung', b.id, 'nicht angelegt:', e instanceof Error ? e.message : e)
+  }
+  return { status: 'manuell' }
 }
 
 /**
