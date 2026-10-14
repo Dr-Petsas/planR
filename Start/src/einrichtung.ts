@@ -14,7 +14,7 @@ const BRIDGE_SCHRITTE = (ordner: string) => [
   '<b>PlanR-Bridge herunterladen</b> (ZIP, etwa 15 MB), auf den Rechner kopieren und entpacken (Rechtsklick → „Alle extrahieren“).',
   '<code>Installieren.cmd</code> doppelklicken und die Windows-Abfrage mit „Ja“ bestätigen. Eingaben sind nicht nötig – das Paket kennt Ihre Praxis.',
   `Nur falls die Installation das Praxisprogramm nicht selbst findet, fragt sie nach dem Ordner – ${ordner}.`,
-  'Das Fenster meldet „Connector bereit“ und „PlanR verbunden“. Der Dienst startet ab jetzt mit dem Rechner; am Server wird kein Port geöffnet.',
+  'Fenster offen lassen, bis es am Ende „Dienst \'PlanR-Bridge\' ist eingerichtet“ meldet (etwa eine Minute). Der Dienst startet ab jetzt mit dem Rechner; am Server wird kein Port geöffnet.',
 ]
 
 const ANLEITUNGEN: Record<string, Anleitung> = {
@@ -69,7 +69,8 @@ export async function bridgePaketLaden(): Promise<{ ok: true } | { ok: false; st
   }
 }
 
-interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; pvs?: string; version?: string; status?: string }
+/** geprueft: Die Prüfung im Installer hat PlanR erreicht, der Windows-Dienst meldet sich aber (noch) nicht. */
+interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; geprueft?: boolean; pvs?: string; version?: string; status?: string }
 interface Katalog { anzahl?: Record<string, number>; pvs?: string }
 
 const SCHRITTE = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & Positionen', 'Fertig'] as const
@@ -114,14 +115,9 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
 
   const pvs = () => pvsVon(einst.pvs)
   const anbindbar = () => !!anleitungVon(einst.pvs)
-  /**
-   * Bridges ab 1.3 melden ihren Zustand; ohne Zustand meldet sich dort nur die Prüfung am Ende der Installation,
-   * der Dienst selbst noch nicht. Ältere Bridges melden nie einen Zustand – dann gilt verbunden als bereit.
-   */
-  const meldetZustand = () => { const [a, b] = (stand?.version ?? '').split('.').map(Number); return a > 1 || (a === 1 && b >= 3) }
-  const nurPruefung = () => !!stand?.verbunden && !stand.status && meldetZustand()
-  const bridgeBereit = () => !!stand?.verbunden && (stand.status === 'bereit' || (!stand.status && !meldetZustand()))
-  const wartetText = () => nurPruefung() ? 'Installation geprüft – warte auf den Windows-Dienst „PlanR-Bridge“ …' : `Die Bridge meldet: ${stand?.status ?? ''}`
+  /** Ältere Bridges melden keinen Zustand – dann gilt verbunden als bereit. */
+  const bridgeBereit = () => !!stand?.verbunden && (!stand.status || stand.status === 'bereit')
+  const ENDE = '„Dienst \'PlanR-Bridge\' ist eingerichtet“'
 
   function inhalt(): string {
     const p = pvs()
@@ -137,12 +133,14 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <h3>Verbindung prüfen</h3>
         ${stand?.verbunden
           ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>
-             ${bridgeBereit() ? '' : `<p class="ein-warte"><span class="ein-punkt"></span> ${esc(wartetText())}</p>
-             <p class="ein-klein">${nurPruefung()
-               ? 'Der Dienst startet nach der Installation innerhalb einer Minute. Bleibt die Meldung, läuft er nicht oder erreicht PlanR nicht – Protokoll: <code>C:\\ProgramData\\PlanR-Bridge\\agent.log</code>. Wir helfen gern: 0211 3029 3035.'
-               : 'Der Connector braucht nach der Installation bis zu einer Minute. Bleibt die Meldung, rufen Sie uns an: 0211 3029 3035.'}</p>`}`
-          : `<p class="ein-warte"><span class="ein-punkt"></span> Warte auf die Bridge … Sobald die Installation „PlanR verbunden“ meldet, geht es hier weiter.</p>
-             <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und hat die Installation „PlanR verbunden“ gemeldet? Wir helfen gern: 0211 3029 3035.</p>`}`
+             ${bridgeBereit() ? '' : `<p class="ein-warte"><span class="ein-punkt"></span> Die Bridge meldet: ${esc(stand.status ?? '')}</p>
+             <p class="ein-klein">Der Connector braucht nach der Installation bis zu einer Minute. Bleibt die Meldung, rufen Sie uns an: 0211 3029 3035.</p>`}`
+          : stand?.geprueft
+            ? `<p class="ein-ok">✓ Installation geprüft: Der Praxisrechner erreicht PlanR.</p>
+               <p class="ein-warte"><span class="ein-punkt"></span> Warte auf den Windows-Dienst „PlanR-Bridge“ … Bitte das Installationsfenster offen lassen, bis es ${ENDE} meldet.</p>
+               <p class="ein-klein">Hat die Installation mit einer roten Fehlermeldung geendet oder das Fenster geschlossen? Dann Installieren.cmd noch einmal starten. Protokoll: <code>C:\\ProgramData\\PlanR-Bridge\\agent.log</code> – wir helfen gern: 0211 3029 3035.</p>`
+            : `<p class="ein-warte"><span class="ein-punkt"></span> Warte auf die Bridge … Sobald die Installation ${ENDE} meldet, geht es hier weiter.</p>
+               <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und ist die Installation ohne rote Fehlermeldung durchgelaufen? Wir helfen gern: 0211 3029 3035.</p>`}`
       case 3: return `
         <h3>Preise &amp; Positionen übernehmen</h3>
         <p class="ein-text">${esc(anleitungVon(einst.pvs)?.preise ?? '')} So rechnet PlanR von Anfang an mit Ihren eigenen Preisen.</p>
@@ -157,7 +155,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
                    <p>Läuft seit <span data-katalog-uhr>${dauer(Date.now() - katalogSeit)}</span>. Dauert ca. 5 Minuten – bitte das Fenster offen lassen und den Vorgang nicht abbrechen.</p></div>
                </div>`
             : `<button type="button" class="neu-knopf" data-katalog${laeuft || !stand?.verbunden || !bridgeBereit() ? ' disabled' : ''}>Jetzt übernehmen</button>
-               <p class="ein-klein">Dauert ca. 5 Minuten.${!stand?.verbunden ? ' Geht, sobald die Bridge verbunden ist.' : bridgeBereit() ? '' : ` Geht, sobald die Bridge bereit ist. ${esc(wartetText())}`}</p>`}`
+               <p class="ein-klein">Dauert ca. 5 Minuten.${!stand?.verbunden ? (stand?.geprueft ? ' Geht, sobald der Windows-Dienst „PlanR-Bridge“ läuft.' : ' Geht, sobald die Bridge verbunden ist.') : bridgeBereit() ? '' : ` Geht, sobald die Bridge bereit ist – sie meldet: ${esc(stand.status ?? '')}`}</p>`}`
       default: return `
         <h3>Fertig – PlanR ist eingerichtet.</h3>
         <p class="ein-text">Holen Sie jetzt den ersten HKP aus ${esc(p?.name ?? 'Ihrem Praxissystem')}, ziehen Sie die Regler und sehen Sie, wie viel mehr Umsatz im selben Befund steckt.</p>
@@ -245,9 +243,9 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   uhr = window.setInterval(async () => {
     if (!schleier.isConnected) return clearInterval(uhr)
     if (schritt < 1 || schritt > 3) return
-    const vorher = `${stand?.verbunden}|${stand?.status}`
+    const vorher = `${stand?.verbunden}|${stand?.status}|${stand?.geprueft}`
     await standLaden()
-    if (`${stand?.verbunden}|${stand?.status}` !== vorher && !laeuft) zeichnen()
+    if (`${stand?.verbunden}|${stand?.status}|${stand?.geprueft}` !== vorher && !laeuft) zeichnen()
   }, 4000)
 
   void standLaden().then(() => {

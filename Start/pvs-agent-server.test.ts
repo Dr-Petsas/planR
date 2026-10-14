@@ -2,7 +2,7 @@ import { generateKeyPairSync, sign } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import {
   AgentHub, Bremse, accessPruefen, auftragErlaubt, codeHash, codePasst, cookieWert, emailErlaubt, geraetPasst, neuerPraxisCode,
-  FRUEHER_TAGE, neuerSchluessel, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AgentListe,
+  FRUEHER_TAGE, neuerSchluessel, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AgentListe,
 } from './pvs-agent-server.ts'
 
 const schluessel = neuerSchluessel()
@@ -164,6 +164,16 @@ describe('Auftragswarteschlange', () => {
     await new Promise((r) => setTimeout(r, 50))
     hub.zurueckstellen('praxis', verloren!)
     await expect(ergebnis).rejects.toThrow('nicht_abgeholt')
+  })
+
+  it('erkennt die Installationsprüfung: ab Bridge 1.3 fragt nur sie ohne Zustand', () => {
+    expect(nurPruefung('1.3', undefined)).toBe(true)
+    expect(nurPruefung('1.10', undefined)).toBe(true)
+    expect(nurPruefung('2.0', undefined)).toBe(true)
+    expect(nurPruefung('1.3', 'Connector startet')).toBe(false)
+    expect(nurPruefung('1.3', 'bereit')).toBe(false)
+    expect(nurPruefung('1.2', undefined)).toBe(false)
+    expect(nurPruefung(undefined, undefined)).toBe(false)
   })
 })
 

@@ -147,6 +147,15 @@ export interface Auftrag { id: string; method: 'GET' | 'POST'; pfad: string; bod
 export interface Antwort { ok: boolean; status: number; daten: Record<string, unknown> }
 export interface AgentStand { am: number; pvs?: string; version?: string; status?: string }
 
+/**
+ * Ab Bridge 1.3 schickt der Dienst bei jeder Abfrage seinen Zustand mit; ohne Zustand fragt nur die Prüfung im
+ * Installer (--pruefen). Sie darf keinen Auftrag bekommen – sie führt ihn nicht aus – und ist keine laufende Bridge.
+ */
+export function nurPruefung(version: string | undefined, status: string | undefined): boolean {
+  const [haupt, neben] = (version ?? '').split('.').map(Number)
+  return !status && (haupt > 1 || (haupt === 1 && neben >= 3))
+}
+
 /** Ein Agent gilt als verbunden, solange er spätestens alle ONLINE_MS wieder abholt. */
 export const ONLINE_MS = 60_000
 /** Eine laufende Bridge hält immer einen Long-Poll offen; bleibt ein Auftrag länger liegen, holt sie nicht mehr ab. */

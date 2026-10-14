@@ -10,7 +10,7 @@ import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import { PVS_CONNECTOR, PVS_SUCHE, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
 import {
-  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
+  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
@@ -1021,14 +1021,21 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     bridgeMelden(mandant, 'abgewiesen: Access-Anmeldung fehlt')
     return json(res, 401, { ok: false })
   }
-  if (!hub.verbunden(mandant)) bridgeMelden(mandant, `meldet sich an (${String(req.headers['user-agent'] ?? '').slice(0, 40)})`)
+  const q = new URLSearchParams(query)
+  const version = (q.get('version') ?? '').slice(0, 40) || undefined
+  const status = (q.get('status') ?? '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 160) || undefined
+  const pruefung = url === '/api/pvs-agent/auftrag' && req.method === 'GET' && nurPruefung(version, status)
+  if (!hub.verbunden(mandant) && !pruefung) bridgeMelden(mandant, `meldet sich an (${String(req.headers['user-agent'] ?? '').slice(0, 40)})`)
   if (await bridgeWeiterleiten(req, res, url, query)) return
 
+  if (pruefung) {
+    bridgeGeprueft.set(mandant, Date.now())
+    bridgeMelden(mandant, `Installation geprüft (Bridge ${version})`)
+    res.statusCode = 204
+    return void res.end()
+  }
   if (url === '/api/pvs-agent/auftrag' && req.method === 'GET') {
-    const q = new URLSearchParams(query)
     const pvs = /^[a-z]{1,20}$/.test(q.get('pvs') ?? '') ? q.get('pvs')! : undefined
-    const version = (q.get('version') ?? '').slice(0, 40) || undefined
-    const status = (q.get('status') ?? '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 160) || undefined
     if (status !== bridgeStatus.get(mandant)) {
       bridgeStatus.set(mandant, status)
       console.log('[planr] Bridge', mandant, 'Zustand:', status ?? '(ohne Angabe)')
@@ -1063,6 +1070,9 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
 
 const bridgeGemeldet = new Map<string, number>()
 const bridgeStatus = new Map<string, string | undefined>()
+/** Letzte Installationsprüfung je Praxis: Der Assistent zeigt damit, dass nur noch der Windows-Dienst fehlt. */
+const bridgeGeprueft = new Map<string, number>()
+const GEPRUEFT_MS = 15 * 60_000
 /** Höchstens einmal je Minute, Praxis und Meldung ins Protokoll – eine abgewiesene Bridge fragt alle paar Sekunden. */
 function bridgeMelden(mandant: string, text: string) {
   const k = `${mandant}|${text}`
@@ -1215,7 +1225,8 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
   if (req.method === 'GET') {
     const alt = (await agentenLesen())[m]
     const stand = alt ? hub.verbunden(m) : null
-    return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, pvs: stand?.pvs, version: stand?.version, status: stand?.status })
+    const geprueft = !stand && Date.now() - (bridgeGeprueft.get(m) ?? 0) < GEPRUEFT_MS
+    return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, geprueft, pvs: stand?.pvs, version: stand?.version, status: stand?.status })
   }
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
   if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Den Bridge-Schlüssel erzeugen dürfen nur Praxis-Admins.' })
