@@ -2,7 +2,8 @@ import { generateKeyPairSync, sign } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import {
   AgentHub, Bremse, accessPruefen, auftragErlaubt, codeHash, codePasst, cookieWert, emailErlaubt, geraetPasst, neuerPraxisCode,
-  FRUEHER_TAGE, neuerSchluessel, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AgentListe,
+  FRUEHER_TAGE, SETUP_TAGE, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
+  setupCodeFinden, setupCodeSetzen, type AgentListe,
 } from './pvs-agent-server.ts'
 
 const schluessel = neuerSchluessel()
@@ -66,6 +67,25 @@ describe('Agenten-Schlüssel', () => {
     expect(schluesselPasst(l, 'praxis', dritter, jetzt + (FRUEHER_TAGE + 1) * 86_400_000)).toBe(true)
     expect(schluesselPasst(l, 'andere', erster, jetzt)).toBe(false)
     expect(schluesselPasst({ praxis: { ...e, hash: schluesselHash(dritter), frueher: [] } }, 'praxis', erster, jetzt)).toBe(false)
+  })
+
+  it('Einrichtungscode des Setups führt zur Praxis, nur SETUP_TAGE lang', () => {
+    const jetzt = Date.parse('2026-10-14T12:00:00Z')
+    const c = neuerSetupCode()
+    expect(c).toMatch(/^[A-HJKMNP-Z2-9]{8}$/)
+    const e = setupCodeSetzen(undefined, c, 'Praxis Müller', jetzt)
+    expect(schluesselPasst({ praxis: e }, 'praxis', '')).toBe(false)
+    const l: AgentListe = { ...liste, andere: e }
+    expect(setupCodeFinden(l, c.toLowerCase(), jetzt + 60_000)).toEqual({ mandant: 'andere', praxis: 'Praxis Müller' })
+    expect(setupCodeFinden(l, neuerSetupCode(), jetzt)).toBeNull()
+    expect(setupCodeFinden(l, '', jetzt)).toBeNull()
+    expect(setupCodeFinden(l, c, jetzt + (SETUP_TAGE + 1) * 86_400_000)).toBeNull()
+    const neu = paketSchluesselSetzen(setupCodeSetzen(liste.praxis, c, 'Praxis A', jetzt), schluesselHash(neuerSchluessel()), jetzt)
+    expect(setupCodeFinden({ praxis: neu }, c, jetzt)?.mandant).toBe('praxis')
+    expect(schluesselPasst({ praxis: neu }, 'praxis', schluessel, jetzt)).toBe(true)
+    let viele = e
+    for (let i = 0; i < 7; i++) viele = setupCodeSetzen(viele, neuerSetupCode(), '', jetzt)
+    expect(viele.setup).toHaveLength(5)
   })
 
   it('gibt Adressen und Domains frei', () => {

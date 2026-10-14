@@ -10,7 +10,8 @@ import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import { PVS_CONNECTOR, PVS_SUCHE, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
 import {
-  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst, type AccessEinstellung, type AgentListe,
+  AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
+  setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
@@ -59,6 +60,8 @@ const BRIDGE_WEITER = `${ORDNER}/bridge-weiter.json`
 const BUCHUNGEN = `${ORDNER}/buchungen.json`
 /** Installationspaket für den Praxisserver (pvsConnectoR: agent/paket-bauen.ps1) */
 const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Bridge.zip`
+/** Dasselbe als Setup in einer Datei; PlanR hängt beim Herunterladen den Einrichtungscode an den Dateinamen. */
+const AGENT_SETUP = `${ORDNER}/downloads/PlanR-Bridge-Setup.exe`
 const TUNNEL_HOST = 'planr.pickadoc-tunnel.com'
 const HERKUNFT = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$|^https:\/\/[a-z0-9-]+\.pickadoc-tunnel\.com$/
 const MODUL_RE = /^[a-z0-9-]{1,40}$/
@@ -1025,8 +1028,10 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
   const version = (q.get('version') ?? '').slice(0, 40) || undefined
   const status = (q.get('status') ?? '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 160) || undefined
   const pruefung = url === '/api/pvs-agent/auftrag' && req.method === 'GET' && nurPruefung(version, status)
-  if (!hub.verbunden(mandant) && !pruefung) bridgeMelden(mandant, `meldet sich an (${String(req.headers['user-agent'] ?? '').slice(0, 40)})`)
+  const setup = url === '/api/pvs-agent/setup'
+  if (!hub.verbunden(mandant) && !pruefung && !setup) bridgeMelden(mandant, `meldet sich an (${String(req.headers['user-agent'] ?? '').slice(0, 40)})`)
   if (await bridgeWeiterleiten(req, res, url, query)) return
+  if (setup) return setupFortschritt(req, res, mandant)
 
   if (pruefung) {
     bridgeGeprueft.set(mandant, Date.now())
@@ -1040,7 +1045,9 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
       bridgeStatus.set(mandant, status)
       console.log('[planr] Bridge', mandant, 'Zustand:', status ?? '(ohne Angabe)')
     }
-    const auftrag = await hub.abholen(mandant, 25_000, { pvs, version, status }, (weg) => res.on('close', weg))
+    // Solange der Connector noch startet, kurz warten: „bereit“ soll Setup und Assistent sofort erreichen.
+    const ms = status && status !== 'bereit' ? 5_000 : 25_000
+    const auftrag = await hub.abholen(mandant, ms, { pvs, version, status }, (weg) => res.on('close', weg))
     if (res.writableEnded || res.destroyed) {
       if (auftrag) hub.zurueckstellen(mandant, auftrag)
     return
@@ -1073,6 +1080,44 @@ const bridgeStatus = new Map<string, string | undefined>()
 /** Letzte Installationsprüfung je Praxis: Der Assistent zeigt damit, dass nur noch der Windows-Dienst fehlt. */
 const bridgeGeprueft = new Map<string, number>()
 const GEPRUEFT_MS = 15 * 60_000
+interface SetupStand { beginn: number; am: number; schritt: number; gesamt: number; text: string; fehler: boolean; fertig: boolean; details: string }
+/** Fortschritt des Setups auf dem Praxisserver – der Assistent im Browser zeigt ihn live. */
+const bridgeSetup = new Map<string, SetupStand>()
+const SETUP_MS = 30 * 60_000
+
+/**
+ * POST vom Setup: Schritt x von y. GET: Ist der neue Dienst verbunden? Erst ein Abruf nach Setup-Beginn zählt –
+ * die eben beendete alte Bridge gilt sonst noch bis zu ONLINE_MS als verbunden.
+ */
+async function setupFortschritt(req: IncomingMessage, res: ServerResponse, mandant: string) {
+  if (req.method === 'GET') {
+    const stand = hub.verbunden(mandant)
+    const neu = stand && stand.am > (bridgeSetup.get(mandant)?.beginn ?? 0) ? stand : null
+    return json(res, 200, { ok: true, verbunden: !!neu, status: neu?.status, version: neu?.version })
+  }
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  let b: Record<string, unknown>
+  try {
+    b = JSON.parse(await lesenBody(req, 20_000) || '{}') as Record<string, unknown>
+  } catch {
+    return json(res, 400, { ok: false })
+  }
+  const zahl = (v: unknown) => Math.max(0, Math.min(20, Math.trunc(Number(v)) || 0))
+  const jetzt = Date.now()
+  const schritt = zahl(b.schritt)
+  const s: SetupStand = {
+    beginn: schritt <= 2 ? jetzt : bridgeSetup.get(mandant)?.beginn ?? jetzt,
+    am: jetzt, schritt, gesamt: zahl(b.gesamt) || 5,
+    text: String(b.text ?? '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 200),
+    fehler: b.fehler === true, fertig: b.fertig === true,
+    details: b.fehler === true ? String(b.details ?? '').slice(-4000) : '',
+  }
+  bridgeSetup.set(mandant, s)
+  console.log('[planr] Bridge', mandant, `Setup ${String(b.version ?? '').slice(0, 10)} ${s.schritt}/${s.gesamt}${s.fehler ? ' FEHLER' : ''}: ${s.text}`)
+  if (s.fehler && s.details) console.log(s.details.slice(-2000))
+  json(res, 200, { ok: true })
+}
+
 /** Höchstens einmal je Minute, Praxis und Meldung ins Protokoll – eine abgewiesene Bridge fragt alle paar Sekunden. */
 function bridgeMelden(mandant: string, text: string) {
   const k = `${mandant}|${text}`
@@ -1226,7 +1271,11 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
     const alt = (await agentenLesen())[m]
     const stand = alt ? hub.verbunden(m) : null
     const geprueft = !stand && Date.now() - (bridgeGeprueft.get(m) ?? 0) < GEPRUEFT_MS
-    return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, geprueft, pvs: stand?.pvs, version: stand?.version, status: stand?.status })
+    const s = bridgeSetup.get(m)
+    const setup = s && Date.now() - s.am < SETUP_MS
+      ? { schritt: s.schritt, gesamt: s.gesamt, text: s.text, fehler: s.fehler, fertig: s.fertig, details: s.details, vor: Math.round((Date.now() - s.am) / 1000) }
+      : undefined
+    return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, geprueft, setup, pvs: stand?.pvs, version: stand?.version, status: stand?.status })
   }
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
   if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Den Bridge-Schlüssel erzeugen dürfen nur Praxis-Admins.' })
@@ -1275,6 +1324,62 @@ async function bridgePaket(req: IncomingMessage, res: ServerResponse, w: Wer) {
   res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge.zip"')
   res.setHeader('Content-Length', String(daten.length))
   res.end(daten)
+}
+
+/**
+ * POST: Bridge-Setup für die eigene Praxis (nur Admin). Die Datei ist für alle gleich (und bleibt so signierbar);
+ * der Einrichtungscode steht im Dateinamen, das Setup tauscht ihn bei /api/bridge-setup/einloesen gegen den Zugang.
+ */
+async function bridgeSetupLaden(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Bridge laden nur Praxis-Admins herunter.' })
+  const daten = await readFile(AGENT_SETUP).catch(() => null)
+  if (!daten || daten.length < 1024 || daten.toString('latin1', 0, 2) !== 'MZ') {
+    return json(res, 503, { ok: false, meldung: 'Das Bridge-Setup ist gerade nicht verfügbar. Bitte rufen Sie uns an: 0211 3029 3035.' })
+  }
+  const m = w.mandant
+  const praxis = (await zugaengeLesen()).mandanten[w.konto.clientId]?.praxen?.[0]?.name ?? ''
+  const code = neuerSetupCode()
+  await exklusiv(async () => {
+    const liste = await agentenLesen()
+    liste[m] = setupCodeSetzen(liste[m], code, praxis)
+    await jsonSchreiben(AGENTEN, liste)
+  })
+  console.log('[planr] Bridge-Setup für', m, 'von', w.konto.email)
+  res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable')
+  res.setHeader('Content-Disposition', `attachment; filename="PlanR-Bridge-Setup-${code}.exe"`)
+  res.setHeader('X-PlanR-Code', code)
+  res.setHeader('Content-Length', String(daten.length))
+  res.end(daten)
+}
+
+const setupBremse = new Bremse(10, 15 * 60_000)
+
+/** POST {code} vom Setup, ohne Anmeldung: neuer Bridge-Schlüssel für die Praxis des Codes. */
+async function bridgeSetupEinloesen(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  if (setupBremse.gesperrt(ip(req))) return json(res, 429, { ok: false, meldung: 'Zu viele falsche Einrichtungscodes. Bitte in 15 Minuten noch einmal versuchen oder uns anrufen: 0211 3029 3035.' })
+  const b = JSON.parse(await lesenBody(req, 1000) || '{}') as { code?: unknown }
+  const schluesselNeu = neuerSchluessel()
+  const treffer = await exklusiv(async () => {
+    const liste = await agentenLesen()
+    const t = setupCodeFinden(liste, String(b.code ?? ''))
+    if (!t) return null
+    liste[t.mandant] = paketSchluesselSetzen(liste[t.mandant], schluesselHash(schluesselNeu))
+    await jsonSchreiben(AGENTEN, liste)
+    return t
+  })
+  if (!treffer) {
+    setupBremse.fehler(ip(req))
+    return json(res, 404, { ok: false, meldung: 'Dieser Einrichtungscode ist ungültig oder abgelaufen. Bitte die Bridge in PlanR unter „Einrichtung“ neu herunterladen und die neue Datei öffnen.' })
+  }
+  const pvs = einstellungenPruefen((await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {}))[treffer.mandant] ?? LEER).pvs
+  const host = /^[a-z0-9.-]+(:\d+)?$/i.test(req.headers.host ?? '') ? req.headers.host! : 'planr.pickadoc.de'
+  const planr = `${/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host) ? 'http' : 'https'}://${host}`
+  console.log('[planr] Bridge-Setup eingelöst für', treffer.mandant, `(${pvs || 'PVS offen'})`)
+  json(res, 200, { ok: true, planr, mandant: treffer.mandant, schluessel: schluesselNeu, praxis: treffer.praxis, pvs })
 }
 
 /**
@@ -1529,7 +1634,8 @@ const fehler500 = (res: ServerResponse) => (e: unknown) => {
  */
 export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
   const [url, query = ''] = String(req.url ?? '').split('?')
-  if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort') return agentEndpunkt(req, res, url, query)
+  if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort' || url === '/api/pvs-agent/setup') return agentEndpunkt(req, res, url, query)
+  if (url === '/api/bridge-setup/einloesen') return void bridgeSetupEinloesen(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Der Einrichtungscode kam nicht an.' }) })
   if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip' || url === '/download/PlanR-Bridge.zip') return download(req, res, url)
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
@@ -1553,6 +1659,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/einstellungen') return einstellungen(req, res, w)
   if (url === '/api/bridge-schluessel') return void bridgeSchluessel(req, res, w).catch(fehler500(res))
   if (url === '/api/bridge-paket') return void bridgePaket(req, res, w).catch(fehler500(res))
+  if (url === '/api/bridge-setup') return void bridgeSetupLaden(req, res, w).catch(fehler500(res))
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))

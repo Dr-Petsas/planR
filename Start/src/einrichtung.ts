@@ -1,5 +1,5 @@
 /**
- * Einrichtungsassistent: Praxissystem wählen, persönliches Bridge-Paket laden und installieren, Verbindung prüfen,
+ * Einrichtungsassistent: Praxissystem wählen, Bridge-Setup laden und starten (Fortschritt live), Verbindung prüfen,
  * Preise & Positionen übernehmen. Die Anleitung je PVS zeigt auch die Bestätigungsseite der Buchung.
  */
 import './einrichtung.css'
@@ -11,11 +11,15 @@ const dauer = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.
 interface Anleitung { rechner: string; ordner: string; schritte: string[]; preise: string }
 
 const BRIDGE_SCHRITTE = (ordner: string) => [
-  '<b>PlanR-Bridge herunterladen</b> (ZIP, etwa 15 MB), auf den Rechner kopieren und entpacken (Rechtsklick → „Alle extrahieren“).',
-  '<code>Installieren.cmd</code> doppelklicken und die Windows-Abfrage mit „Ja“ bestätigen. Eingaben sind nicht nötig – das Paket kennt Ihre Praxis.',
-  `Nur falls die Installation das Praxisprogramm nicht selbst findet, fragt sie nach dem Ordner – ${ordner}.`,
-  'Fenster offen lassen, bis es am Ende „Dienst \'PlanR-Bridge\' ist eingerichtet“ meldet (etwa eine Minute). Der Dienst startet ab jetzt mit dem Rechner; am Server wird kein Port geöffnet.',
+  '<b>PlanR-Bridge herunterladen</b> – am besten gleich an diesem Rechner. Sitzen Sie gerade an einem anderen, kopieren Sie die Datei per USB-Stick oder Netzwerk hinüber.',
+  'Die Datei <b>PlanR-Bridge-Setup-….exe</b> öffnen (im Browser unten bzw. oben rechts oder im Ordner „Downloads“) und die Windows-Frage mit <b>„Ja“</b> beantworten.',
+  `Das Setup richtet alles selbst ein – etwa eine Minute; den Fortschritt sehen Sie auch hier. Nur falls es das Praxisprogramm nicht findet, fragt es nach dem Ordner – ${ordner}.`,
 ]
+const WARNUNGEN = 'Warnt Windows mit „Der Computer wurde durch Windows geschützt“? Auf <b>„Weitere Informationen“</b> und dann <b>„Trotzdem ausführen“</b> klicken. Fragt der Browser, ob Sie die Datei behalten möchten: <b>„Behalten“</b>.'
+
+/** Die Schritte des Setups (PlanRBridge.exe); es meldet „Schritt x von 5“. */
+const SETUP_SCHRITTE = ['Programm einrichten', 'Zugang Ihrer Praxis holen', 'Praxisprogramm suchen', 'Windows-Dienst „PlanR-Bridge“ starten', 'Verbindung zu PlanR prüfen']
+interface SetupStand { schritt: number; gesamt: number; text: string; fehler: boolean; fertig: boolean; details: string; vor: number }
 
 const ANLEITUNGEN: Record<string, Anleitung> = {
   dampsoft: {
@@ -47,30 +51,55 @@ export function anleitungHtml(pvsId: string, mitDownload = false): string {
     <p class="ein-text"><b>Wo installieren?</b> ${a.rechner}</p>
     ${mitDownload ? '<div data-paket-platz></div>' : ''}
     <ol class="ein-liste">${a.schritte.map((s) => `<li>${s}</li>`).join('')}</ol>
-    <p class="ein-klein">Entfernen: <code>Entfernen.cmd</code> im entpackten Ordner doppelklicken. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>`
+    <p class="ein-klein">${WARNUNGEN}</p>
+    ${mitDownload ? '<p class="ein-klein" data-zip-platz></p>' : ''}
+    <p class="ein-klein">Entfernen: Windows-Einstellungen → Apps → „PlanR-Bridge“ → Deinstallieren. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>`
 }
 
-/** Persönliches Bridge-Paket holen und speichern. status 401/403: nicht (als Admin) angemeldet. */
-export async function bridgePaketLaden(): Promise<{ ok: true } | { ok: false; status: number; meldung: string }> {
+type Download = { ok: true; code: string } | { ok: false; status: number; meldung: string }
+
+async function herunterladen(url: string, name: string): Promise<Download> {
   try {
-    const r = await fetch('/api/bridge-paket', { method: 'POST' })
+    const r = await fetch(url, { method: 'POST' })
     if (!r.ok) return { ok: false, status: r.status, meldung: String(((await r.json().catch(() => ({}))) as { meldung?: string }).meldung ?? 'Der Download hat nicht geklappt.') }
     const adresse = URL.createObjectURL(await r.blob())
     const a = document.createElement('a')
     a.href = adresse
-    a.download = 'PlanR-Bridge.zip'
+    a.download = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') ?? '')?.[1] ?? name
     document.body.append(a)
     a.click()
     a.remove()
     setTimeout(() => URL.revokeObjectURL(adresse), 60_000)
-    return { ok: true }
+    return { ok: true, code: r.headers.get('X-PlanR-Code') ?? '' }
   } catch {
     return { ok: false, status: 0, meldung: 'Der Download hat nicht geklappt. Bitte die Internetverbindung prüfen.' }
   }
 }
 
+/** Bridge-Setup der eigenen Praxis; der Einrichtungscode steht im Dateinamen. status 401/403: nicht (als Admin) angemeldet. */
+export const bridgeSetupLaden = () => herunterladen('/api/bridge-setup', 'PlanR-Bridge-Setup.exe')
+/** ZIP-Paket mit Installieren.cmd für IT-Dienstleister (Zugang liegt im Paket) */
+export const bridgePaketLaden = () => herunterladen('/api/bridge-paket', 'PlanR-Bridge.zip')
+
+/** Code zum Abtippen, falls das Setup danach fragt (umbenannte Datei) */
+export const codeLesbar = (code: string) => code.replace(/^(.{4})(.{4})$/, '$1-$2')
+
+/** Fortschritt des Setups auf dem Praxisrechner, wie es ihn an PlanR meldet */
+export function setupHtml(s: SetupStand): string {
+  const stumm = !s.fertig && !s.fehler && s.vor > 300
+  const zustand = (k: number) => s.fertig || k < s.schritt ? 'ok' : k === s.schritt ? (s.fehler ? 'fehler' : 'aktiv') : ''
+  return `<div class="ein-setup" role="status" aria-live="polite">
+    <b>${s.fertig ? 'Setup abgeschlossen' : s.fehler ? 'Das Setup ist nicht durchgelaufen' : 'Setup läuft auf dem Praxisrechner …'}</b>
+    <ol>${SETUP_SCHRITTE.map((n, i) => `<li class="${zustand(i + 1)}">${n}</li>`).join('')}</ol>
+    ${s.fehler ? `<p class="ein-setup-fehler">${esc(s.text)}</p>
+      <p class="ein-klein">Das Setup-Fenster zeigt „Erneut versuchen“. Klappt es nicht, rufen Sie uns an: 0211 3029 3035 – wir sehen Ihre Meldung.</p>
+      ${s.details ? `<details class="ein-klein"><summary>Technische Details</summary><pre>${esc(s.details)}</pre></details>` : ''}`
+      : stumm ? '<p class="ein-klein">Das Setup meldet sich seit einigen Minuten nicht mehr. Ist sein Fenster noch offen – wartet es vielleicht auf eine Eingabe?</p>' : ''}
+  </div>`
+}
+
 /** geprueft: Die Prüfung im Installer hat PlanR erreicht, der Windows-Dienst meldet sich aber (noch) nicht. */
-interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; geprueft?: boolean; pvs?: string; version?: string; status?: string }
+interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; geprueft?: boolean; setup?: SetupStand; pvs?: string; version?: string; status?: string }
 interface Katalog { anzahl?: Record<string, number>; pvs?: string }
 
 const SCHRITTE = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & Positionen', 'Fertig'] as const
@@ -85,6 +114,8 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   let einst = o.einstellungen
   let stand: Stand | null = null
   let paketGeladen = false
+  let code = ''
+  let zipGeladen = false
   let katalog: Katalog | null = null
   let laeuft = false
   let meldung = ''
@@ -132,15 +163,17 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       case 2: return `
         <h3>Verbindung prüfen</h3>
         ${stand?.verbunden
-          ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>
+          ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(pvsVon(stand.pvs ?? '')?.name || stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>
              ${bridgeBereit() ? '' : `<p class="ein-warte"><span class="ein-punkt"></span> Die Bridge meldet: ${esc(stand.status ?? '')}</p>
              <p class="ein-klein">Der Connector braucht nach der Installation bis zu einer Minute. Bleibt die Meldung, rufen Sie uns an: 0211 3029 3035.</p>`}`
+          : stand?.setup
+            ? setupHtml(stand.setup)
           : stand?.geprueft
             ? `<p class="ein-ok">✓ Installation geprüft: Der Praxisrechner erreicht PlanR.</p>
                <p class="ein-warte"><span class="ein-punkt"></span> Warte auf den Windows-Dienst „PlanR-Bridge“ … Bitte das Installationsfenster offen lassen, bis es ${ENDE} meldet.</p>
                <p class="ein-klein">Hat die Installation mit einer roten Fehlermeldung geendet oder das Fenster geschlossen? Dann Installieren.cmd noch einmal starten. Protokoll: <code>C:\\ProgramData\\PlanR-Bridge\\agent.log</code> – wir helfen gern: 0211 3029 3035.</p>`
-            : `<p class="ein-warte"><span class="ein-punkt"></span> Warte auf die Bridge … Sobald die Installation ${ENDE} meldet, geht es hier weiter.</p>
-               <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und ist die Installation ohne rote Fehlermeldung durchgelaufen? Wir helfen gern: 0211 3029 3035.</p>`}`
+            : `<p class="ein-warte"><span class="ein-punkt"></span> Warte auf die Bridge … Sobald das Setup „Fertig“ meldet, geht es hier weiter.</p>
+               <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und wurde das Setup geöffnet und mit „Ja“ bestätigt? Wir helfen gern: 0211 3029 3035.</p>`}`
       case 3: return `
         <h3>Preise &amp; Positionen übernehmen</h3>
         <p class="ein-text">${esc(anleitungVon(einst.pvs)?.preise ?? '')} So rechnet PlanR von Anfang an mit Ihren eigenen Preisen.</p>
@@ -202,22 +235,31 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
     }))
     const platz = $('[data-paket-platz]')
     if (platz) {
-      platz.innerHTML = !o.admin ? '<p class="ein-hinweis">Das Paket lädt der Praxis-Admin herunter – es enthält den Zugang Ihrer Praxis.</p>'
-        : `<p><button type="button" class="neu-knopf ein-download" data-paket${laeuft ? ' disabled' : ''}>${laeuft ? 'Paket wird erstellt …' : paketGeladen ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'}</button></p>
-           ${paketGeladen ? '<p class="ein-ok">✓ Heruntergeladen (Ordner „Downloads“). Eine schon installierte Bridge läuft weiter.</p>' : ''}`
+      platz.innerHTML = !o.admin ? '<p class="ein-hinweis">Das Setup lädt der Praxis-Admin herunter – es holt sich den Zugang Ihrer Praxis.</p>'
+        : `<p><button type="button" class="neu-knopf ein-download" data-setup${laeuft ? ' disabled' : ''}>${laeuft ? 'Setup wird vorbereitet …' : paketGeladen ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'}</button></p>
+           ${paketGeladen ? `<p class="ein-ok">✓ Heruntergeladen (Ordner „Downloads“) – jetzt die Datei öffnen.${code ? ` Fragt das Setup nach einem Code: <b class="ein-code">${esc(codeLesbar(code))}</b>` : ''}</p>` : ''}
+           ${stand?.setup ? setupHtml(stand.setup) : ''}`
     }
-    $('[data-paket]')?.addEventListener('click', async () => {
+    const zipPlatz = $('[data-zip-platz]')
+    if (zipPlatz && o.admin) {
+      zipPlatz.innerHTML = zipGeladen ? '✓ ZIP-Paket heruntergeladen: entpacken und <code>Installieren.cmd</code> als Administrator ausführen.'
+        : `<button type="button" class="link-knopf" data-paket${laeuft ? ' disabled' : ''}>Für IT-Dienstleister: Bridge als ZIP-Paket mit Installieren.cmd</button>`
+    }
+    const laden = (zip: boolean) => async () => {
       laeuft = true
       meldung = ''
       zeichnen()
-      const r = await bridgePaketLaden()
+      const r = await (zip ? bridgePaketLaden() : bridgeSetupLaden())
       if (r.ok) {
-        paketGeladen = true
+        if (zip) zipGeladen = true
+        else { paketGeladen = true; code = r.code }
         stand = { ...(stand ?? { mandant: '', verbunden: false }), eingerichtet: true }
       } else meldung = r.meldung
       laeuft = false
       zeichnen()
-    })
+    }
+    $('[data-setup]')?.addEventListener('click', laden(false))
+    $('[data-paket]')?.addEventListener('click', laden(true))
     $('[data-katalog]')?.addEventListener('click', async () => {
       laeuft = true
       meldung = ''
@@ -243,9 +285,15 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   uhr = window.setInterval(async () => {
     if (!schleier.isConnected) return clearInterval(uhr)
     if (schritt < 1 || schritt > 3) return
-    const vorher = `${stand?.verbunden}|${stand?.status}|${stand?.geprueft}`
+    const merkmal = () => `${stand?.verbunden}|${stand?.status}|${stand?.geprueft}|${JSON.stringify({ ...stand?.setup, vor: (stand?.setup?.vor ?? 0) > 300 })}`
+    const vorher = merkmal()
+    const warBereit = bridgeBereit()
+    const warFertig = !!stand?.setup?.fertig
     await standLaden()
-    if (`${stand?.verbunden}|${stand?.status}|${stand?.geprueft}` !== vorher && !laeuft) zeichnen()
+    if (laeuft || merkmal() === vorher) return
+    // Meldet das Setup „fertig“ bzw. wird die Bridge jetzt bereit, geht es von selbst zur Verbindung.
+    if (schritt === 1 && ((!warFertig && stand?.setup?.fertig) || (!warBereit && bridgeBereit()))) { schritt = 2; meldung = '' }
+    zeichnen()
   }, 4000)
 
   void standLaden().then(() => {

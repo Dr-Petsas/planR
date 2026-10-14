@@ -15,6 +15,8 @@ export interface AgentEintrag {
   codeHash?: string
   /** Freigegebene PCs: Hash ihres Geräte-Cookies */
   geraete?: { hash: string; name: string; am: string }[]
+  /** Einrichtungscodes aus dem Dateinamen des Setups (PlanR-Bridge-Setup-<CODE>.exe) */
+  setup?: { hash: string; bis: string; praxis: string }[]
   angelegt?: string
 }
 export type AgentListe = Record<string, AgentEintrag>
@@ -49,6 +51,29 @@ export function neuerPraxisCode(): string {
 export const codeNorm = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, '')
 export const codeHash = (code: string) => schluesselHash(codeNorm(code))
 export const codePasst = (liste: AgentListe, mandant: string, code: string) => gleich(liste[mandant]?.codeHash, codeNorm(code))
+
+/**
+ * Das Setup trägt seinen Code im Dateinamen und tauscht ihn bei PlanR gegen den Zugang. Er bleibt SETUP_TAGE
+ * einlösbar, damit dieselbe Datei auch ein zweites Mal läuft; 8 Zeichen ≈ 40 Bit, Fehlversuche bremst PlanR.
+ */
+export const SETUP_TAGE = 7
+export const neuerSetupCode = () => [...randomBytes(8)].map((b) => CODE_ZEICHEN[b % CODE_ZEICHEN.length]).join('')
+
+export function setupCodeSetzen(alt: AgentEintrag | undefined, code: string, praxis: string, jetzt = Date.now()): AgentEintrag {
+  const neu = { hash: codeHash(code), bis: new Date(jetzt + SETUP_TAGE * 86_400_000).toISOString(), praxis }
+  const setup = [neu, ...(alt?.setup ?? [])].filter((s) => Date.parse(s.bis) > jetzt).slice(0, 5)
+  return { hash: '', emails: [], geraete: [], ...alt, setup }
+}
+
+export function setupCodeFinden(liste: AgentListe, code: string, jetzt = Date.now()): { mandant: string; praxis: string } | null {
+  const c = codeNorm(code)
+  if (c.length !== 8) return null
+  for (const [mandant, e] of Object.entries(liste)) {
+    const s = (e.setup ?? []).find((x) => Date.parse(x.bis) > jetzt && gleich(x.hash, c))
+    if (s) return { mandant, praxis: s.praxis }
+  }
+  return null
+}
 
 export const GERAET_COOKIE = (mandant: string) => `planr_pvs_${mandant}`
 export function cookieWert(kopf: string | undefined, name: string): string {

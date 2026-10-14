@@ -29,6 +29,20 @@
 .ein-spinner { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 50%; border: 3px solid rgba(0, 0, 0, 0.1); border-top-color: var(--akzent); animation: ein-dreh 0.9s linear infinite; }
 @keyframes ein-dreh { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ein-spinner { animation-duration: 3s; } }
+.ein-code { white-space: nowrap; letter-spacing: 0.04em; }
+.ein-setup { margin: 0 0 14px; padding: 12px 16px; border: 1px solid var(--linie); border-radius: 10px; font-size: 14px; }
+.ein-setup ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.ein-setup li { display: flex; align-items: center; gap: 9px; color: var(--grau); }
+.ein-setup li::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; flex: 0 0 auto; box-sizing: border-box; }
+.ein-setup li.ok { color: var(--akzent-dunkel); }
+.ein-setup li.ok::before { content: '✓'; border: 0; width: 12px; height: auto; font-weight: 700; line-height: 1; }
+.ein-setup li.aktiv { color: var(--text); font-weight: 600; }
+.ein-setup li.aktiv::before { background: var(--akzent); border-color: var(--akzent); animation: ein-puls 1.2s ease-in-out infinite; }
+.ein-setup li.fehler { color: var(--rot); font-weight: 600; }
+.ein-setup li.fehler::before { content: '✕'; border: 0; width: 12px; height: auto; line-height: 1; }
+.ein-setup-fehler { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: #fbeceb; color: var(--rot); }
+.ein-setup pre { white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow: auto; font-size: 11.5px; background: #f4f6f7; padding: 8px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .ein-setup li.aktiv::before { animation: none; } }
 .ein-pvs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 .ein-pvs-wahl { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px; border: 1px solid var(--linie); border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
 .ein-pvs-wahl:hover { border-color: var(--akzent); }
