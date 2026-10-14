@@ -595,6 +595,13 @@ body.hp-body {
 .hp-buehne--sk .hp-eyebrow { color: var(--hp-pink); }
 .hp-schraeg-handy { position: relative; z-index: 1; width: min(100%, 310px); transform: perspective(1600px) rotateY(12deg) rotate(-20deg); }
 .hp-schraeg-handy .cc-phone { width: 100%; }
+/* Der Flip-Schirm setzt backface-visibility: hidden. Zusammen mit der 3D-Kippe bleibt der Desktop dann ein Standbild. */
+.hp-schraeg-handy .cc-phone,
+.hp-schraeg-handy .cc-screen,
+.hp-schraeg-handy .cc-screen::before {
+  -webkit-backface-visibility: visible;
+  backface-visibility: visible;
+}
 .hp-chat { gap: 12px; min-height: 560px; }
 .hp-chat-kopf { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
 .hp-chat-kopf b { display: block; color: #fff; font-size: 17px; }
