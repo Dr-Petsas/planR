@@ -464,55 +464,58 @@ const HTML = `
     </div>
   </section>
 
-  <section class="hp-sektion" id="funktionen">
-    <div class="hp-sektion-kopf">
+  <section class="hp-sektion hp-fluss" id="funktionen">
+    <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span></span><span class="mobil"></span><span class="mobil"></span><span class="mobil"></span></div>
+    <div class="hp-sektion-kopf hp-ein">
       <p class="hp-eyebrow">Was PlanR kann</p>
       <h2>Alles, wofür du bisher einen Abrechnungsdienst bezahlt hast.</h2>
     </div>
     <div class="hp-karten">
-      <article><span class="hp-icon">🎙️</span><h3>Diktieren statt tippen</h3>
+      <article class="hp-ein"><span class="hp-icon">🎙️</span><h3>Diktieren statt tippen</h3>
         <p>„Clara, HKP für Frau Berger: 14 bis 16 Brücke, 26 Krone.“ Befund, Regelversorgung, Festzuschüsse und Positionen stehen in Sekunden.</p></article>
-      <article><span class="hp-icon">🎚️</span><h3>Regler für maximalen Umsatz</h3>
+      <article class="hp-ein"><span class="hp-icon">🎚️</span><h3>Regler für maximalen Umsatz</h3>
         <p>Zusatzleistungen, GOZ-Faktor, Eigenlabor und Privatanteil per Schieberegler – mit Begründungen und Mehrkostenvereinbarung.</p></article>
-      <article><span class="hp-icon">🦷</span><h3>Alle Pläne deiner Praxis</h3>
+      <article class="hp-ein"><span class="hp-icon">🦷</span><h3>Alle Pläne deiner Praxis</h3>
         <p>Kassen-HKP, Privat-ZE, Implantologie, PAR, Kieferbruch und Schienen, KFO sowie Kons und Mehrkosten – ein Werkzeug für alles.</p></article>
-      <article><span class="hp-icon">🏥</span><h3>Praxisindividuell</h3>
+      <article class="hp-ein"><span class="hp-icon">🏥</span><h3>Praxisindividuell</h3>
         <p>Deine Preislisten, dein Eigenlabor-Katalog, BEL II für jede KZV und tagesaktuelle Punktwerte. Dein Stil, nicht der vom Dienstleister.</p></article>
-      <article><span class="hp-icon">🔁</span><h3>Zurück ins PVS</h3>
+      <article class="hp-ein"><span class="hp-icon">🔁</span><h3>Zurück ins PVS</h3>
         <p>Pläne aus dem Praxisprogramm holen und fertig zurückgeben – über die PlanR-Bridge, ohne offenen Port am Praxisserver.</p></article>
-      <article><span class="hp-icon">📱</span><h3>Freigabe am Handy</h3>
+      <article class="hp-ein"><span class="hp-icon">📱</span><h3>Freigabe am Handy</h3>
         <p>Plan per Link prüfen, Regler nachziehen, freigeben. Praxisgemeinschaften sehen jeweils nur ihre eigenen Pläne.</p></article>
     </div>
   </section>
 
-  <section class="hp-sektion hp-vergleich">
+  <section class="hp-sektion hp-vergleich hp-fluss">
+    <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-vs">
-      <div class="hp-vs-alt">
+      <div class="hp-vs-alt hp-ein">
         <h3>Gestern: HKP outsourcen</h3>
         <ul><li>Bezahlung pro Plan</li><li>Tage warten, Rückfragen per Mail</li><li>Fremde Preislogik, verschenkter Umsatz</li><li>Patientendaten verlassen die Praxis</li></ul>
       </div>
-      <div class="hp-vs-neu">
+      <div class="hp-vs-neu hp-ein">
         <h3>Heute: PlanR</h3>
         <ul><li>${PLANR} € im Monat und ${cent(PRO_PLAN)} je Plan</li><li>Fertig, während der Patient noch im Stuhl sitzt</li><li>Deine Regler, dein Umsatz</li><li>Hosting in Deutschland, DSGVO-konform</li></ul>
       </div>
     </div>
   </section>
 
-  <section class="hp-sektion" id="preise">
-    <div class="hp-sektion-kopf">
+  <section class="hp-sektion hp-fluss" id="preise">
+    <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span class="mobil"></span><span class="mobil"></span></div>
+    <div class="hp-sektion-kopf hp-ein">
       <p class="hp-eyebrow">Preise</p>
       <h2>Ein Plan, der sich ab dem ersten HKP rechnet.</h2>
       <p>Alle Preise netto zzgl. USt., monatlich kündbar.</p>
     </div>
     <div class="hp-tiers">
-      <article class="hp-tier">
+      <article class="hp-tier hp-ein">
         <h3>PlanR</h3>
         <p class="hp-preis"><b>${PLANR} €</b> / Monat</p>
         <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
         <ul><li>Alle Planer: ZE, Implantologie, PAR, KB, KFO, Kons</li><li>Umsatz-Regler und Begründungen</li><li>Eigene Preislisten und Eigenlabor</li><li>PVS-Anbindung über die PlanR-Bridge</li><li>Freigabe am Handy</li></ul>
         <a class="hp-knopf" href="#buchen">PlanR buchen</a>
       </article>
-      <article class="hp-tier hp-tier-top">
+      <article class="hp-tier hp-tier-top hp-ein">
         <span class="hp-band-tag">Beliebt</span>
         <h3>PlanR + Sprach-KI</h3>
         <p class="hp-preis"><b>${PLANR + 49} €</b> / Monat</p>
@@ -520,7 +523,7 @@ const HTML = `
         <ul><li>Alles aus PlanR</li><li>Clara als Sprach-App am Handy</li><li>Pläne per Sprache anlegen und ändern</li><li>Kopplung per QR-Code, ohne Installation am PC</li><li>Eigener Name für deine Assistentin</li></ul>
         <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Mit Sprach-KI buchen</a>
       </article>
-      <article class="hp-tier">
+      <article class="hp-tier hp-ein">
         <h3>Pickadoc MAS</h3>
         <p class="hp-preis"><b>PlanR inklusive</b></p>
         <p class="hp-volumen"><b>Unbegrenzt</b> Pläne erstellen</p>
@@ -530,35 +533,37 @@ const HTML = `
     </div>
   </section>
 
-  <section class="hp-sektion hp-produkte" id="produkte">
-    <div class="hp-sektion-kopf">
+  <section class="hp-sektion hp-produkte hp-fluss" id="produkte">
+    <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span class="mobil"></span><span class="mobil"></span><span class="mobil"></span></div>
+    <div class="hp-sektion-kopf hp-ein">
       <p class="hp-eyebrow">Ein Pickadoc-Produkt</p>
       <h2>Brauchst du mehr?</h2>
       <p>PlanR ist erst der Anfang. Für jede Aufgabe in deiner Praxis hat Pickadoc eine KI-Kollegin – einzeln oder im Paket CORE, Frontdesk und MAS.</p>
     </div>
     <div class="hp-karten hp-karten-produkte">
-      <article><small>Online-Termine</small><h3>CalendR</h3><p>Die beste Alternative zu Doctolib für Zahnärzte: Online-Buchung, Praxiskalender und Erinnerungen.</p></article>
-      <article><small>Aufklärung &amp; Unterschrift</small><h3>SignR</h3><p>Aufklärungs-KI und digitale Unterschriften – Bögen am Tablet erklären, unterschreiben, ablegen.</p></article>
-      <article><small>KI-Videos</small><h3>ClonR</h3><p>Videos mit deinem Gesicht und deiner Stimme – für Aufklärung, Website und Social Media, ohne Drehtag.</p></article>
-      <article><small>CallR · Telefon-KI eingehend</small><h3>Bianca</h3><p>Nimmt jeden Anruf an, vergibt Termine und beantwortet Fragen – rund um die Uhr.</p></article>
-      <article><small>CallR · Telefon-KI ausgehend</small><h3>Lisa</h3><p>Ruft für dich heraus: Recall, Terminerinnerungen und Rückrufe.</p></article>
-      <article><small>Post-KI</small><h3>Nadine</h3><p>Liest Briefe, E-Mails und Faxe, sortiert sie zu und bereitet Antworten vor.</p></article>
-      <article><small>Abrechnungs-KI</small><h3>Sophie</h3><p>Prüft die Abrechnung und findet vergessene Leistungen. PlanR läuft direkt in Sophie.</p></article>
-      <article><small>Ersthelferin am Handy</small><h3>Clara</h3><p>Deine Leitstelle per Sprache – sie kennt die Praxis und ruft die richtige Kollegin.</p></article>
-      <article><small>QM-KI</small><h3>Julia</h3><p>Qualitätsmanagement, Hygiene und Begehungen – Dokumente immer aktuell.</p></article>
-      <article><small>Arbeitszeit-KI</small><h3>Marie</h3><p>Erfasst Arbeitszeiten und behält Urlaub und Dienstplan im Blick.</p></article>
-      <article><small>Sprechzimmer-KI</small><h3>Lena</h3><p>Hört bei der Behandlung mit und schreibt die Dokumentation für dich.</p></article>
-      <article><small>Empfang</small><h3>Self-Check-in</h3><p>Patienten melden sich an der Stele selbst an – Karte stecken, Anamnese ausfüllen, fertig.</p></article>
+      <article class="hp-ein"><small>Online-Termine</small><h3>CalendR</h3><p>Die beste Alternative zu Doctolib für Zahnärzte: Online-Buchung, Praxiskalender und Erinnerungen.</p></article>
+      <article class="hp-ein"><small>Aufklärung &amp; Unterschrift</small><h3>SignR</h3><p>Aufklärungs-KI und digitale Unterschriften – Bögen am Tablet erklären, unterschreiben, ablegen.</p></article>
+      <article class="hp-ein"><small>KI-Videos</small><h3>ClonR</h3><p>Videos mit deinem Gesicht und deiner Stimme – für Aufklärung, Website und Social Media, ohne Drehtag.</p></article>
+      <article class="hp-ein"><small>CallR · Telefon-KI eingehend</small><h3>Bianca</h3><p>Nimmt jeden Anruf an, vergibt Termine und beantwortet Fragen – rund um die Uhr.</p></article>
+      <article class="hp-ein"><small>CallR · Telefon-KI ausgehend</small><h3>Lisa</h3><p>Ruft für dich heraus: Recall, Terminerinnerungen und Rückrufe.</p></article>
+      <article class="hp-ein"><small>Post-KI</small><h3>Nadine</h3><p>Liest Briefe, E-Mails und Faxe, sortiert sie zu und bereitet Antworten vor.</p></article>
+      <article class="hp-ein"><small>Abrechnungs-KI</small><h3>Sophie</h3><p>Prüft die Abrechnung und findet vergessene Leistungen. PlanR läuft direkt in Sophie.</p></article>
+      <article class="hp-ein"><small>Ersthelferin am Handy</small><h3>Clara</h3><p>Deine Leitstelle per Sprache – sie kennt die Praxis und ruft die richtige Kollegin.</p></article>
+      <article class="hp-ein"><small>QM-KI</small><h3>Julia</h3><p>Qualitätsmanagement, Hygiene und Begehungen – Dokumente immer aktuell.</p></article>
+      <article class="hp-ein"><small>Arbeitszeit-KI</small><h3>Marie</h3><p>Erfasst Arbeitszeiten und behält Urlaub und Dienstplan im Blick.</p></article>
+      <article class="hp-ein"><small>Sprechzimmer-KI</small><h3>Lena</h3><p>Hört bei der Behandlung mit und schreibt die Dokumentation für dich.</p></article>
+      <article class="hp-ein"><small>Empfang</small><h3>Self-Check-in</h3><p>Patienten melden sich an der Stele selbst an – Karte stecken, Anamnese ausfüllen, fertig.</p></article>
     </div>
     <p class="hp-mitte"><a class="hp-knopf" href="https://pickadoc.ai" target="_blank" rel="noopener">Alle Produkte auf pickadoc.ai</a></p>
   </section>
 
-  <section class="hp-sektion hp-kontakt" id="kontakt">
-    <div class="hp-sektion-kopf">
+  <section class="hp-sektion hp-kontakt hp-fluss" id="kontakt">
+    <div class="hp-stroeme" aria-hidden="true"><span></span><span class="mobil"></span><span class="mobil"></span></div>
+    <div class="hp-sektion-kopf hp-ein">
       <h2>PlanR für deine Praxis</h2>
       <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat, Passwort. Danach sofort anmelden: Der Einrichtungsassistent führt dich bis zum ersten HKP aus deinem PVS.</p>
     </div>
-    <div class="hp-kontakt-wege">
+    <div class="hp-kontakt-wege hp-ein">
       <a class="hp-knopf hp-knopf-voll" href="#buchen">Jetzt online buchen</a>
       <a class="hp-knopf" href="mailto:info@pickadoc.de?subject=PlanR%20buchen">E-Mail schreiben</a>
       <a class="hp-knopf" href="tel:+4921130293035">0211 3029 3035</a>
@@ -746,6 +751,34 @@ function rueckStarten(wurzel: HTMLElement) {
 
 let aufraeumen: (() => void) | undefined
 
+/** Karten ab „Was PlanR kann“ nacheinander einblenden; Animationen ausserhalb des Bilds anhalten. */
+function flussStarten(wurzel: HTMLElement) {
+  const vorher = aufraeumen
+  const beobachter: IntersectionObserver[] = []
+  const teile = [...wurzel.querySelectorAll<HTMLElement>('.hp-fluss .hp-ein')]
+  const schritt = window.matchMedia('(max-width: 900px)').matches ? 130 : 75
+  const ein = new IntersectionObserver((eintraege) => {
+    const treffer = eintraege.filter((e) => e.isIntersecting)
+    treffer.sort((a, b) => (a.target.compareDocumentPosition(b.target) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+    treffer.forEach((e, i) => {
+      const el = e.target as HTMLElement
+      el.style.setProperty('--d', `${i * schritt}ms`)
+      el.classList.add('sichtbar')
+      ein.unobserve(el)
+    })
+  }, { threshold: 0.16, rootMargin: '0px 0px -36px 0px' })
+  for (const el of teile) ein.observe(el)
+  const ruhe = new IntersectionObserver((eintraege) => {
+    for (const e of eintraege) e.target.classList.toggle('hp-pausiert', !e.isIntersecting)
+  }, { rootMargin: '220px 0px' })
+  for (const el of wurzel.querySelectorAll('.hp-hero, .hp-band, .hp-buehne, .hp-sektion')) ruhe.observe(el)
+  beobachter.push(ein, ruhe)
+  aufraeumen = () => {
+    vorher?.()
+    for (const io of beobachter) io.disconnect()
+  }
+}
+
 /** Handy-Menü und Nach-oben-Pfeil. */
 function navigationStarten(wurzel: HTMLElement) {
   const burger = wurzel.querySelector<HTMLButtonElement>('[data-burger]')!
@@ -840,6 +873,7 @@ export function homepage(app: HTMLElement) {
   const wurzel = app.querySelector<HTMLElement>('.hp')!
   aufraeumen?.()
   navigationStarten(wurzel)
+  flussStarten(wurzel)
   demoStarten(wurzel)
   claraHandyStarten(wurzel)
   galerieStarten(wurzel)

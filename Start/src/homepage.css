@@ -297,6 +297,39 @@ body.hp-body {
 .hp-karten-produkte small { display: block; margin-bottom: 6px; color: var(--hp-mint); font-size: 12px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
 .hp-mitte { text-align: center; margin-top: 34px; }
 
+/* ---------- Einblenden und Stromlinien ab „Was PlanR kann“ ---------- */
+.hp-fluss { overflow: hidden; }
+.hp-fluss > .hp-sektion-kopf, .hp-fluss > .hp-karten, .hp-fluss > .hp-vs, .hp-fluss > .hp-tiers, .hp-fluss > .hp-kontakt-wege, .hp-fluss > .hp-mitte { position: relative; z-index: 1; }
+.hp-stroeme { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.hp-stroeme span {
+  position: absolute; left: -18%; width: 68%; height: 72px; border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 122, 168, 0.16), transparent);
+  animation: hp-strom 17s ease-in-out infinite alternate;
+}
+.hp-stroeme span:nth-child(2) {
+  top: 46%; left: auto; right: -16%; width: 52%; height: 40px;
+  background: linear-gradient(90deg, transparent, rgba(63, 216, 181, 0.18), transparent);
+  animation-duration: 21s; animation-direction: alternate-reverse;
+}
+.hp-stroeme span:nth-child(3) {
+  top: 78%; left: 6%; width: 46%; height: 26px;
+  background: linear-gradient(90deg, transparent, rgba(255, 122, 168, 0.1), rgba(63, 216, 181, 0.12), transparent);
+  animation-duration: 24s;
+}
+.hp-stroeme span.mobil { display: none; }
+@keyframes hp-strom {
+  from { transform: translate3d(0, 0, 0) rotate(-16deg); }
+  to { transform: translate3d(12%, 18px, 0) rotate(-12deg); }
+}
+.hp-ein, .hp-karten article.hp-ein, .hp-tier.hp-ein {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.2, .7, .2, 1), border-color 0.2s, box-shadow 0.2s;
+  transition-delay: var(--d, 0ms), var(--d, 0ms), 0s, 0s;
+}
+.hp-ein.sichtbar, .hp-karten article.hp-ein.sichtbar, .hp-tier.hp-ein.sichtbar { opacity: 1; transform: none; }
+.hp-karten article.hp-ein.sichtbar:hover { transform: translateY(-3px); }
+.hp-pausiert, .hp-pausiert *, .hp-pausiert *::before, .hp-pausiert *::after { animation-play-state: paused !important; }
+
 /* ---------- Vergleich ---------- */
 .hp-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 @media (max-width: 760px) { .hp-vs { grid-template-columns: 1fr; } }
@@ -698,9 +731,83 @@ body.hp-body {
   .hp-rueck-reiter span:last-child { display: none; }
   .hp-rueck-akte td:nth-child(3), .hp-rueck-akte th:nth-child(3) { display: none; }
   .hp-rueck-schritte { grid-template-columns: 1fr; }
+
+  .hp-nav { backdrop-filter: none; -webkit-backdrop-filter: none; background: #07161a; }
+  .hp-glow, .hp-schwebe { animation: none; }
+  .hp-formen .f3, .hp-galerie-text { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .hp-band-fenster, .hp-buehne--plaene { mask-image: none; -webkit-mask-image: none; }
+  .hp-handy .cc-flip__inner { will-change: auto; }
+  .hp-logo { filter: none; }
+  .hp-buehne, .hp-band { content-visibility: auto; contain-intrinsic-size: auto 680px; }
+
+  .hp-stroeme span.mobil { display: block; }
+  .hp-stroeme span { height: 28px; }
+  .hp-stroeme span.mobil:nth-child(4) {
+    top: 22%; left: -24%; width: 84%; height: 16px; animation-duration: 11s;
+    background: linear-gradient(90deg, transparent, rgba(255, 122, 168, 0.32), transparent);
+  }
+  .hp-stroeme span.mobil:nth-child(5) {
+    top: 58%; left: 18%; width: 70%; height: 12px; animation-duration: 13s; animation-direction: alternate-reverse;
+    background: linear-gradient(90deg, transparent, rgba(63, 216, 181, 0.3), transparent);
+  }
+  .hp-stroeme span.mobil:nth-child(6) {
+    top: 88%; left: -8%; width: 76%; height: 18px; animation-duration: 15s;
+    background: linear-gradient(90deg, transparent, rgba(255, 122, 168, 0.2), rgba(63, 216, 181, 0.18), transparent);
+  }
+  .hp-ein, .hp-karten article.hp-ein, .hp-tier.hp-ein { transform: translateY(28px); transition-duration: 0.7s; }
+
+  #funktionen .hp-karten article { position: relative; overflow: hidden; }
+  #funktionen .hp-karten article::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(var(--hp-pink), var(--hp-mint));
+    transform: scaleY(0); transform-origin: top;
+    transition: transform 0.55s cubic-bezier(.2, .8, .2, 1);
+  }
+  #funktionen .hp-karten article.sichtbar::before { transform: scaleY(1); transition-delay: var(--d, 0ms); }
+  #funktionen .hp-karten article::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 122, 168, 0.16), rgba(63, 216, 181, 0.1) 62%, transparent 74%);
+    transform: translateX(-130%);
+  }
+  #funktionen .hp-karten article.sichtbar::after { animation: hp-wisch 0.9s ease forwards; animation-delay: var(--d, 0ms); }
+  #funktionen .hp-karten article.hp-ein .hp-icon,
+  #funktionen .hp-karten article.hp-ein h3,
+  #funktionen .hp-karten article.hp-ein p,
+  .hp-karten-produkte article.hp-ein small,
+  .hp-karten-produkte article.hp-ein h3,
+  .hp-karten-produkte article.hp-ein p,
+  .hp-vs .hp-ein li,
+  .hp-tier.hp-ein li {
+    opacity: 0; transform: translateY(10px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  #funktionen .hp-karten article.sichtbar .hp-icon { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 80ms); }
+  #funktionen .hp-karten article.sichtbar h3 { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 170ms); }
+  #funktionen .hp-karten article.sichtbar p { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 260ms); }
+  .hp-karten-produkte article.sichtbar small { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 60ms); }
+  .hp-karten-produkte article.sichtbar h3 { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 140ms); }
+  .hp-karten-produkte article.sichtbar p { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 220ms); }
+  .hp-vs .sichtbar li:nth-child(1), .hp-tier.sichtbar li:nth-child(1) { opacity: 1; transform: none; transition-delay: 90ms; }
+  .hp-vs .sichtbar li:nth-child(2), .hp-tier.sichtbar li:nth-child(2) { opacity: 1; transform: none; transition-delay: 170ms; }
+  .hp-vs .sichtbar li:nth-child(3), .hp-tier.sichtbar li:nth-child(3) { opacity: 1; transform: none; transition-delay: 250ms; }
+  .hp-vs .sichtbar li:nth-child(4), .hp-tier.sichtbar li:nth-child(4) { opacity: 1; transform: none; transition-delay: 330ms; }
+  .hp-vs .sichtbar li:nth-child(5), .hp-tier.sichtbar li:nth-child(5) { opacity: 1; transform: none; transition-delay: 410ms; }
 }
+@keyframes hp-wisch { to { transform: translateX(130%); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .hp-glow, .hp-band-spur, .hp-mic i, .hp-connect-linie i, .hp-schwebe, .hp-chat-orb { animation: none; }
+  .hp-glow, .hp-band-spur, .hp-mic i, .hp-connect-linie i, .hp-schwebe, .hp-chat-orb, .hp-stroeme span { animation: none; }
   .laeuft .hp-rueck-paket, .laeuft .hp-rueck-knopf { animation: none; }
+  .hp-ein, .hp-ein.sichtbar,
+  .hp-karten article.hp-ein, .hp-karten article.hp-ein.sichtbar,
+  .hp-tier.hp-ein, .hp-tier.hp-ein.sichtbar { opacity: 1; transform: none; transition: none; }
+  #funktionen .hp-karten article.hp-ein .hp-icon,
+  #funktionen .hp-karten article.hp-ein h3,
+  #funktionen .hp-karten article.hp-ein p,
+  .hp-karten-produkte article.hp-ein small,
+  .hp-karten-produkte article.hp-ein h3,
+  .hp-karten-produkte article.hp-ein p,
+  .hp-vs .hp-ein li, .hp-tier.hp-ein li { opacity: 1; transform: none; transition: none; }
+  #funktionen .hp-karten article::before { transform: none; }
+  #funktionen .hp-karten article::after { animation: none; transform: none; }
 }
