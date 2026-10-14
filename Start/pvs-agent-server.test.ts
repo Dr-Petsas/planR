@@ -139,6 +139,32 @@ describe('Auftragswarteschlange', () => {
     hub.antworten('praxis', neu!.id, { ok: true, status: 200, daten: {} })
     expect((await ergebnis).ok).toBe(true)
   })
+
+  it('bricht einen langen Auftrag früh ab, wenn die Bridge ihn nicht abholt', async () => {
+    const hub = new AgentHub(30)
+    const start = Date.now()
+    await expect(hub.rufen('praxis', { method: 'GET', pfad: '/praxis/katalog', ms: 540_000 })).rejects.toThrow('nicht_abgeholt')
+    expect(Date.now() - start).toBeLessThan(1000)
+    expect(await hub.abholen('praxis', 10)).toBeNull()
+  })
+
+  it('lässt einen abgeholten Auftrag laufen, auch wenn er länger als die Abholfrist braucht', async () => {
+    const hub = new AgentHub(20)
+    const ergebnis = hub.rufen('praxis', { method: 'GET', pfad: '/praxis/katalog', ms: 540_000 })
+    const a = await hub.abholen('praxis', 1000)
+    await new Promise((r) => setTimeout(r, 60))
+    expect(hub.antworten('praxis', a!.id, { ok: true, status: 200, daten: {} })).toBe(true)
+    expect((await ergebnis).ok).toBe(true)
+  })
+
+  it('startet die Abholfrist neu, wenn ein Auftrag zurückgestellt wird', async () => {
+    const hub = new AgentHub(30)
+    const ergebnis = hub.rufen('praxis', { method: 'GET', pfad: '/praxis/katalog', ms: 540_000 })
+    const verloren = await hub.abholen('praxis', 1000)
+    await new Promise((r) => setTimeout(r, 50))
+    hub.zurueckstellen('praxis', verloren!)
+    await expect(ergebnis).rejects.toThrow('nicht_abgeholt')
+  })
 })
 
 describe('erlaubte Connector-Aufrufe', () => {

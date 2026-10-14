@@ -606,8 +606,8 @@ async function insPvs(req: IncomingMessage, w: Wer, modul: string, nummer: strin
       : `Dort: Patient (Nr. ${wahl.id}) → Prothetik → Plan ${vermerk.planNr} öffnen.`
     const hinweise = anlage.daten.hinweise?.length ? ` Hinweise: ${anlage.daten.hinweise.join(' ')}` : ''
     json(res, 200, { ok: true, meldung: `HKP für ${wer} in ${pvs.name} als Plan Nr. ${vermerk.planNr} angelegt. ${dort}${hinweise}` })
-  } catch {
-    json(res, 503, { ok: false, meldung: stumm(c) })
+  } catch (e) {
+    json(res, 503, { ok: false, meldung: stumm(c, e) })
   }
 }
 
@@ -615,9 +615,12 @@ interface PvsWeg { id?: string; name?: string; agent?: boolean; rufen?: Rufer; f
 
 const wegFehler = (res: ServerResponse, c: PvsWeg) => json(res, c.status ?? 409, { ok: false, meldung: c.fehler })
 
-const stumm = (c: PvsWeg) => c.agent
-  ? `Die PlanR-Bridge der Praxis antwortet nicht – läuft ${c.name} auf dem Server?`
-  : `Der ${c.name}-Connector antwortet nicht – läuft er auf diesem PC?`
+const stumm = (c: PvsWeg, e?: unknown) => e instanceof Error && e.message === 'nicht_abgeholt'
+  ? 'Die PlanR-Bridge holt keine Aufträge ab: Der Windows-Dienst „PlanR-Bridge“ auf dem Praxisrechner läuft nicht oder erreicht PlanR nicht. '
+    + 'Bitte dort unter „Dienste“ prüfen bzw. C:\\ProgramData\\PlanR-Bridge\\agent.log ansehen – oder rufen Sie uns an: 0211 3029 3035.'
+  : c.agent
+    ? `Die PlanR-Bridge der Praxis antwortet nicht – läuft ${c.name} auf dem Server?`
+    : `Der ${c.name}-Connector antwortet nicht – läuft er auf diesem PC?`
 
 /**
  * Weg zum PVS des Mandanten: über seine Bridge, sobald sie verbunden ist, sonst zum Connector auf diesem PC
@@ -688,8 +691,8 @@ async function pvsLesen(req: IncomingMessage, w: Wer, art: string, q: URLSearchP
       betrag: Number(h.estimatedTotal ?? h.total) || 0,
     })).sort((a, b) => b.nummer - a.nummer)
     return json(res, 200, { ok: true, pvs: c.name, hkps, uebernehmbar: !!PVS_CONNECTOR[c.id!] })
-  } catch {
-    return json(res, 503, { ok: false, meldung: stumm(c) })
+  } catch (e) {
+    return json(res, 503, { ok: false, meldung: stumm(c, e) })
   }
 }
 
@@ -704,8 +707,8 @@ async function ausPvs(req: IncomingMessage, w: Wer, patient: string, planNr: str
     // Der HKP gehört zur Praxis des Patienten (Praxisgemeinschaft); ältere Bridges kennen die Abfrage noch nicht.
     const zeile = await c.rufen<{ praxis?: unknown }>(`/patients/${patient}`).catch(() => null)
     praxis = (zeile?.ok ? praxisNr(zeile.daten.praxis) : null) ?? praxis
-  } catch {
-    return json(res, 503, { ok: false, meldung: stumm(c) })
+  } catch (e) {
+    return json(res, 503, { ok: false, meldung: stumm(c, e) })
   }
   if (!r.ok || !r.daten.plan) return json(res, r.status === 404 ? 404 : 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? 'HKP ließ sich nicht lesen.'}` })
   const hinweise = [...(r.daten.hinweise ?? [])]
@@ -757,8 +760,8 @@ function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis>
     let r
     try {
       r = await c.rufen!<Record<string, unknown>>('/praxis/katalog', { ms: 540_000 })
-    } catch {
-      return { ok: false, status: 503, meldung: stumm(c) }
+    } catch (e) {
+      return { ok: false, status: 503, meldung: stumm(c, e) }
     }
     if (r.status === 404) return { ok: false, status: 501, meldung: `${c.name} liefert seine Leistungsverzeichnisse noch nicht – PlanR-Bridge bzw. Connector aktualisieren.` }
     if (!r.ok) return { ok: false, status: 502, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` }
@@ -1500,7 +1503,7 @@ async function internPatienten(req: IncomingMessage, w: Wer, q: URLSearchParams,
     if (geburt && !patienten.length) patienten = (await suche(geburt)).filter((p) => p.geburtsdatum === geburt)
     return json(res, 200, { ok: true, pvs: c.name, patienten })
   } catch (e) {
-    return e instanceof Error && e.message.startsWith(`${c.name}:`) ? json(res, 502, { ok: false, meldung: e.message }) : json(res, 503, { ok: false, meldung: stumm(c) })
+    return e instanceof Error && e.message.startsWith(`${c.name}:`) ? json(res, 502, { ok: false, meldung: e.message }) : json(res, 503, { ok: false, meldung: stumm(c, e) })
   }
 }
 

@@ -149,12 +149,37 @@ export interface AgentStand { am: number; pvs?: string; version?: string; status
 
 /** Ein Agent gilt als verbunden, solange er spätestens alle ONLINE_MS wieder abholt. */
 export const ONLINE_MS = 60_000
+/** Eine laufende Bridge hält immer einen Long-Poll offen; bleibt ein Auftrag länger liegen, holt sie nicht mehr ab. */
+export const ABHOL_MS = 45_000
 
 export class AgentHub {
   private schlange = new Map<string, Auftrag[]>()
   private wartende = new Map<string, ((a: Auftrag | null) => void)[]>()
-  private offen = new Map<string, { mandant: string; fertig: (a: Antwort) => void; fehler: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>()
+  private offen = new Map<string, { mandant: string; fertig: (a: Antwort) => void; fehler: (e: Error) => void; timer: ReturnType<typeof setTimeout>; abholen?: ReturnType<typeof setTimeout> }>()
   private stand = new Map<string, AgentStand>()
+
+  constructor(private abholMs = ABHOL_MS) {}
+
+  private ausgeben(a: Auftrag) {
+    const o = this.offen.get(a.id)
+    if (o?.abholen) { clearTimeout(o.abholen); o.abholen = undefined }
+    return a
+  }
+
+  private liegtBereit(mandant: string, a: Auftrag) {
+    const o = this.offen.get(a.id)
+    if (!o) return
+    clearTimeout(o.abholen)
+    o.abholen = setTimeout(() => {
+      if (this.offen.get(a.id) !== o) return
+      clearTimeout(o.timer)
+      this.offen.delete(a.id)
+      const l = this.schlange.get(mandant) ?? []
+      const i = l.indexOf(a)
+      if (i >= 0) l.splice(i, 1)
+      o.fehler(new Error('nicht_abgeholt'))
+    }, this.abholMs)
+  }
 
   verbunden(mandant: string, jetzt = Date.now()): AgentStand | null {
     const s = this.stand.get(mandant)
@@ -169,7 +194,7 @@ export class AgentHub {
   abholen(mandant: string, ms: number, info: Omit<AgentStand, 'am'> = {}, abbruch?: (weg: () => void) => void): Promise<Auftrag | null> {
     this.stand.set(mandant, { ...info, am: Date.now() })
     const da = this.schlange.get(mandant)?.shift()
-    if (da) return Promise.resolve(da)
+    if (da) return Promise.resolve(this.ausgeben(da))
     return new Promise((resolve) => {
       const liste = this.wartende.get(mandant) ?? []
       const weg = () => {
@@ -181,7 +206,7 @@ export class AgentHub {
       const geben = (a: Auftrag | null) => {
         weg()
         this.stand.set(mandant, { ...info, am: Date.now() })
-        resolve(a)
+        resolve(a && this.ausgeben(a))
       }
       const timer = setTimeout(() => geben(null), ms)
       liste.push(geben)
@@ -203,7 +228,10 @@ export class AgentHub {
       this.offen.set(auftrag.id, { mandant, fertig, fehler, timer })
       const wartet = this.wartende.get(mandant)?.[0]
       if (wartet) wartet(auftrag)
-      else this.schlange.set(mandant, [...(this.schlange.get(mandant) ?? []), auftrag])
+      else {
+        this.schlange.set(mandant, [...(this.schlange.get(mandant) ?? []), auftrag])
+        this.liegtBereit(mandant, auftrag)
+      }
     })
   }
 
@@ -212,7 +240,10 @@ export class AgentHub {
     if (this.offen.get(a.id)?.mandant !== mandant) return
     const wartet = this.wartende.get(mandant)?.[0]
     if (wartet) wartet(a)
-    else this.schlange.set(mandant, [a, ...(this.schlange.get(mandant) ?? [])])
+    else {
+      this.schlange.set(mandant, [a, ...(this.schlange.get(mandant) ?? [])])
+      this.liegtBereit(mandant, a)
+    }
   }
 
   /** Antwort des Agenten; nur der Mandant, dem der Auftrag gehört, darf sie liefern. */
@@ -220,6 +251,7 @@ export class AgentHub {
     const o = this.offen.get(id)
     if (!o || o.mandant !== mandant) return false
     clearTimeout(o.timer)
+    clearTimeout(o.abholen)
     this.offen.delete(id)
     o.fertig(antwort)
     return true
