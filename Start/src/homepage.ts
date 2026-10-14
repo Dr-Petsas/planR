@@ -734,12 +734,24 @@ function galerieStarten(wurzel: HTMLElement) {
   const knoepfe = [...galerie.querySelectorAll<HTMLButtonElement>('[role=tab]')]
   const bilder = [...galerie.querySelectorAll<HTMLImageElement>('.hp-fenster-bild img')]
   const feld = (name: string) => galerie.querySelector<HTMLElement>(`[data-galerie-${name}]`)!
+  const buehne = galerie.closest<HTMLElement>('.hp-buehne')!
   let i = 0
-  const zeigen = (n: number) => {
+  let scrollt = false
+  let timer = 0
+  const beiScroll = () => {
+    scrollt = true
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => { scrollt = false }, 160)
+  }
+  window.addEventListener('scroll', beiScroll, { passive: true })
+  const zeigen = (n: number, sanft: boolean) => {
     i = n
     const p = PLAENE[n]
     knoepfe.forEach((k, ki) => { k.classList.toggle('aktiv', ki === n); k.setAttribute('aria-selected', String(ki === n)) })
-    knoepfe[n].parentElement!.scrollTo({ left: knoepfe[n].offsetLeft - 12, behavior: 'smooth' })
+    const leiste = knoepfe[n].parentElement!
+    if (leiste.scrollWidth > leiste.clientWidth + 4) {
+      leiste.scrollTo({ left: knoepfe[n].offsetLeft - 12, behavior: sanft ? 'smooth' : 'auto' })
+    }
     bilder.forEach((b, bi) => b.classList.toggle('aktiv', bi === n))
     feld('pfad').textContent = `planr.pickadoc.de/planer/${p.pfad}`
     feld('titel').textContent = p.titel
@@ -748,12 +760,20 @@ function galerieStarten(wurzel: HTMLElement) {
   }
   const takt = setInterval(() => {
     if (lauf !== laeuft || !document.body.contains(galerie)) return clearInterval(takt)
-    zeigen((i + 1) % PLAENE.length)
+    if (scrollt || buehne.classList.contains('hp-pausiert')) return
+    zeigen((i + 1) % PLAENE.length, false)
   }, 5000)
+  const vorher = aufraeumen
+  aufraeumen = () => {
+    vorher?.()
+    window.removeEventListener('scroll', beiScroll)
+    window.clearTimeout(timer)
+    clearInterval(takt)
+  }
   for (const k of knoepfe) {
     k.addEventListener('click', () => {
       clearInterval(takt)
-      zeigen(Number(k.dataset.i))
+      zeigen(Number(k.dataset.i), true)
     })
   }
 }
