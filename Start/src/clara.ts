@@ -11,6 +11,12 @@ interface Kopplung { ok?: boolean; url?: string; qrDataUrl?: string; code?: stri
 
 export const NAME_MUSTER = /^[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß-]{2,19}$/
 
+/** „EVA“ → „Eva“: in Großbuchstaben liest die Stimme den Namen sonst als Abkürzung vor. */
+export const nameSchreibweise = (n: string) => n.split('-')
+  .map((t) => (t.length > 1 && t === t.toUpperCase() ? t[0] + t.slice(1).toLowerCase() : t))
+  .join('-')
+  .replace(/^./, (c) => c.toUpperCase())
+
 export async function claraLaden(): Promise<ClaraStand | null> {
   try {
     const r = await fetch('/api/clara', { cache: 'no-store' })
@@ -58,12 +64,12 @@ export function claraOeffnen(o: { admin: boolean; stand: ClaraStand | null; geae
               <img src="${esc(kopplung.qrDataUrl)}" alt="QR-Code zum Koppeln" width="200" height="200">
               <div>
                 <ol class="ein-liste">
-                  <li>QR-Code mit der Handy-Kamera scannen.</li>
-                  <li>Mitteilungen erlauben und die Seite zum Home-Bildschirm hinzufügen.</li>
-                  <li>App öffnen und „${esc(name)}“ antippen.</li>
+                  <li>QR-Code mit der Handy-Kamera scannen und die Seite öffnen.</li>
+                  <li>Zum Home-Bildschirm hinzufügen: iPhone über Teilen ⬆ → „Zum Home-Bildschirm“, Android über das Menü ⋮ → „Zum Startbildschirm hinzufügen“.</li>
+                  <li>Die neue App „${esc(name)}“ öffnen. Fragt sie nach einem Code, diesen eingeben${kopplung.code ? ':' : '.'}</li>
                 </ol>
-                ${kopplung.code ? `<p class="ein-klein">Ohne Kamera: Code <code>${esc(kopplung.code)}</code> in der App eingeben.</p>` : ''}
-                <p class="ein-klein">Gültig bis ${esc(bis)} Uhr, nur für ein Gerät.</p>
+                ${kopplung.code ? `<div class="cl-code" aria-label="Kopplungscode">${esc(kopplung.code)}</div>` : ''}
+                <p class="ein-klein">Gültig bis ${esc(bis)} Uhr, nur für ein Gerät. Danach in der App auf den Kreis tippen und lossprechen.</p>
               </div>
             </div>`
           : `<p class="ein-text">Ihr Handy wird zum Mikrofon für ${esc(name)}. Der QR-Code gilt 30 Minuten und koppelt genau ein Gerät mit Ihrem Konto.</p>
@@ -81,8 +87,9 @@ export function claraOeffnen(o: { admin: boolean; stand: ClaraStand | null; geae
     schleier.querySelector('[data-koppeln]')?.addEventListener('click', () => void koppeln())
   }
 
-  const speichern = async (neu: string) => {
-    if (!NAME_MUSTER.test(neu)) { meldung = 'Bitte ein Wort mit 3 bis 20 Buchstaben (Bindestrich erlaubt).'; return zeichnen() }
+  const speichern = async (eingabe: string) => {
+    if (!NAME_MUSTER.test(eingabe)) { meldung = 'Bitte ein Wort mit 3 bis 20 Buchstaben (Bindestrich erlaubt).'; return zeichnen() }
+    const neu = nameSchreibweise(eingabe)
     laeuft = true; meldung = ''; zeichnen()
     try {
       const r = await fetch('/api/clara', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assistantName: neu }) })

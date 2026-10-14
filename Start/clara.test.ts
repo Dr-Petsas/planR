@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NAME_MUSTER } from './src/clara'
+import { NAME_MUSTER, nameSchreibweise } from './src/clara'
 
 // Gleiche Regel wie MAS (backend/src/hkp/planrClara.js rufnameSaeubern): der Name ist zugleich Weckwort.
 describe('Name der HKP-Assistentin', () => {
@@ -8,5 +8,11 @@ describe('Name der HKP-Assistentin', () => {
   })
   it('lehnt Leerzeichen, Ziffern, Zeichen und Überlänge ab', () => {
     for (const n of ['Al', 'Frau Holle', 'R2D2', '<b>', '-Mia', 'x'.repeat(21), '']) expect(NAME_MUSTER.test(n), n).toBe(false)
+  })
+  it('schreibt Großbuchstaben-Namen als Namen, damit die Stimme sie nicht buchstabiert', () => {
+    expect(nameSchreibweise('EVA')).toBe('Eva')
+    expect(nameSchreibweise('ANNA-LENA')).toBe('Anna-Lena')
+    expect(nameSchreibweise('eva')).toBe('Eva')
+    expect(nameSchreibweise('McKenzie')).toBe('McKenzie')
   })
 })

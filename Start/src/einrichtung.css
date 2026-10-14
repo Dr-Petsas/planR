@@ -78,3 +78,4 @@
 .cl-qr { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
 .cl-qr img { border: 1px solid var(--linie); border-radius: 12px; }
 .cl-qr > div { flex: 1; min-width: 220px; }
+.cl-code { display: inline-block; margin: 10px 0 0 22px; padding: 8px 16px; border: 2px solid var(--akzent); border-radius: 10px; background: var(--akzent-hell); color: var(--akzent-dunkel); font: 700 28px/1.2 ui-monospace, Consolas, monospace; letter-spacing: 0.22em; user-select: all; }
