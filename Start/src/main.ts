@@ -110,7 +110,7 @@ function planUrl(p: PlanKarte): string | null {
   const basis = adresse(planer, location)
   if (!basis) return null
   if (!p.oeffnen) return basis
-  const url = new URL(basis)
+  const url = new URL(basis, location.href)
   new URLSearchParams(p.oeffnen).forEach((v, k) => url.searchParams.set(k, v))
   return url.toString()
 }
