@@ -37,6 +37,7 @@ function haken(w: Werte, f: Record<string, string>, name: string, text: string):
 /** Seite #buchen bzw. #buchen-clara */
 export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
   let schritt = 0
+  let erreicht = 0
   let fehler: Record<string, string> = {}
   let meldung = ''
   let sendet = false
@@ -163,6 +164,22 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     </aside>`
   }
 
+  function schrittLeiste(): string {
+    const p = PAKETE[paket()]
+    const punkte = SCHRITTE.map((s, i) => {
+      const klasse = i === schritt ? 'aktiv' : i <= erreicht ? 'erledigt' : ''
+      const an = i <= erreicht || i === schritt + 1
+      return `<li class="${klasse}"><button type="button" data-sprung="${i}"${an ? '' : ' disabled'}${i === schritt ? ' aria-current="step"' : ''}><span>${i + 1}</span><b>${s}</b></button></li>`
+    }).join('')
+    return `<nav class="bu-schritte" aria-label="Buchungsschritte">
+        <button type="button" class="bu-pfeil" data-sprung="${schritt - 1}" aria-label="Zurück">←</button>
+        <ol>${punkte}</ol>
+        <button type="button" class="bu-pfeil" data-sprung="${schritt + 1}" aria-label="Weiter"${schritt >= SCHRITTE.length - 1 ? ' disabled' : ''}>→</button>
+      </nav>
+      <p class="bu-schritt-name">${schritt + 1} von ${SCHRITTE.length} · ${SCHRITTE[schritt]}</p>
+      ${schritt > 0 ? `<p class="bu-preiszeile">${p.monat} € plus ${cent(PRO_PLAN)} je Plan</p>` : ''}`
+  }
+
   function zeichnen() {
     app.innerHTML = `
       <div class="bu-seite">
@@ -170,7 +187,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
           <a class="marke" href="#top"><span class="logo">${logo()}</span><div><h1>PlanR</h1><p>Buchen</p></div></a>
           <a class="link-knopf" href="#anmelden">Schon Kunde? Anmelden</a>
         </header>
-        <ol class="bu-schritte">${SCHRITTE.map((s, i) => `<li class="${i < schritt ? 'erledigt' : i === schritt ? 'aktiv' : ''}"><span>${i + 1}</span>${s}</li>`).join('')}</ol>
+        ${schrittLeiste()}
         <div class="bu-rumpf">
           <form class="bu-karte" novalidate>
             ${inhalt()}
@@ -194,9 +211,29 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
       const el = e.target as HTMLInputElement
       if (el.type === 'radio' || el.type === 'checkbox') { w[el.name] = el.type === 'checkbox' ? el.checked : el.value; if (el.name === 'paket') zeichnen() }
     })
-    app.querySelector('[data-zurueck]')?.addEventListener('click', () => { schritt -= 1; fehler = {}; meldung = ''; zeichnen(); scrollTo(0, 0) })
+    app.querySelector('[data-zurueck]')?.addEventListener('click', () => springen(schritt - 1))
+    for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-sprung]')) {
+      knopf.addEventListener('click', () => springen(Number(knopf.dataset.sprung)))
+    }
     form.addEventListener('submit', (e) => { e.preventDefault(); void weiter() })
     app.querySelector<HTMLElement>('.fehler input, .fehler select')?.focus()
+  }
+
+  function springen(ziel: number) {
+    if (ziel < 0) { location.hash = '#top'; return }
+    if (ziel >= SCHRITTE.length || ziel === schritt) return
+    if (ziel > schritt) {
+      fehler = pruefen()
+      meldung = ''
+      if (Object.keys(fehler).length) { meldung = 'Bitte die markierten Angaben ergänzen.'; zeichnen(); return }
+      if (ziel > erreicht && ziel !== schritt + 1) return
+    }
+    schritt = ziel
+    erreicht = Math.max(erreicht, schritt)
+    fehler = {}
+    meldung = ''
+    zeichnen()
+    scrollTo(0, 0)
   }
 
   function pruefen(): Record<string, string> {
@@ -231,7 +268,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     fehler = pruefen()
     meldung = ''
     if (Object.keys(fehler).length) { meldung = 'Bitte die markierten Angaben ergänzen.'; return zeichnen() }
-    if (schritt < SCHRITTE.length - 1) { schritt += 1; zeichnen(); scrollTo(0, 0); return }
+    if (schritt < SCHRITTE.length - 1) { schritt += 1; erreicht = Math.max(erreicht, schritt); zeichnen(); scrollTo(0, 0); return }
     sendet = true
     zeichnen()
     try {

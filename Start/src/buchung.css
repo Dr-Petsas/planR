@@ -4,13 +4,34 @@
 .bu-kopf h1 { margin: 0; font-size: 22px; }
 .bu-kopf p { margin: 0; color: var(--grau); font-size: 13px; }
 .bu-kopf .link-knopf { margin-left: 0; }
-.bu-schritte { max-width: 1080px; margin: 0 auto 16px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
-.bu-schritte li { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--grau); padding: 5px 12px 5px 5px; border-radius: 999px; background: #fff; border: 1px solid var(--linie); }
+.bu-schritte { max-width: 1080px; margin: 0 auto 16px; display: flex; align-items: center; gap: 8px; }
+.bu-schritte ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; flex: 1; }
+.bu-schritte li button {
+  display: flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; color: var(--grau);
+  padding: 5px 12px 5px 5px; border-radius: 999px; background: #fff; border: 1px solid var(--linie); cursor: pointer;
+}
+.bu-schritte li button:disabled { cursor: default; opacity: 0.45; }
 .bu-schritte li span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #f1f3f4; font-weight: 700; font-size: 11.5px; }
-.bu-schritte li.aktiv { color: var(--akzent-dunkel); font-weight: 600; border-color: var(--akzent); }
+.bu-schritte li.aktiv button { color: var(--akzent-dunkel); font-weight: 600; border-color: var(--akzent); }
 .bu-schritte li.aktiv span, .bu-schritte li.erledigt span { background: var(--akzent); color: #fff; }
+.bu-pfeil, .bu-schritt-name, .bu-preiszeile { display: none; }
 .bu-rumpf { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 1fr 280px; gap: 18px; align-items: start; }
-@media (max-width: 860px) { .bu-rumpf { grid-template-columns: 1fr; } .bu-leiste { order: -1; } }
+@media (max-width: 860px) {
+  .bu-rumpf { grid-template-columns: 1fr; }
+  .bu-pfeil {
+    display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0;
+    border-radius: 50%; border: 1px solid var(--linie); background: #fff; color: var(--akzent-dunkel);
+    font-size: 18px; cursor: pointer;
+  }
+  .bu-pfeil:disabled { opacity: 0.35; cursor: default; }
+  .bu-schritte { margin-bottom: 6px; }
+  .bu-schritte ol { flex-wrap: nowrap; justify-content: center; }
+  .bu-schritte li button { width: 36px; height: 36px; padding: 0; justify-content: center; border-radius: 50%; }
+  .bu-schritte li b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .bu-schritt-name, .bu-preiszeile { display: block; max-width: 1080px; margin: 0 auto 8px; text-align: center; font-size: 14px; }
+  .bu-schritt-name { font-weight: 650; color: var(--text); }
+  .bu-preiszeile { margin-bottom: 12px; font-weight: 750; color: var(--akzent-dunkel); }
+}
 .bu-karte { background: #fff; border: 1px solid var(--linie); border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(20, 40, 50, 0.06); }
 .bu-karte h2 { margin: 0 0 14px; font-size: 21px; }
 .bu-karte h3 { margin: 22px 0 10px; font-size: 16px; }
@@ -36,6 +57,7 @@
 .bu-preis small { font-size: 14px; font-weight: 500; color: var(--grau); margin: 0; }
 .bu-volumen { color: var(--akzent-dunkel); font-weight: 650; font-size: 14px; }
 .bu-leiste { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 4px; background: #fff; border: 1px solid var(--linie); border-radius: 16px; padding: 18px; }
+@media (max-width: 860px) { .bu-leiste { display: none; } }
 .bu-leiste p { margin: 8px 0 0; font-size: 13.5px; color: #3b464d; }
 .bu-leiste ul { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: var(--grau); display: flex; flex-direction: column; gap: 3px; }
 .bu-leiste a { color: var(--akzent-dunkel); }
