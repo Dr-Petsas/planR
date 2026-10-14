@@ -134,6 +134,37 @@ describe('Auftrag verstehen', () => {
     expect(r.plan.befunde.map((x) => x.nr)).toEqual(expect.arrayContaining(['4.1', '4.6', '4.7']))
     expect(r.hinweise).toContain('18 und 28 nicht genannt – als fehlend angenommen.')
   })
+
+  it('Kiefer-Aussage mitten im Auftrag: „Unterkiefer ist voll bezahnt“ plant keinen UK (Anruf 14.10.2026 12:30)', () => {
+    const erster = 'Genau, da möchte ich einen heilen Kostenplan machen für eine Oberkiefer-Teleskoppprothese mit Teleskope auf 13 und 23 und die Zähne 14 bis 17 und 24 bis 27 ersetzen'
+    const zweiter = 'Es fehlen 14 bis 17, 24 bis 27, die Achter fehlen alle, Unterkiefer ist voll bezahnt, und ich möchte Teleskope auf 13 und 23 und ersetzte Zähne prämolaren und molaren im Oberkiefer, acht Stück insgesamt'
+    for (const satz of [zweiter, `${erster}. ${zweiter}`]) {
+      const a = auftragVerstehen(satz)
+      expect(a.teile).toBeUndefined()
+      expect([a.kiefer, a.versorgung, a.pfeiler]).toEqual(['OK', 'teleskopprothese', ['13', '23']])
+      const b = befundVerstehen(befundAusAuftrag(satz), a.kiefer)
+      expect(['14', '17', '24', '27', '18', '28'].map((z) => b[z])).toEqual(['f', 'f', 'f', 'f', 'f', 'f'])
+      expect(['31', '36', '41', '47'].map((z) => b[z])).toEqual(['', '', '', ''])
+      expect(planAusAuftrag(a, b).status).toBe('ok')
+    }
+    const nurErster = auftragVerstehen(erster)
+    expect([nurErster.kiefer, nurErster.pfeiler]).toEqual(['OK', ['13', '23']])
+    expect(befundVerstehen(befundAusAuftrag(erster), 'OK')).toMatchObject({ 14: 'f', 17: 'f', 24: 'f', 27: 'f' })
+  })
+
+  it('Antwort auf „Für den Unterkiefer habe ich keinen Befund“: gilt dem genannten Kiefer, nicht dem Auftrags-Kiefer', () => {
+    const b = befundVerstehen('es fehlen 14 bis 17. Im Unterkiefer sind alle Zähne vorhanden', 'OK')
+    expect([b[14], b[36], b[41]]).toEqual(['f', '', ''])
+    expect(b[11]).toBeUndefined()
+    for (const s of ['unten sind alle da', 'im Unterkiefer fehlen keine', 'Unterkiefer vollbezahnt', 'im Unterkiefer fehlt keiner'])
+      expect(befundVerstehen(s, 'OK')[46]).toBe('')
+    expect(befundVerstehen('die sind alle da', 'UK')[36]).toBe('')
+    expect(befundAusAuftrag('Unterkiefer ist voll bezahnt')).toBe('unterkiefer ist voll bezahnt')
+    for (const uk of ['Im Unterkiefer die Sechser sind kariös', 'im Unterkiefer 36 ist nicht erhaltungswürdig']) {
+      const a = auftragVerstehen(`Oberkiefer Teleskopprothese auf 13 und 23, 14 bis 17 und 24 bis 27 ersetzen. ${uk}`)
+      expect([a.teile, a.kiefer, a.versorgung]).toEqual([undefined, 'OK', 'teleskopprothese'])
+    }
+  })
 })
 
 describe('Plan aus Auftrag', () => {

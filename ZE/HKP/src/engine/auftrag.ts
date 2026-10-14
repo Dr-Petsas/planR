@@ -171,15 +171,18 @@ function versorgungIn(t: string, coverDenture: boolean): Versorgung | undefined 
 }
 
 export function auftragVerstehen(text: string): HkpAuftrag {
+  const ohne = ohneKieferBefund(text)
+  if (ohne) return { ...auftragVerstehen(ohne), text }
   const auftrag = einzelAuftrag(text)
   const abschnitte = kieferAbschnitte(text)
   const beide = BEIDE_KIEFER.test(norm(text))
   if (abschnitte.length < 2 && !(beide && auftrag.versorgung === 'totalprothese')) return auftrag
   const roh = abschnitte.map((a) => ({ ...einzelAuftrag(a.text), kiefer: a.kiefer }))
   // Abschnitt nur mit Kiefer-Wort („… im Oberkiefer und Unterkiefer“) erbt die Versorgung des Nachbarn –
-  // nicht, wenn dort ein Befund steht („unten bleibt alles“).
+  // nicht, wenn dort ein Befund steht („unten bleibt alles“, „im Unterkiefer ist die 36 kariös“).
   roh.forEach((x, i) => {
-    if (x.versorgung || /bleib|erhalt|vorhanden|fehl|nichts|kein|gesund|intakt/.test(norm(abschnitte[i].text))) return
+    const t = norm(abschnitte[i].text)
+    if (x.versorgung || /nichts|kein/.test(t) || BEFUND_WORTE.some(([re]) => re.test(t))) return
     const nachbar = roh.slice(0, i).reverse().find((y) => y.versorgung) ?? roh.slice(i + 1).find((y) => y.versorgung)
     if (nachbar?.versorgung) x.versorgung = nachbar.versorgung
   })
@@ -235,8 +238,9 @@ function einzelAuftrag(text: string): HkpAuftrag {
       // Einzelzahn: „Implantat am Zahn 26“, „in Region 26“ (Anruf 07.10.2026 19:36)
       || ((auftrag.versorgung === 'implantatkronen' || auftrag.versorgung === 'kronen')
         && /implantat|\b(?:am|an|bei|f(?:ü|ue)r) (?:zahn )?[1-4][1-8]\b|\bzahn [1-4][1-8]\b|\bregion?\b/.test(teil))) {
-      // „Teleskop auf 13 und 23 ersetzte Zähne 14 …“: ab dem Befund-Wort sind es keine Pfeiler mehr
-      const vorBefund = teil.split(BEFUND_BEGINN)[0]
+      // „Teleskop auf 13 und 23 ersetzte Zähne 14 …“: ab dem Befund-Wort sind es keine Pfeiler mehr,
+      // ebenso ab „und die Zähne 14 bis 17 ersetzen“ (Verb hinten)
+      const vorBefund = teil.split(BEFUND_BEGINN)[0].split(ZAEHNE_NACHGESTELLT)[0]
       const pf = vorBefund === teil ? zs : zaehneIn(vorBefund, auftrag.kiefer)
       auftrag.pfeiler.push(...pf.filter((z) => !auftrag.pfeiler.includes(z)))
       pfeilerDavor = vorBefund === teil
@@ -281,13 +285,15 @@ function brueckeVerstehen(t: string, a: HkpAuftrag) {
   a.glieder = glieder
 }
 
-const BEFUND_BEGINN = /\b(?:ersetzt\w*|(?:es )?fehl\w*|vorhanden|extrah\w*|entfern\w*)\b/
+const BEFUND_BEGINN = /\b(?:ersetz\w*|(?:es )?fehl\w*|vorhanden|extrah\w*|entfern\w*)\b/
+/** „… und die Zähne 14 bis 17 ersetzen“: ab hier stehen Befund-Zähne, das Verb folgt erst am Ende */
+const ZAEHNE_NACHGESTELLT = / und (?:die |der )?z(?:ä|ae)hne? (?=[1-4][1-8]\b)/
 
 const BEFUND_WORTE: [RegExp, string][] = [
   [/nicht erhaltungsw(ü|ue)rdig|zerst(ö|oe)rt|extrah|entfern|ziehen/, 'x'],
   [/erneuerungsbed(ü|ue)rftig|krone (ist )?(kaputt|defekt|insuffizient)|\b(?:k ?w|ka ?weh)\b/, 'kw'],
   [/(ü|ue)berkronungsbed(ü|ue)rftig|krone n(ö|oe)tig|braucht? (eine )?krone|kariös|karies|\b(?:w ?w ?w?|weh ?weh)\b/, 'ww'],
-  [/fehl|ohne zahn|l(ü|ue)cke|ersetzt/, 'f'],
+  [/fehl|ohne zahn|l(ü|ue)cke|ersetz/, 'f'],
   [/vorhanden|gesund|intakt|da\b|steh|bleib|erhalt/, ''],
 ]
 
@@ -328,15 +334,30 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
     letztes = code
   })
   for (const k of nurKiefer) for (const z of REIHE[k]) if (!(z in befund)) befund[z] = 'f'
-  if (ALLE_DA.test(norm(text)))
-    for (const k of kiefer ? [kiefer] : (['OK', 'UK'] as Kiefer[])) for (const z of REIHE[k]) if (!(z in befund) && !istWeisheitszahn(z)) befund[z] = ''
+  // „Im Unterkiefer sind alle Zähne vorhanden“ gilt dem genannten Kiefer, auch wenn der Auftrag im OK liegt
+  const alleDa = new Set<Kiefer>()
+  const alleDaTeile = roh.map((teil, i) => (ALLE_DA.test(` ${teil} `) ? genannt[i] ?? null : undefined)).filter((k) => k !== undefined)
+  for (const k of alleDaTeile) if (k) alleDa.add(k)
+  if (alleDaTeile.includes(null) || (!alleDaTeile.length && ALLE_DA.test(norm(text))))
+    for (const k of kiefer ? [kiefer] : (['OK', 'UK'] as Kiefer[])) alleDa.add(k)
+  for (const k of alleDa) for (const z of REIHE[k]) if (!(z in befund) && !istWeisheitszahn(z)) befund[z] = ''
   if (kiefer && /alle (anderen|übrigen|uebrigen|restlichen) fehlen|sonst (fehlt|fehlen) alle|rest fehlt|(anderen|übrigen|uebrigen|restlichen) z(ä|ae)hne (sind |werden )?(ersetzt|fehlen)/.test(norm(text)))
     for (const z of REIHE[kiefer]) if (!(z in befund)) befund[z] = 'f'
   return befund
 }
 
 /** „Alle Zähne sind gesund“, „es fehlt keiner“: Antwort auf die Befundfrage – die übrigen Zähne sind vorhanden */
-const ALLE_DA = /\balle (?:anderen |(?:ü|ue)brigen )?z(?:ä|ae)hne (?:sind )?(?:noch )?(?:gesund|vorhanden|da|intakt|in ordnung|erhalten)\b|\bes fehlt (?:kein zahn|keiner|nichts)\b|\bnichts fehlt\b|\bkeine z(?:ä|ae)hne fehlen\b|\bvoll ?bezahnt\b/
+const ALLE_DA = /\balle (?:anderen |(?:ü|ue)brigen )?z(?:ä|ae)hne (?:sind )?(?:noch )?(?:gesund|vorhanden|da|intakt|in ordnung|erhalten)\b|\bes fehlt (?:kein zahn|keiner|nichts)\b|\bnichts fehlt\b|\bkeine z(?:ä|ae)hne fehlen\b|\bvoll ?bezahnt\b|\b(?:sind|ist) (?:noch )?alle (?:da|vorhanden|gesund|intakt|drin)\b|\bfehl(?:t|en) (?:kein(?:er|e)?|nichts)\b|\bkein(?:er|e)? fehl(?:t|en)\b/
+
+/** „Unterkiefer ist voll bezahnt“, „unten sind alle da“: Befund über einen ganzen Kiefer, keine Versorgung */
+const kieferBefundTeil = (teil: string) => !!kieferIn(` ${teil} `) && ALLE_DA.test(` ${teil} `) && !versorgungIn(teil, false) && !VERSORGUNGS_TEIL.test(teil)
+
+/** Auftrag ohne seine Kiefer-Befundteile – sonst öffnet „Unterkiefer ist voll bezahnt“ einen eigenen Versorgungs-Abschnitt; '' wenn es keine gibt */
+function ohneKieferBefund(text: string): string {
+  const teile = satzteile(text)
+  const rest = teile.filter((t) => !kieferBefundTeil(t))
+  return rest.length && rest.length < teile.length ? rest.join(', ') : ''
+}
 
 const ALLE_FEHLEN = /\b(fehlen|fehlt) (ihm |ihr )?(schon )?alle z(ä|ae)hne\b|\balle z(ä|ae)hne (fehlen|sind (weg|raus|gezogen))\b|\bzahnlos\b|\bkeine z(ä|ae)hne mehr\b/
 
@@ -344,7 +365,7 @@ const VERSORGUNGS_TEIL = /prothese|teleskop|konus|doppelkrone|krone|anker|pfeile
 
 /** Befund-Satzteile aus einem gesprochenen Auftrag („… die Sechser und Siebener fehlen …“), sonst '' */
 /** Satzteil, der nur Zähne aufzählt („die Vierer“, „Fünfer“) – sein Verb steht weiter hinten */
-const NUR_ZAEHNE = /^(?:(?:die|der|den|und|sowie|auch|noch|[1-4][1-8]|\d(?:er|ern)|einser|zweier|dreier|eckz(?:ah|äh|aeh)ne?n?|vierer|f(?:ü|ue)nfer|sechser|siebe?ner|achter)n?\s*)+$/
+const NUR_ZAEHNE = /^(?:(?:die|der|den|und|sowie|auch|noch|bis|[1-4][1-8]|\d(?:er|ern)|einser|zweier|dreier|eckz(?:ah|äh|aeh)ne?n?|vierer|f(?:ü|ue)nfer|sechser|siebe?ner|achter)n?\s*)+$/
 
 export function befundAusAuftrag(text: string): string {
   const satz = befundSaetze(text)
@@ -358,12 +379,21 @@ export function befundAusAuftrag(text: string): string {
 }
 
 function befundSaetze(text: string): string {
+  // Kiefer-Befundteile stehen für sich (sie tragen ihren Kiefer) und hinten, damit kein Satzteil ihren Kiefer erbt
+  const kieferBefund = satzteile(text).filter(kieferBefundTeil)
+  if (kieferBefund.length) {
+    const ohne = ohneKieferBefund(text)
+    return [ohne ? befundSaetze(ohne) : '', ...kieferBefund].filter(Boolean).join(', ')
+  }
   const ausTeil = (abschnitt: string) => {
-    // „Teleskop auf 13 und 23 ersetzte Zähne 14“: der Befund hängt am Versorgungs-Satzteil
+    // „Teleskop auf 13 und 23 ersetzte Zähne 14“: der Befund hängt am Versorgungs-Satzteil;
+    // „Teleskope auf 13 und 23 und die Zähne 14 bis 17 ersetzen“: er beginnt bei „die Zähne“
     const teile = satzteile(abschnitt).flatMap((t) => {
       const m = BEFUND_BEGINN.exec(t)
-      return m && m.index > 0 && VERSORGUNGS_TEIL.test(t.slice(0, m.index)) && !VERSORGUNGS_TEIL.test(t.slice(m.index))
-        ? [t.slice(0, m.index).trim(), t.slice(m.index)] : [t]
+      if (!(m && m.index > 0 && VERSORGUNGS_TEIL.test(t.slice(0, m.index)) && !VERSORGUNGS_TEIL.test(t.slice(m.index)))) return [t]
+      const z = ZAEHNE_NACHGESTELLT.exec(t.slice(0, m.index))
+      const ab = z && !VERSORGUNGS_TEIL.test(t.slice(z.index, m.index)) ? z.index : m.index
+      return [t.slice(0, ab).trim(), t.slice(ab).replace(/^ und /, '').trim()]
     })
     const istBefund = (t: string) => !VERSORGUNGS_TEIL.test(t) && BEFUND_WORTE.some(([re]) => re.test(t))
     return teile.filter((t, i) => {
