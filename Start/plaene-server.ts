@@ -1080,7 +1080,8 @@ const bridgeStatus = new Map<string, string | undefined>()
 /** Letzte Installationsprüfung je Praxis: Der Assistent zeigt damit, dass nur noch der Windows-Dienst fehlt. */
 const bridgeGeprueft = new Map<string, number>()
 const GEPRUEFT_MS = 15 * 60_000
-interface SetupStand { beginn: number; am: number; schritt: number; gesamt: number; text: string; fehler: boolean; fertig: boolean; details: string }
+/** hinweis: zum Abschluss, z. B. dass die Bridge nur liest oder welche von mehreren DS-Win-Kopien sie nimmt */
+interface SetupStand { beginn: number; am: number; schritt: number; gesamt: number; text: string; fehler: boolean; fertig: boolean; details: string; hinweis: string }
 /** Fortschritt des Setups auf dem Praxisserver – der Assistent im Browser zeigt ihn live. */
 const bridgeSetup = new Map<string, SetupStand>()
 const SETUP_MS = 30 * 60_000
@@ -1111,9 +1112,10 @@ async function setupFortschritt(req: IncomingMessage, res: ServerResponse, manda
     text: String(b.text ?? '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 200),
     fehler: b.fehler === true, fertig: b.fertig === true,
     details: b.fehler === true ? String(b.details ?? '').slice(-4000) : '',
+    hinweis: String(b.hinweis ?? '').replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').slice(0, 800),
   }
   bridgeSetup.set(mandant, s)
-  console.log('[planr] Bridge', mandant, `Setup ${String(b.version ?? '').slice(0, 10)} ${s.schritt}/${s.gesamt}${s.fehler ? ' FEHLER' : ''}: ${s.text}`)
+  console.log('[planr] Bridge', mandant, `Setup ${String(b.version ?? '').slice(0, 10)} ${s.schritt}/${s.gesamt}${s.fehler ? ' FEHLER' : ''}: ${s.text}${s.hinweis ? ` – ${s.hinweis.replace(/\n/g, ' | ')}` : ''}`)
   if (s.fehler && s.details) console.log(s.details.slice(-2000))
   json(res, 200, { ok: true })
 }
@@ -1273,7 +1275,7 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
     const geprueft = !stand && Date.now() - (bridgeGeprueft.get(m) ?? 0) < GEPRUEFT_MS
     const s = bridgeSetup.get(m)
     const setup = s && Date.now() - s.am < SETUP_MS
-      ? { schritt: s.schritt, gesamt: s.gesamt, text: s.text, fehler: s.fehler, fertig: s.fertig, details: s.details, vor: Math.round((Date.now() - s.am) / 1000) }
+      ? { schritt: s.schritt, gesamt: s.gesamt, text: s.text, fehler: s.fehler, fertig: s.fertig, details: s.details, hinweis: s.hinweis, vor: Math.round((Date.now() - s.am) / 1000) }
       : undefined
     return json(res, 200, { ok: true, mandant: m, eingerichtet: !!alt, verbunden: !!stand, geprueft, setup, pvs: stand?.pvs, version: stand?.version, status: stand?.status })
   }

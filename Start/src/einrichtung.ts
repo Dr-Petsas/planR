@@ -19,7 +19,11 @@ const WARNUNGEN = 'Warnt Windows mit „Der Computer wurde durch Windows geschü
 
 /** Die Schritte des Setups (PlanRBridge.exe); es meldet „Schritt x von 5“. */
 const SETUP_SCHRITTE = ['Programm einrichten', 'Zugang Ihrer Praxis holen', 'Praxisprogramm suchen', 'Windows-Dienst „PlanR-Bridge“ starten', 'Verbindung zu PlanR prüfen']
-interface SetupStand { schritt: number; gesamt: number; text: string; fehler: boolean; fertig: boolean; details: string; vor: number }
+interface SetupStand { schritt: number; gesamt: number; text: string; fehler: boolean; fertig: boolean; details: string; hinweis?: string; vor: number }
+
+/** Was das Setup zum Abschluss sagt: nur lesend bzw. welche von mehreren DS-Win-Kopien es genommen hat */
+const setupHinweis = (s?: SetupStand) => s?.fertig && s.hinweis
+  ? `<p class="ein-hinweis">${esc(s.hinweis).replace(/\n/g, '<br>')}<br>Fragen dazu? Rufen Sie uns an: 0211 3029 3035.</p>` : ''
 
 const ANLEITUNGEN: Record<string, Anleitung> = {
   dampsoft: {
@@ -95,6 +99,7 @@ export function setupHtml(s: SetupStand): string {
       <p class="ein-klein">Das Setup-Fenster zeigt „Erneut versuchen“. Klappt es nicht, rufen Sie uns an: 0211 3029 3035 – wir sehen Ihre Meldung.</p>
       ${s.details ? `<details class="ein-klein"><summary>Technische Details</summary><pre>${esc(s.details)}</pre></details>` : ''}`
       : stumm ? '<p class="ein-klein">Das Setup meldet sich seit einigen Minuten nicht mehr. Ist sein Fenster noch offen – wartet es vielleicht auf eine Eingabe?</p>' : ''}
+    ${setupHinweis(s)}
   </div>`
 }
 
@@ -164,6 +169,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <h3>Verbindung prüfen</h3>
         ${stand?.verbunden
           ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(pvsVon(stand.pvs ?? '')?.name || stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>
+             ${setupHinweis(stand.setup)}
              ${bridgeBereit() ? '' : `<p class="ein-warte"><span class="ein-punkt"></span> Die Bridge meldet: ${esc(stand.status ?? '')}</p>
              <p class="ein-klein">Der Connector braucht nach der Installation bis zu einer Minute. Bleibt die Meldung, rufen Sie uns an: 0211 3029 3035.</p>`}`
           : stand?.setup
