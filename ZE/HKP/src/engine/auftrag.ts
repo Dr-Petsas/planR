@@ -7,7 +7,7 @@ import type { Abformung, HkpPlan } from '../types'
 import { leererPlan } from '../store/plan'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './regeln'
 import { privatStufeAnwenden, regelUebernehmen } from './aufwertung'
-import { FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerblendbereich, istWeisheitszahn, kieferVon } from './zahnschema'
+import { BEFUND_KUERZEL, FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerblendbereich, istWeisheitszahn, kieferVon } from './zahnschema'
 import { WERKSTOFFE, WERKSTOFFE_FUER, kronenEinheiten, type Werkstoff } from './material'
 import { ausfuehrungIn } from './ausfuehrung'
 
@@ -182,7 +182,7 @@ export function auftragVerstehen(text: string): HkpAuftrag {
   // nicht, wenn dort ein Befund steht („unten bleibt alles“, „im Unterkiefer ist die 36 kariös“).
   roh.forEach((x, i) => {
     const t = norm(abschnitte[i].text)
-    if (x.versorgung || /nichts|kein/.test(t) || BEFUND_WORTE.some(([re]) => re.test(t))) return
+    if (x.versorgung || /nichts|kein/.test(t) || befundWort(t, true)) return
     const nachbar = roh.slice(0, i).reverse().find((y) => y.versorgung) ?? roh.slice(i + 1).find((y) => y.versorgung)
     if (nachbar?.versorgung) x.versorgung = nachbar.versorgung
   })
@@ -227,7 +227,7 @@ function einzelAuftrag(text: string): HkpAuftrag {
     if (NUR_ZAEHNE.test(teil)) {
       // „Teleskope auf 13, 23 und 14“: Aufzählung setzt die Pfeiler fort – außer „…, 34, 35 fehlen“
       const weiter = alleTeile.slice(i + 1).find((u) => !NUR_ZAEHNE.test(u))
-      if (pfeilerDavor && !(weiter && BEFUND_WORTE.some(([re]) => re.test(weiter))))
+      if (pfeilerDavor && !(weiter && befundWort(weiter, true)))
         auftrag.pfeiler.push(...zs.filter((z) => !auftrag.pfeiler.includes(z)))
       return
     }
@@ -289,31 +289,116 @@ const BEFUND_BEGINN = /\b(?:ersetz\w*|(?:es )?fehl\w*|vorhanden|extrah\w*|entfer
 /** „… und die Zähne 14 bis 17 ersetzen“: ab hier stehen Befund-Zähne, das Verb folgt erst am Ende */
 const ZAEHNE_NACHGESTELLT = / und (?:die |der )?z(?:ä|ae)hne? (?=[1-4][1-8]\b)/
 
-const BEFUND_WORTE: [RegExp, string][] = [
-  [/nicht erhaltungsw(ü|ue)rdig|zerst(ö|oe)rt|extrah|entfern|ziehen/, 'x'],
-  [/erneuerungsbed(ü|ue)rftig|krone (ist )?(kaputt|defekt|insuffizient)|\b(?:k ?w|ka ?weh)\b/, 'kw'],
-  [/(ü|ue)berkronungsbed(ü|ue)rftig|krone n(ö|oe)tig|braucht? (eine )?krone|kariös|karies|\b(?:w ?w ?w?|weh ?weh)\b/, 'ww'],
-  [/fehl|ohne zahn|l(ü|ue)cke|ersetz/, 'f'],
-  [/vorhanden|gesund|intakt|da\b|steh|bleib|erhalt/, ''],
+/**
+ * Befundwörter → eHKP-Kürzel, das erste passende gilt. Die Grundart (Krone, Brückenglied, Teleskop …) bekommt
+ * bei „erneuerungsbedürftig“ ihr w (b → bw). `versorgung`: das Wort nennt auch eine Versorgung – im Auftrag
+ * („15 ist ein Brückenglied“) ist es Therapie, kein Befund.
+ */
+const BEFUND_ARTEN: { re: RegExp; code: string; versorgung?: true }[] = [
+  { re: /l(?:ü|ue)ckenschluss|l(?:ü|ue)cke (?:ist )?geschlossen/, code: ')(' },
+  { re: /implantat\w*[- ]?(?:(?:regio |zahn )?[1-4][1-8] )?(?:ist |sind |wird |werden |soll |muss )?(?:nicht erhaltungsw|entfern|explant|raus)|zu entfernende\w* implantat|explantier/, code: 'ix' },
+  { re: /implantat\w*[- ]?teleskop|teleskop\w* auf (?:dem |den |einem )?implantat/, code: 'st', versorgung: true },
+  { re: /implantat\w*[- ]?br(?:ü|ue)cken[- ]?glied|br(?:ü|ue)cken[- ]?glied\w* auf implantat/, code: 'sb', versorgung: true },
+  { re: /implantat\w*[- ]?(?:steg|verbindungselement)/, code: 'so', versorgung: true },
+  { re: /implantat\w*[- ]?prothese|implantatgetragene\w* prothese/, code: 'se', versorgung: true },
+  { re: /implantat[- ]?kron|implantatgetragene\w* kron|kronen? auf (?:dem |einem )?implantat/, code: 'sk', versorgung: true },
+  { re: /\b(?:ist|sind|hat|haben|mit|tr(?:ä|ae)gt) (?:ein(?:em)? )?implantat\b|implantat\w* (?:ist |sind )?(?:vorhanden|intakt|drin|versorgt|in ordnung)|\b(?:ist|sind|bereits|schon) implantiert/, code: 'i', versorgung: true },
+  { re: /(?:adh(?:ä|ae)siv|klebe)[- ]?br(?:ü|ue)cken[- ]?glied/, code: 'ab', versorgung: true },
+  { re: /adh(?:ä|ae)siv|klebebr(?:ü|ue)cke|maryland/, code: 'a', versorgung: true },
+  { re: /sekund(?:ä|ae)r[- ]?teil/, code: 't2w', versorgung: true },
+  { re: /teleskop|doppelkrone|konuskrone/, code: 't', versorgung: true },
+  { re: /br(?:ü|ue)cken[- ]?glied|zwischenglied|\bglied\b/, code: 'b', versorgung: true },
+  { re: /wurzelstift[- ]?kappe|stiftkappe/, code: 'r', versorgung: true },
+  { re: /teilkrone/, code: 'pk', versorgung: true },
+  { re: /teil[- ]?defekt|partielle\w* (?:substanz)?defekt/, code: 'pw' },
+  { re: /unzureichende\w* retention|retention (?:ist )?unzureichend/, code: 'ur' },
+  { re: /(?:durch|mit) (?:eine\w* |die |der )?prothese ersetzt|ersetzt durch (?:eine |die )?prothese|prothesenzahn|ersetzter zahn/, code: 'e' },
+  { re: /nicht erhaltungsw(?:ü|ue)rdig|hoffnungslos|extrah|entfern|ziehen/, code: 'x' },
+  { re: /weitgehend zerst|(?:ü|ue)berkronungsbed(?:ü|ue)rftig|krone n(?:ö|oe)tig|braucht? (?:eine )?krone|kari(?:ö|oe)s|karies|\b(?:w ?w ?w?|weh ?weh)\b/, code: 'ww' },
+  { re: /zerst(?:ö|oe)rt/, code: 'x' },
+  { re: /erneuerungsbed(?:ü|ue)rftig|krone (?:ist )?(?:kaputt|defekt|insuffizient)|\b(?:k ?w|ka ?weh)\b/, code: 'kw' },
+  { re: /(?:ü|ue)berkront|krone (?:ist )?(?:intakt|in ordnung|gut)|intakte krone|\b(?:hat|haben|mit|tr(?:ä|ae)gt|tragen) (?:eine )?kronen?\b/, code: 'k' },
+  { re: /fehl|ohne zahn|l(?:ü|ue)cke|ersetz/, code: 'f' },
+  { re: /vorhanden|gesund|intakt|da\b|steh|bleib|erhalt/, code: '' },
 ]
+const MIT_W: Record<string, string> = { a: 'aw', ab: 'abw', b: 'bw', e: 'ew', k: 'kw', r: 'rw', sb: 'sbw', se: 'sew', sk: 'skw', so: 'sow', st: 'stw', t: 'tw' }
+const ERNEUERN = /erneuer|kaputt|\bdefekt|insuffizient|undicht|gebrochen|locker/
+/** „15 sk“, „16 ist k w“: das Kürzel selbst am Ende des Satzteils */
+const KUERZEL_AM_ENDE = new RegExp(`(?:^|\\s)(${[...Object.keys(BEFUND_KUERZEL), 'i']
+  .sort((a, b) => b.length - a.length).map((k) => k.replace(/[()]/g, '\\$&')).join('|')})$`)
+
+/** Befund eines Satzteils → Kürzel und Fundstelle; `imAuftrag` überspringt Kürzel und Wörter, die auch eine Versorgung nennen */
+function befundWort(teil: string, imAuftrag = false): { code: string; index: number } | undefined {
+  if (!imAuftrag) {
+    const k = KUERZEL_AM_ENDE.exec(teil.trimEnd().replace(/(?:\s[a-z2])+$/, (m) => ` ${m.replace(/\s/g, '')}`))
+    if (k) return { code: k[1], index: k.index }
+  }
+  for (const art of BEFUND_ARTEN) {
+    if (imAuftrag && art.versorgung) continue
+    const m = art.re.exec(teil)
+    if (!m) continue
+    const w = ERNEUERN.test(teil)
+    if (art.code === 'pk') return { code: w ? 'pkw' : /n(?:ö|oe)tig|braucht|bed(?:ü|ue)rftig/.test(teil) ? 'pw' : 'k', index: m.index }
+    return { code: (w && MIT_W[art.code]) || art.code, index: m.index }
+  }
+  return undefined
+}
+
+const ZAHN_WORT = '(?:[1-4][1-8]|(?:einser|zweier|dreier|vierer|f(?:ü|ue)nfer|sechser|siebe?ner|achter)n?|eckz(?:ah|äh|aeh)ne?n?|front\\w*)'
+const ZAHN_ANFANG = new RegExp(`^(?:(?:die|der|den|zahn|z(?:ä|ae)hne)\\s+)?(${ZAHN_WORT}(?:\\s*(?:bis|-|,)\\s*${ZAHN_WORT})*)\\s*(.*)$`)
+const NUR_ZAHN = new RegExp(`^(?:(?:die|der|den|zahn|z(?:ä|ae)hne)\\s+)?${ZAHN_WORT}(?:\\s*(?:bis|-)\\s*${ZAHN_WORT})?$`)
+const VERB_EINZAHL = /^(?:ist|hat|tr(?:ä|ae)gt|wird|fehlt|steht|bleibt)\b/
+const VERB_MEHRZAHL = /^(?:sind|haben|tragen|werden|fehlen|stehen|bleiben)\b/
+
+/**
+ * „es fehlen 16 und 17 und 15 ist überkront“: ein zweiter Befund mit eigenen Zähnen beginnt einen neuen Satzteil.
+ * Die Zähne dazwischen gehören nach Einzahl/Mehrzahl des Verbs zum zweiten; steht das erste Verb vorn
+ * („es fehlen …“), setzt die Aufzählung es so weit wie möglich fort.
+ */
+function befundTeilen(teil: string): string[] {
+  const st = teil.split(/\s+und\s+/)
+  const out: string[] = []
+  let s = 0
+  for (let j = 1; j < st.length; j++) {
+    const m = ZAHN_ANFANG.exec(st[j])
+    if (!m || NUR_ZAHN.test(st[j]) || !befundWort(st[j])) continue
+    let b = j - 1
+    while (b >= s && !befundWort(st[b])) b--
+    if (b < s) continue
+    const zahnVorn = st[b].search(new RegExp(`\\b${ZAHN_WORT}\\b`))
+    const verbVorn = zahnVorn < 0 || befundWort(st[b])!.index < zahnVorn
+    const passt = (i: number) => {
+      if (!st.slice(i, j).every((x) => NUR_ZAHN.test(x))) return false
+      const mehrere = j > i || !/^[1-4][1-8]$/.test(m[1])
+      return !(VERB_EINZAHL.test(m[2]) && mehrere) && !(VERB_MEHRZAHL.test(m[2]) && !mehrere)
+    }
+    const moeglich = Array.from({ length: j - b }, (_, k) => b + 1 + k).filter(passt)
+    if (!moeglich.length) continue
+    const i = verbVorn ? moeglich[moeglich.length - 1] : moeglich[0]
+    out.push(st.slice(s, i).join(' und '))
+    s = i
+  }
+  out.push(st.slice(s).join(' und '))
+  return out
+}
 
 /** Gesprochener Befund („es fehlen 15 bis 18 und 25 bis 28, 13 bis 23 vorhanden“) → eHKP-Kürzel je Zahn */
 export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
   const befund: Befund = {}
   const nurKiefer = new Set<Kiefer>()
-  const roh = satzteile(text)
+  const roh = satzteile(text).flatMap(befundTeilen)
   const genannt = roh.map((teil) => kieferIn(norm(teil)))
   /** Satzteil ohne Kiefer („die Sechser fehlen“) erbt ihn vom Nachbarn – erst davor, sonst danach */
   const kieferFuer = (i: number) =>
     genannt[i] ?? kiefer ?? genannt.slice(0, i).reverse().find(Boolean) ?? genannt.slice(i + 1).find(Boolean)
   const teile = roh.map((teil, i) => {
     const k = kieferFuer(i)
-    const treffer = BEFUND_WORTE.map(([re, code]) => ({ m: re.exec(teil), code })).find((x) => x.m)
+    const treffer = befundWort(teil)
     const ersterZahn = teil.search(/\b[1-4][1-8]\b|er(n|s)?\b|front|eckz/)
     return {
       teil, k, zs: zaehneIn(teil, k), code: treffer?.code,
       /** Verb am Ende („…, die Sechser und Siebener fehlen“) gilt auch für die Satzteile davor */
-      nachgestellt: !!treffer?.m && ersterZahn >= 0 && treffer.m.index > ersterZahn,
+      nachgestellt: !!treffer && ersterZahn >= 0 && treffer.index > ersterZahn,
     }
   })
   let letztes: string | undefined
@@ -395,7 +480,7 @@ function befundSaetze(text: string): string {
       const ab = z && !VERSORGUNGS_TEIL.test(t.slice(z.index, m.index)) ? z.index : m.index
       return [t.slice(0, ab).trim(), t.slice(ab).replace(/^ und /, '').trim()]
     })
-    const istBefund = (t: string) => !VERSORGUNGS_TEIL.test(t) && BEFUND_WORTE.some(([re]) => re.test(t))
+    const istBefund = (t: string) => !VERSORGUNGS_TEIL.test(t) && !!befundWort(t, true)
     return teile.filter((t, i) => {
       if (istBefund(t)) return true
       if (!NUR_ZAEHNE.test(t)) return false

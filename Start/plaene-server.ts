@@ -616,7 +616,7 @@ async function insPvs(req: IncomingMessage, w: Wer, modul: string, nummer: strin
 
 interface PvsWeg { id?: string; name?: string; agent?: boolean; rufen?: Rufer; fehler?: string; status?: number }
 
-const wegFehler = (res: ServerResponse, c: PvsWeg) => json(res, c.status ?? 409, { ok: false, meldung: c.fehler })
+const wegFehler = (res: ServerResponse, c: PvsWeg) => json(res, c.status ?? 409, { ok: false, pvs: c.name, meldung: c.fehler })
 
 const stumm = (c: PvsWeg, e?: unknown) => e instanceof Error && e.message === 'nicht_abgeholt'
   ? 'Die PlanR-Bridge holt keine Aufträge ab: Der Windows-Dienst „PlanR-Bridge“ auf dem Praxisrechner läuft nicht oder erreicht PlanR nicht. '
@@ -638,16 +638,16 @@ async function pvsConnector(req: IncomingMessage, w: Wer, zweck: 'suche' | 'hkp'
   const pvs = pvsVon(e.pvs)
   if (!pvs || !e.bridge) return { fehler: 'Kein Praxisprogramm eingestellt bzw. die Verbindung dorthin ist aus (Einstellungen).' }
   const basis = (zweck === 'suche' ? PVS_SUCHE : PVS_CONNECTOR)[pvs.id]
-  if (!basis) return { fehler: zweck === 'suche' ? `Für ${pvs.name} gibt es noch keine Patientensuche.` : `HKPs aus ${pvs.name} kann PlanR noch nicht übernehmen.` }
+  if (!basis) return { name: pvs.name, fehler: zweck === 'suche' ? `Für ${pvs.name} gibt es noch keine Patientensuche.` : `HKPs aus ${pvs.name} kann PlanR noch nicht übernehmen.` }
   const agenten = await agentenLesen()
   const stand = agenten[mandant] ? hub.verbunden(mandant) : null
-  if (stand?.pvs && stand.pvs !== pvs.id) return { status: 409, fehler: `Die PlanR-Bridge der Praxis arbeitet mit ${stand.pvs}, eingestellt ist ${pvs.name}.` }
+  if (stand?.pvs && stand.pvs !== pvs.id) return { status: 409, name: pvs.name, fehler: `Die PlanR-Bridge der Praxis arbeitet mit ${stand.pvs}, eingestellt ist ${pvs.name}.` }
   if (stand) return { id: pvs.id, name: pvs.name, agent: true, rufen: agentRufer(mandant, praxen) }
   if (agenten[mandant]) {
     const zuletzt = hub.zuletzt(mandant)
     bridgeMelden(mandant, `nicht verbunden (${zuletzt ? `zuletzt vor ${Math.round((Date.now() - zuletzt) / 1000)} s` : 'seit dem Serverstart nie'})`)
   }
-  if (!amPraxisPc(req)) return { status: 503, fehler: `Die PlanR-Bridge der Praxis ist nicht verbunden – läuft der Dienst „PlanR-Bridge“ auf dem ${pvs.name}-Server?` }
+  if (!amPraxisPc(req)) return { status: 503, name: pvs.name, fehler: `Die PlanR-Bridge der Praxis ist nicht verbunden – läuft der Dienst „PlanR-Bridge“ auf dem ${pvs.name}-Server?` }
   return {
     id: pvs.id, name: pvs.name, agent: false,
     rufen: <T,>(pfad: string, init: Parameters<Rufer>[1] = {}) => connector<T>(basis, pfad, { ...init, headers: { ...init.headers, ...praxenKopf(praxen) } }),
@@ -1606,10 +1606,10 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
     json(res, r.status === 404 ? 404 : r.status === 400 ? 422 : 502, { ok: false, pvs: c.name, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
   try {
     let nummer = angabe('patient')
-    if (nummer && !/^\d{1,5}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Die Patientennummer besteht nur aus Ziffern.' })
+    if (nummer && !/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Die Patientennummer besteht nur aus Ziffern.' })
     if (!nummer) {
       const p: PlanPatient = { vorname: angabe('vorname'), name: angabe('name'), geburtsdatum: angabe('geburt') }
-      if (!p.geburtsdatum) return json(res, 400, { ok: false, meldung: 'Ohne Patientennummer brauche ich das Geburtsdatum.' })
+      if (!p.geburtsdatum) return json(res, 400, { ok: false, pvs: c.name, meldung: `Ohne Geburtsdatum finde ich den Patienten in ${c.name} nicht sicher.` })
       const s = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: p.name || p.vorname || '', limit: '100' })}`, { ms: 30_000 })
       if (!s.ok) return fehlt(s)
       const wahl = patientWaehlen((s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') })), p, c.name!)

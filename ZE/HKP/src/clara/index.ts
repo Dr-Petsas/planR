@@ -8,13 +8,13 @@ import { planNormalisieren } from '../store/plan'
 import { berechnen, belNrNorm, type Ergebnis, type Listen } from '../engine/berechnung'
 import type { EigenPosition } from '../engine/eigenlabor'
 import { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, type Befund, type PlanOptionen, type Rueckfrage } from '../engine/auftrag'
-import { ALLE_ZAEHNE } from '../engine/zahnschema'
+import { ALLE_ZAEHNE, BEFUND_KUERZEL } from '../engine/zahnschema'
 import {
   ausfuehrungAnwenden, ausfuehrungIn, ausfuehrungSatz, ausfuehrungUnterschied, ausfuehrungVon, systemSprech,
   LABOR_SPRECH, WERKSTOFF_SPRECH, type Ausfuehrung, type AusfuehrungStand,
 } from '../engine/ausfuehrung'
 
-export { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, planNormalisieren, berechnen, STANDARD_LISTEN }
+export { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, planNormalisieren, berechnen, STANDARD_LISTEN, BEFUND_KUERZEL }
 export { ausfuehrungIn, ausfuehrungSatz, ausfuehrungVon, systemSprech, LABOR_SPRECH, WERKSTOFF_SPRECH }
 export { befundDatei, befundDateiName } from './befundDatei'
 export { aufZielpreis, preisSpanne, EIGEN_KASSE_MIN, type ReglerStand, type ZielpreisErgebnis } from './zielpreis'

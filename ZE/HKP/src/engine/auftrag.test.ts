@@ -66,6 +66,45 @@ describe('Auftrag verstehen', () => {
     expect(befundVerstehen('14 ist k w', 'OK')[14]).toBe('kw')
   })
 
+  it('alle eHKP-Befunde gesprochen erkennen – der neue Befund geht nach Dampsoft (Chef 14.10.2026)', () => {
+    const faelle: [string, string][] = [
+      ['15 ist überkront', 'k'], ['15 hat eine intakte Krone', 'k'], ['Krone auf 15 erneuerungsbedürftig', 'kw'],
+      ['15 ist überkronungsbedürftig', 'ww'], ['15 ist weitgehend zerstört', 'ww'], ['15 nicht erhaltungswürdig', 'x'],
+      ['15 mit Teildefekt', 'pw'], ['15 braucht eine Teilkrone', 'pw'], ['Teilkrone 15 erneuerungsbedürftig', 'pkw'],
+      ['15 unzureichende Retention', 'ur'], ['15 ist ein Brückenglied', 'b'], ['Brückenglied 15 erneuerungsbedürftig', 'bw'],
+      ['15 Teleskop vorhanden', 't'], ['Teleskop 15 erneuerungsbedürftig', 'tw'], ['Sekundärteil 15 erneuerungsbedürftig', 't2w'],
+      ['15 durch Prothese ersetzt', 'e'], ['15 durch Prothese ersetzt und erneuerungsbedürftig', 'ew'],
+      ['15 Adhäsivbrückenanker', 'a'], ['Adhäsivbrückenanker 15 erneuerungsbedürftig', 'aw'],
+      ['15 Adhäsivbrückenglied', 'ab'], ['Adhäsivbrückenglied 15 erneuerungsbedürftig', 'abw'],
+      ['15 Wurzelstiftkappe', 'r'], ['Wurzelstiftkappe 15 erneuerungsbedürftig', 'rw'],
+      ['15 Implantat vorhanden', 'i'], ['15 ist ein Implantat', 'i'], ['Implantat 15 nicht erhaltungswürdig', 'ix'],
+      ['15 Implantatkrone', 'sk'], ['Implantatkrone 15 erneuerungsbedürftig', 'skw'],
+      ['15 Implantatbrückenglied', 'sb'], ['Implantatbrückenglied 15 erneuerungsbedürftig', 'sbw'],
+      ['15 Implantatteleskop', 'st'], ['Implantatteleskop 15 erneuerungsbedürftig', 'stw'],
+      ['15 ersetzt durch Implantatprothese', 'se'], ['15 ersetzt durch Implantatprothese erneuerungsbedürftig', 'sew'],
+      ['15 Implantatverbindungselement', 'so'], ['Implantatverbindungselement 15 erneuerungsbedürftig', 'sow'],
+      ['15 Lückenschluss', ')('], ['15 fehlt', 'f'], ['15 ist vorhanden', ''],
+    ]
+    for (const [satz, code] of faelle) expect([satz, befundVerstehen(satz, 'OK')[15]]).toEqual([satz, code])
+  })
+
+  it('Kürzel selbst diktiert: „15 sk“, „16 s k w“, „17 t 2 w“', () => {
+    const b = befundVerstehen('15 sk, 16 s k w, 17 t 2 w, 14 pkw, 13 )(, 26 i, 27 ix', 'OK')
+    expect([b[15], b[16], b[17], b[14], b[13], b[26], b[27]]).toEqual(['sk', 'skw', 't2w', 'pkw', ')(', 'i', 'ix'])
+  })
+
+  it('zweiter Befund im selben Satzteil: „es fehlen 16 und 17 und 15 ist überkront“', () => {
+    expect(befundVerstehen('es fehlen 16 und 17 und 15 ist überkront', 'OK')).toEqual({ 16: 'f', 17: 'f', 15: 'k' })
+    expect(befundVerstehen('16 und 17 fehlen und 14 und 15 sind überkront', 'OK')).toEqual({ 16: 'f', 17: 'f', 14: 'k', 15: 'k' })
+    expect(befundVerstehen('16 ist überkront und 17 fehlt', 'OK')).toEqual({ 16: 'k', 17: 'f' })
+    expect(befundVerstehen('16 und 17 fehlen', 'OK')).toEqual({ 16: 'f', 17: 'f' })
+  })
+
+  it('im Auftrag ist „15 ist ein Brückenglied“ Therapie, „17 ist überkront“ Befund', () => {
+    expect(befundAusAuftrag('Brücke von 14 auf 16, 15 ist ein Brückenglied')).toBe('15 fehlt')
+    expect(befundVerstehen(befundAusAuftrag('Brücke von 14 auf 16, 17 ist überkront'), 'OK')).toMatchObject({ 15: 'f', 17: 'k' })
+  })
+
   it('beide Kiefer in einem Auftrag: OK Totalprothese, UK Teleskope (Gespräch 05.10.2026)', () => {
     const satz = 'Im Oberkiefer eine Totalprothese und im Unterkiefer eine Teleskopprothese auf die Dreier und Vierer beidseitig.'
     const a = auftragVerstehen(satz)
