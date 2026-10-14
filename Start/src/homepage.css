@@ -291,8 +291,15 @@ body.hp-body {
 }
 .hp-karten article:hover { transform: translateY(-3px); border-color: rgba(255, 122, 168, 0.45); box-shadow: 0 20px 50px -30px rgba(224, 64, 123, 0.6); }
 .hp-karten h3 { font-size: 20px; margin-bottom: 8px; }
+#funktionen .hp-karten h3 { display: flex; align-items: center; gap: 12px; }
+#funktionen .hp-karten h3 > span:last-child { min-width: 0; }
 .hp-karten p { margin: 0; color: #b9cfcf; }
-.hp-icon { display: inline-block; font-size: 28px; margin-bottom: 12px; }
+.hp-icon {
+  display: grid; place-items: center; flex: none; width: 36px; height: 36px; margin: 0;
+  border-radius: 10px; color: var(--hp-pink); background: rgba(255, 122, 168, 0.14);
+}
+.hp-icon svg { width: 20px; height: 20px; display: block; }
+.hp-icon circle { fill: #2e323d; }
 .hp-karten.hp-karten-produkte { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 .hp-karten-produkte small { display: block; margin-bottom: 6px; color: var(--hp-mint); font-size: 12px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
 .hp-mitte { text-align: center; margin-top: 34px; }
@@ -770,7 +777,6 @@ body.hp-body {
     transform: translateX(-130%);
   }
   #funktionen .hp-karten article.sichtbar::after { animation: hp-wisch 0.9s ease forwards; animation-delay: var(--d, 0ms); }
-  #funktionen .hp-karten article.hp-ein .hp-icon,
   #funktionen .hp-karten article.hp-ein h3,
   #funktionen .hp-karten article.hp-ein p,
   .hp-karten-produkte article.hp-ein small,
@@ -781,8 +787,7 @@ body.hp-body {
     opacity: 0; transform: translateY(10px);
     transition: opacity 0.45s ease, transform 0.45s ease;
   }
-  #funktionen .hp-karten article.sichtbar .hp-icon { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 80ms); }
-  #funktionen .hp-karten article.sichtbar h3 { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 170ms); }
+  #funktionen .hp-karten article.sichtbar h3 { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 80ms); }
   #funktionen .hp-karten article.sichtbar p { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 260ms); }
   .hp-karten-produkte article.sichtbar small { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 60ms); }
   .hp-karten-produkte article.sichtbar h3 { opacity: 1; transform: none; transition-delay: calc(var(--d, 0ms) + 140ms); }

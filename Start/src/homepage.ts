@@ -33,6 +33,17 @@ const BEMA = 740
 const BEL_HOECHST = 1180
 const PLANR = 69
 
+const symbol = (pfade: string) =>
+  `<span class="hp-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${pfade}</svg></span>`
+const IKONEN = {
+  mikro: symbol('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5M8.5 20.5h7"/>'),
+  regler: symbol('<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2"/><circle cx="15" cy="12" r="2.2"/><circle cx="8" cy="18" r="2.2"/>'),
+  zahn: symbol('<path fill="currentColor" stroke="none" d="M8.2 6.2c0-2.2 1.2-3.8 2.4-3.8.8 0 1.3.8 1.6 1.5.3-.7.8-1.5 1.6-1.5 1.2 0 2.4 1.6 2.4 3.8 0 1.7-.3 3.4-.8 5-.4 1.2-1 2.3-1.8 2.3-.7 0-.9-.8-1.1-2-.2-1.3-.5-1.9-1.3-1.9s-1.1.6-1.3 1.9c-.2 1.2-.4 2-1.1 2-.8 0-1.4-1.1-1.8-2.3-.5-1.6-.8-3.3-.8-5z"/>'),
+  praxis: symbol('<path d="M4 20.5V9.2L12 4l8 5.2v11.3"/><path d="M9.5 20.5v-5.2h5v5.2"/><path d="M12 8.2v3.6M10.2 10h3.6"/>'),
+  tausch: symbol('<path d="M4 7h12"/><path d="M13 4l3 3-3 3"/><path d="M20 17H8"/><path d="M11 14l-3 3 3 3"/>'),
+  handy: symbol('<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>'),
+}
+
 interface Regler { zusatz: number; faktor: number; bel: number; privat: number; beb: number; plaene: number }
 const START: Regler = { zusatz: 0, faktor: 2.3, bel: 60, privat: 0, beb: 0, plaene: 20 }
 
@@ -471,17 +482,17 @@ const HTML = `
       <h2>Alles, wofür du bisher einen Abrechnungsdienst bezahlt hast.</h2>
     </div>
     <div class="hp-karten">
-      <article class="hp-ein"><span class="hp-icon">🎙️</span><h3>Diktieren statt tippen</h3>
+      <article class="hp-ein"><h3>${IKONEN.mikro}<span>Diktieren statt tippen</span></h3>
         <p>„Clara, HKP für Frau Berger: 14 bis 16 Brücke, 26 Krone.“ Befund, Regelversorgung, Festzuschüsse und Positionen stehen in Sekunden.</p></article>
-      <article class="hp-ein"><span class="hp-icon">🎚️</span><h3>Regler für maximalen Umsatz</h3>
+      <article class="hp-ein"><h3>${IKONEN.regler}<span>Regler für maximalen Umsatz</span></h3>
         <p>Zusatzleistungen, GOZ-Faktor, Eigenlabor und Privatanteil per Schieberegler – mit Begründungen und Mehrkostenvereinbarung.</p></article>
-      <article class="hp-ein"><span class="hp-icon">🦷</span><h3>Alle Pläne deiner Praxis</h3>
+      <article class="hp-ein"><h3>${IKONEN.zahn}<span>Alle Pläne deiner Praxis</span></h3>
         <p>Kassen-HKP, Privat-ZE, Implantologie, PAR, Kieferbruch und Schienen, KFO sowie Kons und Mehrkosten – ein Werkzeug für alles.</p></article>
-      <article class="hp-ein"><span class="hp-icon">🏥</span><h3>Praxisindividuell</h3>
+      <article class="hp-ein"><h3>${IKONEN.praxis}<span>Praxisindividuell</span></h3>
         <p>Deine Preislisten, dein Eigenlabor-Katalog, BEL II für jede KZV und tagesaktuelle Punktwerte. Dein Stil, nicht der vom Dienstleister.</p></article>
-      <article class="hp-ein"><span class="hp-icon">🔁</span><h3>Zurück ins PVS</h3>
+      <article class="hp-ein"><h3>${IKONEN.tausch}<span>Zurück ins PVS</span></h3>
         <p>Pläne aus dem Praxisprogramm holen und fertig zurückgeben – über die PlanR-Bridge, ohne offenen Port am Praxisserver.</p></article>
-      <article class="hp-ein"><span class="hp-icon">📱</span><h3>Freigabe am Handy</h3>
+      <article class="hp-ein"><h3>${IKONEN.handy}<span>Freigabe am Handy</span></h3>
         <p>Plan per Link prüfen, Regler nachziehen, freigeben. Praxisgemeinschaften sehen jeweils nur ihre eigenen Pläne.</p></article>
     </div>
   </section>
