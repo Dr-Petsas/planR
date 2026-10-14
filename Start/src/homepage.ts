@@ -986,6 +986,7 @@ function spielwieseStarten(wurzel: HTMLElement) {
 
 export function homepage(app: HTMLElement) {
   document.body.classList.add('hp-body')
+  document.documentElement.classList.add('hp-html')
   document.title = 'PlanR – HKP erstellen per Sprach-KI'
   app.innerHTML = HTML
   const wurzel = app.querySelector<HTMLElement>('.hp')!
@@ -1006,4 +1007,5 @@ export function homepageVerlassen() {
   aufraeumen?.()
   aufraeumen = undefined
   document.body.classList.remove('hp-body')
+  document.documentElement.classList.remove('hp-html')
 }

@@ -3,6 +3,8 @@ body.hp-body {
   background: #071a1f;
   color: #e9f3f2;
 }
+/* Am Handy weder seitlich verschiebbar noch über den Rand federnd. Auf html statt body, sonst klebt die Navigation nicht. */
+html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 
 .hp {
   --hp-tief: #071a1f;

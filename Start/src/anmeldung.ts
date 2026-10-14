@@ -116,7 +116,7 @@ export function anmeldePopup(hinweis: string, zu: () => void) {
   huelle.setAttribute('aria-labelledby', 'anmelde-titel')
   huelle.innerHTML = `<div class="anmelde-popup-hg" data-zu></div>${formular(hinweis, true)}`
   document.body.append(huelle)
-  document.body.classList.add('popup-offen')
+  document.documentElement.classList.add('popup-offen')
   const form = huelle.querySelector<HTMLFormElement>('[data-anmelden]')!
   formularVerdrahten(form)
   const taste = (e: KeyboardEvent) => { if (e.key === 'Escape') schliessen() }
@@ -126,7 +126,7 @@ export function anmeldePopup(hinweis: string, zu: () => void) {
   popupSchliessen = () => {
     document.removeEventListener('keydown', taste)
     huelle.remove()
-    document.body.classList.remove('popup-offen')
+    document.documentElement.classList.remove('popup-offen')
   }
   form.querySelector<HTMLInputElement>('[name=email]')!.focus()
 }

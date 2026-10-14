@@ -278,8 +278,8 @@ main { min-width: 0; }
 .anmelde-neu { margin: 4px 0 0; padding-top: 14px; border-top: 1px solid var(--linie); font-size: 14px; text-align: center; color: var(--grau); }
 .anmelde-neu a { color: var(--akzent-dunkel); font-weight: 600; }
 
-body.popup-offen { overflow: hidden; }
-.anmelde-popup { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px 16px; overflow-y: auto; }
+html.popup-offen { overflow: hidden; overscroll-behavior: none; }
+.anmelde-popup { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px 16px; overflow: hidden auto; overscroll-behavior: none; }
 .anmelde-popup-hg { position: fixed; inset: 0; background: rgba(4, 16, 19, 0.72); backdrop-filter: blur(6px); animation: popup-hg 0.2s ease-out; }
 .anmelde-popup .anmelde-karte {
   position: relative; border-top: 4px solid #ff7aa8; color: var(--text); background: #fff;
