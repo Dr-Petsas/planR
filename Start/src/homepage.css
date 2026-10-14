@@ -218,7 +218,7 @@ body.hp-body {
 .hp-plan-summe { display: flex; justify-content: space-between; align-items: baseline; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hp-linie); }
 .hp-plan-summe b { font-size: 30px; color: var(--hp-gold); font-variant-numeric: tabular-nums; }
 .hp-plan-balken { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.07); margin-top: 12px; overflow: hidden; }
-.hp-plan-balken i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--hp-mint), var(--hp-pink), var(--hp-gold)); }
+.hp-plan-balken i { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left center; background: linear-gradient(90deg, var(--hp-mint), var(--hp-pink), var(--hp-gold)); }
 
 @media (max-width: 900px) { .hp-hero { grid-template-columns: 1fr; } }
 
@@ -587,13 +587,13 @@ body.hp-body {
 .hp-buehne-bild--rechts { --winkel: 24deg; }
 .hp-buehne-bild--rechts .hp-formen { transform: scaleX(-1) rotate(-50deg); }
 .hp-buehne--sk .hp-buehne-bild { --p-glanz: rgba(255, 122, 168, 0.3); }
-.hp-buehne--sk .hp-formen .f3 { background: linear-gradient(90deg, rgba(255, 140, 180, 0.2), rgba(255, 255, 255, 0.04)); }
+.hp-buehne--sk .hp-formen .f3 { background: linear-gradient(90deg, rgba(255, 140, 180, 0.2), rgba(255, 255, 255, 0.04)); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .hp-buehne--sk .hp-buehne-bild::before {
   content: ""; position: absolute; left: 50%; top: 50%; width: 520px; height: 520px; margin: -260px 0 0 -260px; z-index: 0; pointer-events: none;
   border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 122, 168, 0.18), transparent);
 }
 .hp-buehne--sk .hp-eyebrow { color: var(--hp-pink); }
-.hp-schraeg-handy { position: relative; z-index: 1; width: min(100%, 310px); transform: perspective(1600px) rotateY(12deg) rotate(-20deg); }
+.hp-schraeg-handy { position: relative; z-index: 1; width: min(100%, 310px); transform: perspective(1600px) rotateY(12deg) rotate(-20deg); contain: layout; overflow-anchor: none; }
 .hp-schraeg-handy .cc-phone { width: 100%; }
 /* Der Flip-Schirm setzt backface-visibility: hidden. Zusammen mit der 3D-Kippe bleibt der Desktop dann ein Standbild. */
 .hp-schraeg-handy .cc-phone,
@@ -611,8 +611,8 @@ body.hp-body {
   background: radial-gradient(circle at 35% 30%, #a8fff0, #2ee6c8 45%, #1b6a82);
   box-shadow: 0 0 22px rgba(46, 230, 200, 0.55); animation: hp-atmen-orb 2.4s ease-in-out infinite;
 }
-@keyframes hp-atmen-orb { 50% { transform: scale(1.1); box-shadow: 0 0 32px rgba(46, 230, 200, 0.8); } }
-.hp-chat .hp-sprache { position: relative; z-index: 1; min-height: 92px; align-items: flex-start; padding: 12px 14px; border-radius: 18px 18px 6px 18px; }
+@keyframes hp-atmen-orb { 50% { transform: scale(1.08); } }
+.hp-chat .hp-sprache { position: relative; z-index: 1; height: 104px; overflow: hidden; overflow-anchor: none; align-items: flex-start; padding: 12px 14px; border-radius: 18px 18px 6px 18px; }
 .hp-chat .hp-sprache p { font-size: 13.5px; }
 .hp-chat .hp-plan { position: relative; z-index: 1; padding: 14px; border-radius: 18px 18px 18px 6px; }
 .hp-chat .hp-plan-zeile { font-size: 12.5px; padding: 7px 0; }

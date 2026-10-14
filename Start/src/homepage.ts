@@ -611,11 +611,29 @@ function demoStarten(wurzel: HTMLElement) {
   const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches
   const warten = (ms: number) => new Promise((r) => setTimeout(r, ms))
   const ziel = 4380
+  const buehne = diktat.closest<HTMLElement>('.hp-buehne')!
+  let scrollt = false
+  let timer = 0
+  const beiScroll = () => {
+    scrollt = true
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => { scrollt = false }, 160)
+  }
+  window.addEventListener('scroll', beiScroll, { passive: true })
+  const vorher = aufraeumen
+  aufraeumen = () => {
+    vorher?.()
+    window.removeEventListener('scroll', beiScroll)
+    window.clearTimeout(timer)
+  }
+  const frei = () => !scrollt && !buehne.classList.contains('hp-pausiert')
+  const bisFrei = async () => { while (lauf === laeuft && !frei()) await warten(120) }
+  const balkenAuf = (anteil: number) => { balken.style.transform = `scaleX(${anteil})` }
   if (ruhig) {
     diktat.textContent = DIKTAT
     plan.classList.add('sichtbar')
     summe.textContent = euro(ziel)
-    balken.style.width = '100%'
+    balkenAuf(1)
     return
   }
   void (async () => {
@@ -623,23 +641,33 @@ function demoStarten(wurzel: HTMLElement) {
       diktat.textContent = ''
       plan.classList.remove('sichtbar')
       summe.textContent = '0 €'
-      balken.style.width = '0%'
+      balkenAuf(0)
       await warten(500)
       for (const z of DIKTAT) {
         if (lauf !== laeuft) return
+        await bisFrei()
         diktat.textContent += z
         await warten(32)
       }
       await warten(400)
       plan.classList.add('sichtbar')
-      const t0 = performance.now()
+      let t0 = performance.now()
+      let pauseAb = 0
       await new Promise<void>((fertig) => {
         const schritt = (t: number) => {
+          if (lauf !== laeuft) return fertig()
+          if (!frei()) {
+            if (!pauseAb) pauseAb = t
+            window.setTimeout(() => requestAnimationFrame(schritt), 120)
+            return
+          }
+          if (pauseAb) { t0 += t - pauseAb; pauseAb = 0 }
           const p = Math.min(1, (t - t0) / 1600)
           const e = 1 - (1 - p) ** 3
-          summe.textContent = euro(ziel * e)
-          balken.style.width = `${e * 100}%`
-          if (p < 1 && lauf === laeuft) requestAnimationFrame(schritt)
+          const text = euro(ziel * e)
+          if (summe.textContent !== text) summe.textContent = text
+          balkenAuf(e)
+          if (p < 1) requestAnimationFrame(schritt)
           else fertig()
         }
         requestAnimationFrame(schritt)
