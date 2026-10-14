@@ -309,9 +309,11 @@ const HTML = `
           </div>
         </div>
         <div class="hp-galerie-text">
-          <b data-galerie-titel>${PLAENE[0].titel}</b>
-          <p data-galerie-text>${PLAENE[0].text}</p>
-          <a class="hp-link" data-galerie-link href="/planer/${PLAENE[0].pfad}/" target="_blank" rel="noopener">Planer live ausprobieren →</a>
+          ${PLAENE.map((p, i) => `<div class="hp-galerie-eintrag${i === 0 ? ' aktiv' : ''}"${i === 0 ? '' : ' aria-hidden="true"'}>
+            <b>${p.titel}</b>
+            <p>${p.text}</p>
+            <a class="hp-link" href="/planer/${p.pfad}/" target="_blank" rel="noopener"${i === 0 ? '' : ' tabindex="-1"'}>Planer live ausprobieren →</a>
+          </div>`).join('')}
         </div>
       </div>
     </div>
@@ -337,7 +339,7 @@ const HTML = `
         <span class="hp-rueck-knopf">Ins PVS übertragen ✓</span>
       </div>
       <div class="hp-rueck-bruecke" aria-hidden="true">
-        <div class="hp-rueck-bahn"><i class="hp-rueck-paket">${logo()}</i></div>
+        <div class="hp-rueck-bahn"><span class="hp-rueck-spur"><i class="hp-rueck-paket">${logo()}</i></span></div>
         <small>PlanR-Bridge · verschlüsselt · ohne offenen Port</small>
       </div>
       <div class="hp-rueck-pvs" data-rueck-pvs style="--pvs:${PVS_RUECK[0].farbe}">
@@ -733,7 +735,8 @@ function galerieStarten(wurzel: HTMLElement) {
   const galerie = wurzel.querySelector<HTMLElement>('[data-galerie]')!
   const knoepfe = [...galerie.querySelectorAll<HTMLButtonElement>('[role=tab]')]
   const bilder = [...galerie.querySelectorAll<HTMLImageElement>('.hp-fenster-bild img')]
-  const feld = (name: string) => galerie.querySelector<HTMLElement>(`[data-galerie-${name}]`)!
+  const eintraege = [...galerie.querySelectorAll<HTMLElement>('.hp-galerie-eintrag')]
+  const pfad = galerie.querySelector<HTMLElement>('[data-galerie-pfad]')!
   const buehne = galerie.closest<HTMLElement>('.hp-buehne')!
   let i = 0
   let scrollt = false
@@ -746,17 +749,20 @@ function galerieStarten(wurzel: HTMLElement) {
   window.addEventListener('scroll', beiScroll, { passive: true })
   const zeigen = (n: number, sanft: boolean) => {
     i = n
-    const p = PLAENE[n]
     knoepfe.forEach((k, ki) => { k.classList.toggle('aktiv', ki === n); k.setAttribute('aria-selected', String(ki === n)) })
     const leiste = knoepfe[n].parentElement!
     if (leiste.scrollWidth > leiste.clientWidth + 4) {
       leiste.scrollTo({ left: knoepfe[n].offsetLeft - 12, behavior: sanft ? 'smooth' : 'auto' })
     }
     bilder.forEach((b, bi) => b.classList.toggle('aktiv', bi === n))
-    feld('pfad').textContent = `planr.pickadoc.de/planer/${p.pfad}`
-    feld('titel').textContent = p.titel
-    feld('text').textContent = p.text
-    feld('link').setAttribute('href', `/planer/${p.pfad}/`)
+    eintraege.forEach((e, ei) => {
+      e.classList.toggle('aktiv', ei === n)
+      e.toggleAttribute('aria-hidden', ei !== n)
+      const link = e.querySelector('a')!
+      if (ei === n) link.removeAttribute('tabindex')
+      else link.setAttribute('tabindex', '-1')
+    })
+    pfad.textContent = `planr.pickadoc.de/planer/${PLAENE[n].pfad}`
   }
   const takt = setInterval(() => {
     if (lauf !== laeuft || !document.body.contains(galerie)) return clearInterval(takt)
@@ -784,10 +790,11 @@ function rueckStarten(wurzel: HTMLElement) {
   const fluss = wurzel.querySelector<HTMLElement>('[data-rueck]')!
   const pvs = fluss.querySelector<HTMLElement>('[data-rueck-pvs]')!
   const feld = (name: string) => fluss.querySelector<HTMLElement>(`[data-rueck-${name}]`)!
+  const planr = fluss.querySelector<HTMLElement>('.hp-rueck-planr')!
   let n = 0
-  const zeigen = () => {
-    const plan = RUECK_PLAENE[n % RUECK_PLAENE.length]
-    const system = PVS_RUECK[n % PVS_RUECK.length]
+  const fuellen = (k: number) => {
+    const plan = RUECK_PLAENE[k % RUECK_PLAENE.length]
+    const system = PVS_RUECK[k % PVS_RUECK.length]
     feld('art').textContent = plan.art
     feld('text').textContent = plan.text
     feld('summe').textContent = plan.summe
@@ -796,16 +803,68 @@ function rueckStarten(wurzel: HTMLElement) {
     feld('z-art').textContent = plan.art
     feld('z-text').textContent = plan.text
     feld('z-summe').textContent = plan.summe
+  }
+  // Die Texte sind verschieden lang; ohne feste Höhe springt bei jedem Wechsel alles darunter mit.
+  const hoeheSperren = () => {
+    pvs.style.minHeight = ''
+    planr.style.minHeight = ''
+    let hp = 0
+    let hk = 0
+    for (let k = 0; k < Math.max(RUECK_PLAENE.length, PVS_RUECK.length); k++) {
+      fuellen(k)
+      hp = Math.max(hp, pvs.getBoundingClientRect().height)
+      hk = Math.max(hk, planr.getBoundingClientRect().height)
+    }
+    pvs.style.minHeight = `${Math.ceil(hp)}px`
+    planr.style.minHeight = `${Math.ceil(hk)}px`
+    fuellen(n)
+  }
+  const zeigen = () => {
+    fuellen(n)
     fluss.classList.remove('laeuft')
     void fluss.offsetWidth
     fluss.classList.add('laeuft')
   }
+  hoeheSperren()
   zeigen()
+  let breite = window.innerWidth
+  let groesse = 0
+  const beiGroesse = () => {
+    window.clearTimeout(groesse)
+    groesse = window.setTimeout(() => {
+      if (window.innerWidth === breite) return
+      breite = window.innerWidth
+      hoeheSperren()
+    }, 200)
+  }
+  window.addEventListener('resize', beiGroesse)
+  let sichtbar = false
+  const sicht = new IntersectionObserver(([e]) => { sichtbar = e.isIntersecting }, { rootMargin: '120px 0px' })
+  sicht.observe(fluss)
+  let scrollt = false
+  let timer = 0
+  const beiScroll = () => {
+    scrollt = true
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => { scrollt = false }, 160)
+  }
+  window.addEventListener('scroll', beiScroll, { passive: true })
   const takt = setInterval(() => {
     if (lauf !== laeuft || !document.body.contains(fluss)) return clearInterval(takt)
+    if (!sichtbar || scrollt) return
     n++
     zeigen()
   }, 4500)
+  const vorher = aufraeumen
+  aufraeumen = () => {
+    vorher?.()
+    clearInterval(takt)
+    sicht.disconnect()
+    window.removeEventListener('scroll', beiScroll)
+    window.removeEventListener('resize', beiGroesse)
+    window.clearTimeout(timer)
+    window.clearTimeout(groesse)
+  }
 }
 
 let aufraeumen: (() => void) | undefined
