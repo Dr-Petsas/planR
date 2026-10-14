@@ -10,7 +10,9 @@ import type { RegisterAbgleich } from '../store/registerAbgleich'
 
 const datum = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('de-DE') : '')
 const zeit = (iso?: string) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '')
-const QUELLE: Record<string, string> = { lena01: 'Lena-Erstuntersuchung', gesprochen: 'gesprochen', 'gesprochen+lena01': 'gesprochen + Lena', pvs: 'Praxisprogramm', planr: 'PlanR', auftrag: 'aus dem Auftrag (Totalprothese: zahnlos)', keiner: 'aus dem Auftrag (Totalprothese: zahnlos)' }
+const QUELLE: Record<string, string> = { lena01: 'Lena-Erstuntersuchung', gesprochen: 'neu aufgenommen', 'gesprochen+lena01': 'gesprochen + Lena', 'gesprochen+pvs': 'gesprochen + Praxisprogramm', pvs: 'Praxisprogramm', planr: 'PlanR', auftrag: 'aus dem Auftrag (Totalprothese: zahnlos)', keiner: 'aus dem Auftrag (Totalprothese: zahnlos)' }
+const quelleText = (q: NonNullable<RegisterKopf['befundQuelle']>) =>
+  `${q.art === 'pvs' && q.pvs ? `aus ${q.pvs}` : QUELLE[q.art] ?? q.art}${q.datum ? ` vom ${datum(q.datum)}` : ''}${q.uebertragen ? `, in ${q.uebertragen} übernommen` : ''}`
 
 async function dateiHerunterladen(hkpId: string, d: RegisterDateiKopf) {
   try {
@@ -236,7 +238,7 @@ function RegisterZeile({ h, geoeffnet, offen, onToggle, onOeffnen, onStatus }: {
         <tr className="register-details">
           <td colSpan={7}>
             {h.auftragText && <p><strong>Eingesprochen:</strong> „{h.auftragText}“</p>}
-            {h.befundQuelle && <p><strong>Befund:</strong> {QUELLE[h.befundQuelle.art] ?? h.befundQuelle.art}{h.befundQuelle.datum ? ` vom ${datum(h.befundQuelle.datum)}` : ''}</p>}
+            {h.befundQuelle && <p><strong>Befund:</strong> {quelleText(h.befundQuelle)}</p>}
             {!!h.dateien?.length && (
               <p><strong>Dateien:</strong>{' '}
                 {h.dateien.map((d) => (

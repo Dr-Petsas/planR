@@ -212,4 +212,12 @@ describe('erlaubte Connector-Aufrufe', () => {
     expect(auftragErlaubt('GET', '/dashboard')).toBe(false)
     expect(auftragErlaubt('DELETE', '/appointments/1')).toBe(false)
   })
+
+  it('Befund: aktuellen lesen und neuen schreiben, keine Test- und Importwege', () => {
+    expect(auftragErlaubt('GET', '/patients/12/befunde/01')).toBe(true)
+    expect(auftragErlaubt('POST', '/patients/12/befunde/01')).toBe(true)
+    expect(auftragErlaubt('POST', '/patients/12/befunde/01/dummy')).toBe(false)
+    expect(auftragErlaubt('POST', '/patients/12/befunde/01/import')).toBe(false)
+    expect(auftragErlaubt('GET', '/patients/12/befunde/01?alle=1')).toBe(false)
+  })
 })

@@ -8,7 +8,7 @@ import {
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
-import { PVS_CONNECTOR, PVS_SUCHE, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
+import { PVS_CONNECTOR, PVS_SUCHE, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
   setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe,
@@ -1569,7 +1569,7 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   const soll = Buffer.from(masSchluessel())
   const ist = Buffer.from(String(req.headers['x-planr-key'] ?? ''))
   if (!soll.length || soll.length !== ist.length || !timingSafeEqual(soll, ist)) return json(res, 401, { ok: false })
-  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  if (req.method !== 'GET' && !(req.method === 'POST' && url === '/api/intern/pvs/befund')) return json(res, 405, { ok: false })
   const q = new URLSearchParams(query)
   const clientId = q.get('clientId') ?? ''
   const z = await zugaengeLesen()
@@ -1579,7 +1579,68 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   const konto = { clientId } as Konto
   const w: Wer = { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
   if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
+  if (url === '/api/intern/pvs/befund') return internBefund(req, w, q, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
+}
+
+/**
+ * GET: aktueller Zahnstatus des Patienten im PVS, Kürzel genau wie dort. POST { kiefer, zaehne }: neuer Befund
+ * ersetzt den alten in den genannten Kiefern (DS-Win hebt den alten als Historie auf). Patient per Nummer oder
+ * Vorname, Name und Geburtsdatum – nur ein eindeutiger Treffer.
+ */
+async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, res: ServerResponse) {
+  const c = await pvsConnector(req, w, 'suche')
+  if (!c.rufen) return wegFehler(res, c)
+  if (c.id !== 'dampsoft') return json(res, 501, { ok: false, pvs: c.name, meldung: `Den Befund aus ${c.name} kann PlanR noch nicht lesen.` })
+  const rufen = c.rufen
+  let body: Record<string, unknown> = {}
+  if (req.method === 'POST') {
+    try {
+      body = JSON.parse(await lesenBody(req, 64_000)) as Record<string, unknown>
+    } catch {
+      return json(res, 400, { ok: false, meldung: 'Ungültiger Befund.' })
+    }
+  }
+  const angabe = (k: string) => String(body[k] ?? q.get(k) ?? '').trim()
+  const fehlt = (r: { status: number; daten: { error?: string } }) =>
+    json(res, r.status === 404 ? 404 : r.status === 400 ? 422 : 502, { ok: false, pvs: c.name, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
+  try {
+    let nummer = angabe('patient')
+    if (nummer && !/^\d{1,5}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Die Patientennummer besteht nur aus Ziffern.' })
+    if (!nummer) {
+      const p: PlanPatient = { vorname: angabe('vorname'), name: angabe('name'), geburtsdatum: angabe('geburt') }
+      if (!p.geburtsdatum) return json(res, 400, { ok: false, meldung: 'Ohne Patientennummer brauche ich das Geburtsdatum.' })
+      const s = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: p.name || p.vorname || '', limit: '100' })}`, { ms: 30_000 })
+      if (!s.ok) return fehlt(s)
+      const wahl = patientWaehlen((s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') })), p, c.name!)
+      if (!wahl.id) return json(res, 409, { ok: false, pvs: c.name, meldung: wahl.fehler })
+      nummer = wahl.id
+    }
+    const lesen = () => rufen<Record<string, unknown>>(`/patients/${nummer}/befunde/01`, { ms: 30_000 })
+    const r = await lesen()
+    if (!r.ok) return fehlt(r)
+    const befund = befundAusPvs(r.daten)
+    if (!befund) return json(res, 502, { ok: false, pvs: c.name, meldung: `${c.name} hat keinen lesbaren Befund geliefert.` })
+    if (req.method === 'GET') return json(res, 200, { ok: true, pvs: c.name, patient: nummer, datum: befund.datum, zaehne: befund.zaehne })
+
+    const teeth = befundAuftrag((body.zaehne ?? {}) as Record<string, unknown>, Array.isArray(body.kiefer) ? body.kiefer : [])
+    if (!Object.keys(teeth).length) return json(res, 400, { ok: false, meldung: 'Im Befund steht kein Zahn der genannten Kiefer.' })
+    const schreiben = (version: string) => rufen<{ selectedTeeth?: string[]; message?: string }>(`/patients/${nummer}/befunde/01`, {
+      method: 'POST', body: { version, teeth }, headers: { 'X-DSWIN-EDIT': '1' }, ms: 70_000,
+    })
+    let s = await schreiben(befund.version)
+    if (s.status === 409) {
+      // Zwischen Lesen und Schreiben geändert oder DS-Win speichert gerade: einmal frisch lesen und erneut versuchen.
+      const neu = await lesen()
+      const v = neu.ok ? befundAusPvs(neu.daten) : null
+      if (v) s = await schreiben(v.version)
+    }
+    if (!s.ok) return fehlt(s)
+    console.log('[planr] Befund ins PVS geschrieben', w.mandant, `${(s.daten.selectedTeeth ?? []).length} Zähne`)
+    return json(res, 200, { ok: true, pvs: c.name, patient: nummer, geschrieben: s.daten.selectedTeeth ?? [] })
+  } catch (e) {
+    return json(res, 503, { ok: false, pvs: c.name, meldung: stumm(c, e) })
+  }
 }
 
 /**
@@ -1642,7 +1703,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
-  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient') return void internPvs(req, res, url, query).catch(fehler500(res))
+  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund') return void internPvs(req, res, url, query).catch(fehler500(res))
   if (!url.startsWith('/api/')) return next()
   kopf(res, herkunft(req))
   if (req.method === 'OPTIONS') {

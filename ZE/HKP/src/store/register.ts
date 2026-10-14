@@ -42,7 +42,8 @@ export interface RegisterKopf {
   erstelltVon?: 'clara' | 'planr'
   version: number
   summen?: { gesamt: number; festzuschuss: number; kassenanteil: number; eigenanteil: number; material: number }
-  befundQuelle?: { art: string; datum?: string }
+  /** pvs: Name des Praxisprogramms bei art 'pvs'; uebertragen: dorthin geschrieben (neu aufgenommener Befund) */
+  befundQuelle?: { art: string; datum?: string; pvs?: string; uebertragen?: string }
   hinweise?: string[]
   offeneAenderung?: { id: string } | null
   verlauf?: { at: string; wer: string; was: string }[]

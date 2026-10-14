@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { datumIso, hkpFuerPvs, patientWaehlen, planungJeZahn } from './pvs'
+import { befundAuftrag, befundAusPvs, datumIso, hkpFuerPvs, patientWaehlen, planungJeZahn } from './pvs'
 
 const t = (id: string, firstName: string, lastName: string, birthDate = '') => ({ id, firstName, lastName, birthDate })
 
@@ -68,5 +68,27 @@ describe('PVS-Export: HKP-Daten', () => {
       [{ ebene: 'BEMA', nr: '91b', zahn: '34' }, { ebene: 'BEMA', nr: '91b', zahn: '36' }, { ebene: 'BEMA', nr: '92', zahn: '34-36' }, { ebene: 'BEMA', nr: '96a', zahn: 'UK' }],
     )
     expect(regel).toEqual({ 34: 'K', 35: 'B', 36: 'K', 31: 'E', 41: 'E' })
+  })
+})
+
+describe('Befund aus dem und ins PVS', () => {
+  const zahn = (status: string) => ({ raw: '', status, missing: status === 'f' })
+  it('übernimmt jedes Kürzel unverändert, auch eigene des PVS', () => {
+    const b = befundAusPvs({
+      version: 'v1', current: { date: '', teeth: { 18: zahn('f'), 16: zahn('sk'), 15: zahn('t1'), 11: zahn('') } },
+      items: [{ date: '2026-10-12' }, { date: '2025-01-01' }],
+    })
+    expect(b?.version).toBe('v1')
+    expect(b?.datum).toBe('2026-10-12')
+    expect(b?.zaehne).toMatchObject({ 18: 'f', 16: 'sk', 15: 't1', 11: '', 48: '' })
+    expect(Object.keys(b!.zaehne)).toHaveLength(32)
+    expect(befundAusPvs({ current: { teeth: {} } })).toBeNull()
+  })
+
+  it('schreibt nur die genannten Kiefer, ohne Kürzel heißt vorhanden', () => {
+    const t = befundAuftrag({ 18: 'f', 17: '', 16: 'kw', 36: 'x' }, ['OK'])
+    expect(t).toEqual({ 18: 'f', 17: 'healthy', 16: 'kw' })
+    expect(befundAuftrag({ 18: 'f', 36: 'x' }, ['OK', 'UK', 'XX'])).toEqual({ 18: 'f', 36: 'x' })
+    expect(befundAuftrag({ 18: 'f' }, [])).toEqual({})
   })
 })

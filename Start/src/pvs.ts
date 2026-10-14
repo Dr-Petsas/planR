@@ -128,3 +128,32 @@ export interface PvsVermerk {
 
 export const vermerkText = (v: PvsVermerk, pvsName: string) =>
   `In ${pvsName} als Plan Nr. ${v.planNr} angelegt (${new Date(v.am).toLocaleDateString('de-DE')})`
+
+/** Aktueller Zahnstatus aus dem PVS: Kürzel je Zahn genau wie dort ('' = ohne Befund) */
+export interface PvsBefund {
+  datum: string
+  version: string
+  zaehne: Record<string, string>
+}
+
+/** Antwort des Connectors auf GET /patients/<nr>/befunde/01; Datum: aktueller Status, sonst letzter 01-Befund */
+export function befundAusPvs(d: unknown): PvsBefund | null {
+  const o = d as { version?: unknown; current?: { date?: unknown; teeth?: Record<string, { status?: unknown }> }; items?: { date?: unknown }[] }
+  const teeth = o?.current?.teeth
+  if (typeof o?.version !== 'string' || !teeth || typeof teeth !== 'object') return null
+  const zaehne = Object.fromEntries([...KIEFER.OK, ...KIEFER.UK].map((z) => [z, String(teeth[z]?.status ?? '').trim()]))
+  return { datum: datumIso(o.current?.date) || datumIso(o.items?.[0]?.date), version: o.version, zaehne }
+}
+
+/** Neuer Befund → Schreibauftrag für den Connector: nur die genannten Kiefer, ohne Kürzel = vorhanden */
+export function befundAuftrag(zaehne: Record<string, unknown>, kiefer: unknown[]): Record<string, string> {
+  const teeth: Record<string, string> = {}
+  for (const k of kiefer) {
+    for (const z of KIEFER[String(k)] ?? []) {
+      if (!(z in zaehne)) continue
+      const code = String(zaehne[z] ?? '').trim()
+      teeth[z] = code || 'healthy'
+    }
+  }
+  return teeth
+}
