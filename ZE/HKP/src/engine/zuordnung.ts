@@ -62,12 +62,15 @@ const BEGRIFFE: readonly [RegExp, string][] = [
   [/zirkon(dioxid|oxid)?|lithiumdisilikat/, 'keramik'],
   [/monolithisch(en|er|es|e)?|(voll)?anatomisch(en|er|es|e)?/, 'vollanatomisch'],
   [/gefrae?s+t(en|er|es|e)?/, 'gefraest'],
-  [/^g?egossen(en|er|es|e)?|^gossen(en|er|es|e)?/, 'gegossen'],
+  [/^g?egossen(en|er|es|e)?|^gossen(en|er|es|e)?|^guss(?!s)/, 'gegossen'],
 ]
 
 /** Metall ist in der BEB der Normalfall; nennt der Schritt keinen Werkstoff, zählt die Legierung der Praxis nicht */
 const METALL = /^(nem|edelmetall|hochgold|gold|titan|cocr|cocrmo|palladium|metall|legierung)$/
-const WERKSTOFF = /^(nem|edelmetall|hochgold|gold|titan|metall\w*|legierung|keramik|komposit|kunststoff|pmma)$/
+const WERKSTOFF = /^(nem|edelmetall|hochgold|gold|titan|metall\w*|legierung|keramik|komposit|kunststoff|pmma|wachs)$/
+const NICHT_METALL = new Set(['keramik', 'komposit', 'kunststoff'])
+const RESTAURATION = /(krone|inlay|onlay|glied)$/
+const VERFAHREN = new Set(['gegossen', 'gefraest', 'gebogen', 'gepresst'])
 /** Alternativen im Text des Schritts („gegossen/gefräst“, „Keramik/Kompositverblendung“) */
 const ALTERNATIVEN: readonly [string, string][] = [['gegossen', 'gefraest'], ['keramik', 'komposit']]
 
@@ -137,16 +140,23 @@ const gewicht = (w: string) => 1 + Math.log((VOKABULAR.length + 1) / ((DF.get(w)
 /** Text des Leistungsschritts zu einer Nummer der Standardliste */
 export const schrittText = (nr: string) => NACH_NR.get(/^\d{1,4}$/.test(nr.trim()) ? bebNorm(nr) : nr.trim())?.text
 
+/** Bauteile, deren Arten eigene Leistungen sind (Dreiviertel-, Teil-, Teleskop-, Doppelkrone) */
+const KOPF = new Set(['krone', 'glied', 'brueckenglied', 'inlay'])
+
 /**
  * Anteil eines Worts, der in der anderen Wortliste wiederkommt. Teiltreffer zählen mit dem kleineren Gewicht,
- * über Nummern hinweg nur halb („Dreiviertelkrone“ ist keine „Krone“).
+ * über Nummern hinweg nur zu einem Viertel („Doppelkrone“ ist keine „Krone“); bei gleicher Nummer voll, außer
+ * das Bauteil der Praxis ist allgemeiner als das des Schritts („Krone“ bestätigt nicht „Dreiviertelkrone“).
  */
-function anteil(x: string, andere: string[], locker: boolean): number {
+function anteil(x: string, andere: string[], locker: boolean, xVonPraxis: boolean): number {
   let best = 0
   for (const y of andere) {
     const t = wortTreffer(x, y, locker)
     if (t === 'gleich') return gewicht(x)
-    if (t === 'teil') best = Math.max(best, Math.min(gewicht(x), gewicht(y)) * (locker ? 1 : 0.5))
+    if (t !== 'teil') continue
+    const [praxisWort, schrittWort] = xVonPraxis ? [x, y] : [y, x]
+    const schrittSpezieller = schrittWort.length > praxisWort.length && KOPF.has(praxisWort)
+    best = Math.max(best, Math.min(gewicht(x), gewicht(y)) * (!locker ? 0.25 : schrittSpezieller ? 0.5 : 1))
   }
   return best
 }
@@ -173,12 +183,15 @@ function aehnlichWorte(p: PraxisWorte, standard: string[], locker: boolean): num
     if (a.includes(x) !== a.includes(y)) b = b.filter((w) => w !== (a.includes(x) ? y : x))
     else if (!a.includes(x)) b = b.filter((w) => w !== x && w !== y)
   }
-  if (!b.some((w) => WERKSTOFF.test(w))) a = a.filter((w) => !METALL.test(w))
-  if (!a.length) return 0
+  // Metall und Guss sind der Normalfall: nennt der Schritt sie nicht, zählen sie wenig (ein wörtlicher Treffer gewinnt)
+  const neutral = new Set<string>()
+  if (!b.some((w) => WERKSTOFF.test(w))) for (const w of a) if (METALL.test(w)) neutral.add(w)
+  if (!b.some((w) => VERFAHREN.has(w) || NICHT_METALL.has(w))) neutral.add('gegossen')
+  if (a.every((w) => neutral.has(w))) return 0
   let treffer = 0
   let summe = 0
-  for (const x of a) { summe += gewicht(x); treffer += anteil(x, b, locker) }
-  for (const y of b) { summe += gewicht(y); treffer += anteil(y, a, locker) }
+  for (const x of a) { summe += gewicht(x) * (neutral.has(x) ? 0.3 : 1); treffer += anteil(x, b, locker, true) }
+  for (const y of b) { summe += gewicht(y); treffer += anteil(y, a, locker, false) }
   return summe ? treffer / summe : 0
 }
 
@@ -192,11 +205,11 @@ function ablaufVon(praxis: string, e: Eintrag): Ablauf | undefined {
   return p.includes('gefraest') ? 'scan' : 'abdruck'
 }
 
-const OHNE_ZAHN = /krone|bruecke|provisor|verblend|stift|charakteris|reparatur|instandsetz|erweiter/
+const OHNE_ZAHN = /krone|bruecke|provisor|verblend|stift|charakteris|reparatur|instandsetz|erweiter|gnatholog|aufstell|modell|wachs/
 /** Material und Teile ohne BEB-Nummer: Rolle aus dem Text */
 const ROLLEN_REGELN: readonly [Rolle, RegExp, RegExp?][] = [
-  ['zahn-front', /front ?zahn|frontz(ae|a)hn/, OHNE_ZAHN],
-  ['zahn-seite', /seiten ?zahn|seitenz(ae|a)hn/, OHNE_ZAHN],
+  ['zahn-front', /\bfront ?z(ae|a)hne?\b/, OHNE_ZAHN],
+  ['zahn-seite', /\bseiten ?z(ae|a)hne?\b/, OHNE_ZAHN],
   ['abform-alginat', /alginat.*(kiefer|abdruck|abformung)|(kiefer|abdruck|abformung).*alginat/],
   ['abform-praezision', /doppelmisch|korrekturabform|praezisionsabform|praezisionsabdruck/],
   ['abform-funktion', /funktionsabform|funktionsabdruck/],
@@ -242,7 +255,12 @@ export function zuordnungVorschlagen(e: Pick<EigenPosition, 'nr' | 'text' | 'ers
   const pw: PraxisWorte = { w: woerter(text), gekuerzt: text.trim().length >= 38 }
   const ueberText = () => {
     if (!pw.w.length) return undefined
-    const treffer = VOKABULAR.map((v) => ({ v, a: aehnlichsterText(pw, v) })).sort((x, y) => y.a - x.a)
+    // „Kunststoffinlay“ ist kein „Inlay mehrflächig“: ohne Werkstoff meint die BEB eine Metall-Restauration
+    const nichtMetall = pw.w.some((w) => NICHT_METALL.has(w)) && pw.w.some((w) => RESTAURATION.test(w)) && !pw.w.includes('verblendung')
+      && !/\bfuer (keramik|kunststoff|komposit|polymer|kst)/.test(klein(text))
+    const treffer = VOKABULAR
+      .filter((v) => !nichtMetall || v.texte.some((t) => t.some((w) => WERKSTOFF.test(w))))
+      .map((v) => ({ v, a: aehnlichsterText(pw, v) })).sort((x, y) => y.a - x.a)
     const beste = treffer[0]
     // Abstand zur nächstbesten anderen Leistung (gleicher Text unter zwei Nummern zählt nicht)
     const zweite = treffer.find((x) => x.v.text !== beste?.v.text)?.a ?? 0

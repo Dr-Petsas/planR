@@ -53,6 +53,21 @@ describe('Zuordnung Praxisposition → Leistungsschritt', () => {
     expect(fuer('Zirkon Rohling Multilayer')).toBe('MAT:rohling-zirkon')
   })
 
+  it('Praxisliste nach BEB 97 (DS-Win „BEB“)', () => {
+    const v = (nr: string, text: string) => { const x = zuordnungVorschlagen(pvs(nr, text)); return x ? `${x.fuer}${x.wenn ? '/' + x.wenn : ''}` : '' }
+    expect(v('2101', 'Gusskrone')).toBe('2101/abdruck')
+    expect(v('2104', 'Gusskrone für Keramikteilverblendung')).toBe('2121/abdruck')
+    expect(v('2107', 'Guß-Dreiviertelkrone')).toBe('2104/abdruck')
+    expect(v('2521', 'Keramikinlay, einflächig')).toBe('2551')
+    expect(v('2424', 'Kunststoffinlay mehrflächig')).toBe('')
+    expect(v('3209', 'Doppelkrone für Keramik-Verbl.sekundär')).toBe('')
+    expect(v('0411', 'Individueller Frontzahnführungsteller')).toBe('0522')
+    expect(v('2804', 'Frontzahn nach gnathologischen Kriterien')).toBe('')
+    expect(v('4615', 'Auflage gegossen')).toBe('4122')
+    expect(v('4616', 'Kralle gegossen')).toBe('')
+    expect(v('ZFK', 'Frontzähne, Kunststoff (Vitapan)')).toBe('MAT:zahn-front')
+  })
+
   it('ältere Nummerierung: fast wörtlich eine andere Leistung', () => {
     expect(zuordnungVorschlagen(pvs('2361', 'Brückenglied gegossen/gefräst Metall'))?.fuer).toBe('2362')
     expect(zuordnungVorschlagen(pvs('0007', 'Kontrollmodell'))?.fuer).toBe('0008')
