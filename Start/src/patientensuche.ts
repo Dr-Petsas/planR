@@ -21,6 +21,8 @@ export interface SucheUmgebung {
   planrPlaene: (vorname: string, name: string) => PlanTreffer[]
   /** Neuen HKP mit diesen Anmeldedaten öffnen */
   neuerHkp: (p: Stammdaten) => void
+  /** Aktuellen 01-Befund des PVS-Patienten (Nummer) im HKP-Planer zeigen */
+  befundOeffnen?: (patientNr: string) => void
   /** übernommener HKP (Registernummer) → Liste neu laden und Planer öffnen */
   geoeffnet: (nummer: string, hinweise: string[]) => Promise<void>
   dateiWaehlen: () => void
@@ -89,7 +91,10 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
     karte.innerHTML = `
       <div class="ps-kopf">
         <div><b>${esc(kopf.name)}${kopf.vorname ? `, ${esc(kopf.vorname)}` : ''}</b><span>${esc(kopf.unter)}</span></div>
-        <button type="button" class="neu-knopf" data-neuer-hkp>Neuen HKP für ${esc(wer)} erstellen</button>
+        <span class="ps-knoepfe">
+          ${pvsPatient && u.befundOeffnen ? '<button type="button" class="link-knopf" data-befund>Befund (01)</button>' : ''}
+          <button type="button" class="neu-knopf" data-neuer-hkp>Neuen HKP für ${esc(wer)} erstellen</button>
+        </span>
       </div>
       ${plaene.length ? `<p class="pvs-titel">Schon in PlanR</p>
         <div class="ps-liste">${plaene.map((p) => p.url
@@ -97,6 +102,7 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
           : `<div><b>${esc(p.titel)}</b><span>${esc(p.unter)}</span></div>`).join('')}</div>` : ''}
       <div data-hkps></div>`
     karte.querySelector('[data-neuer-hkp]')!.addEventListener('click', neu)
+    karte.querySelector('[data-befund]')?.addEventListener('click', () => { zu(); u.befundOeffnen?.(pvsPatient!.id) })
     if (pvsPatient) void hkpsZeigen(pvsPatient)
   }
 

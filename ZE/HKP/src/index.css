@@ -790,6 +790,33 @@ code { background: #f0f1f3; padding: 0 3px; border-radius: 3px; }
 .register-leiste.konflikt { background: var(--gelb); border-color: #e0b400; }
 .register-leiste.live-leiste { background: #fdf0f6; border-color: #e9b8cf; }
 .live-leiste .live-punkt { width: 10px; height: 10px; border-radius: 50%; background: #b9a3ad; flex: none; }
+/* Aktueller 01-Befund (Planer-Leiste und Befundseite) */
+.befund-leiste { background: #fff; }
+.befund-leiste .live-punkt, .befund-seite .live-punkt { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #b9a3ad; flex: none; vertical-align: middle; }
+.befund-leiste .live-punkt.an, .befund-seite .live-punkt.an { background: #2e8b57; }
+.b01-offen-text { color: var(--pink-dunkel); font-weight: 600; }
+.b01-schema { display: inline-flex; flex-direction: column; gap: 2px; }
+.b01-reihe { display: grid; grid-template-columns: repeat(16, 26px); gap: 1px; }
+.b01-reihe > :nth-child(8) { margin-right: 4px; }
+.b01-reihe.uk { border-top: 1px solid var(--linie); padding-top: 2px; }
+.b01-zahn { display: flex; flex-direction: column; align-items: center; border: 1px solid transparent; border-radius: 3px; padding: 1px 0; line-height: 1.1; }
+.b01-zahn .b01-code { font-size: 11px; font-weight: 600; min-height: 12px; }
+.b01-zahn .b01-nr { font-size: 9px; color: var(--grau); }
+.b01-zahn.fehlt .b01-code { color: var(--grau); }
+.b01-zahn.offen { background: var(--rot-hell); border-color: var(--rot-linie); }
+.b01-zahn.weicht { outline: 1px dashed var(--blau); outline-offset: -1px; }
+.b01-schema.gross .b01-reihe { grid-template-columns: repeat(16, 44px); gap: 3px; }
+.b01-schema.gross .b01-zahn { padding: 3px 0; }
+.b01-schema.gross .b01-code { font-size: 15px; }
+.b01-schema.gross .b01-nr { font-size: 11px; }
+.b01-schema.gross input { width: 38px; padding: 2px; text-align: center; font-weight: 600; }
+.b01-seite { display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: start; }
+.b01-seite aside { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; overflow: auto; }
+.b01-eintrag { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 5px 8px; border: 1px solid var(--linie); border-radius: 5px; background: #fff; cursor: pointer; }
+.b01-eintrag.aktiv { border-color: var(--rot); background: var(--rot-hell); }
+.b01-eintrag small { color: var(--grau); font-size: 11px; }
+.b01-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.befund-seite h3 small { font-weight: 400; color: var(--grau); }
 .live-leiste.verbunden .live-punkt { background: #c2185b; }
 .live-leiste.spielt .live-punkt { animation: livePuls 0.9s ease-in-out infinite; }
 .live-leiste .live-meldung { display: block; font-style: italic; color: #6b4a5a; margin-top: 2px; }

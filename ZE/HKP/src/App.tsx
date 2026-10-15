@@ -32,6 +32,7 @@ import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
 import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, useAktiv, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
 import { LIVE_TITEL, PHASE_TEXT, liveAbonnieren, liveModus, liveSchritte, type LiveStand } from './store/live'
 import { patientAusFragment } from './store/patientUebergabe'
+import { AktuellerBefundLeiste, BefundSeite } from './components/Befund01'
 
 /** Gesamtdauer, in der ein Live-Schritt von Clara sichtbar eingetragen wird */
 const LIVE_DAUER_MS = 5000
@@ -52,12 +53,16 @@ function neuerPlan(einstellungen: Einstellungen): HkpPlan {
   return { ...leer, einstellungen, verwaltung: { ...leer.verwaltung, zahnarztNr, abrechnungsNr } }
 }
 
-type Tab = 'teil1' | 'teil2' | 'anlage' | 'eigenlabor' | 'register' | 'preislisten' | 'einstellungen'
+type Tab = 'teil1' | 'teil2' | 'anlage' | 'eigenlabor' | 'befund' | 'register' | 'preislisten' | 'einstellungen'
+
+/** ?befund=<Patientennummer> öffnet die Befundseite (Patientensuche in PlanR) */
+const befundAusAdresse = () => (typeof window === 'undefined' ? '' : (new URLSearchParams(window.location.search).get('befund') ?? '').trim())
 
 export default function App() {
   const [plan, setPlan] = usePlan()
   const alle = usePreislisten()
-  const [tab, setTab] = useState<Tab>('teil1')
+  const [befundStart, setBefundStart] = useState(befundAusAdresse)
+  const [tab, setTab] = useState<Tab>(() => (befundAusAdresse() ? 'befund' : 'teil1'))
   const [engineHinweise, setEngineHinweise] = useState<string[]>([])
 
   const e = plan.einstellungen
@@ -281,7 +286,7 @@ export default function App() {
           <h1>HKP-Planer <span>Zahnersatz · BEMA · GOZ · BEL II · BEB</span><MandantName /></h1>
         </div>
         <nav>
-          {([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([t, n]) => (
+          {([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['befund', 'Befund (01)'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([t, n]) => (
             <button key={t} className={tab === t ? 'aktiv' : ''} onClick={() => setTab(t)}>{n}</button>
           ))}
           {hkpAnsicht && <button className="drucken" onClick={() => window.print()} title="HKP drucken oder als PDF speichern">🖶 Drucken</button>}
@@ -317,6 +322,10 @@ export default function App() {
           </span>
           {linkAbgleich.abgleich.art === 'konflikt' && <button onClick={linkAbgleich.ueberschreiben}>Meinen Stand speichern</button>}
         </div>
+      )}
+      {hkpAnsicht && (
+        <AktuellerBefundLeiste plan={plan} setPlan={setPlan} frei={!register.aktiv && !linkEintrag && !liveAn}
+          onSeite={(nr) => { setBefundStart(nr); setTab('befund') }} />
       )}
 
       <div className={hkpAnsicht ? 'arbeitsflaeche' : ''}>
@@ -381,6 +390,7 @@ export default function App() {
               verwendet={[listen.bema, listen.goz, listen.bel, listen.beb, listen.fz].map((l) => l?.id ?? '')} />
           </>
         )}
+        {tab === 'befund' && <BefundSeite start={befundStart} onNeuerHkp={(p) => neuAnfangen(p)} />}
         {tab === 'register' && (
           <RegisterSeite plan={plan} ergebnis={ergebnis} r={register} onGeoeffnet={() => setTab('teil1')} onEinstellungen={() => setTab('einstellungen')} />
         )}

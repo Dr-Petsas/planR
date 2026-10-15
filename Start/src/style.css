@@ -206,6 +206,7 @@ main { min-width: 0; }
 .ps-kopf > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ps-kopf b { font-size: 17px; }
 .ps-kopf span { font-size: 13px; color: var(--grau); }
+.ps-kopf .ps-knoepfe { display: flex; align-items: center; gap: 10px; font-size: inherit; color: inherit; }
 .ps-liste { display: flex; flex-direction: column; gap: 4px; }
 .ps-liste > a, .ps-liste > div { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border: 1px solid var(--linie); border-radius: 10px; background: #fff; color: var(--text); text-decoration: none; font-size: 14px; }
 .ps-liste span { color: var(--grau); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

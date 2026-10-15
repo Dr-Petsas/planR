@@ -28027,6 +28027,11 @@ var BEFUND_ARTEN = [
 		versorgung: true
 	},
 	{
+		re: /\b[1-4][1-8] (?:ein )?implantate?$/,
+		code: "i",
+		versorgung: true
+	},
+	{
 		re: /(?:adh(?:ä|ae)siv|klebe)[- ]?br(?:ü|ue)cken[- ]?glied/,
 		code: "ab",
 		versorgung: true
@@ -28092,6 +28097,11 @@ var BEFUND_ARTEN = [
 	{
 		re: /(?:ü|ue)berkront|krone (?:ist )?(?:intakt|in ordnung|gut)|intakte krone|\b(?:hat|haben|mit|tr(?:ä|ae)gt|tragen) (?:eine )?kronen?\b/,
 		code: "k"
+	},
+	{
+		re: /\b[1-4][1-8] (?:eine )?kronen?$/,
+		code: "k",
+		versorgung: true
 	},
 	{
 		re: /fehl|ohne zahn|l(?:ü|ue)cke|ersetz/,
@@ -28660,7 +28670,7 @@ function aufZielpreis(plan, ziel, praxis = {}) {
 }
 //#endregion
 //#region src/clara/index.ts
-var ENGINE_STAND = "2026-10-15 04:03";
+var ENGINE_STAND = "2026-10-15 10:39";
 var ausKatalog = /* @__PURE__ */ new WeakMap();
 /** Eigenlabor-Katalog und Praxis-GOZ wie im Browser nach dem PVS-Abgleich (je Katalog einmal gebildet) */
 function katalogTeile(k, eigen) {

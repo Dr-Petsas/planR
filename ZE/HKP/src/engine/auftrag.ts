@@ -303,6 +303,7 @@ const BEFUND_ARTEN: { re: RegExp; code: string; versorgung?: true }[] = [
   { re: /implantat\w*[- ]?prothese|implantatgetragene\w* prothese/, code: 'se', versorgung: true },
   { re: /implantat[- ]?kron|implantatgetragene\w* kron|kronen? auf (?:dem |einem )?implantat/, code: 'sk', versorgung: true },
   { re: /\b(?:ist|sind|hat|haben|mit|tr(?:ä|ae)gt) (?:ein(?:em)? )?implantat\b|implantat\w* (?:ist |sind )?(?:vorhanden|intakt|drin|versorgt|in ordnung)|\b(?:ist|sind|bereits|schon) implantiert/, code: 'i', versorgung: true },
+  { re: /\b[1-4][1-8] (?:ein )?implantate?$/, code: 'i', versorgung: true },
   { re: /(?:adh(?:ä|ae)siv|klebe)[- ]?br(?:ü|ue)cken[- ]?glied/, code: 'ab', versorgung: true },
   { re: /adh(?:ä|ae)siv|klebebr(?:ü|ue)cke|maryland/, code: 'a', versorgung: true },
   { re: /sekund(?:ä|ae)r[- ]?teil/, code: 't2w', versorgung: true },
@@ -318,6 +319,7 @@ const BEFUND_ARTEN: { re: RegExp; code: string; versorgung?: true }[] = [
   { re: /zerst(?:ö|oe)rt/, code: 'x' },
   { re: /erneuerungsbed(?:ü|ue)rftig|krone (?:ist )?(?:kaputt|defekt|insuffizient)|\b(?:k ?w|ka ?weh)\b/, code: 'kw' },
   { re: /(?:ü|ue)berkront|krone (?:ist )?(?:intakt|in ordnung|gut)|intakte krone|\b(?:hat|haben|mit|tr(?:ä|ae)gt|tragen) (?:eine )?kronen?\b/, code: 'k' },
+  { re: /\b[1-4][1-8] (?:eine )?kronen?$/, code: 'k', versorgung: true },
   { re: /fehl|ohne zahn|l(?:ü|ue)cke|ersetz/, code: 'f' },
   { re: /vorhanden|gesund|intakt|da\b|steh|bleib|erhalt/, code: '' },
 ]

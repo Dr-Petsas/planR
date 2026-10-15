@@ -13,6 +13,8 @@ const HUB = typeof location === 'undefined' ? ''
   : location.pathname.startsWith('/planer/') ? `${location.origin}/api/register`
   : location.hostname.endsWith('.pickadoc-tunnel.com') ? 'https://planr.pickadoc-tunnel.com/api/register'
     : `http://${location.hostname}:5189/api/register`
+/** PlanR-Server (ohne /api/…), über den auch der aktuelle Befund läuft */
+export const PLANR_SERVER = HUB.replace(/\/api\/register$/, '')
 /** Weitere Mandanten bekommen am Praxis-PC nicht automatisch den Schlüssel der Praxis (vite.config.ts) */
 const MANDANT_KOPF: Record<string, string> = MANDANT_ID === STANDARD_ID ? {} : { 'X-PlanR-Mandant': MANDANT_ID }
 const VERBINDUNG_KEY = mk('hkp.mas.v1')

@@ -8,7 +8,9 @@ import {
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
-import { PVS_CONNECTOR, PVS_SUCHE, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsTreffer, type PvsVermerk } from './src/pvs.ts'
+import {
+  PVS_CONNECTOR, PVS_SUCHE, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
+} from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
   setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe,
@@ -30,10 +32,13 @@ import {
 } from './rechnung.ts'
 import type { Paket } from './src/paket.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
+import {
+  ablageKuerzen, befundAnsicht, befundLive, befundMelden, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen, zaehneAktuell, type Befund01,
+} from './befund01.ts'
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
-const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler') => `${ORDNER}/mandanten/${mandant}/${name}.json`
+const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde') => `${ORDNER}/mandanten/${mandant}/${name}.json`
 /** Pickadoc-Praxis → Mandant, Benutzer → DS-Win-Praxen (anmeldung.ts) */
 const ZUGAENGE = `${ORDNER}/zugaenge.json`
 const SITZUNGEN = `${ORDNER}/sitzungen.json`
@@ -1570,7 +1575,9 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   const soll = Buffer.from(masSchluessel())
   const ist = Buffer.from(String(req.headers['x-planr-key'] ?? ''))
   if (!soll.length || soll.length !== ist.length || !timingSafeEqual(soll, ist)) return json(res, 401, { ok: false })
-  if (req.method !== 'GET' && !(req.method === 'POST' && url === '/api/intern/pvs/befund')) return json(res, 405, { ok: false })
+  const schreibt = url === '/api/intern/pvs/befund' || url.startsWith('/api/intern/befund/')
+  if (req.method !== 'GET' && !(req.method === 'POST' && schreibt)) return json(res, 405, { ok: false })
+  if (req.method === 'GET' && url.startsWith('/api/intern/befund/')) return json(res, 405, { ok: false })
   const q = new URLSearchParams(query)
   const clientId = q.get('clientId') ?? ''
   const z = await zugaengeLesen()
@@ -1585,6 +1592,7 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   }
   if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
   if (url === '/api/intern/pvs/befund') return internBefund(req, w, q, res)
+  if (url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen') return internBefundAendern(req, w, url, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
 }
 
@@ -1594,10 +1602,6 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
  * Vorname, Name und Geburtsdatum – nur ein eindeutiger Treffer.
  */
 async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, res: ServerResponse) {
-  const c = await pvsConnector(req, w, 'suche')
-  if (!c.rufen) return wegFehler(res, c)
-  if (c.id !== 'dampsoft') return json(res, 501, { ok: false, pvs: c.name, meldung: `Den Befund aus ${c.name} kann PlanR noch nicht lesen.` })
-  const rufen = c.rufen
   let body: Record<string, unknown> = {}
   if (req.method === 'POST') {
     try {
@@ -1606,46 +1610,213 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
       return json(res, 400, { ok: false, meldung: 'Ungültiger Befund.' })
     }
   }
-  const angabe = (k: string) => String(body[k] ?? q.get(k) ?? '').trim()
-  const fehlt = (r: { status: number; daten: { error?: string } }) =>
-    json(res, r.status === 404 ? 404 : r.status === 400 ? 422 : 502, { ok: false, pvs: c.name, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
+  const l = await pvsBefundLesen(req, w, (k) => String(body[k] ?? q.get(k) ?? '').trim())
+  if (!('nummer' in l)) return json(res, l.status, l.daten)
+  if (req.method === 'GET') {
+    // Offene Änderungen aus dem Gespräch gehören zum aktuellen Befund (nächster Plan, Freigabe)
+    const b = await befundGelesen(w, l)
+    return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, datum: l.befund.datum, zaehne: l.befund.zaehne, offen: b.offen, offenWer: b.offenWer, stand: b.stand, geschrieben: b.geschrieben })
+  }
+  const s = await befundSchreiben(w, l, Array.isArray(body.kiefer) ? body.kiefer : [], (body.zaehne ?? {}) as Record<string, unknown>)
+  if (!('geschrieben' in s)) return json(res, s.status, s.daten)
+  return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, geschrieben: s.geschrieben })
+}
+
+// ---------- Aktueller 01-Befund je Patient (befund01.ts) ----------
+
+type BefundFehler = { status: number; daten: Record<string, unknown> }
+interface BefundGelesen { c: PvsWeg; rufen: Rufer; nummer: string; befund: PvsBefund; label: string; geburt: string }
+/** Ohne neues Lesen gilt der gemerkte Stand aus dem Praxisprogramm so lange als frisch */
+const BEFUND_FRISCH_MS = 10 * 60_000
+
+const pvsFehlt = (c: PvsWeg, r: { status: number; daten: { error?: string } }): BefundFehler =>
+  ({ status: r.status === 404 ? 404 : r.status === 400 ? 422 : 502, daten: { ok: false, pvs: c.name, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` } })
+
+/** Patient per Nummer oder Vorname, Name und Geburtsdatum (nur ein eindeutiger Treffer) und sein 01 aus dem PVS */
+async function pvsBefundLesen(req: IncomingMessage, w: Wer, angabe: (k: string) => string): Promise<BefundGelesen | BefundFehler> {
+  const c = await pvsConnector(req, w, 'suche')
+  if (!c.rufen) return { status: c.status ?? 409, daten: { ok: false, pvs: c.name, meldung: c.fehler } }
+  if (c.id !== 'dampsoft') return { status: 501, daten: { ok: false, pvs: c.name, meldung: `Den Befund aus ${c.name} kann PlanR noch nicht lesen.` } }
+  const rufen = c.rufen
   try {
-    let nummer = angabe('patient')
-    if (nummer && !/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Die Patientennummer besteht nur aus Ziffern.' })
+    let nummer = angabe('patient'), label = '', geburt = ''
+    if (nummer && !/^\d{1,9}$/.test(nummer)) return { status: 400, daten: { ok: false, meldung: 'Die Patientennummer besteht nur aus Ziffern.' } }
     if (!nummer) {
       const p: PlanPatient = { vorname: angabe('vorname'), name: angabe('name'), geburtsdatum: angabe('geburt') }
-      if (!p.geburtsdatum) return json(res, 400, { ok: false, pvs: c.name, meldung: `Ohne Geburtsdatum finde ich den Patienten in ${c.name} nicht sicher.` })
+      if (!p.geburtsdatum) return { status: 400, daten: { ok: false, pvs: c.name, meldung: `Ohne Geburtsdatum finde ich den Patienten in ${c.name} nicht sicher.` } }
       const s = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: p.name || p.vorname || '', limit: '100' })}`, { ms: 30_000 })
-      if (!s.ok) return fehlt(s)
-      const wahl = patientWaehlen((s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') })), p, c.name!)
-      if (!wahl.id) return json(res, 409, { ok: false, pvs: c.name, meldung: wahl.fehler })
+      if (!s.ok) return pvsFehlt(c, s)
+      const treffer = (s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
+      const wahl = patientWaehlen(treffer, p, c.name!)
+      if (!wahl.id) return { status: 409, daten: { ok: false, pvs: c.name, meldung: wahl.fehler } }
       nummer = wahl.id
+      const t = treffer.find((x) => x.id === nummer)
+      label = [t?.lastName, t?.firstName].filter(Boolean).join(', ')
+      geburt = isoDatum(String(t?.birthDate ?? ''))
     }
-    const lesen = () => rufen<Record<string, unknown>>(`/patients/${nummer}/befunde/01`, { ms: 30_000 })
-    const r = await lesen()
-    if (!r.ok) return fehlt(r)
+    const r = await rufen<Record<string, unknown>>(`/patients/${nummer}/befunde/01`, { ms: 30_000 })
+    if (!r.ok) return pvsFehlt(c, r)
     const befund = befundAusPvs(r.daten)
-    if (!befund) return json(res, 502, { ok: false, pvs: c.name, meldung: `${c.name} hat keinen lesbaren Befund geliefert.` })
-    if (req.method === 'GET') return json(res, 200, { ok: true, pvs: c.name, patient: nummer, datum: befund.datum, zaehne: befund.zaehne })
+    if (!befund) return { status: 502, daten: { ok: false, pvs: c.name, meldung: `${c.name} hat keinen lesbaren Befund geliefert.` } }
+    return { c, rufen, nummer, befund, label, geburt }
+  } catch (e) {
+    return { status: 503, daten: { ok: false, pvs: c.name, meldung: stumm(c, e) } }
+  }
+}
 
-    const teeth = befundAuftrag((body.zaehne ?? {}) as Record<string, unknown>, Array.isArray(body.kiefer) ? body.kiefer : [])
-    if (!Object.keys(teeth).length) return json(res, 400, { ok: false, meldung: 'Im Befund steht kein Zahn der genannten Kiefer.' })
-    const schreiben = (version: string) => rufen<{ selectedTeeth?: string[]; message?: string }>(`/patients/${nummer}/befunde/01`, {
-      method: 'POST', body: { version, teeth }, headers: { 'X-DSWIN-EDIT': '1' }, ms: 70_000,
-    })
-    let s = await schreiben(befund.version)
+const befundeLesen = (mandant: string) => jsonLesen<Record<string, Befund01>>(ABLAGE(mandant, 'befunde'), {})
+const befundKette = new Map<string, Promise<unknown>>()
+
+/** Befund eines Patienten ändern – je Praxis nacheinander; jede Änderung geht sofort an die offenen Fenster. */
+function befundAendern(mandant: string, patient: string, f: (alt: Befund01 | undefined) => Befund01 | undefined): Promise<Befund01 | undefined> {
+  const lauf = (befundKette.get(mandant) ?? Promise.resolve()).then(async () => {
+    const a = await befundeLesen(mandant)
+    const neu = f(a[patient])
+    if (!neu || neu === a[patient]) return a[patient]
+    await jsonSchreiben(ABLAGE(mandant, 'befunde'), ablageKuerzen({ ...a, [patient]: neu }))
+    befundMelden(mandant, neu)
+    return neu
+  })
+  befundKette.set(mandant, lauf.catch(() => undefined))
+  return lauf
+}
+
+/** Gelesenen 01 merken; ohne bekannten Namen einmal die Stammdaten holen */
+async function befundGelesen(w: Wer, l: BefundGelesen): Promise<Befund01> {
+  let { label, geburt } = l
+  if (!label) {
+    const alt = (await befundeLesen(w.mandant))[l.nummer]
+    label = alt?.label ?? ''
+    geburt = alt?.geburt ?? ''
+    if (!label) {
+      const z = await l.rufen<Record<string, unknown>>(`/patients/${l.nummer}`).catch(() => null)
+      if (z?.ok) {
+        const s = stammdatenAusPvs(z.daten)
+        label = [s.name, s.vorname].filter(Boolean).join(', ')
+        geburt = s.geburtsdatum
+      }
+    }
+  }
+  const lesen = { patient: l.nummer, label, geburt, pvs: l.c.name ?? '', zaehne: l.befund.zaehne, datum: l.befund.datum }
+  return (await befundAendern(w.mandant, l.nummer, (alt) => nachLesen(alt, lesen)))!
+}
+
+/** Kiefer ins PVS (DS-Win hebt den alten Befund als Historie auf); danach stehen sie so im aktuellen Befund. */
+async function befundSchreiben(w: Wer, l: BefundGelesen, kiefer: unknown[], zaehne: Record<string, unknown>): Promise<{ geschrieben: string[]; befund: Befund01 } | BefundFehler> {
+  const teeth = befundAuftrag(zaehne, kiefer)
+  if (!Object.keys(teeth).length) return { status: 400, daten: { ok: false, meldung: 'Im Befund steht kein Zahn der genannten Kiefer.' } }
+  const { c, rufen, nummer } = l
+  const schreiben = (version: string) => rufen<{ selectedTeeth?: string[]; message?: string }>(`/patients/${nummer}/befunde/01`, {
+    method: 'POST', body: { version, teeth }, headers: { 'X-DSWIN-EDIT': '1' }, ms: 70_000,
+  })
+  try {
+    let s = await schreiben(l.befund.version)
     if (s.status === 409) {
       // Zwischen Lesen und Schreiben geändert oder DS-Win speichert gerade: einmal frisch lesen und erneut versuchen.
-      const neu = await lesen()
+      const neu = await rufen<Record<string, unknown>>(`/patients/${nummer}/befunde/01`, { ms: 30_000 })
       const v = neu.ok ? befundAusPvs(neu.daten) : null
       if (v) s = await schreiben(v.version)
     }
-    if (!s.ok) return fehlt(s)
+    if (!s.ok) return pvsFehlt(c, s)
     console.log('[planr] Befund ins PVS geschrieben', w.mandant, `${(s.daten.selectedTeeth ?? []).length} Zähne`)
-    return json(res, 200, { ok: true, pvs: c.name, patient: nummer, geschrieben: s.daten.selectedTeeth ?? [] })
+    const k = kiefer.map(String)
+    const lesen = { patient: nummer, label: l.label, geburt: l.geburt, pvs: c.name ?? '', zaehne: l.befund.zaehne, datum: l.befund.datum }
+    const befund = (await befundAendern(w.mandant, nummer, (alt) => nachSchreiben(alt ?? nachLesen(undefined, lesen), k, zaehne)))!
+    return { geschrieben: s.daten.selectedTeeth ?? [], befund }
   } catch (e) {
-    return json(res, 503, { ok: false, pvs: c.name, meldung: stumm(c, e) })
+    return { status: 503, daten: { ok: false, pvs: c.name, meldung: stumm(c, e) } }
   }
+}
+
+/** Einzelne Zähne ändern (Gespräch oder PlanR); Grundlage ist der Stand im PVS, bei Bedarf frisch gelesen. */
+async function befundAenderungAnwenden(req: IncomingMessage, w: Wer, angabe: (k: string) => string, zaehne: Record<string, unknown>, wer: string): Promise<Befund01 | BefundFehler> {
+  const nummer = angabe('patient')
+  const alt = /^\d{1,9}$/.test(nummer) ? (await befundeLesen(w.mandant))[nummer] : undefined
+  let basis = alt && Date.now() - Date.parse(alt.gelesen) < BEFUND_FRISCH_MS ? alt : undefined
+  if (!basis) {
+    const l = await pvsBefundLesen(req, w, angabe)
+    if (!('nummer' in l)) return l
+    basis = await befundGelesen(w, l)
+  }
+  const b = basis
+  return (await befundAendern(w.mandant, b.patient, (a) => nachAenderung(a ?? b, zaehne, wer)))!
+}
+
+const befundZaehne = (x: unknown): Record<string, unknown> | null =>
+  x && typeof x === 'object' && !Array.isArray(x) && Object.keys(x).length ? x as Record<string, unknown> : null
+
+/** POST /api/intern/befund/aenderung { patient | vorname, name, geburt; zaehne; wer } · /api/intern/befund/verwerfen { patient } */
+async function internBefundAendern(req: IncomingMessage, w: Wer, url: string, res: ServerResponse) {
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(await lesenBody(req, 64_000)) as Record<string, unknown>
+  } catch {
+    return json(res, 400, { ok: false, meldung: 'Ungültige Änderung.' })
+  }
+  const angabe = (k: string) => String(body[k] ?? '').trim()
+  if (url === '/api/intern/befund/verwerfen') {
+    const nummer = angabe('patient')
+    const b = /^\d{1,9}$/.test(nummer) ? await befundAendern(w.mandant, nummer, (a) => a && verwerfen(a)) : undefined
+    return b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, 404, { ok: false, meldung: 'Zu diesem Patienten liegt kein Befund vor.' })
+  }
+  const zaehne = befundZaehne(body.zaehne)
+  if (!zaehne) return json(res, 400, { ok: false, meldung: 'Keine Zähne genannt.' })
+  const b = await befundAenderungAnwenden(req, w, angabe, zaehne, angabe('wer').slice(0, 60) || 'Assistentin')
+  return 'patient' in b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, b.status, b.daten)
+}
+
+/**
+ * Befundseite und HKP-Planer: GET /api/befund?patient= (bzw. vorname, name, geburt) liest frisch aus dem PVS,
+ * /api/befund/live meldet jede Änderung, /api/befund/liste die zuletzt geänderten. POST aenderung | verwerfen |
+ * schreiben { patient } – Schreiben überträgt die offenen Kiefer ins PVS.
+ */
+async function befundEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, q: URLSearchParams, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (w.praxen?.length === 0) return json(res, 403, { ok: false, meldung: 'Sie sind noch keiner Praxis zugeordnet.' })
+  const m = w.mandant
+  if (req.method === 'GET' && url === '/api/befund/live') return befundLive(m, res, (fertig) => req.on('close', fertig))
+  if (req.method === 'GET' && url === '/api/befund/liste') {
+    const alle = Object.values(await befundeLesen(m)).sort((a, b) => b.stand.localeCompare(a.stand)).slice(0, 30)
+    return json(res, 200, { ok: true, befunde: alle.map(befundAnsicht) })
+  }
+  if (req.method === 'GET' && url === '/api/befund') {
+    const l = await pvsBefundLesen(req, w, (k) => (q.get(k) ?? '').trim())
+    if ('nummer' in l) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
+    // PVS gerade nicht erreichbar: der gemerkte Stand mit Hinweis
+    const alt = /^\d{1,9}$/.test(q.get('patient') ?? '') ? (await befundeLesen(m))[q.get('patient')!] : undefined
+    return alt ? json(res, 200, { ok: true, befund: befundAnsicht(alt), meldung: String(l.daten.meldung ?? '') }) : json(res, l.status, l.daten)
+  }
+  if (req.method !== 'POST') return json(res, 404, { ok: false })
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse((await lesenBody(req, 64_000)) || '{}') as Record<string, unknown>
+  } catch {
+    return json(res, 400, { ok: false })
+  }
+  const nummer = String(body.patient ?? '')
+  if (!/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Patientennummer fehlt.' })
+  const angabe = (k: string) => (k === 'patient' ? nummer : '')
+  if (url === '/api/befund/aenderung') {
+    const zaehne = befundZaehne(body.zaehne)
+    if (!zaehne) return json(res, 400, { ok: false, meldung: 'Keine Zähne genannt.' })
+    const b = await befundAenderungAnwenden(req, w, angabe, zaehne, w.konto.email ?? 'PlanR')
+    return 'patient' in b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, b.status, b.daten)
+  }
+  if (url === '/api/befund/verwerfen') {
+    const b = await befundAendern(m, nummer, (a) => a && verwerfen(a))
+    return b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, 404, { ok: false })
+  }
+  if (url === '/api/befund/schreiben') {
+    const l = await pvsBefundLesen(req, w, angabe)
+    if (!('nummer' in l)) return json(res, l.status, l.daten)
+    const frisch = await befundGelesen(w, l)
+    const kiefer = offeneKiefer(frisch)
+    if (!kiefer.length) return json(res, 200, { ok: true, befund: befundAnsicht(frisch), meldung: `Der Befund steht schon so in ${l.c.name}.` })
+    const s = await befundSchreiben(w, l, kiefer, zaehneAktuell(frisch))
+    if (!('geschrieben' in s)) return json(res, s.status, s.daten)
+    return json(res, 200, { ok: true, befund: befundAnsicht(s.befund), meldung: `In ${l.c.name} übernommen.` })
+  }
+  json(res, 404, { ok: false })
 }
 
 /**
@@ -1708,7 +1879,8 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
-  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog') {
+  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog'
+    || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen') {
     return void internPvs(req, res, url, query).catch(fehler500(res))
   }
   if (!url.startsWith('/api/')) return next()
@@ -1735,6 +1907,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/rechnungen' || /^\/api\/rechnungen\/PR-\d{4}-\d{4}$/.test(url)) return void rechnungenEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
+  if (url === '/api/befund' || url.startsWith('/api/befund/')) return void befundEndpunkt(req, res, url, new URLSearchParams(query), w).catch(fehler500(res))
   if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps' || url === '/api/pvs/patient') {
     if (req.method !== 'GET' || !eigeneSeite(req)) return json(res, 403, { ok: false })
     return void pvsLesen(req, w, url.slice('/api/pvs/'.length), new URLSearchParams(query), res).catch(fehler500(res))

@@ -242,6 +242,16 @@ function hkpNeuOeffnen(p: Stammdaten) {
   location.href = url.toString()
 }
 
+/** Befundseite des HKP-Planers mit dem aktuellen 01 dieses Patienten */
+function befundOeffnen(patientNr: string) {
+  const planer = BEREICHE.flatMap((b) => b.planer).find((x) => x.host === 'hkp')
+  const basis = planer && adresse(planer, location)
+  if (!basis) return melden('Der HKP-Planer ist hier nicht erreichbar.')
+  const url = new URL(basis, location.href)
+  url.searchParams.set('befund', patientNr)
+  location.href = url.toString()
+}
+
 /** Aus dem PVS übernommener HKP: Liste neu laden, dann den Planer mit dem Plan öffnen */
 async function ausPvsOeffnen(nummer: string, hinweise: string[]) {
   await laden()
@@ -602,6 +612,7 @@ function zeichnen() {
         : `Die Suche in ${ziel} über das Internet braucht die PlanR-Bridge auf dem Praxisserver (Einrichtung → Bridge).`,
       planrPlaene,
       neuerHkp: hkpNeuOeffnen,
+      befundOeffnen,
       dateiWaehlen: () => importWaehlen(null),
       geoeffnet: ausPvsOeffnen,
     })

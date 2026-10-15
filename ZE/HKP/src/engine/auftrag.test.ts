@@ -100,6 +100,13 @@ describe('Auftrag verstehen', () => {
     expect(befundVerstehen('16 und 17 fehlen', 'OK')).toEqual({ 16: 'f', 17: 'f' })
   })
 
+  it('Befund ändern per Sprache: „47 Implantat“ und „15 und 13 Kronen“ erben kein Kürzel vom Nachbarn', () => {
+    expect(befundVerstehen('37 zerstört. 47 Implantat')).toEqual({ 37: 'x', 47: 'i' })
+    expect(befundVerstehen('14 Brückenglied, 15 und 13 Kronen')).toEqual({ 14: 'b', 15: 'k', 13: 'k' })
+    expect(befundVerstehen('16 fehlt, 17, 18')).toEqual({ 16: 'f', 17: 'f', 18: 'f' })
+    expect(befundAusAuftrag('Brücke von 34 auf 36, 37 Krone')).not.toMatch(/37/)
+  })
+
   it('im Auftrag ist „15 ist ein Brückenglied“ Therapie, „17 ist überkront“ Befund', () => {
     expect(befundAusAuftrag('Brücke von 14 auf 16, 15 ist ein Brückenglied')).toBe('15 fehlt')
     expect(befundVerstehen(befundAusAuftrag('Brücke von 14 auf 16, 17 ist überkront'), 'OK')).toMatchObject({ 15: 'f', 17: 'k' })
