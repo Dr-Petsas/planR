@@ -123,10 +123,10 @@ export const PVS_PLANER: Record<string, string> = {
   'privat-kv': 'Privat-ZE-Plan', 'privat-impl': 'Implantologie-Plan', 'privat-kons': 'Kons-Plan', 'kons-mkv': 'Füllungs-MKV',
 }
 
-/** Wohin diese Pläne gehen: DS-Win alle; DENS Kons, Füllungs-MKV und Implantologie als Kostenvoranschlag (Privat-ZE noch ohne DENS-Vorlage) */
+/** Wohin diese Pläne gehen: DS-Win alle; DENS Kons, Füllungs-MKV und Implantologie als Kostenvoranschlag, Privat-ZE als Privatprothetik */
 const PLAN_PVS: Record<string, string[]> = {
   dampsoft: Object.keys(PVS_PLANER),
-  dens: ['privat-kons', 'kons-mkv', 'privat-impl'],
+  dens: Object.keys(PVS_PLANER),
 }
 
 export const planInsPvsMoeglich = (pvs: string | undefined, modul: string) => !!pvs && (PLAN_PVS[pvs] ?? []).includes(modul)

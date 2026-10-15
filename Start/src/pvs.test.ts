@@ -8,12 +8,10 @@ describe('PVS-Vermerk', () => {
     expect(vermerkText({ pvs: 'dampsoft', patientId: '1', planNr: 17, plaene: [17, 18], am }, 'DS-Win')).toBe('In DS-Win als Plan Nr. 17 und 18 angelegt (15.10.2026)')
   })
 
-  it('DS-Win nimmt alle Privatpläne, DENS bisher Kons, Füllungs-MKV und Implantologie', () => {
+  it('DS-Win und DENS nehmen alle Privatpläne und die Füllungs-MKV', () => {
     expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv'].every((m) => planInsPvsMoeglich('dampsoft', m))).toBe(true)
-    expect(planInsPvsMoeglich('dens', 'kons-mkv')).toBe(true)
-    expect(planInsPvsMoeglich('dens', 'privat-kons')).toBe(true)
-    expect(planInsPvsMoeglich('dens', 'privat-impl')).toBe(true)
-    expect(planInsPvsMoeglich('dens', 'privat-kv')).toBe(false)
+    expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv'].every((m) => planInsPvsMoeglich('dens', m))).toBe(true)
+    expect(planInsPvsMoeglich('dens', 'hkp')).toBe(false)
     expect(planInsPvsMoeglich('evident', 'kons-mkv')).toBe(false)
     expect(planInsPvsMoeglich(undefined, 'kons-mkv')).toBe(false)
   })
