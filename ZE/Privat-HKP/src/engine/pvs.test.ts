@@ -30,6 +30,15 @@ describe('Privat-ZE fürs Praxisprogramm', () => {
     expect(kva.positionen.find((x) => x.ebene === 'BEB' && x.nr === '2101')).toMatchObject({ labor: 'eigen', einzelpreis: 99 })
   })
 
+  it('Begründung über dem Schwellenwert geht mit', () => {
+    const p0 = plan({ '16': { B: 'kw', TP: 'KM' } })
+    const p = { ...p0, regler: { ...p0.regler, gozFaktor: 3 } }
+    const [kva] = pvsPlaene(p, kalkulieren(p, STANDARD_EINSTELLUNGEN))
+    const goz = kva.positionen.filter((x) => x.ebene === 'GOZ')
+    expect(goz.length).toBeGreaterThan(0)
+    for (const x of goz) expect(x.faktor! > 2.3 ? x.begruendung : 'ohne').toMatch(/\S{3}/)
+  })
+
   it('ohne Honorar kein Plan', () => {
     const p = plan({})
     expect(pvsPlaene(p, kalkulieren(p, STANDARD_EINSTELLUNGEN))).toEqual([])

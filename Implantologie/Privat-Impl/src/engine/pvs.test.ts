@@ -30,4 +30,16 @@ describe('Implantologie fürs Praxisprogramm', () => {
     const [kva] = pvsPlaene(p, k)
     for (const z of analog) expect(kva.positionen).toContainEqual(expect.objectContaining({ nr: `${z.nr}a`, bezeichnung: z.text }))
   })
+
+  it('Begründung über dem Schwellenwert geht mit (DENS: Faktorerklärung)', () => {
+    const p = { ...plan({ '36': { B: 'f', TP: 'I' } }), regler: { ...STANDARD_REGLER, gozFaktor: 3, analogStufe: 4 } }
+    const k = kalkulieren(p, STANDARD_EINSTELLUNGEN)
+    const [kva] = pvsPlaene(p, k)
+    const gesteigert = kva.positionen.filter((x) => x.ebene === 'GOZ' && !x.nr?.endsWith('a') && (x.faktor ?? 0) > 2.3)
+    expect(gesteigert.length).toBeGreaterThan(0)
+    for (const x of gesteigert) expect(x.begruendung).toMatch(/\S{3}/)
+    const analog = kva.positionen.filter((x) => x.nr?.endsWith('a'))
+    expect(analog.length).toBeGreaterThan(0)
+    expect(analog.filter((x) => x.begruendung)).toEqual([])
+  })
 })

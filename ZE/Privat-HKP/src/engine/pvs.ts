@@ -15,7 +15,7 @@ export function pvsPlaene(plan: Plan, kalk: Kalkulation): PvsPlan[] {
   const positionen: PvsPosition[] = [
     ...kalk.honorar.filter((z) => gueltig(z) && NR.test(z.nr)).map((z): PvsPosition => ({
       ebene: 'GOZ', nr: z.nr, zahn: pvsZahn(z.zahn), anzahl: z.anzahl, faktor: z.faktor, einzelpreis: z.einzel, betrag: z.betrag,
-      art: pvsArt(z.nr, 'ZE'),
+      art: pvsArt(z.nr, 'ZE'), ...(z.begruendung?.trim() ? { begruendung: z.begruendung.trim() } : {}),
     })),
     ...kalk.labor.filter(gueltig).map(labor),
     // Praxismaterial (ohne MwSt.) zählt zu Material und Labor der Praxis.

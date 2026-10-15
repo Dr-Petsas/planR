@@ -24,6 +24,8 @@ export interface PvsPosition {
   /** Kürzel der Praxisposition (Material) */
   eigen?: string
   bezeichnung?: string
+  /** Begründung des Steigerungsfaktors (DENS: Faktorerklärung der KVA-Zeile) */
+  begruendung?: string
 }
 
 export interface PvsPlan {

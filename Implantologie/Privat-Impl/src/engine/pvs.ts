@@ -12,6 +12,8 @@ export function pvsPlaene(plan: Plan, kalk: Kalkulation): PvsPlan[] {
     ebene, nr: z.analog ? `${z.nr}a` : z.nr, zahn: pvsZahn(z.zahn), anzahl: z.anzahl, ...(z.faktor ? { faktor: z.faktor } : {}),
     einzelpreis: z.einzel, betrag: z.betrag, art: ebene === 'GOAE' ? 'IM' : pvsArt(z.nr, 'IM'),
     ...(z.analog ? { bezeichnung: z.text.slice(0, 300) } : {}),
+    // Bei Analogleistungen ist `begruendung` die PKV-Einschätzung aus dem Katalog, keine Faktorbegründung.
+    ...(!z.analog && z.begruendung?.trim() ? { begruendung: z.begruendung.trim() } : {}),
   })
   const positionen: PvsPosition[] = [
     ...kalk.honorarGoz.filter((z) => gueltig(z) && NR.test(z.nr)).map(honorar('GOZ')),
