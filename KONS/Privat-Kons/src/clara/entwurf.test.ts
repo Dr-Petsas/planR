@@ -80,6 +80,8 @@ describe('Kons-Entwurf', () => {
       grund: 'befund_konflikt', zahn: '36', frage: 'Laut Befund ist 36 ein fehlender Zahn, dort geht kein Aufbau. Welchen Zahn meinen Sie?',
     })
     expect(konsEntwurf('Wurzelbehandlung an 36 dreikanalig', { 36: 'k' }).status).toBe('ok')
+    expect(konsEntwurf('Inlay 36 mod', { 36: 'i' })).toMatchObject({ frage: expect.stringMatching(/^Laut Befund ist 36 ein Implantat mit intakter Suprakonstruktion,/) })
+    expect(konsEntwurf('Inlay 36 mod', { 36: 'k' })).toMatchObject({ frage: expect.stringMatching(/^Laut Befund ist 36 eine klinisch intakte Krone,/) })
   })
 
   it('Nachtrag zu einer Rückfrage ergänzt den Auftrag', () => {

@@ -268,7 +268,9 @@ const sortiert = (zs: string[]) => [...zs].sort((a, b) => ALLE_ZAEHNE.indexOf(a)
 const befundArt = (th?: Therapie): KonsArt => (th === 'endo' || th === 'revision' ? 'endo' : th === 'aufbau' ? 'aufbau' : 'fuellung')
 const befundName = (code: string) => {
   const n = BEFUND_KUERZEL[code]
-  return n ? `ein${/zahn$/i.test(n) ? '' : 'e'} ${n}` : code
+  if (!n) return code
+  const kopf = n.match(/\p{Lu}[\p{L}-]*/u)?.[0] ?? ''
+  return `ein${/(?:zahn|implantat|glied|element|teil|schluss)$/i.test(kopf) ? '' : 'e'} ${n}`
 }
 
 /** Gesprochener Auftrag + 01 → gerechneter Kons-Kostenvoranschlag (ohne Nummer) oder Rückfrage */

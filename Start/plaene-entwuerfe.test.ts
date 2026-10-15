@@ -126,6 +126,15 @@ describe('Sprach-Entwürfe von Clara in der Übersicht', () => {
     expect(a.eingang[0].plan).toMatchObject({ nummer: `PK-${JAHR}-C001`, zaehne: { 36: { therapie: 'endo', kanaele: 3 } } })
   })
 
+  it('Kostenvoranschlag Implantologie: Privatkarte mit IMPL-Nummer im Eingang des Implantologie-Planers', async () => {
+    const implPlan = { nummer: '', zaehne: { 46: { B: '', TP: 'I' } }, implantate: {}, regionen: { 'UK-R': { augmentation: true } }, global: { bildgebung: 'dvt' } }
+    offen = [{ id: 'i1', modul: 'privat-impl', patient: 'Petra Privattest', betrag: 2450.5, plan: implPlan }]
+    const d = await holen('/api/plaene') as { plaene: Record<string, unknown>[] }
+    expect(d.plaene.find((k) => k.modul === 'privat-impl')).toMatchObject({ kuerzel: 'IMPL', art: 'Privat', nummer: `IMPL-${JAHR}-C001`, status: 'entwurf' })
+    const a = await holen('/api/plaene?nur=abgleich&modul=privat-impl') as { eingang: { plan: Record<string, unknown> }[] }
+    expect(a.eingang[0].plan).toMatchObject({ nummer: `IMPL-${JAHR}-C001`, zaehne: { 46: { TP: 'I' } }, regionen: { 'UK-R': { augmentation: true } } })
+  })
+
   it('MAS nicht erreichbar: die Übersicht kommt trotzdem', async () => {
     masKaputt = true
     try {
