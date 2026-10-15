@@ -33,7 +33,7 @@ import {
 import type { Paket } from './src/paket.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
 import {
-  ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
+  ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, befundOhnePvs, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
   vorgangBeenden, vorgangKarten, vorgangLaeuft, vorgangMelden, zaehneAktuell, type Befund01,
 } from './befund01.ts'
 
@@ -1634,8 +1634,12 @@ interface BefundGelesen { c: PvsWeg; rufen: Rufer; nummer: string; befund: PvsBe
 /** Ohne neues Lesen gilt der gemerkte Stand aus dem Praxisprogramm so lange als frisch */
 const BEFUND_FRISCH_MS = 10 * 60_000
 
+/** Bridge vor 1.4 kennt die Befund-Aufrufe nicht (403); die Assistentin liest die Meldung vor */
+const BRIDGE_ZU_ALT = /führt die PlanR-Bridge nicht aus/
 const pvsFehlt = (c: PvsWeg, r: { status: number; daten: { error?: string } }): BefundFehler =>
-  ({ status: r.status === 404 ? 404 : r.status === 400 ? 422 : 502, daten: { ok: false, pvs: c.name, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` } })
+  ({ status: r.status === 404 ? 404 : r.status === 400 ? 422 : 502, daten: { ok: false, pvs: c.name, meldung: r.status === 403 && BRIDGE_ZU_ALT.test(r.daten.error ?? '')
+    ? 'Die PlanR-Bridge in der Praxis braucht ein Update.'
+    : `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` } })
 
 /** Patient per Nummer oder Vorname, Name und Geburtsdatum (nur ein eindeutiger Treffer) und sein 01 aus dem PVS */
 async function pvsBefundLesen(req: IncomingMessage, w: Wer, angabe: (k: string) => string): Promise<BefundGelesen | BefundFehler> {
@@ -1740,8 +1744,9 @@ async function befundAenderungAnwenden(req: IncomingMessage, w: Wer, angabe: (k:
   let basis = alt && Date.now() - Date.parse(alt.gelesen) < BEFUND_FRISCH_MS ? alt : undefined
   if (!basis) {
     const l = await pvsBefundLesen(req, w, angabe)
-    if (!('nummer' in l)) return l
-    basis = await befundGelesen(w, l)
+    if (!('nummer' in l) && !alt) return l
+    // Praxisprogramm nicht lesbar: auf dem gemerkten Stand weiter (er zeigt seinen Lesestand selbst)
+    basis = 'nummer' in l ? await befundGelesen(w, l) : alt!
   }
   const b = basis
   return (await befundAendern(w.mandant, b.patient, (a) => nachAenderung(a ?? b, zaehne, wer)))!
@@ -1760,7 +1765,7 @@ async function internBefundAendern(req: IncomingMessage, w: Wer, url: string, re
   }
   const angabe = (k: string) => String(body[k] ?? '').trim()
   if (url === '/api/intern/befund/vorgang') {
-    // Ohne gemerkten Befund kein Vorgang: MAS meldet erst, nachdem es den 01 über PlanR gelesen hat
+    // Ohne gemerkten Befund kein Vorgang – außer MAS nennt den Patienten (Praxisprogramm nicht lesbar, Befund aus dem Gespräch)
     const nummer = angabe('patient')
     if (!/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Patientennummer fehlt.' })
     const teil = {
@@ -1769,7 +1774,8 @@ async function internBefundAendern(req: IncomingMessage, w: Wer, url: string, re
       ...('plan' in body ? { plan: body.plan } : {}),
       ...('meldung' in body ? { meldung: angabe('meldung') } : {}),
     }
-    const b = await befundAendern(w.mandant, nummer, (a) => a && vorgangMelden(a, teil))
+    const neu = angabe('label') ? befundOhnePvs({ patient: nummer, label: angabe('label').slice(0, 120), geburt: isoDatum(angabe('geburt')), pvs: angabe('pvs').slice(0, 40) }) : undefined
+    const b = await befundAendern(w.mandant, nummer, (a) => (a ?? neu) && vorgangMelden((a ?? neu)!, teil))
     return b?.vorgang ? json(res, 200, { ok: true, vorgang: b.vorgang }) : json(res, 404, { ok: false, meldung: 'Zu diesem Patienten liegt noch kein Befund vor.' })
   }
   if (url === '/api/intern/befund/verwerfen') {

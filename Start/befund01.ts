@@ -160,6 +160,15 @@ export function nachLesen(alt: Befund01 | undefined, l: { patient: string; label
   return b
 }
 
+/**
+ * Praxisprogramm gerade nicht lesbar (Live 15.10.2026: Bridge zu alt): Eintrag nur für den Befund aus dem Gespräch.
+ * Er gilt nie als frisch gelesen – jeder Zugriff versucht erst wieder das Praxisprogramm.
+ */
+export const befundOhnePvs = (l: { patient: string; label?: string; geburt?: string; pvs?: string }, jetzt = new Date().toISOString()): Befund01 => ({
+  patient: l.patient, label: l.label ?? '', geburt: l.geburt ?? '', pvs: l.pvs ?? '', pvsZaehne: {}, pvsDatum: '',
+  offen: {}, offenWer: '', gelesen: '', geschrieben: '', stand: jetzt,
+})
+
 /** Änderung aus dem Gespräch (oder in PlanR): einzelne Zähne; was dem Praxisprogramm entspricht, ist nicht offen. */
 export function nachAenderung(alt: Befund01, zaehne: Record<string, unknown>, wer: string, jetzt = new Date().toISOString()): Befund01 {
   const offen = { ...alt.offen, ...nurZaehne(zaehne) }

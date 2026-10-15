@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import {
-  ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
+  ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundOhnePvs, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
   vorgangBeenden, vorgangKarten, vorgangLaeuft, vorgangMelden, type Befund01,
 } from './befund01'
 
@@ -71,6 +71,17 @@ describe('aktueller 01-Befund', () => {
 describe('vom Befund zum Plan', () => {
   const ms = (iso: string) => Date.parse(iso)
   const basis = () => nachLesen(undefined, gelesen({ '16': 'k' }), T1)
+
+  it('ohne lesbares Praxisprogramm: Eintrag aus dem Gespräch, nie frisch, spätere Lesung übernimmt die offenen Zähne', () => {
+    const leer = befundOhnePvs({ patient: '3082', label: 'Muster, Max', pvs: 'DS-Win' }, T1)
+    expect(Date.now() - Date.parse(leer.gelesen) < 60_000).toBe(false)
+    const v = vorgangMelden(leer, { modul: 'hkp', phase: 'befund' }, T1)
+    const diktiert = nachAenderung(v, { '16': 'f', '13': 'k' }, 'Eva', T2)
+    expect(befundAnsicht(diktiert).zaehne).toMatchObject({ '16': 'f', '13': 'k' })
+    const spaeter = nachLesen(diktiert, gelesen({ '16': 'f' }), T3)
+    expect(spaeter.offen).toEqual({ '13': 'k' })
+    expect(spaeter.vorgang?.phase).toBe('befund')
+  })
 
   it('beginnt beim Befund, Phasen gehen nur vorwärts', () => {
     const a = vorgangMelden(basis(), { modul: 'hkp', phase: 'befund', auftrag: 'Brücke 14 bis 16' }, T1)

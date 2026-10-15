@@ -7,6 +7,32 @@ const TOTAL = 'Es fehlen alle Zähne, ich möchte totale Oberkieferprothese und 
 
 const kiefer = (a: ReturnType<typeof auftragVerstehen>) =>
   (a.teile ?? [a]).map((t) => `${t.kiefer}:${t.versorgung}`).sort()
+const fehlend = (b: Record<string, string>) => Object.keys(b).filter((z) => b[z] === 'f').sort()
+
+describe('Ober- und Unterkiefer gemeinsam, Stellen als Zahlwörter (Live 15.10.2026 14:26)', () => {
+  const EINS = 'Ich möchte Teleskopprothese im Oberkiefer- und im Unterkieferplan auf den Eckzähnen, jeweils ein Teleskop, die Zähne vier, fünf, sechs, sieben auf jeder Seite fehlen, die Weisheitszähne fehlen auch alle'
+  const ZWEI = 'Okay, nochmal, jeweils auf jeder Seite die Dreier, also die Eckzähne sind Teleskopzähne, die Zähne vier, fünf, sechs, sieben und acht auf jeder Seite fehlen, sowohl im Oberkiefer als auch im Unterkiefer. Ich möchte zwei Teleskopprothese planen mit Teleskop auf allen Dreiern'
+  const FEHLT = ['14', '15', '16', '17', '18', '24', '25', '26', '27', '28', '34', '35', '36', '37', '38', '44', '45', '46', '47', '48']
+
+  it.each([EINS, ZWEI])('beide Kiefer mit Teleskopen auf den Dreiern, Vierer bis Achter fehlen überall: %s', (s) => {
+    const a = auftragVerstehen(s)
+    expect(kiefer(a)).toEqual(['OK:teleskopprothese', 'UK:teleskopprothese'])
+    expect(a.teile?.flatMap((t) => t.pfeiler).sort()).toEqual(['13', '23', '33', '43'])
+    const b = befundVerstehen(befundAusAuftrag(s), a.kiefer)
+    expect(fehlend(b)).toEqual(FEHLT)
+    const r = planAusAuftrag(a, b)
+    expect(r.status, JSON.stringify(r)).toBe('ok')
+    if (r.status !== 'ok') return
+    for (const z of ['13', '23', '33', '43']) expect(r.plan.zaehne[z].TP).toMatch(/^T/)
+    for (const z of ['16', '26', '36', '46']) expect(r.plan.zaehne[z].TP).toBe('E')
+  })
+
+  it('„Zähne vier bis sieben“ ist eine Spanne; Anzahlen und FDI-Nummern bleiben unberührt', () => {
+    expect(fehlend(befundVerstehen('im Oberkiefer fehlen die Zähne vier bis sieben'))).toEqual(['14', '15', '16', '17', '24', '25', '26', '27'])
+    expect(fehlend(befundVerstehen('es fehlen die Zähne 14 bis 16', 'OK'))).toEqual(['14', '15', '16'])
+    expect(kiefer(auftragVerstehen('zwei Teleskopprothesen im Oberkiefer auf 13 und 23'))).toEqual(['OK:teleskopprothese'])
+  })
+})
 
 describe('Aufträge für beide Kiefer (Live 05.10.2026)', () => {
   it('Hörfehler „Oberkäfer“ + Unterkiefer-Teleskope: zwei Kiefer, Pfeiler auf den Eckzähnen', () => {
@@ -63,7 +89,6 @@ describe('Aufträge für beide Kiefer (Live 05.10.2026)', () => {
 
 // Live-Anruf 05.10.2026 23:00: Befund-Diktat „Teleskop auf 13 und 23, ersetzte Zähne …“ / „es fehlen 14, 15, …“
 describe('Befund-Diktat mit Aufzählung nach dem Verb (Live 05.10.2026 23:00)', () => {
-  const fehlend = (b: Record<string, string>) => Object.keys(b).filter((z) => b[z] === 'f').sort()
 
   it('„es fehlen 14, 15, 16, …“ behält die ganze Liste', () => {
     const b = befundVerstehen(befundAusAuftrag('Also es fehlen 14, 15, 16, 17, 18, 24, 25, 26, 27, 28'))

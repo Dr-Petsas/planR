@@ -92,13 +92,41 @@ const kieferWorte = (t: string) => t
   .replace(/\b(ober|unter)-?\s?k(?:ie|ä|ae|i|e)ff?er(s)?\b-?/g, ' $1kiefer ')
   .replace(/\b(ober|unter)k(?:ie|ä|ae|i|e)ff?er(?=[a-zäöüß])/g, ' $1kiefer ')
 
-const norm = (t: string) => ` ${kieferWorte(t.toLowerCase().replace(/[‐–—]/g, '-')).replace(/\s+/g, ' ')} `
+/**
+ * Gesprochene Stellen (Live 15.10.2026): „die Zähne vier, fünf, sechs, sieben“ → „die vierer, fünfer, sechser und siebener“,
+ * „Zähne vier bis sieben“ ebenso; „Weisheitszähne“ → „achter“. Nur direkt nach „Zähne“ – „zwei Teleskopprothesen“ bleibt.
+ */
+const STELLE: Record<string, number> = { eins: 1, zwei: 2, drei: 3, vier: 4, fünf: 5, fuenf: 5, sechs: 6, sieben: 7, acht: 8 }
+const STELLE_NAME = ['', 'einser', 'zweier', 'dreier', 'vierer', 'fünfer', 'sechser', 'siebener', 'achter']
+const STELLE_WORT = '(?:eins|zwei|drei|vier|f(?:ü|ue)nf|sechs|sieben|acht|[1-8])'
+const STELLEN_LISTE = new RegExp(`\\bz(?:ä|ae)hne?\\s+(${STELLE_WORT}(?:\\s*(?:,|und|bis|-)\\s*${STELLE_WORT})*)\\b`, 'g')
+const stellenWorte = (t: string) => t
+  .replace(/\bweisheitsz(?:ä|ae)hnen?\b(?!\s*\d)/g, 'achter')
+  .replace(STELLEN_LISTE, (_, liste: string) => {
+    const stellen: number[] = []
+    let bis = false
+    for (const w of liste.match(new RegExp(`${STELLE_WORT}|bis|-`, 'g')) ?? []) {
+      if (w === 'bis' || w === '-') { bis = true; continue }
+      const n = STELLE[w] ?? Number(w)
+      const von = stellen[stellen.length - 1]
+      if (bis && von && n > von) for (let i = von + 1; i < n; i++) stellen.push(i)
+      if (!stellen.includes(n)) stellen.push(n)
+      bis = false
+    }
+    const namen = stellen.map((n) => STELLE_NAME[n])
+    return namen.length > 1 ? `${namen.slice(0, -1).join(', ')} und ${namen[namen.length - 1]}` : namen.join('')
+  })
+
+const norm = (t: string) => ` ${stellenWorte(kieferWorte(t.toLowerCase().replace(/[‐–—]/g, '-'))).replace(/\s+/g, ' ')} `
 
 function kieferIn(t: string): Kiefer | undefined {
   const ok = /\b(ok|o\.k\.|oberkiefer|oben)\b/.test(t)
   const uk = /\b(uk|u\.k\.|unterkiefer|unten)\b/.test(t)
   return ok && !uk ? 'OK' : uk && !ok ? 'UK' : undefined
 }
+
+/** „Teleskopprothese im Ober- und Unterkiefer …“, „sowohl im Oberkiefer als auch im Unterkiefer“: eine Angabe für beide */
+const KIEFER_GEMEINSAM = /\b(?:oberkiefer|ok)\s+(?:und|sowie|als auch)\s+(?:(?:im|in|den|dem)\s+)?(?:unterkiefer|uk)\b|\b(?:unterkiefer|uk)\s+(?:und|sowie|als auch)\s+(?:(?:im|in|den|dem)\s+)?(?:oberkiefer|ok)\b/
 
 /** Zähne von a bis b entlang der Zahnreihe (auch über die Mitte, z. B. 13 bis 23) */
 export function zahnSpanne(a: string, b: string): string[] {
@@ -176,11 +204,17 @@ export function auftragVerstehen(text: string): HkpAuftrag {
   const auftrag = einzelAuftrag(text)
   const abschnitte = kieferAbschnitte(text)
   const beide = BEIDE_KIEFER.test(norm(text))
-  if (abschnitte.length < 2 && !(beide && auftrag.versorgung === 'totalprothese')) return auftrag
-  const roh = abschnitte.map((a) => ({ ...einzelAuftrag(a.text), kiefer: a.kiefer }))
+  // Gleiche Prothese für beide Kiefer: jeder Kiefer liest den ganzen Satz („auf den Eckzähnen“ gilt oben und unten)
+  const gemeinsam = KIEFER_GEMEINSAM.test(norm(text))
+    && (auftrag.versorgung === 'teleskopprothese' || auftrag.versorgung === 'totalprothese')
+    && new Set(abschnitte.map((a) => einzelAuftrag(a.text).versorgung).filter(Boolean)).size <= 1
+  if (abschnitte.length < 2 && !(beide && auftrag.versorgung === 'totalprothese') && !gemeinsam) return auftrag
+  const roh = gemeinsam
+    ? (['OK', 'UK'] as Kiefer[]).map((k) => einzelAuftrag(text, k))
+    : abschnitte.map((a) => ({ ...einzelAuftrag(a.text), kiefer: a.kiefer }))
   // Abschnitt nur mit Kiefer-Wort („… im Oberkiefer und Unterkiefer“) erbt die Versorgung des Nachbarn –
   // nicht, wenn dort ein Befund steht („unten bleibt alles“, „im Unterkiefer ist die 36 kariös“).
-  roh.forEach((x, i) => {
+  if (!gemeinsam) roh.forEach((x, i) => {
     const t = norm(abschnitte[i].text)
     if (x.versorgung || /nichts|kein/.test(t) || befundWort(t, true)) return
     const nachbar = roh.slice(0, i).reverse().find((y) => y.versorgung) ?? roh.slice(i + 1).find((y) => y.versorgung)
@@ -200,7 +234,7 @@ export function auftragVerstehen(text: string): HkpAuftrag {
     pfeiler: teile.flatMap((x) => x.pfeiler), coverDenture: teile.some((x) => x.coverDenture) }
 }
 
-function einzelAuftrag(text: string): HkpAuftrag {
+function einzelAuftrag(text: string, kiefer?: Kiefer): HkpAuftrag {
   const t = norm(text)
   const auftrag: HkpAuftrag = {
     text, pfeiler: [], entfernen: [], erhalten: [],
@@ -208,7 +242,7 @@ function einzelAuftrag(text: string): HkpAuftrag {
     mitAchtern: /(mit|inklusive|inkl\.?|samt) (den )?achter/.test(t),
   }
   auftrag.versorgung = versorgungIn(t, auftrag.coverDenture)
-  auftrag.kiefer = kieferIn(t)
+  auftrag.kiefer = kiefer ?? kieferIn(t)
   const nummern = [...t.matchAll(FDI)].map((m) => kieferVon(m[1]))
   if (!auftrag.kiefer && nummern.length && nummern.every((k) => k === nummern[0])) auftrag.kiefer = nummern[0]
   Object.assign(auftrag, ausfuehrungIn(text))
@@ -393,12 +427,16 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
   /** Satzteil ohne Kiefer („die Sechser fehlen“) erbt ihn vom Nachbarn – erst davor, sonst danach */
   const kieferFuer = (i: number) =>
     genannt[i] ?? kiefer ?? genannt.slice(0, i).reverse().find(Boolean) ?? genannt.slice(i + 1).find(Boolean)
+  // „… auf jeder Seite fehlen, sowohl im Oberkiefer als auch im Unterkiefer“: ohne einzelnen Kiefer gelten beide
+  const beide = !kiefer && !genannt.some(Boolean) && (KIEFER_GEMEINSAM.test(norm(text)) || BEIDE_KIEFER.test(norm(text)))
+  const zaehneFuer = (teil: string, k?: Kiefer) =>
+    k || !beide ? zaehneIn(teil, k) : [...new Set([...zaehneIn(teil, 'OK'), ...zaehneIn(teil, 'UK')])]
   const teile = roh.map((teil, i) => {
     const k = kieferFuer(i)
     const treffer = befundWort(teil)
     const ersterZahn = teil.search(/\b[1-4][1-8]\b|er(n|s)?\b|front|eckz/)
     return {
-      teil, k, zs: zaehneIn(teil, k), code: treffer?.code,
+      teil, k, zs: zaehneFuer(teil, k), code: treffer?.code,
       /** Verb am Ende („…, die Sechser und Siebener fehlen“) gilt auch für die Satzteile davor */
       nachgestellt: !!treffer && ersterZahn >= 0 && treffer.index > ersterZahn,
     }
@@ -496,6 +534,11 @@ function befundSaetze(text: string): string {
   }
   const abschnitte = kieferAbschnitte(text)
   if (abschnitte.length < 2) return ausTeil(text).join(', ')
+  // Ober- und Unterkiefer gemeinsam genannt: der Befund gilt beiden, das sagt der angehängte Kiefer-Teil
+  if (KIEFER_GEMEINSAM.test(norm(text))) {
+    const teile = ausTeil(text)
+    return teile.length && !teile.some((t) => kieferIn(norm(t))) ? [...teile, 'im oberkiefer und im unterkiefer'].join(', ') : teile.join(', ')
+  }
   // Vorspann vor der ersten Kiefer-Nennung („Es fehlen alle Zähne, … OK … und … UK“) gilt für beide Kiefer
   const ersteTeile = satzteile(abschnitte[0].text)
   const k = ersteTeile.findIndex((t) => new RegExp(KIEFER_WORT.source).test(norm(t)))
