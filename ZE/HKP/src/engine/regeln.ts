@@ -462,6 +462,7 @@ export function therapieAnwenden(
   const imp = implantatPositionen(mitR, { ...plan.implantat, abformung: implantatAbf }, plan.einstellungen.labor === 'gewerbe' ? 'fremd' : undefined)
   // Ein gescanntes Implantat bedeutet einen gescannten Kiefer – sonst stünden Gips- und gedrucktes Modell nebeneinander
   const abformung = plan.abformung || (implantatAbf === 'scan' && imp.positionen.length ? 'scan' : '')
-  const abf = abformungAnwenden([...r.positionen, ...imp.positionen], mitR, abformung, plan.abformungProthese ?? '', plan.einstellungen.labor === 'praxis')
+  const abf = abformungAnwenden([...r.positionen, ...imp.positionen], mitR, abformung, plan.abformungProthese ?? '', plan.einstellungen.labor === 'praxis',
+    plan.einstellungen.protheseDigital ?? 'voll')
   return { ...r, positionen: abf.positionen, hinweise: [...r.hinweise, ...imp.hinweise, ...abf.hinweise] }
 }

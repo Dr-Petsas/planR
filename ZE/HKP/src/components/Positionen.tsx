@@ -25,12 +25,12 @@ const HONORAR: Abschnitt[] = [
 const EIGEN: Abschnitt[] = [
   { key: 'eigen-BEL', ebene: 'BEL', labor: 'eigen', titel: 'Kasse – BEL II', hinweis: 'Höchstpreis Praxislabor × Regler' },
   { key: 'eigen-BEB', ebene: 'BEB', labor: 'eigen', titel: 'Privat – BEB', hinweis: 'BEB-Liste + Aufschlag' },
-  { key: 'eigen-MAT', ebene: 'MAT', labor: 'eigen', titel: 'Legierungen / Rohlinge', hinweis: 'aus „Kronenmaterial“ (Mittelwerte, netto)' },
+  { key: 'eigen-MAT', ebene: 'MAT', labor: 'eigen', titel: 'Legierungen / Rohlinge / Prothesenzähne', hinweis: 'Eigenlabor-Katalog bzw. „Kronenmaterial“ (Mittelwerte, netto)' },
 ]
 const FREMD: Abschnitt[] = [
   { key: 'fremd-BEL', ebene: 'BEL', labor: 'fremd', titel: 'Kasse – BEL II', hinweis: 'Labor-XML bzw. Höchstpreis Gewerbe' },
-  { key: 'fremd-BEB', ebene: 'BEB', labor: 'fremd', titel: 'Privat – BEB / NBL', hinweis: 'Labor-XML bzw. BEB-Liste' },
-  { key: 'fremd-MAT', ebene: 'MAT', labor: 'fremd', titel: 'Edelmetall / Material / Rabatt', hinweis: 'aus der Laborrechnung (netto)' },
+  { key: 'fremd-BEB', ebene: 'BEB', labor: 'fremd', titel: 'Privat – BEB / NBL', hinweis: 'Labor-XML, Fremdlabor-Liste bzw. BEB-Liste' },
+  { key: 'fremd-MAT', ebene: 'MAT', labor: 'fremd', titel: 'Edelmetall / Material / Rabatt', hinweis: 'Laborrechnung bzw. Fremdlabor-Liste (netto)' },
 ]
 const SONSTIGES: Abschnitt[] = [
   { key: 'MAT', ebene: 'MAT', titel: 'Praxismaterial / sonstige Kosten', hinweis: 'freie Eingabe (brutto)' },
@@ -199,10 +199,13 @@ export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwae
             </thead>
             <tbody>
               {zeilen.map((p, nr) => [p.material ? (
-                <tr key={p.id} className={`zeile-material${nr % 2 ? ' zebra' : ''}`} title="Aus der Kronenmaterial-Wahl – Menge und Preis sind Mittelwerte; ändern unter „Kronenmaterial“">
+                <tr key={p.id} className={`zeile-material${nr % 2 ? ' zebra' : ''}`} title={p.eigen || p.fremd
+                  ? `Preis und Text aus der Position ${p.eigen ?? p.fremd} ${p.eigen ? 'des Eigenlabor-Katalogs' : 'der Fremdlabor-Liste'} – Menge aus der Planung; Zuordnung unter „Preislisten“ ändern`
+                  : 'Aus der Kronenmaterial-Wahl – Menge und Preis sind Mittelwerte; ändern unter „Kronenmaterial“'}>
                   <td>{p.zahn}</td>
-                  <td>–</td>
-                  <td><span className="leistungstext">{p.bezeichnung}<b className="badge-material">Material</b></span></td>
+                  <td>{p.eigen ?? p.fremd ?? '–'}</td>
+                  <td><span className="leistungstext">{p.bezeichnung}<b className="badge-material">Material</b>
+                    {p.eigen && <b className="badge-eigen">Eigen</b>}{p.fremd && <b className="badge-fremd">Labor</b>}</span></td>
                   <td className="r">{zahlDe(p.anzahl)}</td>
                   <td className="r">{zahlDe(p.einzelpreis)}</td>
                   <td className="r">{euro(p.betrag)}</td>
@@ -244,6 +247,7 @@ export function Positionen({ plan, listen, berechnet, setPositionen, zusatzAbwae
                         <span className="leistungstext">
                           {p.bezeichnung || <em>unbekannt</em>}{p.ausXml && <b className="badge-xml">XML</b>}
                           {p.eigen && <b className="badge-eigen" title={p.eigen === p.nr ? 'Praxiseigene Laborposition' : `Preis und Text aus der Eigenlabor-Position ${p.eigen} (statt BEB ${p.nr})`}>Eigen {p.eigen}</b>}
+                          {p.fremd && <b className="badge-fremd" title={`Preis und Text aus der Fremdlabor-Liste, Position ${p.fremd} (für BEB ${p.nr})`}>Labor {p.fremd}</b>}
                           {p.nachtraeglich && <b className="badge-nachtrag" title="Während der Behandlung angefallen">nachträglich</b>}
                         </span>
                       )}

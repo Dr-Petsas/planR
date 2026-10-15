@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Einstellungen, HkpPlan } from './types'
+import type { Einstellungen, HkpPlan, Preisliste } from './types'
 import { usePlan, leererPlan, planNormalisieren } from './store/plan'
 import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, listenFuerPlan, stichtag, usePreislisten, TYP_NAMEN } from './store/preislisten'
 import { getPraxis, usePraxis } from './store/praxis'
@@ -20,11 +20,12 @@ import { Positionen } from './components/Positionen'
 import { Preislisten } from './components/Preislisten'
 import { PreisRegler } from './components/PreisRegler'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
-import { eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
+import { eigenlaborLesen, eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
+import { fremdlaborLesen, fremdlaborSpeichern, useFremdlabor } from './store/fremdlabor'
 import { praxiskatalogAbgleichen, usePraxiskatalog } from './store/praxiskatalog'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useLinkAbgleich, useRegisterAbgleich, type LinkEintrag } from './store/registerAbgleich'
-import { MasVerbindung } from './components/MasVerbindung'
+import { katalogeAnMas, MasVerbindung } from './components/MasVerbindung'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrZurueck } from './PlanrZurueck'
 import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
@@ -61,10 +62,11 @@ export default function App() {
 
   const e = plan.einstellungen
   const eigenlabor = useEigenlabor()
+  const fremdlabor = useFremdlabor()
   const praxiskatalog = usePraxiskatalog()
   const lokaleListen: Listen = useMemo(
-    () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor, komplexe: praxiskatalog?.komplexe, belPraxis: praxiskatalog?.bel }),
-    [alle, plan.verwaltung, e, eigenlabor, praxiskatalog],
+    () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor, fremd: fremdlabor, komplexe: praxiskatalog?.komplexe, belPraxis: praxiskatalog?.bel }),
+    [alle, plan.verwaltung, e, eigenlabor, fremdlabor, praxiskatalog],
   )
   // Preise & Positionen aus dem PVS: beim Start und beim Zurückkehren in den Tab (höchstens jede Minute)
   useEffect(() => {
@@ -365,8 +367,15 @@ export default function App() {
           <>
             <ListenStand />
             <EigenlaborKatalog
-              katalog={eigenlabor} onChange={eigenlaborSpeichern}
+              katalog={eigenlabor} lesen={eigenlaborLesen}
+              onChange={(k) => { eigenlaborSpeichern(k); katalogeAnMas(k, fremdlaborLesen()) }}
               bebText={(nr) => listen.beb?.eintraege.find((x) => x.nr.padStart(4, '0') === nr.trim().padStart(4, '0'))?.text}
+            />
+            <EigenlaborKatalog
+              art="fremd" katalog={fremdlabor} lesen={fremdlaborLesen}
+              onChange={(k) => { fremdlaborSpeichern(k); katalogeAnMas(eigenlaborLesen(), k) }}
+              bebText={(nr) => listen.beb?.eintraege.find((x) => x.nr.padStart(4, '0') === nr.trim().padStart(4, '0'))?.text}
+              bebListen={alle.filter((l): l is Preisliste<'beb'> => l.typ === 'beb' && !l.standard)}
             />
             <Preislisten einstellungen={e} setAktiv={(feld, id) => setEinstellung(feld, id as never)}
               verwendet={[listen.bema, listen.goz, listen.bel, listen.beb, listen.fz].map((l) => l?.id ?? '')} />
@@ -379,7 +388,7 @@ export default function App() {
           <div className="einstellungen es-seite">
             <MandantKarte />
             <EinstellungenSeite plan={plan} setEinstellung={setEinstellung} alle={alle} listen={listen} />
-            <MasVerbindung alle={alle} eigen={eigenlabor} einstellungen={e} />
+            <MasVerbindung alle={alle} eigen={eigenlabor} fremd={fremdlabor} einstellungen={e} />
           </div>
         )}
       </main>
@@ -493,6 +502,16 @@ function EinstellungenSeite({ plan, setEinstellung, alle, listen }: {
                 onChange={(ev) => setEinstellung('mwstLabor', Number(ev.target.value))} /><i>%</i>
             </span>
             <span className="es-fuss">auf zahntechnische Leistungen</span>
+          </label>
+          <label className="es-kachel">
+            <span className="es-titel">Totalprothese nach Scan</span>
+            <select value={e.protheseDigital ?? 'voll'} onChange={(ev) => setEinstellung('protheseDigital', ev.target.value as 'voll' | 'abformung')}>
+              <option value="voll">voll digital (CAD/CAM)</option>
+              <option value="abformung">nur die Abformung digital</option>
+            </select>
+            <span className="es-fuss">{(e.protheseDigital ?? 'voll') === 'voll'
+              ? 'CAD-Aufstellung, gedruckte Anprobe, gefräste Basis statt Meistermodell, Wachsaufstellung und Fertigstellung'
+              : 'gedrucktes Modell statt Situationsmodell, sonst analog'}</span>
           </label>
         </div>
         <p className="es-info">

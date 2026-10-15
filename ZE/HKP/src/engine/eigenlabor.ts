@@ -12,6 +12,12 @@ export interface EigenPosition {
   ersetzt?: string
   /** 'pvs' = aus dem Praxisprogramm übernommen, wird beim nächsten Abgleich ersetzt */
   quelle?: 'pvs'
+  /** Einsatz in der Planung: Nummer des Leistungsschritts (BEB-Standardliste, D1xx) bzw. 'MAT:<rolle>'; '' = nicht automatisch */
+  fuer?: string
+  /** nur bei diesem Ablauf (gefräst nach Intraoralscan, gegossen nach Abdruck) */
+  wenn?: 'scan' | 'abdruck'
+  /** 'hand' = von der Praxis festgelegt (bleibt bei jedem Abgleich), sonst Vorschlag von PlanR */
+  zuordnung?: 'auto' | 'hand'
 }
 
 export interface Kandidat {
@@ -23,6 +29,8 @@ export interface Kandidat {
   /** in die Übernahme einbeziehen */
   an: boolean
   ersetzt?: string
+  /** von Hand festgelegte Zuordnung aus einem exportierten Katalog */
+  zuordnung?: Pick<EigenPosition, 'fuer' | 'wenn' | 'zuordnung'>
 }
 
 export interface Analyse {
@@ -34,12 +42,40 @@ export interface Analyse {
 
 export const bebNorm = (s: string) => s.trim().padStart(4, '0')
 
-/** Eigene Position zu einer Nummer: gleiche Nummer oder als Ersatz einer BEB-Nr. hinterlegt */
-export function eigenFinden(katalog: readonly EigenPosition[] | undefined, nr: string): EigenPosition | undefined {
+export interface FindenKontext {
+  /** Abformung des Plans: bestimmt Varianten wie gefräst (Scan) / gegossen (Abdruck) */
+  ablauf?: string
+  /** von der Planung gesetzte Position (Leistungsschritt) statt einer von Hand gewählten Nummer */
+  auto?: boolean
+}
+
+/**
+ * Dieselbe Leistung unter mehreren BEB-Nummern: die Planung setzt eine davon (Keramikkrone 2281,
+ * Keramik-Brückenglied 2351), Praxis- und Laborlisten führen oft die andere.
+ */
+const GLEICHWERTIG: readonly string[][] = [['2281', '2251', '2252'], ['2351', '2352', '2361']]
+
+/**
+ * Praxisposition zu einer Nummer. Von Hand gewählt: die Position mit genau dieser Nummer. Von der Planung
+ * gesetzt: die dem Leistungsschritt zugeordnete Position (Variante des Ablaufs zuerst); Positionen ohne
+ * Zuordnung wie bisher über gleiche Nummer bzw. „statt BEB-Nr.“.
+ */
+export function eigenFinden(katalog: readonly EigenPosition[] | undefined, nr: string, k: FindenKontext = {}): EigenPosition | undefined {
   if (!katalog?.length || !nr.trim()) return undefined
   const t = nr.trim()
-  return katalog.find((e) => e.nr.trim() === t)
-    ?? (/^\d{1,4}$/.test(t) ? katalog.find((e) => e.ersetzt && bebNorm(e.ersetzt) === bebNorm(t)) : undefined)
+  const ziel = /^\d{1,4}$/.test(t) ? bebNorm(t) : t
+  const gleicheNr = katalog.find((e) => e.nr.trim() === t)
+  if (!k.auto && gleicheNr) return gleicheNr
+  const ablauf = k.ablauf === 'scan' ? 'scan' : 'abdruck'
+  const gruppe = GLEICHWERTIG.find((g) => g.includes(ziel)) ?? [ziel]
+  const fuerNorm = (e: EigenPosition) => (e.fuer && /^\d{1,4}$/.test(e.fuer) ? bebNorm(e.fuer) : e.fuer ?? '')
+  const zugeordnet = katalog.filter((e) => e.fuer && gruppe.includes(fuerNorm(e)) && (!e.wenn || e.wenn === ablauf))
+  // genau dieser Schritt vor einem gleichwertigen, die Variante für den Ablauf vor der allgemeinen, dann dieselbe Nummer
+  const rang = (e: EigenPosition) => (fuerNorm(e) === ziel ? 0 : 4) + (e.wenn ? 0 : 2) + (e.nr.trim() === t ? 0 : 1)
+  if (zugeordnet.length) return zugeordnet.reduce((a, b) => (rang(b) < rang(a) ? b : a))
+  const ohneZuordnung = (e: EigenPosition) => e.fuer === undefined
+  if (gleicheNr && ohneZuordnung(gleicheNr)) return gleicheNr
+  return /^\d{1,4}$/.test(t) ? katalog.find((e) => ohneZuordnung(e) && e.ersetzt && bebNorm(e.ersetzt) === ziel) : undefined
 }
 
 const BETRAG = /^(?:€\s*)?(-?\d{1,3}(?:[.\s]\d{3})+,\d{2}|-?\d+,\d{2}|-?\d+\.\d{2})\s*(?:€|EUR|Euro)?$/i
@@ -136,7 +172,7 @@ export function uebernehmen(katalog: EigenPosition[], kandidaten: Kandidat[], sp
     const preis = k.preise[Math.min(spalte, k.preise.length - 1)]
     const nr = k.nr || `E-${String(++lfd).padStart(3, '0')}`
     const i = neu.findIndex((e) => e.nr === nr)
-    const pos: EigenPosition = { ...(i >= 0 ? neu[i] : {}), nr, text: k.text, preis, ...(k.ersetzt ? { ersetzt: k.ersetzt } : {}) }
+    const pos: EigenPosition = { ...(i >= 0 ? neu[i] : {}), nr, text: k.text, preis, ...(k.ersetzt ? { ersetzt: k.ersetzt } : {}), ...k.zuordnung }
     if (i >= 0) neu[i] = pos
     else neu.push(pos)
   }
@@ -152,7 +188,10 @@ export function jsonAnalysieren(text: string): Analyse {
     const o = e as Partial<EigenPosition>
     const preis = Number(o.preis)
     if (!o.text || !Number.isFinite(preis)) return []
-    return [{ nr: String(o.nr ?? ''), text: String(o.text), preise: [preis], roh: JSON.stringify(o), an: true, ...(o.ersetzt ? { ersetzt: String(o.ersetzt) } : {}) }]
+    const zuordnung = o.zuordnung === 'hand'
+      ? { fuer: String(o.fuer ?? ''), ...(o.wenn === 'scan' || o.wenn === 'abdruck' ? { wenn: o.wenn } : {}), zuordnung: 'hand' as const }
+      : undefined
+    return [{ nr: String(o.nr ?? ''), text: String(o.text), preise: [preis], roh: JSON.stringify(o), an: true, ...(o.ersetzt ? { ersetzt: String(o.ersetzt) } : {}), ...(zuordnung ? { zuordnung } : {}) }]
   })
   return { kandidaten, preisSpalten: 1, warnungen: kandidaten.length ? [] : ['Keine gültigen Positionen in der JSON-Datei.'] }
 }

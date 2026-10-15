@@ -111,6 +111,8 @@ export interface Position {
   nachtraeglich?: boolean
   /** GOZ: eigene Begründung für einen Faktor über 2,3 (§ 10 Abs. 3 GOZ); leer = Standardtext */
   faktorBegruendung?: string
+  /** MAT: Materialrolle (engine/zuordnung.ts ROLLEN), über die der Katalog der Praxis bzw. des Fremdlabors den Preis liefert */
+  rolle?: string
 }
 
 export type Labor = 'eigen' | 'fremd'
@@ -287,4 +289,6 @@ export interface Einstellungen {
   praxisPlz: string
   /** KZV-Nummer für die BEL-II-Höchstpreise ('' = aus der Praxis-PLZ) */
   kzv: string
+  /** Totalprothese nach Intraoralscan: 'voll' (Standard) = digitaler Laborablauf, 'abformung' = nur die Erstabformung digital */
+  protheseDigital?: 'voll' | 'abformung'
 }

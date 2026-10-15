@@ -1562,6 +1562,7 @@ if (process.env.PLANR_RECHNUNGEN === '1') {
 /**
  * GET /api/intern/pvs/patienten?clientId=&q= · /api/intern/pvs/patient?clientId=&patient=
  * Für Clara (MAS) bei PlanR-Praxen ohne MAS: Patienten aus dem PVS der Praxis, nur über ihre verbundene Bridge.
+ * GET /api/intern/praxiskatalog?clientId=: Preise & Positionen, die PlanR aus dem PVS übernommen hat (für Claras HKP).
  * Schlüssel wie MAS→PlanR-Gegenrichtung (PLANR_HKP_KEY), nie mit Sitzungs-Cookie.
  */
 async function internPvs(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
@@ -1578,6 +1579,10 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   }
   const konto = { clientId } as Konto
   const w: Wer = { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
+  if (url === '/api/intern/praxiskatalog') {
+    const a = await katalogLesen(w.mandant)
+    return json(res, 200, { ok: true, katalog: a?.katalog ?? null })
+  }
   if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
   if (url === '/api/intern/pvs/befund') return internBefund(req, w, q, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
@@ -1703,7 +1708,9 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
-  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund') return void internPvs(req, res, url, query).catch(fehler500(res))
+  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog') {
+    return void internPvs(req, res, url, query).catch(fehler500(res))
+  }
   if (!url.startsWith('/api/')) return next()
   kopf(res, herkunft(req))
   if (req.method === 'OPTIONS') {

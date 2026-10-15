@@ -52,7 +52,8 @@ let zaehler = 0
 const pos = (ebene: Position['ebene'], nr: string, zahn: string, extra: Partial<Position> = {}): Position =>
   ({ id: `abf-${Date.now().toString(36)}-${(zaehler++).toString(36)}`, ebene, nr, zahn, anzahl: 1, auto: true, ...extra })
 
-const KRONE = (p: Position) => /^\d\d$/.test(p.zahn) &&
+/** Präparierter Zahn (Krone, Teilkrone, Teleskop) */
+export const KRONE = (p: Position) => /^\d\d$/.test(p.zahn) &&
   ((p.ebene === 'BEMA' && /^(20[abc]|91[abcd])$/.test(p.nr)) || (p.ebene === 'GOZ' && /^(22[012]0|50[0-4]0)$/.test(p.nr)))
 /** Gips-Arbeitsmodell (Sägemodell) und Gegenkiefermodell des festsitzenden Zahnersatzes */
 export const GIPSMODELL = (p: Position) =>
@@ -60,10 +61,10 @@ export const GIPSMODELL = (p: Position) =>
   (p.zahn === '' && ((p.ebene === 'BEL' && p.nr === '0010') || (p.ebene === 'BEB' && p.nr === '0002')))
 
 /** Herausnehmbarer Zahnersatz je Kiefer (Prothese, Kombinationsversorgung) */
-const PROTHESE = (p: Position) => (p.zahn === 'OK' || p.zahn === 'UK') &&
+export const PROTHESE = (p: Position) => (p.zahn === 'OK' || p.zahn === 'UK') &&
   ((p.ebene === 'BEMA' && /^(9[67][abcd]|98[b-h])$/.test(p.nr)) || (p.ebene === 'GOZ' && /^(5180|5190|52[0-3]0)$/.test(p.nr)))
 /** Funktionsabformung mit individuellem Löffel ist schon enthalten (zahnloser Kiefer) */
-const FUNKTIONSABFORMUNG = (p: Position) => (p.ebene === 'BEMA' && /^98[bc]$/.test(p.nr)) || (p.ebene === 'GOZ' && /^(5180|5190)$/.test(p.nr))
+export const FUNKTIONSABFORMUNG = (p: Position) => (p.ebene === 'BEMA' && /^98[bc]$/.test(p.nr)) || (p.ebene === 'GOZ' && /^(5180|5190)$/.test(p.nr))
 
 const KIEFER_BEREICHE = { OK: ['OK rechts', 'OK-Front', 'OK links'], UK: ['UK rechts', 'UK-Front', 'UK links'] } as const
 
@@ -117,12 +118,24 @@ function protheseAbformen(positionen: Position[], art: Abformung, erste: Abformu
 const SITUATIONSMODELL = (k: string) => (p: Position) =>
   p.zahn === k && ((p.ebene === 'BEL' && p.nr === '0010') || (p.ebene === 'BEB' && p.nr === '0002'))
 
+/** Totalprothese nach Intraoralscan: 'voll' = digitaler Laborablauf, 'abformung' = nur die Erstabformung digital */
+export type ProtheseDigital = 'voll' | 'abformung'
+
+/** Schritte der analogen Totalprothese, die der digitale Ablauf ersetzt: Gipsmodelle, Mittelwertartikulator, Wachsaufstellung, Fertigstellung */
+const ANALOG_PROTHESE: Record<'BEL' | 'BEB', ReadonlySet<string>> = {
+  BEL: new Set(['0010', '0120', '3010', '3020', '3610', '3620']),
+  BEB: new Set(['0002', '0402', '6001', '6002', '6301', '6302']),
+}
+
 /**
  * Zahnloser Kiefer (Funktionsabformung, BEMA 98b/c bzw. GOZ 5180/5190) mit Intraoralscan (Chef 09.10.2026):
  * der Scan ersetzt die anatomische Erstabformung – GOZ 0065 für die drei Bereiche des Kiefers und ein
  * gedrucktes Modell (BEB 0009) statt des Situationsmodells. Individueller Löffel und Funktionsabformung bleiben.
+ * Voll digital (Chef 15.10.2026, reine Totalprothese ohne Anker im Kiefer): statt Meistermodell,
+ * Mittelwertartikulator, Wachsaufstellung und Fertigstellung je Auftrag Oralscan aufbereiten, CAD-Auftragsdaten und
+ * digitale Registrierung, je Kiefer CAD-Aufstellung, gedruckte Anprobe, gefräste Basis (BEB 0037) und Einsetzen der Zähne.
  */
-function zahnlosScannen(positionen: Position[]): { positionen: Position[]; hinweise: string[] } {
+function zahnlosScannen(positionen: Position[], digital: ProtheseDigital): { positionen: Position[]; hinweise: string[] } {
   const kiefer = (['OK', 'UK'] as const).filter((k) => positionen.some((p) => p.zahn === k && PROTHESE(p) && FUNKTIONSABFORMUNG(p)))
   if (!kiefer.length) return { positionen, hinweise: [] }
   let out = positionen
@@ -136,11 +149,41 @@ function zahnlosScannen(positionen: Position[]): { positionen: Position[]; hinwe
     if (modell) out = out.flatMap((p) => (p !== modell ? [p] : (p.anzahl ?? 1) > 1 ? [{ ...p, anzahl: (p.anzahl ?? 1) - 1 }] : []))
     neu.push(pos('BEB', '0009', k, { text: `Modell aus Kunststoff ${k} (gedruckt)`, ...(modell?.labor ? { labor: modell.labor } : {}) }))
   }
+  const hinweise = [`${kiefer.join(', ')} zahnlos: Intraoralscan statt anatomischer Erstabformung – GOZ 0065 je Bereich des Kiefers, gedrucktes Modell (BEB 0009) statt Situationsmodell; individueller Löffel und Funktionsabformung bleiben.`]
+  const alle = [...out, ...neu]
+  if (digital !== 'voll') return { positionen: alle, hinweise }
+
+  const ohneAnker = kiefer.filter((k) => !alle.some((p) => /^\d\d$/.test(p.zahn) && kieferVon(p.zahn) === k))
+  if (!ohneAnker.length) return { positionen: alle, hinweise }
+  const analog = (k: string) => (p: Position) => p.zahn === k && (p.ebene === 'BEL' || p.ebene === 'BEB') && ANALOG_PROTHESE[p.ebene].has(p.nr)
+  const laborVon = (k: string) => alle.find((p) => p.zahn === k && (p.ebene === 'BEL' || p.ebene === 'BEB') && p.labor)?.labor
+  const auftragLabor = laborVon(ohneAnker[0])
+  const digitalNeu: Position[] = []
+  const beb = (nr: string, zahn: string, text: string, l = auftragLabor) =>
+    alle.some((p) => p.ebene === 'BEB' && p.nr === nr && p.zahn === zahn) ? [] : [pos('BEB', nr, zahn, { text, ...(l ? { labor: l } : {}) })]
+  digitalNeu.push(
+    ...beb(DIGITAL_BEB.oralscan, '', 'Oralscan aufbereiten'),
+    ...beb(DIGITAL_BEB.auftragsdaten, '', 'CAD: Anlage Auftragsdaten'),
+    ...beb(DIGITAL_BEB.registrierung, '', 'CAD: optisch digitale Registrierung (Kieferrelation)'),
+  )
+  for (const k of ohneAnker) {
+    const l = laborVon(k)
+    digitalNeu.push(
+      ...beb(DIGITAL.aufstellung, k, `CAD: Prothesenzähne virtuell aufstellen ${k}`, l),
+      ...beb(DIGITAL.anprobeProthese, k, `Anprobeprothese gedruckt ${k} (Try-in der CAD-Aufstellung)`, l),
+      ...beb(PROTHESE_BASIS_GEFRAEST, k, `Konstruieren und Fräsen einer Basis aus Kunststoff ${k}`, l),
+      ...beb(DIGITAL.einsetzen, k, `Zähne in die gefräste Basis ${k} einsetzen, ausarbeiten und polieren`, l),
+    )
+  }
+  const raus = (p: Position) => ohneAnker.some((k) => analog(k)(p))
   return {
-    positionen: [...out, ...neu],
-    hinweise: [`${kiefer.join(', ')} zahnlos: Intraoralscan statt anatomischer Erstabformung – GOZ 0065 je Bereich des Kiefers, gedrucktes Modell (BEB 0009) statt Situationsmodell; individueller Löffel und Funktionsabformung bleiben.`],
+    positionen: [...alle.filter((p) => !raus(p)), ...digitalNeu],
+    hinweise: [...hinweise, `Totalprothese ${ohneAnker.join(', ')} voll digital: Oralscan aufbereiten, CAD-Auftragsdaten und digitale Kieferrelation; je Kiefer CAD-Aufstellung, gedruckte Anprobe, gefräste Basis (BEB 0037) und Einsetzen der Zähne statt Meistermodell, Mittelwertartikulator, Wachsaufstellung und Fertigstellung. Löffel, Bissschablone und Funktionsabformung bleiben (Einstellung „Totalprothese nach Scan“).`],
   }
 }
+
+/** BEB-ITZ 0037: Konstruieren und Fräsen einer Basis aus Kunststoff */
+export const PROTHESE_BASIS_GEFRAEST = '0037'
 
 /**
  * Erste Abformung (präparierte Zähne): Scan → GOZ 0065 je Bereich (mit Gegenkiefer) und gedruckte Modelle
@@ -150,11 +193,12 @@ function zahnlosScannen(positionen: Position[]): { positionen: Position[]; hinwe
  */
 export function abformungAnwenden(
   positionen: Position[], zaehne: Record<string, ZahnZeilen>, abformung: Abformung, prothese: Abformung = '', eigenlabor = false,
+  protheseDigital: ProtheseDigital = 'voll',
 ): { positionen: Position[]; hinweise: string[] } {
   const erste = abformung === 'scan' ? scanAnwenden(positionen, zaehne) : { positionen, hinweise: [] }
   const digital = abformung === 'scan' ? digitalerWorkflow(erste.positionen, zaehne, eigenlabor) : { positionen: erste.positionen, hinweise: [] }
   const zweite = protheseAbformen(digital.positionen, prothese, abformung)
-  const zahnlos = abformung === 'scan' || prothese === 'scan' ? zahnlosScannen(zweite.positionen) : { positionen: zweite.positionen, hinweise: [] }
+  const zahnlos = abformung === 'scan' || prothese === 'scan' ? zahnlosScannen(zweite.positionen, protheseDigital) : { positionen: zweite.positionen, hinweise: [] }
   return { positionen: zahnlos.positionen, hinweise: [...erste.hinweise, ...digital.hinweise, ...zweite.hinweise, ...zahnlos.hinweise] }
 }
 

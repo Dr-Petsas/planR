@@ -3,15 +3,28 @@ import type { Einstellungen, Preisliste } from '../types'
 import type { EigenPosition } from '../engine/eigenlabor'
 import { kzvBereich } from '../store/preislisten'
 import { kzvNachNr } from '../data/kzv'
-import { praxisFreigeben, registerStatus, schluesselSetzen, useVerbindung, verbunden } from '../store/register'
+import { katalogeFreigeben, praxisFreigeben, registerStatus, schluesselSetzen, useVerbindung, verbunden } from '../store/register'
 
 const PRAXIS_FELDER: (keyof Einstellungen)[] = ['labor', 'praxisPlz', 'kzv', 'gozFaktor', 'mwstLabor', 'eigenKasseProzent', 'eigenPrivatAufschlag',
-  'bemaListe', 'gozListe', 'belListe', 'bebListe', 'fzListe']
+  'bemaListe', 'gozListe', 'belListe', 'bebListe', 'fzListe', 'protheseDigital']
+
+let katalogUhr: ReturnType<typeof setTimeout> | undefined
+/**
+ * Von Hand geänderter Eigenlabor-Katalog bzw. Fremdlabor-Liste gehen an MAS (Zuordnungen gelten sofort auch für Clara);
+ * Preislisten und Praxiswerte nur über die Freigabe. Nicht beim PVS-Abgleich aufrufen: ein Browser ohne die
+ * Zuordnungen eines anderen Rechners würde sie in MAS überschreiben.
+ */
+export function katalogeAnMas(eigen: EigenPosition[], fremd: EigenPosition[]) {
+  if (!verbunden()) return
+  clearTimeout(katalogUhr)
+  katalogUhr = setTimeout(() => { katalogeFreigeben({ eigen, fremd }).catch(() => { /* nächste Änderung versucht es wieder */ }) }, 3000)
+}
 
 interface Freigabe {
   zeit: Date
   preislisten: number
   eigen: number
+  fremd: number
   labor: Einstellungen['labor']
   plz: string
   kzv: string
@@ -22,7 +35,7 @@ interface Freigabe {
 const zeitDe = (d: Date) => d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 /** Verbindung zu MAS (HKP-Register mit Clara) und Freigabe der Praxis-Preislisten */
-export function MasVerbindung({ alle, eigen, einstellungen }: { alle: Preisliste[]; eigen: EigenPosition[]; einstellungen: Einstellungen }) {
+export function MasVerbindung({ alle, eigen, fremd, einstellungen }: { alle: Preisliste[]; eigen: EigenPosition[]; fremd: EigenPosition[]; einstellungen: Einstellungen }) {
   const v = useVerbindung()
   const { schluessel, sitzung } = v
   const automatisch = v.automatisch || sitzung
@@ -43,7 +56,9 @@ export function MasVerbindung({ alle, eigen, einstellungen }: { alle: Preisliste
     setMeldung({ text: 'prüfe …' })
     try {
       const s = await registerStatus()
-      setMeldung({ text: `Verbunden. Engine in MAS: ${s.engineStand}. Praxis-Preislisten in MAS: ${s.praxis.preislisten ? `${s.praxis.preislisten} eigene, Stand ${new Date(s.praxis.aktualisiert).toLocaleString('de-DE')}` : 'nur die mitgelieferten'}.` })
+      const k = s.praxis.katalog
+      setMeldung({ text: `Verbunden. Engine in MAS: ${s.engineStand}. Praxis-Preislisten in MAS: ${s.praxis.preislisten ? `${s.praxis.preislisten} eigene, Stand ${new Date(s.praxis.aktualisiert).toLocaleString('de-DE')}` : 'nur die mitgelieferten'}. `
+        + `Praxispositionen aus dem PVS: ${k ? `${k.eigenlabor} aus ${k.pvs} (holt MAS selbst bei PlanR)` : 'keine'}. Fremdlabor-Liste: ${s.praxis.fremd ? `${s.praxis.fremd} Positionen` : 'keine'}.` })
     } catch (e) {
       setMeldung({ text: `⚠ ${e instanceof Error ? e.message : String(e)}`, fehler: true })
     }
@@ -54,13 +69,13 @@ export function MasVerbindung({ alle, eigen, einstellungen }: { alle: Preisliste
     try {
       const eigene = alle.filter((l) => !l.standard || l.geaendertAm)
       const r = await praxisFreigeben({
-        preislisten: eigene, eigen,
+        preislisten: eigene, eigen, fremd,
         einstellungen: Object.fromEntries(PRAXIS_FELDER.map((k) => [k, einstellungen[k]])),
       })
       const bereich = kzvBereich(einstellungen)
       const jetzt = new Date()
       setFreigabe({
-        zeit: jetzt, preislisten: r.preislisten, eigen: r.eigen, labor: einstellungen.labor, plz: einstellungen.praxisPlz,
+        zeit: jetzt, preislisten: r.preislisten, eigen: r.eigen, fremd: r.fremd ?? fremd.length, labor: einstellungen.labor, plz: einstellungen.praxisPlz,
         kzv: einstellungen.kzv, kzvName: kzvNachNr(bereich.nr)?.name ?? bereich.nr, gozFaktor: einstellungen.gozFaktor,
       })
       setZuletzt(zeitDe(jetzt))
@@ -108,6 +123,7 @@ export function MasVerbindung({ alle, eigen, einstellungen }: { alle: Preisliste
               <span className="es-wert"><small>GOZ-Faktor</small><b>{String(freigabe.gozFaktor).replace('.', ',')}</b></span>
               <span className="es-wert"><small>Preislisten</small><b>{freigabe.preislisten ? `${freigabe.preislisten} eigene` : 'mitgelieferte'}</b></span>
               <span className="es-wert"><small>Eigenlabor-Katalog</small><b>{freigabe.eigen ? `${freigabe.eigen} Positionen` : 'keiner'}</b></span>
+              <span className="es-wert"><small>Fremdlabor-Liste</small><b>{freigabe.fremd ? `${freigabe.fremd} Positionen` : 'keine'}</b></span>
             </div>
             {(!freigabe.preislisten || !freigabe.eigen) && (
               <p className="es-info">
@@ -119,7 +135,8 @@ export function MasVerbindung({ alle, eigen, einstellungen }: { alle: Preisliste
         )}
         {meldung && <p className={`es-meldung${meldung.fehler ? ' fehler' : ''}`}>{meldung.text}</p>}
         <p className="es-info">
-          Nach Änderungen an Preislisten, Eigenlabor-Katalog, Labor oder Praxis-PLZ hier erneut freigeben. Der MAS-Schlüssel
+          Nach Änderungen an Preislisten, Labor oder Praxis-PLZ hier erneut freigeben. Eigenlabor-Katalog und Fremdlabor-Liste
+          (mit ihren Zuordnungen) gehen nach jeder Änderung automatisch an Clara; die Praxispositionen aus dem PVS holt MAS selbst bei PlanR. Der MAS-Schlüssel
           schützt das HKP-Register (alle HKPs mit Patientennamen, auch die von Clara); ohne ihn rechnet PlanR nur für sich.
         </p>
       </div>

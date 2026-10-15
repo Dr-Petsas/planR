@@ -7,10 +7,12 @@ import { andersartig } from './therapie'
 import { ALLE_ZAEHNE, kieferVon } from './zahnschema'
 import { standardBegruendung } from './begruendung'
 import { implantatZaehne } from './implantat'
-import { eigenFinden, type EigenPosition } from './eigenlabor'
+import { eigenFinden, type EigenPosition, type FindenKontext } from './eigenlabor'
 import { mitDigital } from './digital'
 import { kronenEinheiten, materialErmitteln, werkstoffVon } from './material'
-import { DIGITAL_BEB, GIPSMODELL } from './abformung'
+import { DIGITAL_BEB, FUNKTIONSABFORMUNG, GIPSMODELL, KRONE, PROTHESE } from './abformung'
+import { katalogZuordnen, rolleFinden, type Rolle, ROLLEN } from './zuordnung'
+import { implantatsystem } from '../data/implantatsysteme'
 
 export interface Listen {
   bema?: Preisliste<'bema'>
@@ -20,6 +22,8 @@ export interface Listen {
   fz?: Preisliste<'festzuschuss'>
   /** praxiseigene Laborpositionen */
   eigen?: EigenPosition[]
+  /** Preisliste des Fremdlabors (eigene Nummern, zugeordnet wie die Praxispositionen) */
+  fremd?: EigenPosition[]
   /** Leistungskomplexe der Praxis aus dem PVS */
   komplexe?: Komplex[]
   /** BEL-Preise des Praxislabors aus dem PVS (Nr → €): unteres Ende des Kassen-Schiebereglers */
@@ -41,6 +45,8 @@ export interface BerechnetePosition extends Position {
   begruendung?: string
   /** Nummer der praxiseigenen Laborposition, die Preis und Text liefert */
   eigen?: string
+  /** Nummer der Position aus der Preisliste des Fremdlabors, die Preis und Text liefert */
+  fremd?: string
   /** Preis stammt aus einer BEB-Standardposition, die die Praxis noch nicht bepreist hat */
   richtpreis?: boolean
   fehler?: string
@@ -262,7 +268,13 @@ export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): B
     case 'BEB': {
       const labor = laborVon(p, plan)
       const e = finden<BebEintrag>(listen.beb, p.nr, (s) => s.trim().padStart(4, '0'))
-      const eigen = labor === 'eigen' || !e ? eigenFinden(mitDigital(listen.eigen), p.nr) : undefined
+      const k = findenKontext(p, plan)
+      const fremd = labor === 'fremd' ? fremdFinden(listen, plan, p.nr, k) : undefined
+      if (fremd) {
+        const einzel = p.preis ?? fremd.preis
+        return { ...basis, labor, fremd: fremd.nr, bezeichnung: p.text || fremd.text, listenpreis: fremd.preis, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
+      }
+      const eigen = labor === 'eigen' || !e ? eigenFinden(eigenKatalog(listen.eigen), p.nr, k) : undefined
       // Der Regler hebt nur an: der Preis der Praxis bzw. der BEB-Liste ist seine Untergrenze.
       const aufschlag = labor === 'eigen' ? Math.min(Math.max(0, plan.einstellungen.eigenPrivatAufschlag || 0), BEB_AUFSCHLAG_MAX) : 0
       if (eigen) {
@@ -275,10 +287,45 @@ export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): B
       return { ...basis, labor, bezeichnung: p.text || e?.text || '', listenpreis: e?.preis, einzelpreis: einzel, betrag: runden(einzel * anzahl), ...richtpreis }
     }
     case 'MAT': {
+      const r = p.auto && p.rolle && p.rolle in ROLLEN ? materialFinden(listen, plan, p.rolle as Rolle, p.labor) : undefined
+      if (r) {
+        const einzel = r.preis
+        return { ...basis, labor: p.labor, ...(p.labor === 'fremd' ? { fremd: r.nr } : { eigen: r.nr }), bezeichnung: r.text, listenpreis: p.preis, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
+      }
       const einzel = p.preis ?? 0
       return { ...basis, labor: p.labor, bezeichnung: p.text || 'Material', einzelpreis: einzel, betrag: runden(einzel * anzahl) }
     }
   }
+}
+
+const zugeordnet = new WeakMap<readonly EigenPosition[], EigenPosition[]>()
+const KEINE: EigenPosition[] = []
+
+/** Praxiskatalog mit den Schritten des digitalen Workflows und der Zuordnung zu den Leistungsschritten */
+export function eigenKatalog(katalog: readonly EigenPosition[] | undefined): EigenPosition[] {
+  const k = katalog ?? KEINE
+  let z = zugeordnet.get(k)
+  if (!z) zugeordnet.set(k, (z = katalogZuordnen(mitDigital(k))))
+  return z
+}
+
+/** Ablauf des Plans (Intraoralscan / Abdruck) und ob die Planung die Position gesetzt hat */
+function findenKontext(p: Position, plan: HkpPlan): FindenKontext {
+  return { ablauf: plan.abformung === 'scan' ? 'scan' : 'abdruck', auto: !!p.auto }
+}
+
+/** Preisliste des Fremdlabors gilt, solange dessen Rechnung (Labor-XML) nicht eingelesen ist */
+function fremdFinden(listen: Listen, plan: HkpPlan, nr: string, k: FindenKontext): EigenPosition | undefined {
+  if (plan.fremdlabor.import || !listen.fremd?.length) return undefined
+  return eigenFinden(katalogZuordnen(listen.fremd), nr, k)
+}
+
+/** Material über seine Rolle: Fremdlabor-Teile aus dessen Liste, sonst aus dem Praxiskatalog */
+function materialFinden(listen: Listen, plan: HkpPlan, rolle: Rolle, labor: Labor | undefined): EigenPosition | undefined {
+  if (labor === 'fremd' && plan.fremdlabor.import) return undefined
+  const katalog = labor === 'fremd' ? listen.fremd : listen.eigen
+  const hersteller = rolle.startsWith('implantat-') ? implantatsystem(plan.implantat.system).hersteller : ''
+  return rolleFinden(katalog, rolle, plan.abformung === 'scan' ? 'scan' : 'abdruck', hersteller)
 }
 
 /**
@@ -307,15 +354,52 @@ export function kronenmaterial(plan: HkpPlan) {
   const positionen = m.zeilen.map((z): Position => ({
     id: `mat-${z.zahn}`, ebene: 'MAT', nr: '', zahn: z.zahn, anzahl: z.menge, preis: z.einzel, text: z.text,
     labor: z.labor as Labor | undefined, auto: true, material: true,
+    rolle: METALL.has(z.werkstoff) ? `legierung-${z.werkstoff}` : `rohling-${z.werkstoff}`,
   }))
   return { basis, positionen, hinweise: m.hinweise, edelmetallKasse: new Set(m.edelmetallKasse) }
+}
+
+const METALL = new Set(['nem', 'goldreduziert', 'hochgold'])
+
+/**
+ * Material aus den Rollen des Katalogs, wo der Ablauf es braucht: Konfektionszähne je Prothesenzahn,
+ * Funktionsabformung je Kiefer, Alginat (Situations-/Gegenkiefermodell), Präzisionsabformung und Registrat nur
+ * bei Abdruck. Ohne zugeordnete Position im Katalog der Praxis bzw. des Fremdlabors entsteht keine Zeile.
+ */
+export function rollenMaterial(plan: HkpPlan, positionen: Position[], listen: Listen): Position[] {
+  const out: Position[] = []
+  const dazu = (rolle: Rolle, zahn: string, anzahl: number, labor?: Labor) => {
+    if (anzahl <= 0 || !materialFinden(listen, plan, rolle, labor)) return
+    out.push({ id: `rolle-${rolle}-${zahn}`, ebene: 'MAT', nr: '', zahn, anzahl, rolle, auto: true, material: true, ...(labor ? { labor } : {}) })
+  }
+  const prothesenKiefer = (['OK', 'UK'] as const).filter((k) => positionen.some((p) => p.zahn === k && PROTHESE(p)))
+  for (const k of prothesenKiefer) {
+    const ersetzt = Object.entries(plan.zaehne)
+      .filter(([z, v]) => kieferVon(z) === k && (v.TP.trim() || v.R || '').toUpperCase() === 'E')
+      .map(([z]) => z)
+    const laborPos = positionen.find((p) => p.zahn === k && (p.ebene === 'BEL' || p.ebene === 'BEB'))
+    const labor = laborPos ? laborVon(laborPos, plan) : plan.einstellungen.labor === 'praxis' ? 'eigen' : 'fremd'
+    dazu('zahn-front', k, ersetzt.filter((z) => /^[1-4][1-3]$/.test(z)).length, labor)
+    dazu('zahn-seite', k, ersetzt.filter((z) => /^[1-4][4-8]$/.test(z)).length, labor)
+    if (positionen.some((p) => p.zahn === k && FUNKTIONSABFORMUNG(p))) dazu('abform-funktion', k, 1)
+  }
+  const abdruck = plan.abformung !== 'scan'
+  const kronenKiefer = [...new Set(positionen.filter(KRONE).map((p) => kieferVon(p.zahn)))]
+  const prothesenAbdruck = (plan.abformungProthese || plan.abformung) !== 'scan' ? prothesenKiefer : []
+  if (abdruck) {
+    for (const k of kronenKiefer) dazu('abform-praezision', k, 1)
+    if (kronenKiefer.length) dazu('registrat', '', 1)
+  }
+  const gegenkiefer = abdruck && kronenKiefer.length ? (['OK', 'UK'] as const).filter((k) => !kronenKiefer.includes(k)) : []
+  for (const k of new Set([...prothesenAbdruck, ...gegenkiefer])) dazu('abform-alginat', k, 1)
+  return out
 }
 
 export function berechnen(plan: HkpPlan, listen: Listen): Ergebnis {
   const hinweise: Hinweis[] = []
   const zusatz = zusatzleistungen(plan)
   const mat = kronenmaterial(plan)
-  const allePositionen = [...mat.basis, ...zusatz.positionen, ...mat.positionen]
+  const allePositionen = [...mat.basis, ...zusatz.positionen, ...mat.positionen, ...rollenMaterial(plan, mat.basis, listen)]
   const versorgungsart = versorgungsartErmitteln({ ...plan, positionen: allePositionen })
   const positionen = allePositionen.map((p) => positionBerechnen(p, listen, plan))
 

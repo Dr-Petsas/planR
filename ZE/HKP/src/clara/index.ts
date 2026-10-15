@@ -3,7 +3,8 @@
  * einzelnen ESM-Bundle gebaut und nach MAS-2/backend/src/vendor/hkp-engine.mjs kopiert.
  */
 import type { Ebene, HkpPlan, Preisliste } from '../types'
-import { STANDARD_LISTEN, listenFuerPlan } from '../store/preislisten'
+import { PRAXIS_GOZ_ID, STANDARD_LISTEN, listenFuerPlan } from '../store/preislisten'
+import { belPreise, eigenlaborMischen, praxisGozListe, type PraxisKatalog } from '../store/praxiskatalogDaten'
 import { planNormalisieren } from '../store/plan'
 import { berechnen, belNrNorm, type Ergebnis, type Listen } from '../engine/berechnung'
 import type { EigenPosition } from '../engine/eigenlabor'
@@ -31,14 +32,40 @@ export interface PraxisListen {
   preislisten?: Preisliste[]
   /** Eigenlabor-Katalog */
   eigen?: EigenPosition[]
+  /** Preisliste des Fremdlabors */
+  fremd?: EigenPosition[]
+  /** Preise & Positionen aus dem PVS (PlanR): Eigenlabor, eigene GOZ-Positionen, BEL-Preise, Komplexe */
+  katalog?: PraxisKatalog | null
+}
+
+const ausKatalog = new WeakMap<PraxisKatalog, { eigen?: EigenPosition[]; mischung: EigenPosition[]; goz?: Preisliste<'goz'> }>()
+
+/** Eigenlabor-Katalog und Praxis-GOZ wie im Browser nach dem PVS-Abgleich (je Katalog einmal gebildet) */
+function katalogTeile(k: PraxisKatalog, eigen: EigenPosition[] | undefined) {
+  const da = ausKatalog.get(k)
+  if (da && da.eigen === eigen) return da
+  const basis = STANDARD_LISTEN.find((l) => l.typ === 'goz') as Preisliste<'goz'> | undefined
+  const teile = {
+    eigen,
+    mischung: k.eigenlabor?.length ? eigenlaborMischen(eigen ?? [], k) : eigen ?? [],
+    goz: basis && k.goz?.length ? praxisGozListe(basis, k) : undefined,
+  }
+  ausKatalog.set(k, teile)
+  return teile
 }
 
 /** Preislisten für einen Plan wählen (KZV, Stichtag) – wie in der App */
 export function listenFuer(plan: HkpPlan, praxis: PraxisListen = {}): Listen {
-  const eigene = praxis.preislisten ?? []
+  const k = praxis.katalog
+  const t = k ? katalogTeile(k, praxis.eigen) : undefined
+  const eigene = [...(praxis.preislisten ?? [])]
+  if (t?.goz && !eigene.some((l) => l.id === PRAXIS_GOZ_ID)) eigene.push(t.goz)
   const ids = new Set(eigene.map((l) => l.id))
   const alle = [...STANDARD_LISTEN.filter((l) => !ids.has(l.id)), ...eigene]
-  return { ...listenFuerPlan(alle, plan), eigen: praxis.eigen ?? [] }
+  return {
+    ...listenFuerPlan(alle, plan), eigen: t?.mischung ?? praxis.eigen ?? [], fremd: praxis.fremd ?? [],
+    ...(k ? { komplexe: k.komplexe, belPraxis: belPreise(k) } : {}),
+  }
 }
 
 export const rechnen = (plan: HkpPlan, praxis: PraxisListen = {}): Ergebnis => berechnen(plan, listenFuer(plan, praxis))

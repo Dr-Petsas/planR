@@ -157,7 +157,10 @@ async function anfrage<T>(pfad: string, init: RequestInit = {}): Promise<T> {
   return daten as T
 }
 
-export const registerStatus = () => anfrage<{ engineStand: string; praxis: { aktualisiert: string; preislisten: number; eigen: number } }>('/status')
+export const registerStatus = () => anfrage<{
+  engineStand: string
+  praxis: { aktualisiert: string; preislisten: number; eigen: number; fremd?: number; katalog?: { pvs: string; stand: string; eigenlabor: number } | null }
+}>('/status')
 export const registerListe = () => anfrage<{ hkps: RegisterKopf[] }>('/hkp').then((d) => d.hkps)
 export const registerLesen = (id: string) => anfrage<{ hkp: RegisterHkp }>(`/hkp/${id}`).then((d) => d.hkp)
 export const registerDatei = (id: string, dateiId: string) =>
@@ -227,5 +230,8 @@ export const registerSpeichern = (id: string, version: number, plan: HkpPlan, er
 export const registerStatusSetzen = (id: string, version: number, status: HkpStatus) =>
   anfrage<{ hkp: RegisterKopf }>(`/hkp/${id}`, { method: 'PUT', body: JSON.stringify({ version, status }) }).then((d) => d.hkp)
 
-export const praxisFreigeben = (daten: { preislisten: unknown[]; eigen: unknown[]; einstellungen: Partial<HkpPlan['einstellungen']> }) =>
-  anfrage<{ preislisten: number; eigen: number }>('/praxis', { method: 'POST', body: JSON.stringify(daten) })
+export const praxisFreigeben = (daten: { preislisten: unknown[]; eigen: unknown[]; fremd: unknown[]; einstellungen: Partial<HkpPlan['einstellungen']> }) =>
+  anfrage<{ preislisten: number; eigen: number; fremd?: number }>('/praxis', { method: 'POST', body: JSON.stringify(daten) })
+/** Nur Eigenlabor-Katalog und Fremdlabor-Liste (mit Zuordnungen); Preislisten und Einstellungen bleiben wie zuletzt freigegeben */
+export const katalogeFreigeben = (daten: { eigen: unknown[]; fremd: unknown[] }) =>
+  anfrage<{ eigen: number; fremd: number }>('/praxis/kataloge', { method: 'POST', body: JSON.stringify(daten) })

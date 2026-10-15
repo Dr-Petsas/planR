@@ -708,8 +708,9 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
 
   it('Totalprothese mit Intraoralscan: GOZ 0065 für den Kiefer, gedrucktes Modell statt Situationsmodell, Funktionsabformung bleibt', () => {
     const ok = ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28']
-    const rechne = (abformung: HkpPlan['abformung'], abformungProthese: HkpPlan['abformung'] = '') => {
-      const p = { ...planMit(fehlend(...ok)), abformung, abformungProthese }
+    const rechne = (abformung: HkpPlan['abformung'], abformungProthese: HkpPlan['abformung'] = '', protheseDigital: 'voll' | 'abformung' = 'voll') => {
+      const p0 = planMit(fehlend(...ok))
+      const p = { ...p0, abformung, abformungProthese, einstellungen: { ...p0.einstellungen, protheseDigital } }
       return therapieAnwenden(regelversorgungErmitteln(p.zaehne, regelOptionen(p)), p.zaehne, p)
     }
     const modelle = (r: ReturnType<typeof rechne>) => r.positionen.filter((x) => x.ebene === 'BEL' && x.nr === '0010' && x.zahn === 'OK').reduce((s, x) => s + (x.anzahl ?? 1), 0)
@@ -717,13 +718,23 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
     expect(abdruck.positionen.some((x) => x.nr === '0065' || (x.ebene === 'BEB' && x.nr === '0009'))).toBe(false)
     expect(modelle(abdruck)).toBe(2)
 
-    for (const scan of [rechne('scan'), rechne('abdruck', 'scan')]) {
+    for (const scan of [rechne('scan', '', 'abformung'), rechne('abdruck', 'scan', 'abformung')]) {
       expect(scan.positionen.filter((x) => x.ebene === 'GOZ' && x.nr === '0065').map((x) => x.zahn).sort()).toEqual(['OK links', 'OK rechts', 'OK-Front'])
       expect(scan.positionen.filter((x) => x.ebene === 'BEB' && x.nr === '0009' && x.zahn === 'OK')).toHaveLength(1)
       expect(modelle(scan)).toBe(1)
       expect(hat(scan, 'BEMA', '98b', 'OK') && hat(scan, 'BEL', '0211', 'OK')).toBe(true)
       expect(scan.hinweise.some((h) => h.includes('zahnlos') && h.includes('Intraoralscan'))).toBe(true)
       expect(scan.hinweise.some((h) => h.includes('noch offen'))).toBe(false)
+    }
+
+    // voll digital (Standard): Meistermodell, Artikulator, Wachsaufstellung und Fertigstellung durch den CAD/CAM-Ablauf ersetzt
+    for (const scan of [rechne('scan'), rechne('abdruck', 'scan')]) {
+      expect(modelle(scan)).toBe(0)
+      expect(scan.positionen.some((x) => x.ebene === 'BEL' && ['0120', '3010', '3020', '3610', '3620'].includes(x.nr))).toBe(false)
+      expect(hat(scan, 'BEMA', '98b', 'OK') && hat(scan, 'BEL', '0211', 'OK') && hat(scan, 'BEL', '0220', 'OK')).toBe(true)
+      for (const nr of ['0009', 'D106', 'D108', '0037', 'D107']) expect(hat(scan, 'BEB', nr, 'OK')).toBe(true)
+      for (const nr of ['0007', '0901', '0902']) expect(hat(scan, 'BEB', nr, '')).toBe(true)
+      expect(scan.hinweise.some((h) => h.includes('voll digital'))).toBe(true)
     }
   })
 

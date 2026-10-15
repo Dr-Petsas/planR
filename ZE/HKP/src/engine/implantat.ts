@@ -43,7 +43,7 @@ export function implantatPositionen(zaehne: Record<string, ZahnZeilen>, a: Impla
   const kiefer = [...new Set(imp.map(kieferVon))]
   const haelften = [...new Set(imp.map(bereich))]
   const mat = (k: Komponente, zahn: string) =>
-    pos('MAT', '', zahn, 1, { text: `${sys.hersteller} ${sys.system}: ${KOMPONENTEN[k]}`, preis: sys.preise[k], ...(teileLabor ? { labor: teileLabor } : {}) })
+    pos('MAT', '', zahn, 1, { text: `${sys.hersteller} ${sys.system}: ${KOMPONENTEN[k]}`, preis: sys.preise[k], rolle: `implantat-${k}`, ...(teileLabor ? { labor: teileLabor } : {}) })
 
   for (const z of imp) positionen.push(pos('GOZ', '9050', z, 2))
 

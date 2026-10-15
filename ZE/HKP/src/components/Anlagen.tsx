@@ -42,7 +42,7 @@ function Aufstellung({ titel, zeilen, punkte, leer }: { titel: string; zeilen: B
           {zeilen.map((p) => (
             <tr key={p.id}>
               <td>{p.zahn}</td>
-              <td>{p.ebene === 'BEL' ? belNrAnzeige(p.nr) : p.ebene === 'MAT' ? '–' : p.eigen ?? p.nr}</td>
+              <td>{p.ebene === 'BEL' ? belNrAnzeige(p.nr) : p.ebene === 'MAT' ? '–' : p.eigen ?? p.fremd ?? p.nr}</td>
               <td>{p.bezeichnung || p.text}</td>
               {punkte && <td className="r">{p.punkte ?? ''}</td>}
               <td className="r">{zahlDe(p.anzahl)}</td>
