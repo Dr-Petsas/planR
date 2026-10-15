@@ -105,6 +105,18 @@ describe('Sprach-Entwürfe von Clara in der Übersicht', () => {
     expect(abgeholt.length).toBe(vorher)
   })
 
+  it('Füllungs-MKV: Kassenkarte mit FMKV-Nummer, Plan ohne Regler im Eingang des MKV-Planers', async () => {
+    const mkvPlan = { nummer: '', patient: { name: 'Kassentest', vorname: 'Karl' }, zaehne: { 36: { therapie: 'komposit', flaechen: 2 } } }
+    offen = [{ id: 'm1', modul: 'kons-mkv', patient: 'Karl Kassentest', betrag: 59.98, plan: mkvPlan }]
+    const d = await holen('/api/plaene') as { plaene: Record<string, unknown>[] }
+    expect(d.plaene.find((k) => k.modul === 'kons-mkv')).toMatchObject({ kuerzel: 'MKV', art: 'Kasse', nummer: `FMKV-${JAHR}-C001`, betrag: 59.98, status: 'entwurf' })
+    expect(abgeholt.at(-1)).toEqual({ id: 'm1', nummer: `FMKV-${JAHR}-C001` })
+    const a = await holen('/api/plaene?nur=abgleich&modul=kons-mkv') as { eingang: { plan: Record<string, unknown> }[] }
+    expect(a.eingang).toHaveLength(1)
+    expect(a.eingang[0].plan).toMatchObject({ nummer: `FMKV-${JAHR}-C001`, zaehne: { 36: { therapie: 'komposit', flaechen: 2 } } })
+    expect(a.eingang[0].plan.regler).toBeUndefined()
+  })
+
   it('MAS nicht erreichbar: die Übersicht kommt trotzdem', async () => {
     masKaputt = true
     try {

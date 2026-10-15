@@ -959,10 +959,13 @@ async function inDenEingang(m: string, karte: PlanKarte, plan: Record<string, un
 }
 
 /**
- * Private Sprach-Entwürfe von Clara (MAS planrEntwuerfe) abholen: erst in MAS mit der neuen Nummer als abgeholt
+ * Sprach-Entwürfe von Clara (MAS planrEntwuerfe) abholen: erst in MAS mit der neuen Nummer als abgeholt
  * melden – so kommt ein von Clara gerade zurückgenommener Entwurf nicht mehr an –, dann in den Eingang des Planers.
  */
-const ENTWURF_PLANER: Record<string, { kuerzel: string; praefix: string }> = { 'privat-kv': { kuerzel: 'ZE', praefix: 'KV' } }
+const ENTWURF_PLANER: Record<string, { kuerzel: string; praefix: string; art: 'Kasse' | 'Privat' }> = {
+  'privat-kv': { kuerzel: 'ZE', praefix: 'KV', art: 'Privat' },
+  'kons-mkv': { kuerzel: 'MKV', praefix: 'FMKV', art: 'Kasse' },
+}
 
 async function entwuerfeAbholen(w: Wer): Promise<void> {
   if (!masSchluessel()) return
@@ -985,7 +988,7 @@ async function entwuerfeAbholen(w: Wer): Promise<void> {
     const nummer = entwurfNummer(belegt, meta.praefix, new Date().getFullYear())
     const geaendert = new Date().toISOString()
     const karte = kartePrüfen({
-      modul, kuerzel: meta.kuerzel, art: 'Privat', nummer, patient: String(e.patient ?? ''), betrag: Number(e.betrag) || 0,
+      modul, kuerzel: meta.kuerzel, art: meta.art, nummer, patient: String(e.patient ?? ''), betrag: Number(e.betrag) || 0,
       status: 'entwurf', geaendert, praxis: stempel(w),
     })
     if (!karte) continue
