@@ -299,6 +299,7 @@ const PFADE: [Auftrag['method'], RegExp][] = [
   ['GET', /^\/patients\/\d{1,9}\/(clinical|hkps)$/],
   ['GET', /^\/patients\/\d{1,9}\/hkps\/\d{1,5}\/planr$/],
   ['POST', /^\/patients\/\d{1,9}\/hkps(\/import)?$/],
+  ['POST', /^\/patients\/\d{1,9}\/plaene\/import$/],
   ['GET', /^\/patients\/\d{1,9}\/befunde\/01$/],
   ['POST', /^\/patients\/\d{1,9}\/befunde\/01$/],
   ['GET', /^\/praxis\/katalog$/],

@@ -7,6 +7,7 @@ import { AbformungSchalter } from './components/AbformungFrage'
 import { ImplantatFelder } from './components/ImplantatFelder'
 import { ALLE_ZAEHNE } from './engine/zahnschema'
 import { BEB, GENUTZTE_LISTEN, kalkulieren, euro, positionen } from './engine/berechnung'
+import { pvsPlaene } from './engine/pvs'
 import { PatientFelder, PraxisFelder } from './components/Stammdaten'
 import { ListenKarte } from './components/Listen'
 import { kronenEinheiten, werkstoffVon } from './engine/material'
@@ -52,7 +53,7 @@ export default function App() {
   }, [setEinst])
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
   const ablage = useZeAblage()
-  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan }
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan, pvs: pvsPlaene(plan, kalk) }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'

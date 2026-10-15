@@ -118,16 +118,23 @@ export function hkpFuerPvs(plan: Obj, ergebnis: Obj): string {
   })
 }
 
-/** Vermerk, dass ein HKP schon im PVS liegt */
+/** Planer, deren Plan beim Speichern schon fürs Praxisprogramm gerechnet wird (pvsplan.ts); bisher nur DS-Win */
+export const PVS_PLANER: Record<string, string> = {
+  'privat-kv': 'Privat-ZE-Plan', 'privat-impl': 'Implantologie-Plan', 'privat-kons': 'Kons-Plan', 'kons-mkv': 'Füllungs-MKV',
+}
+
+/** Vermerk, dass ein Plan schon im PVS liegt */
 export interface PvsVermerk {
   pvs: string
   patientId: string
   planNr: number
+  /** mehrere DS-Win-Pläne aus einem PlanR-Plan (Füllungs-MKV und Privatvereinbarung) */
+  plaene?: number[]
   am: string
 }
 
 export const vermerkText = (v: PvsVermerk, pvsName: string) =>
-  `In ${pvsName} als Plan Nr. ${v.planNr} angelegt (${new Date(v.am).toLocaleDateString('de-DE')})`
+  `In ${pvsName} als Plan Nr. ${(v.plaene ?? [v.planNr]).join(' und ')} angelegt (${new Date(v.am).toLocaleDateString('de-DE')})`
 
 /** Aktueller Zahnstatus aus dem PVS: Kürzel je Zahn genau wie dort ('' = ohne Befund) */
 export interface PvsBefund {

@@ -15,6 +15,8 @@ export interface AblageEintrag<P> {
   status: AblageStatus
   freigegebenAm?: string
   plan: P
+  /** Plan fürs Praxisprogramm (pvsplan.ts), beim Speichern aus dem Rechenergebnis */
+  pvs?: unknown[]
 }
 
 export interface AblageDaten<P> {
@@ -22,6 +24,7 @@ export interface AblageDaten<P> {
   patient: string
   betrag: number
   plan: P
+  pvs?: unknown[]
 }
 
 export interface Ablage<P> {
@@ -134,7 +137,7 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
   const plaene = liste.map((e) => ({
     modul: basis, kuerzel: meta.kuerzel, art: meta.art,
     nummer: e.nummer, patient: e.patient, betrag: e.betrag, status: e.status, geaendert: e.geaendert,
-    behandler: behandlerVon(key, e.plan), plan: e.plan,
+    behandler: behandlerVon(key, e.plan), plan: e.plan, ...(e.pvs ? { pvs: e.pvs } : {}),
   }))
   fetch(hub, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modul: basis, plaene, entfernt: weg }) }).catch(() => {})
 }

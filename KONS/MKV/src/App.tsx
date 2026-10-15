@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/mkv'
+import { pvsPlaene } from './engine/pvs'
 import { Befundleiste } from './components/Befundleiste'
 import { ALLE_ZAEHNE, konsKandidaten, konsWarnungen, type Befund01 } from './befund01'
 import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
@@ -61,7 +62,7 @@ export default function App() {
     }
     return { ...p, zaehne }
   })
-  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: rechnung.mehrkosten, plan }
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: rechnung.mehrkosten, plan, pvs: pvsPlaene(plan, rechnung) }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'

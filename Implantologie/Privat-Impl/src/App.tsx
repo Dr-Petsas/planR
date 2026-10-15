@@ -8,6 +8,7 @@ import { Kostenvoranschlag } from './components/Kostenvoranschlag'
 import { Kostenleiste } from './components/Kostenleiste'
 import { PraxisPreise } from './components/PraxisPreise'
 import { euro, kalkulieren } from './engine/berechnung'
+import { pvsPlaene } from './engine/pvs'
 import { geplanteRegionen, implantatZaehne } from './engine/planung'
 import { importAusZe } from './engine/bruecke'
 import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } from './store'
@@ -53,7 +54,7 @@ export default function App() {
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
 
   const ablage = useImplAblage()
-  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan }
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan, pvs: pvsPlaene(plan, kalk) }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'

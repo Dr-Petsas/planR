@@ -5,6 +5,7 @@ import { kalkulieren } from './berechnung'
 import { analogWaehlen } from './analog'
 import { goaeRahmen } from './listen'
 import { analogFinden } from '../data/analog-katalog'
+import { OP_ZUSCHLAEGE, opZuschlagStufe } from '../data/goz-sonderregeln'
 
 const E: Einstellungen = { ...STANDARD_EINSTELLUNGEN }
 
@@ -198,6 +199,24 @@ describe('OP-Zuschlag', () => {
     const zuschlaege = k.honorarGoz.filter((z) => ['0500', '0510', '0520', '0530'].includes(z.nr) && z.sitzung === 3)
     expect(zuschlaege).toHaveLength(1)
     expect(zuschlaege[0].nr).toBe('0530') // höchste Leistung 9100
+  })
+
+  it('Stufe nach Punktzahl: Implantat 9010 (1545 Punkte) → 0530, Freilegung 9040 (626 Punkte) → 0510', () => {
+    const k = kalkulieren(plan({ zaehne: { '36': { B: 'f', TP: 'I' } } }), E)
+    const zuschlag = (nr: string) => {
+      const s = k.honorarGoz.find((z) => z.nr === nr)?.sitzung
+      return k.honorarGoz.filter((z) => OP_ZUSCHLAEGE.includes(z.nr as never) && z.sitzung === s).map((z) => z.nr)
+    }
+    expect(zuschlag('9010')).toEqual(['0530'])
+    expect(zuschlag('9040')).toEqual(['0510'])
+  })
+
+  it('unter 250 Punkten kein Zuschlag, 4090 und 4130 lösen 0500 aus', () => {
+    expect(opZuschlagStufe('3000', 70)).toBeNull()
+    expect(opZuschlagStufe('4090', 180)).toBe('0500')
+    expect(opZuschlagStufe('3020', 270)).toBe('0500')
+    expect(opZuschlagStufe('9140', 650)).toBe('0510')
+    expect(opZuschlagStufe('4133', 880)).toBe('0520')
   })
 })
 

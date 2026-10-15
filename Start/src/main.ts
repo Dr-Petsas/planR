@@ -3,7 +3,7 @@ import './thema'
 import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
-import { PVS_CONNECTOR, PVS_SUCHE } from './pvs'
+import { PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE } from './pvs'
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { apiJson } from './api'
 import { logo } from './logo'
@@ -156,7 +156,7 @@ function zeile(p: PlanKarte, i: number): string {
   const tonne = loeschbar(p)
     ? `<button type="button" class="aktion tonne" data-loeschen="${i}" title="${hkp ? 'HKP verwerfen' : 'Plan löschen'}" aria-label="${hkp ? 'HKP verwerfen' : 'Plan löschen'}: ${name}">${TONNE}</button>`
     : `<span class="aktion tonne aus" title="Liegt bei der Kasse – nur in PlanR änderbar">${TONNE}</span>`
-  const ziel = hkp ? pvsZiel() : ''
+  const ziel = exportZiel(p)
   const dens = einstellungen.pvs === 'dens'
   const export_ = ziel
     ? `<button type="button" class="aktion pvs-knopf${p.imPvs ? ' im-pvs' : ''}" data-export="${i}" title="${esc(`In ${ziel} exportieren${p.imPvs ? ` · ${p.imPvs}` : ''}`)}" aria-label="In ${esc(ziel)} exportieren: ${name}">${dens ? DELFIN : EXPORT}<span>${dens ? 'DENS' : esc(ziel)}</span></button>`
@@ -208,6 +208,12 @@ function pvsZiel(): string {
   return p && einstellungen.bridge && PVS_CONNECTOR[p.id] ? p.name : ''
 }
 
+/** Wohin der Exportknopf einer Zeile schreibt: HKPs in jedes angebundene PVS, die Privat-/MKV-Pläne bisher nur nach DS-Win */
+function exportZiel(p: PlanKarte): string {
+  if (p.modul === 'hkp') return pvsZiel()
+  return PVS_PLANER[p.modul] && einstellungen.pvs === 'dampsoft' ? pvsZiel() : ''
+}
+
 /** Name des PVS, in dem die Patientensuche sucht */
 function pvsQuelle(): string {
   const p = pvsVon(einstellungen.pvs)
@@ -219,18 +225,19 @@ let pvsLaeuft = false
 async function insPvs(p: PlanKarte, ziel: string) {
   if (pvsLaeuft) return
   const wer = p.patient || p.nummer
+  const art = p.modul === 'hkp' ? 'HKP' : PVS_PLANER[p.modul] ?? 'Plan'
   const frage = p.imPvs
     ? `${p.imPvs}.\n\nTrotzdem noch einmal als neuen Plan in ${ziel} anlegen?`
-    : `HKP von ${wer} in ${ziel} beim gleichnamigen Patienten anlegen?`
+    : `${art} von ${wer} in ${ziel} beim gleichnamigen Patienten anlegen?`
   if (!confirm(frage)) return
   pvsLaeuft = true
-  melden(`HKP von ${wer} geht an ${ziel} …`)
+  melden(`${art} von ${wer} geht an ${ziel} …`)
   try {
     const r = await apiJson<Antwort>('/api/plaene/pvs', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(kennung(p)),
     })
     if (r.ok) await laden()
-    melden(r.meldung || (r.ok ? `HKP in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`))
+    melden(r.meldung || (r.ok ? `${art} in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`))
   } finally {
     pvsLaeuft = false
   }
@@ -287,10 +294,9 @@ async function ausPvsOeffnen(nummer: string, hinweise: string[]) {
 }
 
 async function exportieren(p: PlanKarte) {
-  if (p.modul === 'hkp') {
-    const ziel = pvsZiel()
-    return ziel ? insPvs(p, ziel) : undefined
-  }
+  const ziel = exportZiel(p)
+  if (ziel) return insPvs(p, ziel)
+  if (p.modul === 'hkp') return
   const r = await senden('export', kennung(p))
   if (!r.ok || !r.datei) return melden(r.meldung || 'Export hat nicht geklappt.')
   const teil = (s: string) => s.trim().replace(/[^\p{L}\p{N}-]+/gu, '_').replace(/^_+|_+$/g, '')

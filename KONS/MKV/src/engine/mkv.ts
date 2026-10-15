@@ -13,7 +13,7 @@
 import { bemaFuer, LABOR_KLASSE_FAKTOR, THERAPIE } from '../data/katalog'
 import { ermittlePunktwert } from '../punktwerte'
 import type { Einstellungen, Plan, Rechnung, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
-import { BEB, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE, eigenKatalog, gozPunkte, gozText, runden } from './listen'
+import { BEB, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE, eigenKatalog, gozPunkte, gozText, mwstZeile, runden } from './listen'
 import { inlayLabor, type InlayAuftrag } from './inlaylabor'
 import { ALLE_ZAEHNE, istFrontzahn, regionVon } from './zahnschema'
 
@@ -83,6 +83,8 @@ export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Ei
   }
   if (z.anaesthesie && !t.plastisch) zeilen.push(gozZeile('0090', r.faktor))
   if (z.provisorium && !t.plastisch) zeilen.push(gozZeile('2260', r.faktor))
+  const mwst = mwstZeile(zeilen)
+  if (mwst) zeilen.push(mwst)
   for (const x of zeilen) x.zahn = zahn
 
   const privat7: Zeile[] = []
@@ -165,7 +167,8 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     const gegenkiefer = 2 - new Set(inlayZaehne.map((z) => (z[0] === '1' || z[0] === '2' ? 'OK' : 'UK'))).size
     scan.push(gozZeile('0065', plan.regler.inlayFaktor, bereiche + gegenkiefer, 'GOZ', `${gozText('0065')} (${bereiche + gegenkiefer}×)`))
   }
-  const begleit: Zeile[] = [...massnahmen, ...scan, ...labor.auftrag]
+  const auftragMwst = mwstZeile(labor.auftrag)
+  const begleit: Zeile[] = [...massnahmen, ...scan, ...labor.auftrag, ...(auftragMwst ? [auftragMwst] : [])]
 
   const wunsch = plan.privat ?? {}
   const fuellRegionen = new Set(zaehne.map((z) => regionVon(z.zahn))).size

@@ -147,14 +147,16 @@ describe('Inlay-Labor aus dem Praxiskatalog', () => {
   it('Abdruck: Inlay je Zahn zum Praxispreis, ein Sägemodell für den Oberkiefer, Gegenkiefer und Artikulator einmal', () => {
     const r = rechnen(plan(inlays), mitKatalog)
     expect(r.zaehne.map((z) => z.zeilen.filter((x) => x.ebene === 'LABOR').map((x) => `${x.nr} ${x.einzel}`))).toEqual([['BEB 2552 140'], ['BEB 2553 155']])
-    expect(r.begleit.filter((x) => x.ebene === 'LABOR').map((x) => `${x.nr} ${x.zahn ?? ''}`.trim())).toEqual(['BEB 0021 OK', 'BEB 0001 UK', 'BEB 0402'])
+    expect(r.begleit.filter((x) => x.ebene === 'LABOR').map((x) => `${x.nr} ${x.zahn ?? ''}`.trim())).toEqual(['BEB 0021 OK', 'BEB 0001 UK', 'BEB 0402', 'MwSt.'])
+    const labor = [...r.zaehne.flatMap((z) => z.zeilen), ...r.begleit].filter((x) => x.ebene === 'LABOR' && x.nr !== 'MwSt.')
+    expect(r.begleit.at(-1)?.summe).toBeCloseTo(labor.reduce((s, x) => s + x.summe, 0) * 0.07, 2)
     expect(r.hinweise.some((h) => h.includes('Abdruck angenommen'))).toBe(true)
   })
 
   it('Intraoralscan: GOZ 0065 für zwei Kieferhälften plus Gegenkiefer, digitaler Ablauf im Labor', () => {
     const r = rechnen({ ...plan(inlays), abformung: 'scan' }, mitKatalog)
     expect(r.begleit.find((x) => x.nr === '0065')?.anzahl).toBe(3)
-    expect(r.begleit.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['BEB 0009', 'BEB 0009', 'BEB 0007', 'BEB 0901', 'BEB 0902', 'BEB 0903'])
+    expect(r.begleit.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['BEB 0009', 'BEB 0009', 'BEB 0007', 'BEB 0901', 'BEB 0902', 'BEB 0903', 'MwSt.'])
     expect(r.zaehne[0].zeilen.map((x) => x.nr)).toContain('BEB 0909')
   })
 
@@ -162,7 +164,7 @@ describe('Inlay-Labor aus dem Praxiskatalog', () => {
     expect(nrn(plan(inlays), '16')).toEqual(['2160', '2197', 'Labor'])
     const chairside = rechnen(plan({ '16': { therapie: 'inlay', flaechen: 2, labor: 'cadcam' } }), mitKatalog)
     expect(chairside.zaehne[0].zeilen.map((x) => x.nr)).toEqual(['2160', '2197', 'Labor'])
-    expect(chairside.begleit.filter((x) => x.ebene === 'LABOR')).toEqual([])
+    expect(chairside.begleit.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['MwSt.'])
     expect(rechnen(plan(inlays, 0, 'gkvZusatz'), mitKatalog).begleit.filter((x) => x.ebene === 'LABOR')).toEqual([])
   })
 })

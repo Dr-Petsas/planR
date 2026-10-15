@@ -2,7 +2,7 @@ import gozMitgeliefert from '../data/goz-2012.json'
 import bebMitgeliefert from '../data/beb-itz-2024.json'
 import { aktuell } from '../daten'
 import type { GenutzteListe } from '../components/Listen'
-import type { ListenEintrag } from '../types'
+import type { ListenEintrag, Zeile } from '../types'
 import { bebErgaenzen } from './beb-standard'
 import { mitDigital } from './digital'
 import type { EigenPosition } from './eigenlabor'
@@ -37,6 +37,15 @@ export const GOZ: Map<string, ListenEintrag> = new Map(
 )
 
 export const runden = (x: number) => Math.round(x * 100) / 100
+
+/** Zahntechnische Leistungen tragen 7 % MwSt. (§ 12 Abs. 2 Nr. 6 UStG), Praxismaterial („Mat.“) nicht. */
+export const MWST_LABOR = 7
+export const MWST_NR = 'MwSt.'
+export function mwstZeile(zeilen: Zeile[]): Zeile | null {
+  const netto = zeilen.filter((z) => z.ebene === 'LABOR' && z.nr !== MWST_NR && z.nr !== 'Mat.').reduce((s, z) => s + z.summe, 0)
+  const betrag = runden(netto * MWST_LABOR / 100)
+  return betrag > 0 ? { ebene: 'LABOR', nr: MWST_NR, text: `MwSt. ${MWST_LABOR} % auf zahntechnische Leistungen`, anzahl: 1, einzel: betrag, summe: betrag } : null
+}
 
 /** GOZ-Faktorrahmen (alle Abschnitte gleich). */
 export const GOZ_SCHWELLE = 2.3

@@ -36,14 +36,21 @@ export const GOZ_ERGAENZUNG: ListenEintrag[] = [
 /** Chirurgische OP-Zuschläge (nichtstationär), je Tag nur der höchste. */
 export const OP_ZUSCHLAEGE = ['0500', '0510', '0520', '0530'] as const
 
+/** Chirurgische Leistungen des Planers (Sitzung mit Anästhesie, Kontrollröntgen, ggf. OP-Zuschlag). */
+export const OP_LEISTUNGEN = new Set([
+  '3000', '3010', '3020', '3030', '3040', '3045', '3070', '3080', '3100', '3110', '3120', '3210', '3230', '3240',
+  '4080', '4090', '4100', '4120', '4130', '4133',
+  '9010', '9020', '9040', '9090', '9100', '9110', '9120', '9130', '9140', '9150', '9160', '9170',
+])
+
 /**
- * Leistungen, die einen OP-Zuschlag auslösen, mit der zugehörigen Stufe.
- * 0500 (≤ einfache Chirurgie) … 0530 (sehr aufwändig). Je Tag wird nur der
- * Zuschlag der höchstbewerteten Einzelleistung angesetzt (nicht summiert).
+ * OP-Zuschlag nach der Punktzahl der Leistung (GOZ Abschnitt L): 250–499 → 0500 (sowie 4090, 4130),
+ * 500–799 → 0510, 800–1199 → 0520, ab 1200 → 0530; unter 250 Punkten kein Zuschlag.
  */
-export const OP_ZUSCHLAG_STUFE: Record<string, '0500' | '0510' | '0520' | '0530'> = {
-  '3000': '0500', '3010': '0500', '3020': '0500', '3070': '0500', '3080': '0500', '3210': '0500', '9040': '0500', '9160': '0500',
-  '3030': '0510', '3100': '0510', '3240': '0510', '4080': '0510', '9020': '0510', '9090': '0510',
-  '3040': '0520', '3110': '0520', '4090': '0520', '4100': '0520', '4120': '0520', '4130': '0520', '9010': '0520', '9110': '0520', '9140': '0520', '9170': '0520',
-  '3045': '0530', '3120': '0530', '3230': '0530', '4133': '0530', '9100': '0530', '9120': '0530', '9130': '0530', '9150': '0530',
+export function opZuschlagStufe(nr: string, punkte: number): (typeof OP_ZUSCHLAEGE)[number] | null {
+  if (punkte >= 1200) return '0530'
+  if (punkte >= 800) return '0520'
+  if (punkte >= 500) return '0510'
+  if (punkte >= 250 || nr === '4090' || nr === '4130') return '0500'
+  return null
 }

@@ -15,10 +15,10 @@ const DATEN = join(WURZEL, 'Start', 'public', 'daten')
 
 const PLANER = {
   'ZE/HKP': ['basis', 'kasse', 'labor', 'laborimport'],
-  'ZE/Privat-HKP': ['basis', 'ablage', 'befund', 'labor', 'laborimport', 'praxiskatalog'],
-  'Implantologie/Privat-Impl': ['basis', 'ablage', 'befund', 'labor', 'praxiskatalog'],
-  'KONS/MKV': ['basis', 'ablage', 'kasse', 'befund', 'labor', 'inlay', 'praxiskatalog'],
-  'KONS/Privat-Kons': ['basis', 'ablage', 'befund', 'labor', 'inlay', 'praxiskatalog'],
+  'ZE/Privat-HKP': ['basis', 'ablage', 'befund', 'labor', 'laborimport', 'praxiskatalog', 'pvsplan'],
+  'Implantologie/Privat-Impl': ['basis', 'ablage', 'befund', 'labor', 'praxiskatalog', 'pvsplan'],
+  'KONS/MKV': ['basis', 'ablage', 'kasse', 'befund', 'labor', 'inlay', 'praxiskatalog', 'pvsplan'],
+  'KONS/Privat-Kons': ['basis', 'ablage', 'befund', 'labor', 'inlay', 'praxiskatalog', 'pvsplan'],
   'PAR/Kassen-PAR': ['basis', 'ablage', 'kasse'],
   'PAR/Privat-PAR': ['basis', 'ablage'],
   'KB/Kassen-KB': ['basis', 'ablage', 'kasse'],
@@ -44,6 +44,7 @@ const SAETZE = {
   inlay: ['engine/inlaylabor.ts', 'engine/inlaylabor.test.ts'],
   laborimport: ['engine/eigenlabor-pdf.ts'],
   praxiskatalog: ['praxiskatalog.ts'],
+  pvsplan: ['pvsplan.ts', 'pvsplan.test.ts'],
   kasse: ['data/kzv.ts', 'data/punktwerte.json', 'punktwerte.ts', 'punktwerte.test.ts', 'components/Punktwerte.tsx'],
 }
 

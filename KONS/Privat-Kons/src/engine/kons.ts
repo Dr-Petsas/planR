@@ -9,7 +9,7 @@ import { KLASSE_FAKTOR, THERAPIE, ZUSATZ, ZUSAETZE, type Zusatz } from '../data/
 import type { Einstellungen, Plan, Rechnung, Region, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
 import {
   BEB, GOAE, GOAE_FAKTOR_TECHNIK, GOAE_PUNKTWERT, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE,
-  LASER_HOECHSTBETRAG, eigenKatalog, gozEinfach, gozPunkte, gozText, runden,
+  LASER_HOECHSTBETRAG, eigenKatalog, gozEinfach, gozPunkte, gozText, mwstZeile, runden,
 } from './listen'
 import { inlayLabor, type InlayAuftrag } from './inlaylabor'
 import { ALLE_ZAEHNE, kieferVon, regionVon } from './zahnschema'
@@ -308,6 +308,8 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   const frei: Zeile[] = plan.frei
     .filter((p) => gozPunkte(p.nr) > 0)
     .map((p) => ({ ...gozZeile(p.nr, p.faktor, p.anzahl), zahn: p.zahn, zusatz: p.key }))
+  const mwst = mwstZeile([...zaehne.flatMap((z) => z.zeilen), ...begleit])
+  if (mwst) begleit.push(mwst)
 
   const alle = [...zaehne.flatMap((z) => z.zeilen), ...begleit, ...frei]
   const summe = runden(alle.reduce((s, x) => s + x.summe, 0))

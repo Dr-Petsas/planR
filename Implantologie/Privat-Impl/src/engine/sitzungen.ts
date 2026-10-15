@@ -1,6 +1,6 @@
 import type { Einstellungen, Plan, Position } from '../types'
 import { GOZ } from './listen'
-import { OP_ZUSCHLAG_STUFE } from '../data/goz-sonderregeln'
+import { OP_LEISTUNGEN, OP_ZUSCHLAEGE, opZuschlagStufe } from '../data/goz-sonderregeln'
 import { materialFuerKlasse } from '../data/material'
 import { kieferVon } from './zahnschema'
 
@@ -33,7 +33,7 @@ export function sitzungenErgaenzen(plan: Plan, eingang: Position[], _einst: Eins
   const klasse = plan.regler.materialKlasse
 
   // OP-Sitzungen = Sitzungen mit mindestens einer chirurgischen GOZ-Leistung
-  const opNummern = new Set(Object.keys(OP_ZUSCHLAG_STUFE))
+  const opNummern = OP_LEISTUNGEN
   const sitzungen = new Set(positionen.filter((p) => p.ebene === 'GOZ' && opNummern.has(p.nr) && p.sitzung).map((p) => p.sitzung!))
 
   for (const s of [...sitzungen].sort((a, b) => a - b)) {
@@ -52,9 +52,10 @@ export function sitzungenErgaenzen(plan: Plan, eingang: Position[], _einst: Eins
     if (anae) positionen.push({ id: `mat:anae:${s}`, ebene: 'MAT', nr: anae.id, zahn: '', anzahl: Math.max(1, kiefer.size) * 2, sitzung: s, text: `${anae.titel}`, material: true, auto: true, grund: 'Lokalanästhetikum' })
 
     // OP-Zuschlag: nur der höchste (nach der höchstbewerteten Einzelleistung)
-    const hoechste = inSitzung.slice().sort((a, b) => punkte(b.nr) - punkte(a.nr))[0]
-    if (hoechste) {
-      const zuschlag = OP_ZUSCHLAG_STUFE[hoechste.nr]
+    const stufe = (p: Position) => OP_ZUSCHLAEGE.indexOf(opZuschlagStufe(p.nr, punkte(p.nr)) ?? ('' as never))
+    const hoechste = inSitzung.slice().sort((a, b) => stufe(b) - stufe(a) || punkte(b.nr) - punkte(a.nr))[0]
+    const zuschlag = hoechste && opZuschlagStufe(hoechste.nr, punkte(hoechste.nr))
+    if (hoechste && zuschlag) {
       positionen.push({ id: `auto:opzuschlag:${s}`, ebene: 'GOZ', nr: zuschlag, zahn: '', anzahl: 1, sitzung: s, grund: `OP-Zuschlag (höchste Leistung: GOZ ${hoechste.nr})`, auto: true })
     }
 

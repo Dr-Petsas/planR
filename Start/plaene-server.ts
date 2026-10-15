@@ -9,7 +9,7 @@ import {
 import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import {
-  PVS_CONNECTOR, PVS_SUCHE, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
+  PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
@@ -72,7 +72,15 @@ const TUNNEL_HOST = 'planr.pickadoc-tunnel.com'
 const HERKUNFT = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$|^https:\/\/[a-z0-9-]+\.pickadoc-tunnel\.com$/
 const MODUL_RE = /^[a-z0-9-]{1,40}$/
 
-type Inhalte = Record<string, { geaendert: string; plan: Record<string, unknown> }>
+type Inhalte = Record<string, { geaendert: string; plan: Record<string, unknown>; pvs?: Record<string, unknown>[] }>
+
+
+/** Höchstens zwei Pläne (MKV + Privatvereinbarung), jeder klein genug für den Connector (64 KB). */
+function pvsFassung(roh: unknown): Record<string, unknown>[] | undefined {
+  if (!Array.isArray(roh) || !roh.length || roh.length > 2) return undefined
+  const ok = roh.every((p) => p && typeof p === 'object' && !Array.isArray(p) && (p as { format?: unknown }).format === 'planr-plan' && JSON.stringify(p).length <= 50_000)
+  return ok ? roh as Record<string, unknown>[] : undefined
+}
 const schluessel = (modul: string, nummer: string) => `${modul}|${nummer}`
 
 function masSchluessel(): string {
@@ -576,8 +584,65 @@ function pvsNachVorn(pvs: string) {
   } catch { /* Fenster bleibt, wo es ist */ }
 }
 
+/** Patient des Plans im PVS: genau ein Treffer nach Name (und Geburtsdatum), sonst eine Meldung mit HTTP-Status. */
+async function pvsPatient(c: PvsWeg, patient: PlanPatient): Promise<{ id?: string; status?: number; meldung?: string }> {
+  const vorname = String(patient.vorname ?? '').trim(), nachname = String(patient.name ?? '').trim()
+  const q = c.id === 'dampsoft' ? new URLSearchParams({ q: nachname || vorname, limit: '100' }) : new URLSearchParams({ firstName: vorname, lastName: nachname })
+  const suche = await c.rufen!<{ items?: PvsZeile[] }>(`/patients?${q}`)
+  if (!suche.ok) return { status: 502, meldung: `${c.name}: ${suche.daten.error ?? `Patientensuche fehlgeschlagen (HTTP ${suche.status}).`}` }
+  const treffer = (suche.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
+  const wahl = patientWaehlen(treffer, patient, c.name!)
+  return wahl.id ? { id: wahl.id } : { status: 409, meldung: wahl.fehler }
+}
+
+/** Privat-ZE, Implantologie, Kons und Füllungs-MKV: die beim Speichern gerechnete Fassung als Plan(e) in DS-Win anlegen. */
+async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: string, res: ServerResponse) {
+  const art = PVS_PLANER[modul]
+  const karte = (await dateiLesen(w.mandant)).find((k) => k.modul === modul && k.nummer === nummer)
+  if (!karte || !sichtbar(w, karte)) return json(res, 404, { ok: false, meldung: 'Plan nicht gefunden.' })
+  const inhalt = (await inhalteLesen(w.mandant))[schluessel(modul, nummer)]
+  const plaene = pvsFassung(inhalt?.pvs)
+  if (!inhalt || !plaene) {
+    return json(res, 409, { ok: false, meldung: `Für diesen ${art} liegt noch keine Fassung fürs Praxisprogramm vor – den Plan im Planer öffnen und einmal speichern.` })
+  }
+  const c = await pvsConnector(req, w)
+  if (!c.rufen) return wegFehler(res, c)
+  if (c.id !== 'dampsoft') return json(res, 400, { ok: false, meldung: `${art}e gehen bisher nur nach DS-Win, noch nicht nach ${c.name}.` })
+
+  const patient = (inhalt.plan.patient ?? {}) as PlanPatient
+  const angelegt: number[] = []
+  const hinweise: string[] = []
+  try {
+    const wahl = await pvsPatient(c, patient)
+    if (!wahl.id) return json(res, wahl.status ?? 409, { ok: false, meldung: wahl.meldung })
+    for (const plan of plaene) {
+      const anlage = await c.rufen<{ number?: number; label?: string; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/plaene/import`, {
+        method: 'POST', body: { json: JSON.stringify(plan) }, ms: 70_000, headers: { 'X-DSWIN-EDIT': '1' },
+      })
+      if (!anlage.ok || typeof anlage.daten.number !== 'number') {
+        const schon = angelegt.length ? ` Bereits angelegt: Plan Nr. ${angelegt.join(', ')}.` : ''
+        return json(res, 422, { ok: false, meldung: `${c.name} hat den ${art} nicht übernommen: ${anlage.daten.error ?? `HTTP ${anlage.status}`}.${schon}` })
+      }
+      angelegt.push(anlage.daten.number)
+      hinweise.push(...(anlage.daten.hinweise ?? []).map((h) => `${anlage.daten.label ?? 'Plan'} ${anlage.daten.number}: ${h}`))
+    }
+    const vermerk: PvsVermerk = { pvs: c.id, patientId: wahl.id, planNr: angelegt[0], ...(angelegt.length > 1 ? { plaene: angelegt } : {}), am: new Date().toISOString() }
+    await jsonSchreiben(PVS_VERMERKE, { ...await vermerkeLesen(), [schluessel(modul, nummer)]: vermerk })
+    if (!c.agent) pvsNachVorn(c.id)
+    const wer = `${patient.vorname ?? ''} ${patient.name ?? ''}`.trim()
+    json(res, 200, {
+      ok: true,
+      meldung: `${art} für ${wer} in ${c.name} als Plan Nr. ${angelegt.join(' und ')} angelegt. Dort: Patient (Nr. ${wahl.id}) öffnen und die Planauswahl neu laden.`
+        + (hinweise.length ? ` Hinweise: ${hinweise.join(' ')}` : ''),
+    })
+  } catch (e) {
+    json(res, 503, { ok: false, meldung: stumm(c, e) + (angelegt.length ? ` Bereits angelegt: Plan Nr. ${angelegt.join(', ')}.` : '') })
+  }
+}
+
 async function insPvs(req: IncomingMessage, w: Wer, modul: string, nummer: string, res: ServerResponse) {
-  if (modul !== 'hkp') return json(res, 400, { ok: false, meldung: 'Ins Praxisprogramm gehen bisher nur HKPs.' })
+  if (PVS_PLANER[modul]) return planInsPvs(req, w, modul, nummer, res)
+  if (modul !== 'hkp') return json(res, 400, { ok: false, meldung: 'Dieser Plan geht noch nicht ins Praxisprogramm.' })
   const c = await pvsConnector(req, w)
   if (!c.rufen) return wegFehler(res, c)
   const pvs = { id: c.id!, name: c.name! }
@@ -590,13 +655,8 @@ async function insPvs(req: IncomingMessage, w: Wer, modul: string, nummer: strin
 
   const dampsoft = pvs.id === 'dampsoft'
   try {
-    const vorname = String(patient.vorname ?? '').trim(), nachname = String(patient.name ?? '').trim()
-    const q = dampsoft ? new URLSearchParams({ q: nachname || vorname, limit: '100' }) : new URLSearchParams({ firstName: vorname, lastName: nachname })
-    const suche = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${q}`)
-    if (!suche.ok) return json(res, 502, { ok: false, meldung: `${pvs.name}: ${suche.daten.error ?? `Patientensuche fehlgeschlagen (HTTP ${suche.status}).`}` })
-    const treffer = (suche.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
-    const wahl = patientWaehlen(treffer, patient, pvs.name)
-    if (!wahl.id) return json(res, 409, { ok: false, meldung: wahl.fehler })
+    const wahl = await pvsPatient(c, patient)
+    if (!wahl.id) return json(res, wahl.status ?? 409, { ok: false, meldung: wahl.meldung })
 
     // DS-Win nimmt HKPs nur über den Import-Endpunkt mit Schreibfreigabe an (Connector mit --enable-write).
     const anlage = await c.rufen<{ number?: number; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/hkps${dampsoft ? '/import' : ''}`, {
@@ -923,7 +983,10 @@ async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfer
     k.praxis = da?.praxis ?? stempel(w)
     neu.push(k)
     const plan = (e as { plan?: unknown }).plan
-    if (plan && typeof plan === 'object' && !Array.isArray(plan)) inhalteNeu[schluessel(modul, k.nummer)] = { geaendert: k.geaendert, plan: plan as Record<string, unknown> }
+    const pvs = PVS_PLANER[modul] ? pvsFassung((e as { pvs?: unknown }).pvs) : undefined
+    if (plan && typeof plan === 'object' && !Array.isArray(plan)) {
+      inhalteNeu[schluessel(modul, k.nummer)] = { geaendert: k.geaendert, plan: plan as Record<string, unknown>, ...(pvs ? { pvs } : {}) }
+    }
   }
   // Ein älterer Stand desselben Plans überschreibt weder einen neueren noch einen offenen Import.
   const eingang = eingangOffen(await eingangLesen(m), neu)
@@ -2060,7 +2123,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
       for (const k of liste) if (!k.behandler && namen[k.modul]) k.behandler = namen[k.modul]
       const vermerke = await vermerkeLesen()
       for (const k of liste) {
-        const v = k.modul === 'hkp' ? vermerke[`hkp|${k.nummer}`] : undefined
+        const v = vermerke[schluessel(k.modul, k.nummer)]
         if (v) k.imPvs = vermerkText(v, pvsVon(v.pvs)?.name ?? v.pvs)
       }
       json(res, 200, { plaene: liste })

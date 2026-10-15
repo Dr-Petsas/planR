@@ -1,7 +1,7 @@
 import type { Einstellungen, Plan, Position } from '../types'
 import { REGIONEN } from '../types'
 import { ANALOG_KATALOG, type AnalogLeistung } from '../data/analog-katalog'
-import { LASER_ZUSCHLAG, MIKROSKOP_ZUSCHLAG, OP_ZUSCHLAG_STUFE } from '../data/goz-sonderregeln'
+import { LASER_ZUSCHLAG, MIKROSKOP_ZUSCHLAG, OP_LEISTUNGEN } from '../data/goz-sonderregeln'
 import { materialFuerKlasse, materialPreis } from '../data/material'
 import { standardProtokoll } from '../data/blutprotokolle'
 import { analogPosition, analogWaehlen } from './analog'
@@ -55,8 +55,7 @@ export interface ZusatzErgebnis {
 
 /** Echte OP-Sitzungen (mit chirurgischer Leistung, nicht die reine Planung). */
 const opSitzungen = (basis: Position[]) => {
-  const chirurgisch = new Set(Object.keys(OP_ZUSCHLAG_STUFE))
-  return [...new Set(basis.filter((p) => p.ebene === 'GOZ' && p.sitzung && chirurgisch.has(p.nr)).map((p) => p.sitzung!))].sort((a, b) => a - b)
+  return [...new Set(basis.filter((p) => p.ebene === 'GOZ' && p.sitzung && OP_LEISTUNGEN.has(p.nr)).map((p) => p.sitzung!))].sort((a, b) => a - b)
 }
 
 /**

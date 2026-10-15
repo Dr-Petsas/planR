@@ -84,13 +84,15 @@ describe('Einlage- und Goldhämmerfüllungen', () => {
   it('Keramik-Inlay mit adhäsiver Befestigung 2197 und Labor', () => {
     const r = rechnen(plan({ '26': { therapie: 'inlay', flaechen: 3, labor: 'keramik', anaesthesie: true } }), einst)
     const nrn = r.zaehne[0].zeilen.map((x) => x.nr)
-    expect(nrn).toEqual(['2170', '2197', 'Labor', '0090'])
+    expect(nrn).toEqual(['2170', '2197', 'Labor', '0090', 'MwSt.'])
     expect(r.zaehne[0].kasse?.nr).toBe('13c')
+    const z = r.zaehne[0].zeilen
+    expect(z[4].summe).toBeCloseTo(z[2].summe * 0.07, 2)
   })
 
   it('Gold-Inlay ohne 2197, Goldhämmerfüllung analog', () => {
     const g = rechnen(plan({ '26': { therapie: 'inlay', flaechen: 2, labor: 'gold' } }), einst)
-    expect(g.zaehne[0].zeilen.map((x) => x.nr)).toEqual(['2160', 'Labor'])
+    expect(g.zaehne[0].zeilen.map((x) => x.nr)).toEqual(['2160', 'Labor', 'MwSt.'])
     const h = rechnen(plan({ '26': { therapie: 'goldhaemmer', flaechen: 1 } }), einst)
     expect(h.zaehne[0].zeilen[0]).toMatchObject({ nr: '2150a', ebene: 'ANALOG' })
   })
@@ -178,12 +180,12 @@ describe('Aufbau, Stift und Privatvereinbarung (§ 8 Abs. 7 BMV-Z)', () => {
     const zwei = { '16': { therapie: 'inlay', flaechen: 2, labor: 'keramik' }, '17': { therapie: 'inlay', flaechen: 2, labor: 'keramik' } } as const
     const r = rechnen(plan(zwei), { ...einst, eigenlabor })
     const labor = r.zaehne[0].zeilen.filter((x) => x.ebene === 'LABOR')
-    expect(labor.map((x) => x.nr)).toEqual(['BEB 2552'])
+    expect(labor.map((x) => x.nr)).toEqual(['BEB 2552', 'MwSt.'])
     expect(labor[0].einzel).toBe(140)
-    expect(r.begleit.map((x) => `${x.nr} ${x.zahn ?? ''}`.trim())).toEqual(['BEB 0021 OK', 'BEB 0001 UK', 'BEB 0402'])
+    expect(r.begleit.map((x) => `${x.nr} ${x.zahn ?? ''}`.trim())).toEqual(['BEB 0021 OK', 'BEB 0001 UK', 'BEB 0402', 'MwSt.'])
     expect(r.mehrkosten).toBeCloseTo(r.zaehne.reduce((s, z) => s + z.mehrkosten, 0) + r.begleit.reduce((s, x) => s + x.summe, 0), 2)
     const pauschal = rechnen(plan({ '16': { therapie: 'inlay', flaechen: 2, labor: 'keramik' } }), einst)
-    expect(pauschal.zaehne[0].zeilen.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['Labor'])
+    expect(pauschal.zaehne[0].zeilen.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['Labor', 'MwSt.'])
     expect(pauschal.hinweise.some((h) => h.includes('Abdruck angenommen'))).toBe(true)
   })
 
@@ -193,7 +195,7 @@ describe('Aufbau, Stift und Privatvereinbarung (§ 8 Abs. 7 BMV-Z)', () => {
     const r = rechnen(p, { ...einst, eigenlabor })
     expect(r.begleit.find((x) => x.nr === '0065')).toMatchObject({ anzahl: 2 })
     expect(r.zaehne[0].zeilen.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(
-      ['BEB 2551', 'BEB 0013', 'BEB 0017', 'BEB 0904', 'BEB 0905', 'BEB 0909', 'BEB 0911', 'BEB 0906'])
-    expect(r.begleit.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['BEB 0009', 'BEB 0009', 'BEB 0007', 'BEB 0901', 'BEB 0902', 'BEB 0903'])
+      ['BEB 2551', 'BEB 0013', 'BEB 0017', 'BEB 0904', 'BEB 0905', 'BEB 0909', 'BEB 0911', 'BEB 0906', 'MwSt.'])
+    expect(r.begleit.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['BEB 0009', 'BEB 0009', 'BEB 0007', 'BEB 0901', 'BEB 0902', 'BEB 0903', 'MwSt.'])
   })
 })
