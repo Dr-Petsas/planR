@@ -150,7 +150,7 @@ function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, kl
       return { titel: `Goldhämmerfüllung, ${flaechenWort(Math.min(3, f))}`, zeilen: [analogZeile(einlageNr(f), faktor, 1, `Goldhämmerfüllung, ${flaechenWort(Math.min(3, f))}`)] }
     case 'endo':
       return {
-        titel: `Wurzelkanalbehandlung, ${k} Kanal${k === 1 ? '' : 'e'}, ${z.vital === false ? 'avital' : 'vital'}`,
+        titel: `Wurzelkanalbehandlung, ${k} ${k === 1 ? 'Kanal' : 'Kanäle'}, ${z.vital === false ? 'avital' : 'vital'}`,
         zeilen: [
           z.vital === false ? gozZeile('2390', faktor, 1) : gozZeile('2360', faktor, k),
           gozZeile('2410', faktor, k),
@@ -158,7 +158,7 @@ function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, kl
         ],
       }
     case 'revision':
-      return { titel: `Revision, ${k} Kanal${k === 1 ? '' : 'e'}`, zeilen: [gozZeile('2410', faktor, k), gozZeile('2440', faktor, k)] }
+      return { titel: `Revision, ${k} ${k === 1 ? 'Kanal' : 'Kanäle'}`, zeilen: [gozZeile('2410', faktor, k), gozZeile('2440', faktor, k)] }
     case 'vital': {
       const art = z.vitalArt ?? 'indirekt'
       const nr = art === 'indirekt' ? '2330' : art === 'direkt' ? '2340' : '2350'

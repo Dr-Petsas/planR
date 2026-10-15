@@ -965,6 +965,7 @@ async function inDenEingang(m: string, karte: PlanKarte, plan: Record<string, un
 const ENTWURF_PLANER: Record<string, { kuerzel: string; praefix: string; art: 'Kasse' | 'Privat' }> = {
   'privat-kv': { kuerzel: 'ZE', praefix: 'KV', art: 'Privat' },
   'kons-mkv': { kuerzel: 'MKV', praefix: 'FMKV', art: 'Kasse' },
+  'privat-kons': { kuerzel: 'KONS', praefix: 'PK', art: 'Privat' },
 }
 
 async function entwuerfeAbholen(w: Wer): Promise<void> {

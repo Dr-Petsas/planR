@@ -117,6 +117,15 @@ describe('Sprach-Entwürfe von Clara in der Übersicht', () => {
     expect(a.eingang[0].plan.regler).toBeUndefined()
   })
 
+  it('privater Kons-Kostenvoranschlag: Privatkarte mit PK-Nummer im Eingang des Kons-Planers', async () => {
+    const konsPlan = { nummer: '', vereinbarung: 'pkv', zaehne: { 36: { therapie: 'endo', kanaele: 3, vital: true } }, frei: [] }
+    offen = [{ id: 'k1', modul: 'privat-kons', patient: 'Petra Privattest', betrag: 512.4, plan: konsPlan }]
+    const d = await holen('/api/plaene') as { plaene: Record<string, unknown>[] }
+    expect(d.plaene.find((k) => k.modul === 'privat-kons')).toMatchObject({ kuerzel: 'KONS', art: 'Privat', nummer: `PK-${JAHR}-C001`, status: 'entwurf' })
+    const a = await holen('/api/plaene?nur=abgleich&modul=privat-kons') as { eingang: { plan: Record<string, unknown> }[] }
+    expect(a.eingang[0].plan).toMatchObject({ nummer: `PK-${JAHR}-C001`, zaehne: { 36: { therapie: 'endo', kanaele: 3 } } })
+  })
+
   it('MAS nicht erreichbar: die Übersicht kommt trotzdem', async () => {
     masKaputt = true
     try {

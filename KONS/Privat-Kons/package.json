@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "build:engine": "vite build -c vite.engine.config.ts && node tools/engine-nach-mas.mjs",
     "lint": "oxlint"
   },
   "dependencies": {
