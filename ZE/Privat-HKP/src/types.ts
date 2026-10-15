@@ -100,6 +100,8 @@ export interface Einstellungen {
   naechsteNummer: number
   /** praxiseigene Laborpositionen */
   eigenlabor: EigenPosition[]
+  /** zuletzt übernommener Praxiskatalog aus dem PVS (Eigenlabor-Positionen mit Praxispreisen) */
+  praxiskatalog?: { pvs: string; stand: string; anzahl: number }
 }
 
 export interface ListenEintrag {

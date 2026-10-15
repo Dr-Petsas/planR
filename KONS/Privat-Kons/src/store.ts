@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import type { Einstellungen, Plan } from './types'
 import { STANDARD_LABOR, STANDARD_MATERIAL } from './data/katalog'
 import { useAblage } from './ablage'
@@ -71,7 +71,7 @@ function lade(key: string): unknown | null {
   }
 }
 
-export function useEinstellungen(): [Einstellungen, (e: Einstellungen) => void] {
+export function useEinstellungen(): [Einstellungen, Dispatch<SetStateAction<Einstellungen>>] {
   const [einst, setEinst] = useState<Einstellungen>(() => einstMigrieren(lade(KEY_EINST)))
   useEffect(() => {
     localStorage.setItem(KEY_EINST, JSON.stringify(einst))
@@ -79,7 +79,7 @@ export function useEinstellungen(): [Einstellungen, (e: Einstellungen) => void] 
   return [einst, setEinst]
 }
 
-export function usePlan(einst: Einstellungen): [Plan, (p: Plan) => void] {
+export function usePlan(einst: Einstellungen): [Plan, Dispatch<SetStateAction<Plan>>] {
   const [plan, setPlan] = useState<Plan>(() => planMigrieren(lade(KEY_PLAN), einst))
   useEffect(() => {
     localStorage.setItem(KEY_PLAN, JSON.stringify(plan))

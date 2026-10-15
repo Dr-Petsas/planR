@@ -2,15 +2,10 @@ import type { Abformung, HkpPlan, ImplantatAngaben, Position, ZahnZeilen } from 
 import { GEGENUEBER } from './implantat'
 import { bereich } from './zusatzleistungen'
 import { OBERKIEFER, UNTERKIEFER, kieferVon } from './zahnschema'
-import { DIGITAL } from './digital'
+import { DIGITAL, DIGITAL_BEB } from './digital'
 import { kronenEinheiten } from './material'
 
-/** BEB-Positionen des digitalen Ablaufs nach Intraoralscan (Standardpositionen jeder BEB-Liste) */
-export const DIGITAL_BEB = {
-  oralscan: '0007', praepFreilegen: '0013', druckstumpf: '0017', sintern: '0032',
-  auftragsdaten: '0901', registrierung: '0902', segmentierung: '0903', segment: '0904', praepgrenze: '0905',
-  glanzbrand: '0906', krone: '0907', glied: '0908', kauflaeche: '0909', verbinder: '0910', nacharbeiten: '0911',
-} as const
+export { DIGITAL_BEB }
 
 /** Erste Abformung: präparierte Zähne bzw. Primärkronen und Implantate */
 export const ABFORMUNG_ARTEN: { id: Exclude<Abformung, ''>; titel: string; text: string }[] = [

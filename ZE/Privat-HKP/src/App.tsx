@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Zahnschema } from './components/Zahnschema'
 import { Leistungen } from './components/Leistungen'
 import { Kostenvoranschlag } from './components/Kostenvoranschlag'
@@ -17,6 +17,9 @@ import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrZurueck } from './PlanrZurueck'
+import { Befundleiste } from './components/Befundleiste'
+import { befundZeile, datumDe } from './befund01'
+import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
 import type { Einstellungen, Plan } from './types'
 import { patientName } from './stammdaten'
 
@@ -35,6 +38,18 @@ export default function App() {
   const [einst, setEinst] = useEinstellungen()
   const [plan, setPlan] = usePlan(einst.naechsteNummer)
   const [reiter, setReiter] = useState<Reiter>('planung')
+  useEffect(() => {
+    let aus = false
+    praxiskatalogHolen().then((k) => {
+      if (aus || !k) return
+      setEinst((e) => {
+        const stand = { pvs: k.pvs, stand: k.stand, anzahl: k.eigenlabor.length }
+        if (e.praxiskatalog?.stand === stand.stand && e.praxiskatalog.anzahl === stand.anzahl) return e
+        return { ...e, eigenlabor: eigenlaborMischen(e.eigenlabor ?? [], k), praxiskatalog: stand }
+      })
+    })
+    return () => { aus = true }
+  }, [setEinst])
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
   const ablage = useZeAblage()
   const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan }
@@ -124,7 +139,10 @@ export default function App() {
             <fieldset className="sperre" disabled={gesperrt}>
             <div className="block">
               <h3>Befund und Planung</h3>
-              <p className="hilfe">Befund (Kleinbuchstaben) und Planung (Großbuchstaben) mit den bekannten Kürzeln eintragen – z. B. Befund <b>kw</b>, Planung <b>KM</b>; Lücke <b>f</b> mit <b>BM</b>; Implantat <b>SKM</b>. Es gibt keine Regelversorgung: geplant und berechnet wird genau, was eingetragen ist.</p>
+              <Befundleiste patient={plan.patient} zeile={plan.zaehne} auto
+                hinweis="Befundzeile (B) durch den aktuellen 01 ersetzen – die Planung bleibt"
+                onUebernehmen={(b) => setPlan((p) => ({ ...p, zaehne: befundZeile(p.zaehne, b, () => ({ B: '', TP: '' })) }))} />
+              <p className="hilfe">Befund (Kleinbuchstaben) und Planung (Großbuchstaben) mit den bekannten Kürzeln eintragen – z. B. Befund <b>kw</b>, Planung <b>KM</b>; Lücke <b>f</b> mit <b>BM</b>; Implantat <b>SKM</b>. Der Befund kommt aus dem Praxisprogramm (01), sobald Name und Geburtsdatum stehen. Es gibt keine Regelversorgung: geplant und berechnet wird genau, was eingetragen ist.</p>
               <Zahnschema zaehne={plan.zaehne} onChange={(zaehne) => setPlan({ ...plan, zaehne })} />
               <div className="optionen">
                 <button className="sekundaer klein-btn" onClick={() => confirm('Zahnschema leeren?') && setPlan({ ...plan, zaehne: {} })}>Zahnschema leeren</button>
@@ -208,6 +226,13 @@ function PraxisForm({ einst, onChange }: { einst: Einstellungen; onChange: (e: E
       <h3>Praxis (Briefkopf)</h3>
       <PraxisFelder art="privat" praxis={einst.praxis} onChange={(praxis) => onChange({ ...einst, praxis })} />
       <div style={{ marginTop: 14 }}><ListenKarte listen={GENUTZTE_LISTEN} /></div>
+      {einst.praxiskatalog && (
+        <p className="klein">
+          Laborpositionen aus {einst.praxiskatalog.pvs} (Stand {datumDe(einst.praxiskatalog.stand)}): {einst.praxiskatalog.anzahl} Positionen mit
+          Praxispreisen. PlanR ordnet sie den BEB-Leistungsschritten zu (nach Scan die gefräste, nach Abdruck die gegossene Variante);
+          ohne passende Praxisposition gilt der BEB-Preis der Liste.
+        </p>
+      )}
       <EigenlaborKatalog
         katalog={einst.eigenlabor ?? []} onChange={(k) => onChange({ ...einst, eigenlabor: k })}
         bebText={(nr) => BEB.get(nr.trim().padStart(4, '0'))?.text}

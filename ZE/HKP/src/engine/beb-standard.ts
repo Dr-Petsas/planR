@@ -1,4 +1,10 @@
-import type { BebEintrag, Preisliste } from '../types'
+export interface BebEintrag {
+  nr: string
+  text: string
+  preis: number
+  /** Standardposition mit Richtpreis, bis die Praxis den Preis anpasst */
+  richtpreis?: boolean
+}
 
 const r = (nr: string, text: string, preis: number): BebEintrag => ({ nr, text, preis, richtpreis: true })
 
@@ -48,7 +54,7 @@ const UMZUG: readonly { nr: string; alt: RegExp; neu: string }[] = [
 const norm = (nr: string) => nr.trim().padStart(4, '0')
 
 /** Ergänzt eine BEB-Liste um die fehlenden Standardpositionen; ohne Änderung kommt dieselbe Liste zurück. */
-export function bebErgaenzen<T extends Pick<Preisliste<'beb'>, 'eintraege'>>(liste: T): T {
+export function bebErgaenzen<T extends { eintraege: BebEintrag[] }>(liste: T): T {
   const eintraege = [...liste.eintraege]
   let geaendert = false
   for (const u of UMZUG) {

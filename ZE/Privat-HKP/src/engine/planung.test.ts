@@ -7,6 +7,22 @@ import type { Abformung, Zahn } from '../types'
 const nummern = (z: Record<string, Zahn>, abformung: Abformung = 'abdruck', prothese: Abformung = '') =>
   planen(z, abformung, undefined, prothese).positionen.map((p) => `${p.ebene} ${p.nr}${p.zahn ? ' ' + p.zahn : ''}${p.anzahl > 1 ? ' x' + p.anzahl : ''}`)
 
+describe('Befund (01) und Planung', () => {
+  const hinweise = (z: Record<string, Zahn>) => planen(z, 'abdruck').hinweise.join(' | ')
+
+  it('Krone auf fehlendem Zahn, Glied auf vorhandenem und Implantat auf eigenem Zahn fallen auf', () => {
+    expect(hinweise({ 16: { B: 'f', TP: 'KM' } })).toMatch(/16: laut Befund „f“ steht dort kein eigener Zahn/)
+    expect(hinweise({ 14: { B: '', TP: 'KM' }, 15: { B: 'pw', TP: 'BM' }, 16: { B: 'kw', TP: 'KM' } })).toMatch(/15: Brückenglied geplant, laut Befund ist der Zahn vorhanden \(pw\)/)
+    expect(hinweise({ 36: { B: 'ww', TP: 'SKM' } })).toMatch(/36: Implantatversorgung geplant/)
+    expect(hinweise({ 26: { B: 'x', TP: 'KM' } })).toMatch(/26: laut Befund nicht erhaltungswürdig/)
+  })
+
+  it('passender Befund und Planung ohne Befund bleiben ruhig', () => {
+    expect(hinweise({ 14: { B: 'kw', TP: 'KM' }, 15: { B: 'f', TP: 'BM' }, 16: { B: 'ww', TP: 'KM' }, 36: { B: 'f', TP: 'SKM' }, 46: { B: 'skw', TP: 'SKM' } })).not.toMatch(/laut Befund|Befund prüfen/)
+    expect(hinweise({ 16: { B: '', TP: 'BM' } })).not.toMatch(/Befund prüfen/)
+  })
+})
+
 describe('Privatplanung', () => {
   it('Einzelkrone vollkeramisch mit Kronenentfernung', () => {
     const n = nummern({ '16': { B: 'kw', TP: 'KM' } })
@@ -41,30 +57,61 @@ describe('Privatplanung', () => {
     const z: Record<string, Zahn> = { '14': { B: 'f', TP: 'SKM' }, '16': { B: 'kw', TP: 'KM' }, '26': { B: '', TP: 'K' } }
     const scan = planen(z, 'scan')
     const n = scan.positionen.map((p) => `${p.ebene} ${p.nr}${p.zahn ? ' ' + p.zahn : ''}`)
-    expect(n).toEqual(expect.arrayContaining(['BEB D101', 'BEB D102 16', 'BEB 0105 16', 'BEB D102 26', 'BEB 0105 26', 'BEB D104 14', 'BEB D103', 'BEB 0401']))
+    expect(n).toEqual(expect.arrayContaining([
+      'BEB 0007', 'BEB 0901', 'BEB 0902', 'BEB 0903 OK',
+      'BEB 0013 16', 'BEB 0017 16', 'BEB 0904 16', 'BEB 0905 16', 'BEB 0013 26', 'BEB 0017 26',
+      'BEB 0907 14', 'BEB 0907 16', 'BEB 0907 26', 'BEB 0911 14', 'BEB 0911 16', 'BEB 0911 26',
+      'BEB 0032 14', 'BEB 0906 14', 'BEB 0032 16', 'BEB 0906 16', 'BEB D104 14', 'BEB 0401',
+    ]))
     expect(n).not.toContain('BEB 0402')
-    expect(n).not.toContain('BEB D102 14')
-    expect(n.filter((x) => x === 'BEB D101')).toHaveLength(1)
-    expect(scan.hinweise.some((h) => h.startsWith('Digitaler Workflow') && h.includes('nicht gesondert'))).toBe(true)
+    expect(n).not.toContain('BEB 0013 14')
+    expect(n).not.toContain('BEB 0032 26')
+    expect(n.some((x) => /^BEB (D10[123]|0105)\b/.test(x))).toBe(false)
+    expect(n.filter((x) => x === 'BEB 0007')).toHaveLength(1)
+    expect(scan.hinweise.some((h) => h.startsWith('Digitaler Ablauf im Labor nach Intraoralscan'))).toBe(true)
 
     const monolithisch = nummern({ '26': { B: '', TP: 'K' } }, 'scan')
-    expect(monolithisch).toContain('BEB D103')
+    expect(monolithisch).toEqual(expect.arrayContaining(['BEB 0902', 'BEB 0907 26']))
     expect(monolithisch).not.toContain('BEB 0401')
 
     const abdruck = nummern(z, 'abdruck')
-    expect(abdruck.some((x) => / D\d/.test(x) || x.startsWith('BEB 0105'))).toBe(false)
+    expect(abdruck.some((x) => / D\d/.test(x) || /^BEB 09(0\d|1[01])/.test(x) || x.startsWith('BEB 0013'))).toBe(false)
     expect(abdruck).toContain('BEB 0402')
 
     const k = kalkulieren({ ...neuerPlan(1), zaehne: z, abformung: 'scan' }, STANDARD_EINSTELLUNGEN)
-    expect(k.labor.find((x) => x.nr === 'D103')).toMatchObject({ eigen: 'D103', einzel: 14.5 })
+    expect(k.labor.find((x) => x.nr === '0907')?.einzel).toBeGreaterThan(0)
+    expect(k.hinweise.some((h) => /BEB 09\d\d ist in der Laborpreisliste nicht vorhanden/.test(h))).toBe(false)
+    // Presskeramik wird nicht gesintert
+    const press = kalkulieren({ ...neuerPlan(1), zaehne: z, abformung: 'scan', werkstoffe: { 16: 'presskeramik' } }, STANDARD_EINSTELLUNGEN)
+    expect(press.labor.filter((x) => x.nr === '0032').map((x) => x.zahn)).toEqual(['14'])
+  })
+
+  it('Praxiskatalog: Laborpositionen aus DS-Win ersetzen die BEB-Standardpreise über die Zuordnung', () => {
+    const z: Record<string, Zahn> = { '26': { B: '', TP: 'K' } }
+    const eigenlabor = [
+      { nr: '00907', text: 'CAD: Einzelkrone konstruieren', preis: 31, quelle: 'pvs' as const },
+      { nr: '02101', text: 'Krone gegossen NEM', preis: 99, quelle: 'pvs' as const },
+      { nr: '02102', text: 'Krone gefräst NEM', preis: 120, quelle: 'pvs' as const },
+      { nr: '04711', text: 'Mehrflächige Verblendung Keramik', preis: 1, quelle: 'pvs' as const },
+    ]
+    const k = kalkulieren({ ...neuerPlan(1), zaehne: z, abformung: 'scan' }, { ...STANDARD_EINSTELLUNGEN, eigenlabor })
+    expect(k.labor.find((x) => x.nr === '0907')).toMatchObject({ eigen: '00907', einzel: 31 })
+    // nach Scan die gefräste Variante, nach Abdruck die gegossene
+    expect(k.labor.find((x) => x.nr === '2101')).toMatchObject({ eigen: '02102', einzel: 120 })
+    const abdruck = kalkulieren({ ...neuerPlan(1), zaehne: z, abformung: 'abdruck' }, { ...STANDARD_EINSTELLUNGEN, eigenlabor })
+    expect(abdruck.labor.find((x) => x.nr === '2101')).toMatchObject({ eigen: '02101', einzel: 99 })
+    // nicht geplante Positionen des Katalogs bleiben draußen
+    expect(k.labor.some((x) => x.eigen === '04711')).toBe(false)
   })
 
   it('Veneers 11 und 21 (Keramik/Komposit)', () => {
     const n = nummern({ '11': { B: '', TP: 'VE' }, '21': { B: '', TP: 'VEK' } }, 'scan')
     expect(n).toEqual(expect.arrayContaining(['GOZ 2220 11', 'GOZ 2197 11', 'BEB 2653 11', 'GOZ 2220 21', 'GOZ 2197 21', 'BEB 2663 21', 'GOZ 0065 x2',
-      'BEB 0833 11', 'BEB 2951 11', 'BEB 0105 11', 'BEB 0833 21', 'BEB 2945 21', 'BEB 0105 21', 'BEB 0009 OK', 'BEB D103', 'BEB 0723']))
+      'BEB 0833 11', 'BEB 2951 11', 'BEB 0017 11', 'BEB 0909 11', 'BEB 0906 11', 'BEB 0833 21', 'BEB 2945 21', 'BEB 0017 21', 'BEB 0909 21',
+      'BEB 0009 OK', 'BEB 0902', 'BEB 0723']))
     expect(n.filter((x) => x === 'BEB 0723')).toHaveLength(1)
-    expect(n.filter((x) => x === 'BEB 0105 11')).toHaveLength(1)
+    expect(n.filter((x) => x === 'BEB 0017 11')).toHaveLength(1)
+    expect(n.some((x) => x.startsWith('BEB 0907'))).toBe(false)
     expect(n.some((x) => x.startsWith('GOZ 2270') || x.startsWith('GOZ 5'))).toBe(false)
   })
 

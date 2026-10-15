@@ -7,7 +7,7 @@ import { standardProtokoll } from '../data/blutprotokolle'
 import { analogPosition, analogWaehlen } from './analog'
 import { gozEinzel } from './listen'
 import { implantatZaehne } from './planung'
-import { regionVon } from './zahnschema'
+import { kieferVon, regionVon } from './zahnschema'
 
 export const BEGLEIT_STUFEN = [
   { titel: 'keine' },
@@ -59,6 +59,31 @@ const opSitzungen = (basis: Position[]) => {
   return [...new Set(basis.filter((p) => p.ebene === 'GOZ' && p.sitzung && chirurgisch.has(p.nr)).map((p) => p.sitzung!))].sort((a, b) => a - b)
 }
 
+/**
+ * Schablone je Kiefer mit Implantat: GOZ 9003 (Orientierungs-/Positionierungsschablone) bzw. 9005
+ * (3D-Navigationsschablone) beim Eingriff; das Labor als BEB-Positionen, Preis aus dem Eigenlabor der Praxis
+ * bzw. der BEB-Liste. Konventionell: Modell (0001), Basis (1223), Bohrhülse je Implantat (1311); mit Messschablone
+ * zusätzlich Röntgenkugel (1311) und Set-up (0833) je Implantat. Navigation: gedrucktes Modell (0009),
+ * CAD-Auftragsdaten (0901), virtuelles Set-up (0833) je Implantat, Basis und Bohrhülsen.
+ */
+function schablone(impl: string[], stufe: number): Position[] {
+  const nav = stufe >= 3
+  const out: Position[] = []
+  const beb = (nr: string, zahn: string, anzahl: number, text?: string) =>
+    out.push({ id: `zus:schablone:${nr}:${zahn}`, ebene: 'BEB', nr, zahn, anzahl, sitzung: 1, grund: nav ? '3D-Navigationsschablone' : 'Bohrschablone', zusatz: 'begleit', auto: true, ...(text ? { text } : {}) })
+  for (const k of ['OK', 'UK'] as const) {
+    const n = impl.filter((z) => kieferVon(z) === k).length
+    if (!n) continue
+    out.push({ id: `zus:schablone-goz:${k}`, ebene: 'GOZ', nr: nav ? '9005' : '9003', zahn: k, anzahl: 1, sitzung: 3, grund: nav ? '3D-Navigationsschablone' : 'Orientierungs-/Positionierungsschablone', zusatz: 'begleit', auto: true })
+    beb(nav ? '0009' : '0001', k, 1)
+    beb('1223', k, 1, nav ? 'Basis für Navigationsschablone (gedruckt)' : undefined)
+    beb('1311', k, stufe === 2 ? 2 * n : n, stufe === 2 ? 'Röntgenkugel und Bohrhülse positionieren' : 'Bohrhülse positionieren')
+    if (stufe >= 2) beb('0833', k, n, nav ? 'Virtuelles Set-up je Implantat (Backward Planning)' : 'Set-up je Implantat (Backward Planning)')
+  }
+  if (nav) beb('0901', '', 1)
+  return out
+}
+
 export function zusatzleistungen(plan: Plan, basis: Position[], einst: Einstellungen): ZusatzErgebnis {
   const positionen: Position[] = []
   const nichtAngesetzt: string[] = []
@@ -85,12 +110,7 @@ export function zusatzleistungen(plan: Plan, basis: Position[], einst: Einstellu
   if (r.begleitStufe >= 4) zuschlagProSitzung(positionen, basis, sitzungen, '0120', LASER_ZUSCHLAG.nummern, LASER_ZUSCHLAG.hoechstbetrag, 'Laseranwendung')
 
   // ── Schablone (Stufe 0–3) ──────────────────────────────────────────────
-  if (r.schabloneStufe >= 1 && impl.length) {
-    const nav = r.schabloneStufe >= 3
-    positionen.push({ id: 'zus:schablone-goz', ebene: 'GOZ', nr: nav ? '9005' : '9003', zahn: '', anzahl: 1, sitzung: 1, grund: nav ? '3D-Navigationsschablone' : 'Orientierungsschablone', zusatz: 'begleit', auto: true })
-    const laborPreis = nav ? 280 : r.schabloneStufe >= 2 ? 180 : 150
-    positionen.push({ id: 'zus:schablone-labor', ebene: 'MAT', nr: 'schablone', zahn: '', anzahl: 1, sitzung: 1, preis: laborPreis, text: nav ? 'Navigationsbohrschablone (CAD/CAM, Labor)' : 'Bohrschablone (Labor)', material: true, zusatz: 'begleit', auto: true, grund: 'Bohrschablone' })
-  }
+  if (r.schabloneStufe >= 1 && impl.length) positionen.push(...schablone(impl, r.schabloneStufe))
 
   // ── Analog-/Exotenleistungen (Stufe 0–5) ───────────────────────────────
   const regionenMitAugmentation = REGIONEN.filter((reg) => {

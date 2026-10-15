@@ -123,3 +123,77 @@ describe('Kofferdam und Kürzel', () => {
     expect(ausKuerzel('')).toBeNull()
   })
 })
+
+describe('Aufbau, Stift und Privatvereinbarung (§ 8 Abs. 7 BMV-Z)', () => {
+  it('adhäsiver Aufbau: GOZ 2180 + 2197 gegen BEMA 13 nach Flächen, kein fester Betrag', () => {
+    const r = rechnen(plan({ '36': { therapie: 'aufbau', flaechen: 2 } }, 'proZahn', { proZahn: 40 }), einst)
+    const z = r.zaehne[0]
+    expect(z.zeilen.map((x) => x.nr)).toEqual(['2180', '2197'])
+    expect(z.kasse?.nr).toBe('13b')
+    expect(z.ziel).toBeUndefined()
+    expect(z.faktor).toBe(2.3)
+    expect(ausKuerzel('A5')).toMatchObject({ therapie: 'aufbau', flaechen: 4 })
+  })
+
+  it('Glasfaserstift ist keine MKV: eigene Privatvereinbarung, nicht in den Mehrkosten', () => {
+    const ohne = rechnen(plan({ '36': { therapie: 'aufbau', flaechen: 3 } }), einst)
+    const mit = rechnen(plan({ '36': { therapie: 'aufbau', flaechen: 3, stift: true } }), einst)
+    expect(mit.mehrkosten).toBe(ohne.mehrkosten)
+    expect(mit.privat7.map((x) => x.nr)).toEqual(['2195', '2197', 'Mat.'])
+    expect(mit.privat7[2].summe).toBe(18)
+    expect(mit.zaehne[0].zeilen.map((x) => x.nr)).toEqual(['2180', '2197'])
+    expect(mit.privat7Summe).toBeGreaterThan(0)
+    expect(mit.zaehne[0].hinweise.some((h) => h.includes('§ 8 Abs. 7'))).toBe(true)
+  })
+
+  it('plastischer Aufbau 2180 + 2197 liegt unter 13c – mehrschichtig analog 2120 ergibt Mehrkosten', () => {
+    const plastisch = rechnen(plan({ '36': { therapie: 'aufbau', flaechen: 3 } }), einst).zaehne[0]
+    expect(plastisch.mehrkosten).toBe(0)
+    expect(plastisch.warnungen.some((w) => w.includes('analog 2120'))).toBe(true)
+    const schicht = rechnen(plan({ '36': { therapie: 'aufbau', flaechen: 3, mehrschicht: true } }), einst).zaehne[0]
+    expect(schicht.zeilen.map((x) => x.nr)).toEqual(['2120a', '2197'])
+    expect(schicht.mehrkosten).toBeGreaterThan(0)
+  })
+
+  it('Frontzahn: adhäsiver Aufbau ist Kassenleistung', () => {
+    expect(rechnen(plan({ '11': { therapie: 'aufbau', flaechen: 2 } }), einst).zaehne[0].warnungen.some((w) => w.includes('Kassenleistung'))).toBe(true)
+  })
+
+  it('besondere Maßnahmen und Kofferdam je Region mit Hinweis auf BEMA 12', () => {
+    const r = rechnen(plan({ '36': { therapie: 'komposit', flaechen: 2, bmf: true, kofferdam: true }, '37': { therapie: 'komposit', flaechen: 1, bmf: true } }), einst)
+    expect(r.begleit.map((b) => `${b.nr} x${b.anzahl}`)).toEqual(['2030 x1', '2040 x1'])
+    expect(r.hinweise.some((h) => h.includes('BEMA 12'))).toBe(true)
+  })
+
+  it('Inlay: Provisorium privat; 0080, 1020 und 2197 neben Komposit nur als Privatvereinbarung', () => {
+    const p = plan({ '16': { therapie: 'inlay', flaechen: 2, labor: 'keramik', provisorium: true }, '26': { therapie: 'komposit', flaechen: 2 } })
+    const r = rechnen({ ...p, privat: { oberflaeche: true, fluorid: true, adhaesivKomposit: true } }, einst)
+    expect(r.zaehne[0].zeilen.map((x) => x.nr)).toContain('2260')
+    expect(r.privat7.map((x) => `${x.nr}${x.zahn ? ' ' + x.zahn : ''} x${x.anzahl}`)).toEqual(['0080 x2', '1020 x1', '2197 26 x1'])
+    expect(r.hinweise.some((h) => h.includes('strittig'))).toBe(true)
+  })
+
+  it('Inlay-Labor einzeln nach BEB, wenn der Praxiskatalog das Inlay führt; Modelle je Kiefer, nicht je Zahn', () => {
+    const eigenlabor = [{ nr: '02552', text: 'Inlay aus Keramik, gefräst, zweiflächig', preis: 140, quelle: 'pvs' as const }]
+    const zwei = { '16': { therapie: 'inlay', flaechen: 2, labor: 'keramik' }, '17': { therapie: 'inlay', flaechen: 2, labor: 'keramik' } } as const
+    const r = rechnen(plan(zwei), { ...einst, eigenlabor })
+    const labor = r.zaehne[0].zeilen.filter((x) => x.ebene === 'LABOR')
+    expect(labor.map((x) => x.nr)).toEqual(['BEB 2552'])
+    expect(labor[0].einzel).toBe(140)
+    expect(r.begleit.map((x) => `${x.nr} ${x.zahn ?? ''}`.trim())).toEqual(['BEB 0021 OK', 'BEB 0001 UK', 'BEB 0402'])
+    expect(r.mehrkosten).toBeCloseTo(r.zaehne.reduce((s, z) => s + z.mehrkosten, 0) + r.begleit.reduce((s, x) => s + x.summe, 0), 2)
+    const pauschal = rechnen(plan({ '16': { therapie: 'inlay', flaechen: 2, labor: 'keramik' } }), einst)
+    expect(pauschal.zaehne[0].zeilen.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['Labor'])
+    expect(pauschal.hinweise.some((h) => h.includes('Abdruck angenommen'))).toBe(true)
+  })
+
+  it('Intraoralscan: GOZ 0065 je Kieferhälfte bzw. Front plus Gegenkiefer, digitaler Laborablauf', () => {
+    const eigenlabor = [{ nr: '02551', text: 'Inlay aus Keramik, gefräst, einflächig', preis: 120, quelle: 'pvs' as const }]
+    const p = { ...plan({ '36': { therapie: 'inlay', flaechen: 1, labor: 'keramik' } }), abformung: 'scan' as const }
+    const r = rechnen(p, { ...einst, eigenlabor })
+    expect(r.begleit.find((x) => x.nr === '0065')).toMatchObject({ anzahl: 2 })
+    expect(r.zaehne[0].zeilen.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(
+      ['BEB 2551', 'BEB 0013', 'BEB 0017', 'BEB 0904', 'BEB 0905', 'BEB 0909', 'BEB 0911', 'BEB 0906'])
+    expect(r.begleit.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['BEB 0009', 'BEB 0009', 'BEB 0007', 'BEB 0901', 'BEB 0902', 'BEB 0903'])
+  })
+})

@@ -5,6 +5,7 @@
 // Eigenblut-/Laborprotokolle und Material.
 
 import type { Patient, Praxis } from './stammdaten'
+import type { EigenPosition } from './engine/eigenlabor'
 export type { Patient, Praxis } from './stammdaten'
 
 export type Ebene = 'GOZ' | 'GOAE' | 'MAT' | 'BEB'
@@ -194,6 +195,10 @@ export interface Einstellungen {
   materialAnalog: boolean
   /** Preis-Überschreibungen je Material-/Katalog-ID */
   materialPreise: Record<string, number>
+  /** praxiseigene Laborpositionen (aus dem PVS oder von Hand) */
+  eigenlabor?: EigenPosition[]
+  /** zuletzt übernommener Praxiskatalog aus dem PVS */
+  praxiskatalog?: { pvs: string; stand: string; anzahl: number }
 }
 
 export interface ListenEintrag {

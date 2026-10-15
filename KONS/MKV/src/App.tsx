@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/mkv'
+import { Befundleiste } from './components/Befundleiste'
+import { ALLE_ZAEHNE, konsKandidaten, konsWarnungen, type Befund01 } from './befund01'
+import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
 import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, useMkvAblage, usePlan } from './store'
 import { patientName } from './stammdaten'
 import { useDatenVersion } from './components/Listen'
@@ -31,8 +34,33 @@ export default function App() {
   const ablage = useMkvAblage()
   const [reiter, setReiter] = useState<Reiter>('planung')
   const datenVersion = useDatenVersion()
+  const [befund, setBefund] = useState<Befund01 | null>(null)
+  useEffect(() => {
+    let aus = false
+    praxiskatalogHolen().then((k) => {
+      if (aus || !k) return
+      setEinst((e) => {
+        const stand = { pvs: k.pvs, stand: k.stand, anzahl: k.eigenlabor.length }
+        if (e.praxiskatalog?.stand === stand.stand && e.praxiskatalog.anzahl === stand.anzahl) return e
+        return { ...e, eigenlabor: eigenlaborMischen(e.eigenlabor ?? [], k), praxiskatalog: stand }
+      })
+    })
+    return () => { aus = true }
+  }, [setEinst])
 
   const rechnung = useMemo(() => rechnen(plan, einst), [plan, einst, datenVersion])
+  const befundHinweise = konsWarnungen(
+    ALLE_ZAEHNE.filter((z) => plan.zaehne[z]).map((zahn) => ({ zahn, art: plan.zaehne[zahn].therapie === 'aufbau' ? 'aufbau' as const : 'fuellung' as const })),
+    befund?.zaehne,
+  )
+  const kandidatenUebernehmen = (b: Record<string, string>) => setPlan((p) => {
+    const zaehne = { ...p.zaehne }
+    for (const k of konsKandidaten(b)) {
+      if (zaehne[k.zahn]) continue
+      zaehne[k.zahn] = k.art === 'aufbau' ? { therapie: 'aufbau', flaechen: 2 } : { therapie: 'komposit', flaechen: 2 }
+    }
+    return { ...p, zaehne }
+  })
   const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: rechnung.mehrkosten, plan }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
@@ -64,8 +92,8 @@ export default function App() {
             </div>
           </div>
           <div className="kopf-summe">
-            <span>{plan.nummer} · Mehrkosten</span>
-            <b>{euro(rechnung.mehrkosten)}</b>
+            <span>{plan.nummer} · {rechnung.privat7Summe ? 'Eigenanteil' : 'Mehrkosten'}</span>
+            <b>{euro(rechnung.mehrkosten + rechnung.privat7Summe)}</b>
           </div>
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Plan" onLaden={oeffnen} />
         </header>
@@ -99,10 +127,16 @@ export default function App() {
 
           {reiter === 'planung' && (
             <fieldset className="sperre" disabled={gesperrt}>
+              <Befundleiste patient={plan.patient} onBefund={setBefund} onUebernehmen={kandidatenUebernehmen}
+                uebernehmenText="Kandidaten übernehmen"
+                hinweis="Zähne mit „pw“ (Substanzdefekt) als Kompositfüllung, mit „ww“ (weitgehend zerstört) als Aufbau vormerken – vorhandene Einträge bleiben" />
               <Zahnschema plan={plan} setPlan={setPlan} />
               <Zahntabelle plan={plan} setPlan={setPlan} einst={einst} rechnung={rechnung} />
-              {rechnung.hinweise.length > 0 && (
-                <ul className="hinweise">{rechnung.hinweise.map((h) => <li key={h}>{h}</li>)}</ul>
+              {befundHinweise.length + rechnung.hinweise.length > 0 && (
+                <ul className="hinweise">
+                  {befundHinweise.map((h) => <li key={h} className="befund-warnung">{h}</li>)}
+                  {rechnung.hinweise.map((h) => <li key={h}>{h}</li>)}
+                </ul>
               )}
             </fieldset>
           )}

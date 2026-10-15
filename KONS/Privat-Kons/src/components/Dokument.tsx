@@ -73,7 +73,7 @@ function Zeilen({ zeilen, zahnTitel }: { zeilen: Zeile[]; zahnTitel?: string }) 
     <>
       {zeilen.map((x, i) => (
         <tr key={`${x.zahn}-${x.nr}-${i}`}>
-          <td>{i === 0 ? x.zahn ?? '' : ''}</td>
+          <td>{i === 0 || x.zahn !== zeilen[i - 1].zahn ? x.zahn ?? '' : ''}</td>
           <td className="mono">{x.nr}</td>
           <td>{i === 0 && zahnTitel ? <><b>{zahnTitel}</b><br />{x.text}</> : x.text}</td>
           <td className="r">{x.anzahl}</td>
@@ -107,7 +107,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
             </thead>
             <tbody>
               {zaehne.map((z) => <Fragment key={z.zahn}><Zeilen zeilen={z.zeilen} zahnTitel={z.titel} /></Fragment>)}
-              {rechnung.begleit.length > 0 && <Zeilen zeilen={rechnung.begleit} zahnTitel="Je Kieferhälfte, Kiefer und Behandlungstag" />}
+              {rechnung.begleit.length > 0 && <Zeilen zeilen={rechnung.begleit} zahnTitel="Je Kieferhälfte, Kiefer, Behandlungstag und Laborauftrag" />}
               {rechnung.frei.length > 0 && <Zeilen zeilen={rechnung.frei} zahnTitel="Weitere Leistungen" />}
             </tbody>
           </table>

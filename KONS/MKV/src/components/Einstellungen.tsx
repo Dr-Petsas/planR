@@ -68,6 +68,10 @@ export default function Einstellungen({ einst, setEinst }: Props) {
             Vereinbarung gültig (Monate)
             <input type="number" min={1} max={24} value={einst.gueltigMonate} onChange={(e) => set({ gueltigMonate: zahl(e.target.value, 6) })} />
           </label>
+          <label className="feld">
+            Glasfaserstift, Material (€)
+            <input type="number" min={0} step={1} value={einst.stiftPreis} onChange={(e) => set({ stiftPreis: zahl(e.target.value, 18) })} />
+          </label>
         </div>
       </div>
 

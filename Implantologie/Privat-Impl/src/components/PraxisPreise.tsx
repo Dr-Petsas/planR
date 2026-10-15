@@ -2,7 +2,9 @@ import { useState } from 'react'
 import type { Einstellungen } from '../types'
 import { MATERIAL, materialPreis } from '../data/material'
 import { euro } from '../engine/berechnung'
-import { GENUTZTE_LISTEN } from '../engine/listen'
+import { BEB, GENUTZTE_LISTEN, eigenKatalog } from '../engine/listen'
+import { eigenFinden } from '../engine/eigenlabor'
+import { datumDe } from '../befund01'
 import { PraxisFelder } from './Stammdaten'
 import { ListenKarte } from './Listen'
 
@@ -77,6 +79,32 @@ export function PraxisPreise({ einst, onChange }: Props) {
         </tbody>
       </table>
       <p className="kv-fuss">Effektiver EK Beispiel: {liste[0] ? `${liste[0].produkt} = ${euro(materialPreis(liste[0], einst.materialPreise))}` : '–'}</p>
+
+      <h3>Laborpreise (Bohrschablone)</h3>
+      <p className="hilfe">
+        {einst.praxiskatalog
+          ? `Eigenlabor aus ${einst.praxiskatalog.pvs} (Stand ${datumDe(einst.praxiskatalog.stand)}, ${einst.praxiskatalog.anzahl} Positionen): PlanR ordnet die Positionen den BEB-Leistungen zu; ohne passende Praxisposition gilt die BEB-Liste mit Laboraufschlag.`
+          : 'Kein Praxiskatalog aus dem Praxisprogramm – es gilt die BEB-Liste mit Laboraufschlag.'}
+      </p>
+      <table className="edit-tabelle preisliste">
+        <thead><tr><th>BEB</th><th>Leistung</th><th className="r">Preis</th><th>Quelle</th></tr></thead>
+        <tbody>
+          {SCHABLONE_BEB.map((nr) => {
+            const eigen = eigenFinden(eigenKatalog(einst.eigenlabor), nr, { auto: true })
+            const liste = BEB.get(nr)
+            return (
+              <tr key={nr}>
+                <td className="mono">{nr}</td>
+                <td>{eigen?.text ?? liste?.text ?? '–'}</td>
+                <td className="r">{euro(eigen?.preis ?? liste?.preis ?? 0)}</td>
+                <td><small>{eigen ? `Praxis ${eigen.nr}` : 'BEB-Liste'}</small></td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
+
+const SCHABLONE_BEB = ['0001', '0009', '0833', '0901', '1223', '1311']

@@ -109,6 +109,10 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .feld small { color: var(--grau); font-size: 11px; }
 
 .hinweise { margin: 0; padding: 10px 14px 10px 32px; background: var(--akzent-hell); border: 1px solid #c4dfe2; border-radius: 8px; color: var(--akzent-dunkel); line-height: 1.5; }
+.hinweise .befund-warnung { color: #8a4b12; }
+.block.abformung { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.block.abformung h3 { margin: 0; }
+.block.abformung small { color: var(--grau); }
 
 /* ---------- Zahnschema ---------- */
 .zahnschema { overflow-x: auto; padding: 8px 0; }

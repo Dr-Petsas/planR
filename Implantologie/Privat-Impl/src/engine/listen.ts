@@ -1,18 +1,38 @@
 import gozMitgeliefert from '../data/goz-2012.json'
 import goaeMitgeliefert from '../data/goae-zahnarzt.json'
+import bebMitgeliefert from '../data/beb-itz-2024.json'
 import { aktuell } from '../daten'
 import type { GenutzteListe } from '../components/Listen'
 import type { ListenEintrag } from '../types'
 import { GOZ_ERGAENZUNG } from '../data/goz-sonderregeln'
+import { bebErgaenzen } from './beb-standard'
+import { mitDigital } from './digital'
+import type { EigenPosition } from './eigenlabor'
+import { katalogZuordnen } from './zuordnung'
 
 const gozDaten = aktuell('goz-2012.json', gozMitgeliefert)
 const goaeDaten = aktuell('goae-zahnarzt.json', goaeMitgeliefert)
+const bebDaten = aktuell('beb-itz-2024.json', bebMitgeliefert)
 
 /** Listen, die "Preislisten aktualisieren" erneuert. */
 export const GENUTZTE_LISTEN: GenutzteListe[] = [
   { datei: 'goz-2012.json', name: 'GOZ (Privathonorar)', mitgeliefert: gozMitgeliefert, aktuell: gozDaten },
   { datei: 'goae-zahnarzt.json', name: 'GOÄ (für Zahnärzte geöffnete Abschnitte)', mitgeliefert: goaeMitgeliefert, aktuell: goaeDaten },
+  { datei: 'beb-itz-2024.json', name: 'BEB (Privat-Labor, z. B. Bohrschablone)', mitgeliefert: bebMitgeliefert, aktuell: bebDaten },
 ]
+
+export const BEB: Map<string, ListenEintrag> = new Map(
+  bebErgaenzen({ eintraege: bebDaten.eintraege as { nr: string; text: string; preis: number }[] }).eintraege.map((e) => [e.nr, e]),
+)
+
+const LEER: readonly EigenPosition[] = []
+const zugeordnet = new WeakMap<readonly EigenPosition[], EigenPosition[]>()
+/** Eigenlabor der Praxis, jede Position ihrem BEB-Leistungsschritt zugeordnet (wie im HKP) */
+export function eigenKatalog(k: readonly EigenPosition[] = LEER): EigenPosition[] {
+  let z = zugeordnet.get(k)
+  if (!z) zugeordnet.set(k, (z = katalogZuordnen(mitDigital(k))))
+  return z
+}
 
 export const GOZ_PUNKTWERT = gozDaten.punktwert
 export const GOAE_PUNKTWERT = goaeDaten.punktwert

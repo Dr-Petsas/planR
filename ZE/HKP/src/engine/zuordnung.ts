@@ -8,8 +8,7 @@
  * Abformmaterial …), mit der die Planung es dort ansetzt, wo es anfällt. Von Hand festgelegte Zuordnungen bleiben.
  */
 import itz from '../data/beb-itz-2024.json'
-import type { BebEintrag } from '../types'
-import { BEB_STANDARD, bebErgaenzen } from './beb-standard'
+import { BEB_STANDARD, bebErgaenzen, type BebEintrag } from './beb-standard'
 import { DIGITAL_KATALOG } from './digital'
 import { bebNorm, type EigenPosition } from './eigenlabor'
 

@@ -42,6 +42,56 @@ describe('Implantat-Grundfall', () => {
   })
 })
 
+describe('Bohrschablone: GOZ je Kiefer, Labor als BEB', () => {
+  const zwei = { '16': { B: 'f', TP: 'I' }, '26': { B: 'f', TP: 'I' }, '36': { B: 'f', TP: 'I' } }
+
+  it('Orientierungsschablone: 9003 je Kiefer, Modell, Basis und Bohrhülse je Implantat', () => {
+    const k = kalkulieren(plan({ zaehne: zwei, regler: { schabloneStufe: 1 } }), E)
+    expect(k.honorarGoz.filter((z) => z.nr === '9003').map((z) => z.zahn).sort()).toEqual(['OK', 'UK'])
+    const labor = k.labor.map((z) => `${z.nr} ${z.zahn} x${z.anzahl}`)
+    expect(labor).toEqual(expect.arrayContaining(['0001 OK x1', '1223 OK x1', '1311 OK x2', '0001 UK x1', '1223 UK x1', '1311 UK x1']))
+    expect(labor.some((z) => z.startsWith('0833'))).toBe(false)
+    expect(k.labor.every((z) => z.einzel > 0)).toBe(true)
+    expect(k.material.some((z) => z.nr === 'schablone')).toBe(false)
+  })
+
+  it('Messschablone: Röntgenkugel und Bohrhülse, Set-up je Implantat', () => {
+    const k = kalkulieren(plan({ zaehne: zwei, regler: { schabloneStufe: 2 } }), E)
+    const labor = k.labor.map((z) => `${z.nr} ${z.zahn} x${z.anzahl}`)
+    expect(labor).toEqual(expect.arrayContaining(['1311 OK x4', '0833 OK x2', '0833 UK x1']))
+  })
+
+  it('Navigation: 9005, gedrucktes Modell, CAD-Auftragsdaten; Praxispreis aus dem Eigenlabor', () => {
+    const eigenlabor = [{ nr: '01223', text: 'Basis für Bohrschablone bei Implantat', preis: 44.5, quelle: 'pvs' as const }]
+    const k = kalkulieren(plan({ zaehne: { '36': { B: 'f', TP: 'I' } }, regler: { schabloneStufe: 3 } }), { ...E, eigenlabor })
+    expect(k.honorarGoz.filter((z) => z.nr === '9005')).toHaveLength(1)
+    expect(k.labor.map((z) => z.nr)).toEqual(expect.arrayContaining(['0009', '0901', '0833', '1223', '1311']))
+    expect(k.labor.find((z) => z.nr === '1223')).toMatchObject({ eigen: '01223', einzel: 44.5 })
+  })
+})
+
+describe('Befund (01) und Planung', () => {
+  const hinweise = (zaehne: Record<string, Zahn>) => kalkulieren(plan({ zaehne }), E).hinweise
+
+  it('Implantat an einem vorhandenen bzw. nicht erhaltungswürdigen Zahn', () => {
+    expect(hinweise({ '36': { B: '', TP: 'I' }, '37': { B: 'k', TP: '' } }).some((h) => h.startsWith('Zahn 36: Implantat geplant'))).toBe(true)
+    expect(hinweise({ '36': { B: 'x', TP: 'I' } }).some((h) => h.includes('Sofortimplantat (IS) oder vorher Entfernung'))).toBe(true)
+    expect(hinweise({ '36': { B: 'x', TP: 'IS' } }).some((h) => h.startsWith('Zahn 36'))).toBe(false)
+  })
+
+  it('Lücke, vorhandenes Implantat und Entfernung ohne Zahn', () => {
+    expect(hinweise({ '36': { B: 'f', TP: 'I' } }).some((h) => h.startsWith('Zahn 36'))).toBe(false)
+    expect(hinweise({ '36': { B: 'f', TP: 'IS' } }).some((h) => h.includes('Spätimplantat'))).toBe(true)
+    expect(hinweise({ '36': { B: 'i', TP: 'I' } }).some((h) => h.includes('schon ein Implantat'))).toBe(true)
+    expect(hinweise({ '36': { B: 'ix', TP: 'I' } }).some((h) => h.includes('Explantation'))).toBe(true)
+    expect(hinweise({ '36': { B: 'e', TP: 'EX' } }).some((h) => h.includes('Entfernung geplant'))).toBe(true)
+  })
+
+  it('ohne Befund kein Abgleich', () => {
+    expect(hinweise({ '36': { B: '', TP: 'I' } }).some((h) => h.startsWith('Zahn 36'))).toBe(false)
+  })
+})
+
 describe('Sinuslift und Augmentation', () => {
   it('externer Sinuslift + 9100 nur zu einem Drittel', () => {
     const p = plan({

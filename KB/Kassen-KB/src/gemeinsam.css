@@ -55,3 +55,25 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
 .pw-zeile select, .pw-zeile button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--akzent, #2f7f8f); background: #fff; color: var(--akzent-dunkel, #266a78); cursor: pointer; }
 .pw-zeile button:disabled { opacity: .45; cursor: default; }
 .pw-zeile .pw-weg { color: var(--rot, #b0413a); border-color: #e7b9b5; }
+
+/* Befund (01) als erster Schritt */
+.befund-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 16px 8px; padding: 6px 10px; background: #fff; border: 1px solid var(--linie, #e3ddd3); border-radius: 6px; font-size: 13px; }
+.befund-leiste .klein { font-size: 11px; }
+.befund-leiste .aktionen { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.befund-leiste button { font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--akzent, #2f7f8f); background: #fff; color: var(--akzent-dunkel, #266a78); cursor: pointer; }
+.befund-leiste button:disabled { opacity: .45; cursor: default; }
+.befund-leiste .live-punkt { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #b9a3ad; flex: none; }
+.befund-leiste .live-punkt.an { background: #2e8b57; }
+.b01-offen-text { color: var(--rot, #b0413a); font-weight: 600; }
+.b01-schema { display: inline-flex; flex-direction: column; gap: 2px; }
+.b01-reihe { display: grid; grid-template-columns: repeat(16, 26px); gap: 1px; }
+.b01-reihe > :nth-child(8) { margin-right: 4px; }
+.b01-reihe.uk { border-top: 1px solid var(--linie, #e3ddd3); padding-top: 2px; }
+.b01-zahn { display: flex; flex-direction: column; align-items: center; border: 1px solid transparent; border-radius: 3px; padding: 1px 0; line-height: 1.1; }
+.b01-zahn .b01-code { font-size: 11px; font-weight: 600; min-height: 12px; }
+.b01-zahn .b01-nr { font-size: 9px; color: var(--grau, #6b767d); }
+.b01-zahn.fehlt .b01-code { color: var(--grau, #6b767d); }
+.b01-zahn.offen { background: var(--rot-hell, #fbeceb); border-color: #e7b9b5; }
+.b01-zahn.weicht { outline: 1px dashed var(--akzent, #2f7f8f); outline-offset: -1px; }
+.b01-warnung { color: var(--warn, #9a5b00); font-size: 11.5px; }
+@media print { .befund-leiste { display: none; } }

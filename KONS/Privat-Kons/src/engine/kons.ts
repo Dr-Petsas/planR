@@ -8,9 +8,10 @@
 import { KLASSE_FAKTOR, THERAPIE, ZUSATZ, ZUSAETZE, type Zusatz } from '../data/katalog'
 import type { Einstellungen, Plan, Rechnung, Region, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
 import {
-  GOAE, GOAE_FAKTOR_TECHNIK, GOAE_PUNKTWERT, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE,
-  LASER_HOECHSTBETRAG, gozEinfach, gozPunkte, gozText, runden,
+  BEB, GOAE, GOAE_FAKTOR_TECHNIK, GOAE_PUNKTWERT, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE,
+  LASER_HOECHSTBETRAG, eigenKatalog, gozEinfach, gozPunkte, gozText, runden,
 } from './listen'
+import { inlayLabor, type InlayAuftrag } from './inlaylabor'
 import { ALLE_ZAEHNE, kieferVon, regionVon } from './zahnschema'
 
 export const euro = (x: number) =>
@@ -64,7 +65,6 @@ function verfuegbar(zu: Zusatz, z: ZahnLeistung, plan: Plan): boolean {
   if (neben ? !zu.neben : zu.nurNeben) return false
   if (zu.id === 'nekrose') return z.therapie === 'endo' && z.vital === false
   if (zu.id === 'mikroskop') return mikroskopFaehig(z)
-  if (zu.id === 'mehrschicht') return !z.aufbauStift
   if ((zu.id === 'einlage' || zu.id === 'verschluss') && anzahlFuer(zu, z) === 0) return false
   return true
 }
@@ -131,7 +131,7 @@ function zusatzZeile(zu: Zusatz, anzahl: number, faktor: number, einst: Einstell
   }
 }
 
-function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, klasse: number, mehrschicht: boolean): { titel: string; zeilen: Zeile[] } {
+function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, klasse: number, mehrschicht: boolean, laborEinzeln?: Zeile[]): { titel: string; zeilen: Zeile[] } {
   const f = flaechen(z)
   const k = kanaele(z)
   const kl = KLASSE_FAKTOR[klasse] ?? 1
@@ -142,7 +142,8 @@ function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, kl
       const lab = einst.laborPreise.find((l) => l.id === (z.labor ?? 'keramik'))
       const zeilen = [gozZeile(einlageNr(f), faktor, 1)]
       if (lab?.id !== 'gold') zeilen.push(gozZeile('2197', faktor, 1))
-      if (lab) zeilen.push(preisZeile('LABOR', 'Labor', lab.name, lab.preis * kl, 1))
+      if (laborEinzeln?.length) zeilen.push(...laborEinzeln)
+      else if (lab) zeilen.push(preisZeile('LABOR', 'Labor', lab.name, lab.preis * kl, 1))
       return { titel: `Einlagefüllung, ${flaechenWort(Math.min(3, f))}`, zeilen }
     }
     case 'goldhaemmer':
@@ -167,14 +168,20 @@ function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, kl
     case 'versiegelung':
       return { titel: 'Fissurenversiegelung', zeilen: [gozZeile('2000', faktor, 1)] }
     case 'aufbau': {
+      // Ummantelung des Stiftes mit Aufbaumaterial ist 2180 (BZÄK zu 2195); 2197 je adhäsiv befestigtem Teil
+      const aufbau = [...(mehrschicht ? [] : [gozZeile('2180', faktor, 1)]), gozZeile('2197', faktor, 1, `${gozText('2197')} – Aufbau`)]
+      const titel = mehrschicht ? 'Mehrschichtiger Kompositaufbau' : 'Plastischer Aufbau'
       if (z.aufbauStift) {
         const stift = einst.materialPreise.find((m) => m.id === 'glasfaser')
         return {
-          titel: 'Aufbau mit Glasfaserstift',
-          zeilen: [gozZeile('2195', faktor, 1), gozZeile('2197', faktor, 1), preisZeile('MAT', 'Mat.', stift?.name ?? 'Glasfaserstift', (stift?.preis ?? 0) * kl, 1)],
+          titel: `${titel} mit Glasfaserstift`,
+          zeilen: [
+            gozZeile('2195', faktor, 1), gozZeile('2197', faktor, 1, `${gozText('2197')} – Stift`), ...aufbau,
+            preisZeile('MAT', 'Mat.', stift?.name ?? 'Glasfaserstift', (stift?.preis ?? 0) * kl, 1),
+          ],
         }
       }
-      return { titel: mehrschicht ? 'Mehrschichtiger Kompositaufbau' : 'Plastischer Aufbau', zeilen: [...(mehrschicht ? [] : [gozZeile('2180', faktor, 1)]), gozZeile('2197', faktor, 1)] }
+      return { titel, zeilen: aufbau }
     }
     case 'infiltration':
       return { titel: 'Kariesinfiltration', zeilen: [analogZeile('2060', faktor, 1, 'Kariesinfiltration')] }
@@ -187,7 +194,7 @@ function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, kl
 
 const ZAHNWEISE = new Set(['zahn', 'kanal', 'sitzung', 'zwischen'])
 
-export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Einstellungen): ZahnErgebnis {
+export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Einstellungen, laborEinzeln?: Zeile[]): ZahnErgebnis {
   const t = THERAPIE[z.therapie]
   const hinweise: string[] = []
   const warnungen: string[] = []
@@ -200,7 +207,7 @@ export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Ei
   const faktor = z.faktor ?? plan.regler.faktor
   const chips = zusaetzeFuer(z, plan).filter((c) => c.aktiv)
   const mehrschicht = chips.some((c) => c.zusatz.id === 'mehrschicht')
-  const g = grundleistung(z, faktor, einst, plan.regler.materialKlasse, mehrschicht)
+  const g = grundleistung(z, faktor, einst, plan.regler.materialKlasse, mehrschicht, laborEinzeln)
   const neben = plan.vereinbarung === 'gkvZusatz' && t.kasse === 'bema'
   const zeilen = neben ? [] : g.zeilen
   for (const c of chips) {
@@ -215,6 +222,8 @@ export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Ei
   else if (faktor > GOZ_SCHWELLE) hinweise.push(`Faktor ${faktorText(faktor)} über 2,3: Begründung auf der Rechnung (§ 10 Abs. 3 GOZ).`)
   if (z.therapie === 'vital' && z.vitalArt === 'pulpotomie') hinweise.push('Neben der Pulpotomie (2350) ist der Mikroskop-Zuschlag 0110 nicht berechnungsfähig.')
   if (z.therapie === 'versiegelung' && plan.vereinbarung !== 'pkv') hinweise.push('Bei 6- bis 17-Jährigen ist die Versiegelung der Molaren Kassenleistung (BEMA IP 5).')
+  if (z.therapie === 'aufbau') hinweise.push('GOZ 2180/2195 setzen die anschließende Überkronung voraus; bleibt es bei einer Füllung, Kompositfüllung bzw. Stift analog berechnen.')
+  if (z.therapie === 'inlay' && z.labor === 'cadcam') hinweise.push('Chairside-Keramik: Material und Herstellung aus dem Praxislabor als Pauschale, keine BEB-Einzelpositionen.')
 
   return { zahn, titel: g.titel, zeilen, summe: runden(zeilen.reduce((s, x) => s + x.summe, 0)), hinweise, warnungen }
 }
@@ -223,9 +232,37 @@ export function behandlungstageAuto(plan: Plan) {
   return Math.max(1, ...Object.values(plan.zaehne).map(sitzungen))
 }
 
+const inlayImPlan = (plan: Plan, zahn: string) =>
+  plan.zaehne[zahn]?.therapie === 'inlay' && plan.vereinbarung !== 'gkvZusatz'
+
+/**
+ * Inlay-Labor einzeln nach BEB für die Inlays, deren Position die Praxis führt (DS-Win-Eigenlabor):
+ * Inlay je Zahn, Modelle bzw. digitaler Ablauf je Kiefer und Auftrag. Übrige Inlays behalten die Laborpauschale.
+ */
+function laborDesPlans(plan: Plan, einst: Einstellungen): { jeZahn: Map<string, Zeile[]>; auftrag: Zeile[] } {
+  const inlays: InlayAuftrag[] = ALLE_ZAEHNE.filter((zahn) => inlayImPlan(plan, zahn)).flatMap((zahn) => {
+    const w = plan.zaehne[zahn].labor ?? 'keramik'
+    return w === 'keramik' || w === 'gold' ? [{ zahn, werkstoff: w, flaechen: flaechen(plan.zaehne[zahn]) }] : []
+  })
+  const jeZahn = new Map<string, Zeile[]>()
+  const auftrag: Zeile[] = []
+  if (!inlays.length || !einst.eigenlabor?.length) return { jeZahn, auftrag }
+  const { zeilen } = inlayLabor(inlays, plan.abformung ?? 'abdruck', eigenKatalog(einst.eigenlabor), BEB)
+  for (const l of zeilen) {
+    const zeile: Zeile = {
+      ebene: 'LABOR', nr: `BEB ${l.nr}`, text: l.praxis ? `${l.text} (Praxis ${l.praxis})` : l.text,
+      anzahl: l.anzahl, einzel: l.preis, summe: runden(l.preis * l.anzahl), zahn: l.zahn || undefined,
+    }
+    if (/^\d\d$/.test(l.zahn)) jeZahn.set(l.zahn, [...(jeZahn.get(l.zahn) ?? []), zeile])
+    else auftrag.push(zeile)
+  }
+  return { jeZahn, auftrag }
+}
+
 export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   const zaehneIds = ALLE_ZAEHNE.filter((z) => plan.zaehne[z])
-  const zaehne = zaehneIds.map((z) => zahnRechnen(z, plan.zaehne[z], plan, einst))
+  const labor = laborDesPlans(plan, einst)
+  const zaehne = zaehneIds.map((z) => zahnRechnen(z, plan.zaehne[z], plan, einst, labor.jeZahn.get(z)))
   const tage = plan.behandlungstage > 0 ? plan.behandlungstage : behandlungstageAuto(plan)
   const faktor = plan.regler.faktor
 
@@ -260,6 +297,13 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     if (kiefer.has(zu.id)) neu(zu.id, kiefer.get(zu.id)!.size, zu.id)
     if (einmal.has(zu.id)) neu(zu.id, zu.menge === 'tag' ? (plan.behandlungstage > 0 ? tage : einmal.get(zu.id)!) : 1, zu.id)
   }
+  const inlayZaehne = zaehneIds.filter((z) => inlayImPlan(plan, z))
+  if (plan.abformung === 'scan' && inlayZaehne.length) {
+    const bereiche = new Set(inlayZaehne.map(regionVon)).size
+    const gegenkiefer = 2 - new Set(inlayZaehne.map(kieferVon)).size
+    begleit.push({ ...gozZeile('0065', faktor, bereiche + gegenkiefer), zusatz: 'scan' })
+  }
+  begleit.push(...labor.auftrag)
 
   const frei: Zeile[] = plan.frei
     .filter((p) => gozPunkte(p.nr) > 0)
@@ -275,6 +319,12 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   }
   if (begleit.some((x) => x.ebene === 'ZUSCHLAG')) hinweise.push('Zuschläge 0110/0120 einmal je Behandlungstag, einfacher Satz.')
   if (zaehne.some((z) => z.ausgeschlossen)) hinweise.push('Füllungen bei Kassenpatienten gehören in den Füllungs-MKV-Planer – sie sind hier nicht berechnet.')
+  if (labor.jeZahn.size) {
+    hinweise.push(plan.abformung === 'scan'
+      ? 'Inlay-Labor nach den BEB-Positionen der Praxis: digitaler Ablauf nach Intraoralscan (Oralscan aufbereiten, CAD-Daten, Registrierung, Segmentierung, CAD-Kaufläche, CAM-Nacharbeit) und gedruckte Modelle.'
+      : 'Inlay-Labor nach den BEB-Positionen der Praxis: Sägemodell je Kiefer mit Inlay, Gegenkiefermodell und Mittelwertartikulator einmal je Auftrag.')
+  }
+  if (inlayZaehne.length && !plan.abformung) hinweise.push('Abformung für die Inlays: Abdruck angenommen – bei Intraoralscan umstellen (GOZ 0065 und digitaler Laborablauf).')
 
   return { zaehne, begleit, frei, summe, vereinbarung2, hinweise }
 }

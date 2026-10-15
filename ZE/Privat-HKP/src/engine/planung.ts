@@ -2,7 +2,8 @@ import type { Abformung, Ebene, ImplantatAngaben, Position, Zahn } from '../type
 import { ALTE_KRONE, OBERKIEFER, UNTERKIEFER, istFrontzahn, istWeisheitszahn, kieferVon } from './zahnschema'
 import { KOMPONENTEN, implantatsystem, type Komponente } from '../data/implantatsysteme'
 import { brueckenBereiche, pfeilerIm } from './bruecken'
-import { DIGITAL } from './digital'
+import { DIGITAL, DIGITAL_BEB } from './digital'
+import { kronenEinheiten } from './material'
 
 export const ABUTMENTS: { id: ImplantatAngaben['abutment']; titel: string }[] = [
   { id: 'standard', titel: 'konfektioniert (Titan)' },
@@ -92,6 +93,31 @@ function scanBereich(zahn: string) {
 
 export const STANDARD_IMPLANTAT: ImplantatAngaben = { system: 'durchschnitt', loeffel: 'geschlossen', abutment: 'standard' }
 
+/** Befund ohne eigenen Zahn an der Stelle (fehlt, ersetzt, Brückenglied, Implantat) */
+const OHNE_ZAHN = new Set(['f', 'e', 'ew', 'b', 'bw', 'ab', 'abw', 'i', 'ix', 'sb', 'sbw', 'se', 'sew', 'sk', 'skw', 'so', 'sow', 'st', 'stw', ')('])
+/** Befund mit eigenem, erhaltenem Zahn */
+const EIGENER_ZAHN = new Set(['', 'k', 'kw', 'pkw', 'pw', 'ww', 't', 'tw', 't2w', 'a', 'aw', 'ur'])
+/** Planung, die einen eigenen Zahn voraussetzt: Krone, Teilkrone, Veneer, Teleskop, Adhäsivanker */
+const AUF_EIGENEM_ZAHN = /^(K|PK|VE|T|A$)/
+
+/** Passt die Planung zum Befund (01)? Ohne eingetragenen Befund wird nichts geprüft. */
+export function befundAbgleich(geplant: string[], B: (z: string) => string, P: (z: string) => string): string[] {
+  if (![...OBERKIEFER, ...UNTERKIEFER].some((z) => B(z))) return []
+  const aus: string[] = []
+  for (const z of geplant) {
+    const b = B(z), k = P(z)
+    if (AUF_EIGENEM_ZAHN.test(k) && OHNE_ZAHN.has(b))
+      aus.push(`Zahn ${z}: laut Befund „${b}“ steht dort kein eigener Zahn – „${k}“ braucht einen; Brückenglied (B…) oder Implantatkrone (SK…) planen.`)
+    else if (AUF_EIGENEM_ZAHN.test(k) && b === 'x')
+      aus.push(`Zahn ${z}: laut Befund nicht erhaltungswürdig – „${k}“ auf diesem Zahn prüfen.`)
+    if (IMPLANTAT.test(k) && EIGENER_ZAHN.has(b))
+      aus.push(`Zahn ${z}: Implantatversorgung geplant, laut Befund steht dort ein eigener Zahn (${b || 'vorhanden'}) – Befund prüfen.`)
+    if (GLIED.test(k) && EIGENER_ZAHN.has(b))
+      aus.push(`Zahn ${z}: Brückenglied geplant, laut Befund ist der Zahn vorhanden (${b || 'vorhanden'}) – Befund prüfen (f oder x?).`)
+  }
+  return aus
+}
+
 /**
  * `abformung`: präparierte Zähne bzw. Primärkronen;
  * `prothese`: zweite Abformung für den herausnehmbaren Teil einer Kombinationsarbeit (eigene Sitzung)
@@ -113,6 +139,7 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
   if (!geplant.length) return { positionen, hinweise: ['Noch keine Planung eingetragen – Kürzel in der Zeile „Planung“ eintragen (z. B. KM, BM, SK, T, E).'] }
   for (const z of geplant) if (P(z) !== ')(' && !ZUORDNUNG[P(z)] && !PROTHESENZAHN.test(P(z)) && !['H', 'R'].includes(P(z)))
     hinweise.push(`Kürzel „${P(z)}“ an Zahn ${z} ist unbekannt.`)
+  hinweise.push(...befundAbgleich(geplant, B, P))
 
   pos('GOZ', '0030', '')
 
@@ -251,21 +278,10 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
     pos('GOZ', '0065', '', scanBereiche.size + gegenkiefer)
   }
   const impScan = abformung === 'scan' ? [...OBERKIEFER, ...UNTERKIEFER].filter((z) => IMPLANTAT.test(P(z))) : []
-  const digital = stuempfe.length > 0 || impScan.length > 0
-  if (digital) {
-    pos('BEB', DIGITAL.daten, '')
-    for (const z of stuempfe) { pos('BEB', DIGITAL.stumpf, z); pos('BEB', '0105', z) }
-    for (const z of impScan) pos('BEB', DIGITAL.scanbody, z)
-  }
-  if (digital && !herausnehmbar.size) {
-    pos('BEB', DIGITAL.artikulation, '')
-    if (positionen.some((p) => p.ebene === 'BEB' && /^26\d\d$/.test(p.nr))) pos('BEB', '0401', '')
-  } else if (kieferMitArbeit.length) pos('BEB', '0402', '')
-  if (digital) hinweise.push(`Digitaler Workflow im Labor: ${[
-    stuempfe.length && `virtuelle Stümpfe und Druckstümpfe ${stuempfe.join(', ')}`,
-    impScan.length && `Scanbody-Matching ${impScan.join(', ')}`,
-    herausnehmbar.size ? 'Mittelwertartikulator bleibt für die Aufstellung des herausnehmbaren Teils' : 'virtuelle Artikulation statt Mittelwertartikulator',
-  ].filter(Boolean).join(', ')}. CAD-Konstruktion, Fräsen und Brände sind in den Kronen- und Brückenpositionen enthalten und werden nicht gesondert berechnet.`)
+  const digital = abformung === 'scan' ? digitalerAblauf(positionen, pos, stuempfe, impScan, geplant.filter((z) => VENEER.test(P(z)))) : ''
+  if (digital && herausnehmbar.size) pos('BEB', '0402', '')
+  else if (!digital && kieferMitArbeit.length) pos('BEB', '0402', '')
+  if (digital) hinweise.push(`${digital}${herausnehmbar.size ? ' Der Mittelwertartikulator bleibt für die Aufstellung des herausnehmbaren Teils.' : ''}`)
   if (geplant.some((z) => VENEER.test(P(z)))) pos('BEB', '0723', '')
 
   // ---- zweite Abformung: herausnehmbarer Teil (z. B. nach dem Einsetzen der Primärkronen) ----
@@ -325,4 +341,90 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
   }
 
   return { positionen, hinweise }
+}
+
+type PosAnlegen = (ebene: Ebene, nr: string, zahn: string, anzahl?: number, extra?: Partial<Position>) => void
+
+const INLAY_BEB = /^(230[1-4]|255[1-9]|2560)$/
+const KERAMIK_INLAY = /^(255[1-9]|2560)$/
+
+/** Verbinder je Brücke: zwischen den Gliedern und zu jedem Anker daneben */
+function verbinder(glieder: string[], anker: Set<string>): { zahn: string; anzahl: number }[] {
+  const out: { zahn: string; anzahl: number }[] = []
+  for (const reihe of [OBERKIEFER, UNTERKIEFER]) {
+    let lauf: number[] = []
+    const ende = () => {
+      if (!lauf.length) return
+      const a = lauf[0]
+      const b = lauf[lauf.length - 1]
+      const links = anker.has(reihe[a - 1] ?? '')
+      const rechts = anker.has(reihe[b + 1] ?? '')
+      const n = lauf.length - 1 + Number(links) + Number(rechts)
+      if (n > 0) out.push({ zahn: `${reihe[links ? a - 1 : a]}-${reihe[rechts ? b + 1 : b]}`, anzahl: n })
+      lauf = []
+    }
+    reihe.forEach((z, i) => (glieder.includes(z) ? lauf.push(i) : ende()))
+    ende()
+  }
+  return out
+}
+
+/**
+ * Digitaler Ablauf im Labor nach Intraoralscan, wie im HKP mit den BEB-Standardpositionen: je Auftrag Oralscan
+ * aufbereiten, CAD-Auftragsdaten und optisch digitale Registrierung statt Mittelwertartikulator; je Arbeitskiefer
+ * Modellsegmentierung; je präpariertem Zahn Präp freilegen, Druckstumpf, Segment und Präpgrenze; CAD-Konstruktion je
+ * Krone, Kaufläche (Teilkrone/Inlay) bzw. Brückenglied mit Verbindern und CAM-Nacharbeit je Element; je Keramikeinheit
+ * Sintern (nur Zirkon, die Berechnung streicht es bei anderem Werkstoff) und Glanz-/Kristallisationsbrand.
+ * Steckartikulator (BEB 0401) nur bei Verblendung. Liefert den Hinweis, leer ohne Element.
+ */
+function digitalerAblauf(positionen: Position[], pos: PosAnlegen, stuempfe: string[], implantate: string[], veneers: string[]): string {
+  const zahnLabor = positionen.filter((p) => p.ebene === 'BEB' && /^\d\d$/.test(p.zahn))
+  const alle = kronenEinheiten(zahnLabor).filter((e) => e.einheit !== 'sekundaerteleskop')
+  const einheiten = alle.filter((e) => e.einheit !== 'veneer' && !veneers.includes(e.zahn))
+  const einheit = new Map(einheiten.map((e) => [e.zahn, e]))
+  const inlays = [...new Set(zahnLabor.filter((p) => INLAY_BEB.test(p.nr)).map((p) => p.zahn))].filter((z) => !einheit.has(z)).sort()
+  const kronen = [...new Set([
+    ...einheiten.filter((e) => e.einheit !== 'glied' && e.einheit !== 'teilkrone').map((e) => e.zahn),
+    ...stuempfe.filter((z) => !einheit.has(z) && !inlays.includes(z) && !veneers.includes(z)),
+  ])].sort()
+  // Veneer wie Teilkrone und Inlay: Teilversorgung, keine Einzelkrone
+  const kauflaechen = [...einheiten.filter((e) => e.einheit === 'teilkrone').map((e) => e.zahn), ...inlays, ...veneers].sort()
+  const glieder = einheiten.filter((e) => e.einheit === 'glied').map((e) => e.zahn)
+  const keramik = [
+    ...alle.filter((e) => e.art === 'keramik').map((e) => e.zahn),
+    ...inlays.filter((z) => zahnLabor.some((p) => p.zahn === z && KERAMIK_INLAY.test(p.nr))),
+  ].sort()
+  const elemente = [...kronen, ...kauflaechen, ...glieder]
+  if (!elemente.length && !implantate.length) return ''
+
+  const D = DIGITAL_BEB
+  const bruecken = verbinder(glieder, new Set([...kronen, ...kauflaechen]))
+  const verblendet = zahnLabor.some((p) => /^26\d\d$/.test(p.nr) && (elemente.includes(p.zahn) || implantate.includes(p.zahn)))
+  // ITZ führt unter 0007 noch das Kontrollmodell
+  pos('BEB', D.oralscan, '', 1, { text: 'Oralscan aufbereiten' })
+  pos('BEB', D.auftragsdaten, '')
+  pos('BEB', D.registrierung, '')
+  for (const k of new Set([...elemente, ...implantate].map(kieferVon))) pos('BEB', D.segmentierung, k)
+  for (const z of stuempfe) for (const nr of [D.praepFreilegen, D.druckstumpf, D.segment, D.praepgrenze]) pos('BEB', nr, z)
+  for (const z of kronen) pos('BEB', D.krone, z)
+  for (const z of kauflaechen) pos('BEB', D.kauflaeche, z)
+  for (const z of glieder) pos('BEB', D.glied, z)
+  for (const b of bruecken) pos('BEB', D.verbinder, b.zahn, b.anzahl)
+  for (const z of elemente) pos('BEB', D.nacharbeiten, z)
+  for (const z of keramik) { pos('BEB', D.sintern, z); pos('BEB', D.glanzbrand, z) }
+  for (const z of implantate) pos('BEB', DIGITAL.scanbody, z)
+  if (verblendet) pos('BEB', '0401', '')
+
+  const anzahl = (n: number, eins: string, mehr: string) => `${n} ${n > 1 ? mehr : eins}`
+  const teile = [
+    'Oralscan aufbereiten, CAD-Auftragsdaten und digitale Registrierung statt Mittelwertartikulator',
+    stuempfe.length && `Präp freilegen, Druckstumpf, Segment und Präpgrenze je Stumpf (${stuempfe.join(', ')})`,
+    `CAD-Konstruktion ${[kronen.length && anzahl(kronen.length, 'Krone', 'Kronen'), kauflaechen.length && anzahl(kauflaechen.length, 'Kaufläche', 'Kauflächen'),
+      glieder.length && anzahl(glieder.length, 'Brückenglied', 'Brückenglieder')].filter(Boolean).join(', ') || 'Implantatversorgung'} mit CAM-Nacharbeit`,
+    bruecken.length && `Verbinder ${bruecken.map((b) => b.zahn).join(', ')}`,
+    keramik.length && `Sintern (Zirkon) und Glanz-/Kristallisationsbrand ${keramik.join(', ')}`,
+    implantate.length && `Scanbody-Matching ${implantate.join(', ')}`,
+    verblendet && 'Steckartikulator für die Verblendung',
+  ].filter(Boolean)
+  return `Digitaler Ablauf im Labor nach Intraoralscan: ${teile.join('; ')}.`
 }

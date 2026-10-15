@@ -22,7 +22,7 @@ function Zeilen({ zeilen }: { zeilen: Zeile[] }) {
           <tr key={`${x.nr}-${i}`}>
             <td><span className={`tag ${x.ebene}`}>{EBENE_TAG[x.ebene]}</span></td>
             <td className="mono">{x.nr}</td>
-            <td className="text">{x.text}</td>
+            <td className="text">{x.zahn && !/^\d\d$/.test(x.zahn) ? `${x.zahn}: ` : ''}{x.text}</td>
             <td className="r mono">{x.anzahl}×</td>
             <td className="r mono">{x.faktor ? faktorText(x.faktor) : ''}</td>
             <td className="r mono">{euro(x.summe)}</td>
@@ -151,9 +151,20 @@ export default function Zahnkarten({ plan, setPlan, einst, rechnung }: Props) {
         )
       })}
 
+      {rechnung.zaehne.some((e) => !e.ausgeschlossen && plan.zaehne[e.zahn]?.therapie === 'inlay') && (
+        <div className="block abformung">
+          <h3>Abformung der Inlays</h3>
+          <span className="umschalter">
+            <button className={plan.abformung !== 'scan' ? 'aktiv' : ''} onClick={() => setPlan({ ...plan, abformung: 'abdruck' })}>Abdruck (Gipsmodelle)</button>
+            <button className={plan.abformung === 'scan' ? 'aktiv' : ''} onClick={() => setPlan({ ...plan, abformung: 'scan' })}>Intraoralscan (GOZ 0065)</button>
+          </span>
+          <small>{einst.praxiskatalog ? ` Laborpreise aus ${einst.praxiskatalog.pvs}` : ' Laborpauschale aus den Einstellungen – mit dem Praxiskatalog einzeln nach BEB'}</small>
+        </div>
+      )}
+
       {rechnung.begleit.length > 0 && (
         <div className="block">
-          <h3>Je Kieferhälfte, Kiefer und Behandlungstag</h3>
+          <h3>Je Kieferhälfte, Kiefer, Behandlungstag und Laborauftrag</h3>
           <Zeilen zeilen={rechnung.begleit} />
         </div>
       )}

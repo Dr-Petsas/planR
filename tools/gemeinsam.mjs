@@ -14,11 +14,11 @@ const QUELLE = join(WURZEL, '_gemeinsam', 'src')
 const DATEN = join(WURZEL, 'Start', 'public', 'daten')
 
 const PLANER = {
-  'ZE/HKP': ['basis', 'kasse'],
-  'ZE/Privat-HKP': ['basis', 'ablage'],
-  'Implantologie/Privat-Impl': ['basis', 'ablage'],
-  'KONS/MKV': ['basis', 'ablage', 'kasse'],
-  'KONS/Privat-Kons': ['basis', 'ablage'],
+  'ZE/HKP': ['basis', 'kasse', 'labor', 'laborimport'],
+  'ZE/Privat-HKP': ['basis', 'ablage', 'befund', 'labor', 'laborimport', 'praxiskatalog'],
+  'Implantologie/Privat-Impl': ['basis', 'ablage', 'befund', 'labor', 'praxiskatalog'],
+  'KONS/MKV': ['basis', 'ablage', 'kasse', 'befund', 'labor', 'inlay', 'praxiskatalog'],
+  'KONS/Privat-Kons': ['basis', 'ablage', 'befund', 'labor', 'inlay', 'praxiskatalog'],
   'PAR/Kassen-PAR': ['basis', 'ablage', 'kasse'],
   'PAR/Privat-PAR': ['basis', 'ablage'],
   'KB/Kassen-KB': ['basis', 'ablage', 'kasse'],
@@ -36,6 +36,14 @@ const SAETZE = {
     'daten.ts', 'components/Listen.tsx', 'gemeinsam.css', 'thema.ts',
   ],
   ablage: ['ablage.ts', 'ablage.test.ts', 'components/Ablage.tsx'],
+  befund: ['befund01.ts', 'befund01.test.ts', 'components/Befundleiste.tsx'],
+  labor: [
+    'engine/eigenlabor.ts', 'engine/eigenlabor.test.ts', 'engine/digital.ts',
+    'engine/zuordnung.ts', 'engine/beb-standard.ts',
+  ],
+  inlay: ['engine/inlaylabor.ts', 'engine/inlaylabor.test.ts'],
+  laborimport: ['engine/eigenlabor-pdf.ts'],
+  praxiskatalog: ['praxiskatalog.ts'],
   kasse: ['data/kzv.ts', 'data/punktwerte.json', 'punktwerte.ts', 'punktwerte.test.ts', 'components/Punktwerte.tsx'],
 }
 
@@ -56,6 +64,8 @@ const DATENKOPIEN = {
   'PAR/Privat-PAR': ['goz-2012.json'],
   'KFO/Kassen-KFO': ['bel/', 'goz-2012.json'],
   'KFO/Privat-KFO': ['goz-2012.json', 'beb-itz-2024.json'],
+  'KONS/MKV': ['beb-itz-2024.json'],
+  'KONS/Privat-Kons': ['beb-itz-2024.json'],
 }
 
 const lesen = (p) => readFileSync(p, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')

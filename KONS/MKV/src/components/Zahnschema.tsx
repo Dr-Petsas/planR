@@ -14,7 +14,7 @@ export function ausKuerzel(roh: string, vorher?: ZahnLeistung): ZahnLeistung | n
   const t = THERAPIE_NACH_KUERZEL[s[0]]
   if (!t) return 'unbekannt'
   const ziffer = /\d$/.test(s) ? Number(s.at(-1)) : 0
-  const max = t.plastisch ? 5 : 3
+  const max = t.maxFlaechen ?? (t.plastisch ? 5 : 3)
   const flaechen = ziffer >= 1 ? Math.min(max, ziffer) : vorher?.therapie === t.id ? vorher.flaechen : 2
   const basis: ZahnLeistung = vorher?.therapie === t.id ? vorher : { therapie: t.id, flaechen, labor: t.id === 'inlay' ? 'keramik' : undefined }
   return { ...basis, flaechen: Math.min(max, flaechen) }

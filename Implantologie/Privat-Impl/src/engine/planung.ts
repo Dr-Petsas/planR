@@ -38,9 +38,36 @@ export function geplanteRegionen(plan: Plan): Region[] {
   return REGIONEN.filter((r) => aktiv.has(r))
 }
 
+/** Befund (01) ohne eigenen Zahn an der Stelle: Lücke, ersetzt, Brückenglied, Implantat, Lückenschluss */
+const OHNE_ZAHN = new Set(['f', 'e', 'ew', 'b', 'bw', 'ab', 'abw', 'i', 'ix', 'sb', 'sbw', 'se', 'sew', 'sk', 'skw', 'so', 'sow', 'st', 'stw', ')('])
+/** Zahn bzw. Wurzel, die vor dem Implantat entfernt werden muss */
+const ZU_ENTFERNEN = new Set(['x', 'xw', 'r', 'rw', 'ww', 'pz'])
+
+/** Abgleich der Planung mit dem Befund (01): nur, wenn ein Befund eingetragen ist */
+export function befundAbgleich(plan: Plan): string[] {
+  const zaehne = Object.keys(plan.zaehne).sort()
+  if (!zaehne.some((z) => bVon(plan, z))) return []
+  const out: string[] = []
+  for (const z of zaehne) {
+    const tp = tpVon(plan, z)
+    const b = bVon(plan, z)
+    if (!tp) continue
+    if (IMPLANTAT_KUERZEL.has(tp)) {
+      if (b === 'i') out.push(`Zahn ${z}: laut Befund steht dort schon ein Implantat – Planung prüfen.`)
+      else if (b === 'ix') out.push(`Zahn ${z}: laut Befund ist das vorhandene Implantat zu entfernen – Explantation (EXP, GOZ 9170) vorher planen.`)
+      else if (SOFORT_KUERZEL.has(tp) && OHNE_ZAHN.has(b)) out.push(`Zahn ${z}: Sofortimplantat geplant, laut Befund „${b}“ steht dort kein Zahn – Spätimplantat (I) planen.`)
+      else if (!SOFORT_KUERZEL.has(tp) && ZU_ENTFERNEN.has(b)) out.push(`Zahn ${z}: laut Befund „${b}“ steht dort noch ein Zahn bzw. eine Wurzel – Sofortimplantat (IS) oder vorher Entfernung (EX/OX) planen.`)
+      else if (!SOFORT_KUERZEL.has(tp) && !OHNE_ZAHN.has(b)) out.push(`Zahn ${z}: Implantat geplant, laut Befund${b ? ` „${b}“` : ''} steht dort ein eigener Zahn – Befund oder Planung prüfen.`)
+    } else if ((tp === 'EX' || tp === 'OX' || tp === 'XS') && OHNE_ZAHN.has(b)) {
+      out.push(`Zahn ${z}: Entfernung geplant, laut Befund „${b}“ steht dort kein Zahn – Planung prüfen.`)
+    }
+  }
+  return out
+}
+
 export function planen(plan: Plan, _einst: Einstellungen): PlanungsErgebnis {
   const positionen: Position[] = []
-  const hinweise: string[] = []
+  const hinweise: string[] = [...befundAbgleich(plan)]
   const klasse = plan.regler.materialKlasse
 
   const goz = (nr: string, zahn: string, sitzung: number, grund: string, anzahl = 1): Position =>

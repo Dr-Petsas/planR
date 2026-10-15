@@ -94,9 +94,9 @@ export default function Vereinbarung({ plan, einst, rechnung }: Props) {
                   ))}
                 </Fragment>
               ))}
-              {rechnung.begleit.map((b) => (
-                <tr key={b.nr}>
-                  <td />
+              {rechnung.begleit.map((b, i) => (
+                <tr key={`${b.nr}-${b.zahn ?? ''}-${i}`}>
+                  <td>{b.zahn ?? ''}</td>
                   <td className="mono">{b.nr}</td>
                   <td>{b.text}</td>
                   <td className="r">{b.faktor ? faktorText(b.faktor) : ''}</td>
@@ -119,14 +119,39 @@ export default function Vereinbarung({ plan, einst, rechnung }: Props) {
           </div>
         )}
 
-        {privat.length > 0 && (
+        {(privat.length > 0 || rechnung.privat7.length > 0) && (
           <div className="kv-vereinbarung">
             <h2>Private Vereinbarung nach § 8 Abs. 7 BMV-Z</h2>
-            <p>
-              Für {privat.map((z) => `Zahn ${z.zahn}`).join(', ')} wünschen Sie den Austausch einer intakten Füllung. Dafür gilt
-              die Mehrkostenregelung nicht (§ 28 Abs. 2 Satz 5 SGB V); die Leistung ist vollständig privat zu tragen:{' '}
-              <b>{euro(privatSumme)}</b>.
-            </p>
+            {privat.length > 0 && (
+              <p>
+                Für {privat.map((z) => `Zahn ${z.zahn}`).join(', ')} wünschen Sie den Austausch einer intakten Füllung. Dafür gilt
+                die Mehrkostenregelung nicht (§ 28 Abs. 2 Satz 5 SGB V); die Leistung ist vollständig privat zu tragen:{' '}
+                <b>{euro(privatSumme)}</b>.
+              </p>
+            )}
+            {rechnung.privat7.length > 0 && (
+              <>
+                <p>
+                  Die folgenden Leistungen gehören nicht zur Kassenleistung und nicht zur Mehrkostenregelung. Sie wünschen sie
+                  ausdrücklich; sie werden vollständig privat nach der GOZ berechnet:
+                </p>
+                <table className="kv-tabelle">
+                  <thead><tr><th>Zahn</th><th>Nr.</th><th>Leistung</th><th className="r">Faktor</th><th className="r">Betrag</th></tr></thead>
+                  <tbody>
+                    {rechnung.privat7.map((x, i) => (
+                      <tr key={`${x.nr}-${i}`}>
+                        <td>{x.zahn ?? ''}</td>
+                        <td className="mono">{x.nr}</td>
+                        <td>{x.text}</td>
+                        <td className="r">{x.faktor ? faktorText(x.faktor) : ''}</td>
+                        <td className="r">{euro(x.summe)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="kv-summe"><div className="gesamt"><span>privat zu tragen</span><b>{euro(rechnung.privat7Summe)}</b></div></div>
+              </>
+            )}
           </div>
         )}
 

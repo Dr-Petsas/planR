@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Zahnschema } from './components/Zahnschema'
 import { ImplantatDetails } from './components/ImplantatDetails'
 import { RegionenBoxen } from './components/RegionenBoxen'
@@ -18,6 +18,9 @@ import { PlanrZurueck } from './PlanrZurueck'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
 import { patientName } from './stammdaten'
+import { Befundleiste } from './components/Befundleiste'
+import { befundZeile } from './befund01'
+import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
 
 const hatInhalt = (p: Plan) => Boolean(patientName(p.patient).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP))
 
@@ -35,6 +38,18 @@ export default function App() {
   const [plan, setPlan] = usePlan(einst.naechsteNummer)
   const [reiter, setReiter] = useState<Reiter>('planung')
   const fileRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    let aus = false
+    praxiskatalogHolen().then((k) => {
+      if (aus || !k) return
+      setEinst((e) => {
+        const stand = { pvs: k.pvs, stand: k.stand, anzahl: k.eigenlabor.length }
+        if (e.praxiskatalog?.stand === stand.stand && e.praxiskatalog.anzahl === stand.anzahl) return e
+        return { ...e, eigenlabor: eigenlaborMischen(e.eigenlabor ?? [], k), praxiskatalog: stand }
+      })
+    })
+    return () => { aus = true }
+  }, [setEinst])
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
 
   const ablage = useImplAblage()
@@ -116,7 +131,10 @@ export default function App() {
             <fieldset className="sperre" disabled={gesperrt}>
             <div className="block">
               <h3>Befund und Planung</h3>
-              <p className="hilfe">Befund (klein) und Planung (groß) je Zahn eintragen – z. B. Befund <b>f</b> (Lücke), Planung <b>I</b> (Implantat), <b>IS</b> (Sofortimplantat), <b>IA</b> (Implantat + Augmentation), <b>EX/OX</b> (Entfernung).</p>
+              <p className="hilfe">Befund (klein) und Planung (groß) je Zahn eintragen – z. B. Befund <b>f</b> (Lücke), Planung <b>I</b> (Implantat), <b>IS</b> (Sofortimplantat), <b>IA</b> (Implantat + Augmentation), <b>EX/OX</b> (Entfernung). Mit Name und Geburtsdatum kommt der Befund (01) aus dem Praxisprogramm.</p>
+              <Befundleiste patient={plan.patient} zeile={plan.zaehne} auto
+                hinweis="Befundzeile durch den aktuellen 01 ersetzen – die Planung bleibt"
+                onUebernehmen={(b) => setPlan((p) => ({ ...p, zaehne: befundZeile(p.zaehne, b, () => ({ B: '', TP: '' })) }))} />
               <Zahnschema zaehne={plan.zaehne} onChange={(zaehne) => setPlan({ ...plan, zaehne })} />
               <div className="optionen">
                 <button className="sekundaer klein-btn" onClick={() => confirm('Zahnschema leeren?') && setPlan({ ...plan, zaehne: {}, implantate: {} })}>Zahnschema leeren</button>

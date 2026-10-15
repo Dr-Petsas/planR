@@ -5,9 +5,10 @@ import { sitzungenErgaenzen } from './sitzungen'
 import { zusatzleistungen, LABOR_AUFSCHLAG_MAX, LABOR_AUFSCHLAG_MIN } from './zusatz'
 import { standardBegruendung } from './begruendung'
 import {
-  GOAE, GOZ, GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX,
-  goaeEinzel, goaeRahmen, gozEinzel, runden,
+  BEB, GOAE, GOZ, GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX,
+  eigenKatalog, goaeEinzel, goaeRahmen, gozEinzel, runden,
 } from './listen'
+import { eigenFinden } from './eigenlabor'
 import { implantatkoerper, type Teil } from '../data/implantatkoerper'
 import { materialFinden } from '../data/material'
 
@@ -18,6 +19,8 @@ export interface Zeile extends Position {
   einzel: number
   betrag: number
   punkte?: number
+  /** Nummer der praxiseigenen Laborposition, die Preis und Text liefert */
+  eigen?: string
 }
 
 export interface Kalkulation {
@@ -128,8 +131,12 @@ export function kalkulieren(plan: Plan, einst: Einstellungen): Kalkulation {
         betrag: runden(einzel * p.anzahl),
       })
     } else if (p.ebene === 'BEB') {
-      const einzel = runden((p.preis ?? 0) * (1 + aufschlag / 100))
-      labor.push({ ...p, einzel, text: p.text || 'Laborleistung', betrag: runden(einzel * p.anzahl) })
+      // Preisquelle: im Plan gesetzt > Eigenlabor der Praxis (PVS-Katalog) > BEB-Liste mit Laboraufschlag
+      const eigen = p.preis === undefined ? eigenFinden(eigenKatalog(einst.eigenlabor), p.nr, { auto: p.auto }) : undefined
+      const eintrag = BEB.get(p.nr)
+      const einzel = p.preis !== undefined ? runden(p.preis) : eigen ? runden(eigen.preis) : runden((eintrag?.preis ?? 0) * (1 + aufschlag / 100))
+      if (p.preis === undefined && !eigen && !eintrag) hinweise.push(`BEB ${p.nr} ist in der Laborpreisliste nicht vorhanden – Preis bitte eintragen.`)
+      labor.push({ ...p, einzel, ...(eigen ? { eigen: eigen.nr } : {}), text: p.text || eigen?.text || eintrag?.text || 'Laborleistung', betrag: runden(einzel * p.anzahl) })
     } else {
       // MAT (Praxis-/Zahntechnik-Material, mit MwSt.)
       const einzel = materialEinzel(p, einst)

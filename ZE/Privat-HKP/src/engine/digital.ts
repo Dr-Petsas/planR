@@ -1,11 +1,9 @@
 import type { EigenPosition } from './eigenlabor'
 
 /**
- * Digitaler Workflow im Eigenlabor nach Intraoralscan: nur Arbeitsschritte ohne Entsprechung in der BEB.
- * Was die BEB schon kennt, bleibt BEB (0009 gedrucktes Modell, 0105 Druckstumpf, 0401 Steckartikulator,
- * 0833 Wax-up/Mock-up, 0723 Farbbestimmung). CAD-Konstruktion, Verbinder, Fräsen/Drucken sowie Sinter- und
- * Kristallisationsbrand sind in den gefrästen Kronen-, Gerüst- und Brückengliedpositionen enthalten –
- * gesondert berechnet wären sie doppelt.
+ * Eigenlabor-Schritte des digitalen Workflows ohne BEB-Entsprechung. Den Ablauf nach Intraoralscan
+ * (Oralscan, CAD, Druckstumpf, Sintern …) plant abformung.ts mit den BEB-Standardpositionen;
+ * D101–D103 bleiben nur, damit ältere Pläne ihren Preis behalten. D106–D108: digitale Totalprothese.
  */
 export const DIGITAL = {
   daten: 'D101',
@@ -13,6 +11,9 @@ export const DIGITAL = {
   artikulation: 'D103',
   scanbody: 'D104',
   anprobe: 'D105',
+  aufstellung: 'D106',
+  einsetzen: 'D107',
+  anprobeProthese: 'D108',
 } as const
 
 export const DIGITAL_KATALOG: readonly EigenPosition[] = [
@@ -21,7 +22,24 @@ export const DIGITAL_KATALOG: readonly EigenPosition[] = [
   { nr: DIGITAL.artikulation, text: 'Virtuelle Artikulation: Kieferrelation über Bukkalscan zuordnen, Okklusion im virtuellen Artikulator einstellen (je Auftrag)', preis: 14.5 },
   { nr: DIGITAL.scanbody, text: 'Scanbody-Matching: Implantatposition aus der Herstellerbibliothek zuordnen und prüfen (je Implantat)', preis: 9.5 },
   { nr: DIGITAL.anprobe, text: 'Anprobe gedruckt (Try-in aus Kunststoff) zur Passungs- und Ästhetikkontrolle (je Einheit)', preis: 9.5 },
+  { nr: DIGITAL.aufstellung, text: 'CAD: Prothesenzähne virtuell aufstellen, Okklusion und Basis konstruieren (je Kiefer)', preis: 65 },
+  { nr: DIGITAL.einsetzen, text: 'Prothesenzähne in die gefräste bzw. gedruckte Basis einsetzen, ausarbeiten und polieren (je Kiefer)', preis: 55 },
+  { nr: DIGITAL.anprobeProthese, text: 'Anprobeprothese gedruckt (Try-in der CAD-Aufstellung, je Kiefer)', preis: 45 },
 ]
+
+/** BEB-Positionen des digitalen Ablaufs nach Intraoralscan (Standardpositionen jeder BEB-Liste) */
+export const DIGITAL_BEB = {
+  oralscan: '0007', praepFreilegen: '0013', druckstumpf: '0017', sintern: '0032',
+  auftragsdaten: '0901', registrierung: '0902', segmentierung: '0903', segment: '0904', praepgrenze: '0905',
+  glanzbrand: '0906', krone: '0907', glied: '0908', kauflaeche: '0909', verbinder: '0910', nacharbeiten: '0911',
+} as const
+
+/** Schritte, die der Ablauf nicht mehr plant, und ihre BEB-Nachfolger */
+export const DIGITAL_ERSETZT: Readonly<Record<string, string>> = {
+  [DIGITAL.daten]: 'BEB 0007, 0901',
+  [DIGITAL.stumpf]: 'BEB 0013, 0904, 0905',
+  [DIGITAL.artikulation]: 'BEB 0902',
+}
 
 /** Eigener Katalog der Praxis zuerst; fehlende Schritte des digitalen Workflows mit Standardpreis */
 export function mitDigital(katalog: readonly EigenPosition[] | undefined): EigenPosition[] {

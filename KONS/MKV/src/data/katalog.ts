@@ -28,6 +28,10 @@ export interface TherapieEintrag {
   goz: (flaechen: number) => string
   analog?: boolean
   plastisch: boolean
+  /** false: kein fester Mehrkostenbetrag je Füllung/Fläche, Faktor wie eingestellt */
+  festbetrag?: false
+  /** höchste Flächenzahl in der Auswahl */
+  maxFlaechen?: number
   hinweis: string
 }
 
@@ -55,8 +59,12 @@ export const THERAPIEN: TherapieEintrag[] = [
     goz: einlage, analog: true, plastisch: false,
     hinweis: 'In der GOZ nicht beschrieben, analog nach § 6 Abs. 1 GOZ (BZÄK-Katalog); Vergleichsleistung Einlagefüllung nach Flächen.',
   },
+  {
+    id: 'aufbau', kuerzel: 'A', titel: 'Adhäsiver Aufbau zur Aufnahme einer Krone', kurz: 'Aufbau adhäsiv (vor Krone)',
+    goz: () => '2180', plastisch: true, festbetrag: false, maxFlaechen: 4,
+    hinweis: 'Aufbaufüllung in adhäsiver Mehrschichttechnik (GOZ 2180 + 2197); die Kasse trägt die plastische Aufbaufüllung (BEMA 13a–d nach Flächen). Ein Glasfaserstift ist keine Mehrkostenleistung – dafür gilt eine Privatvereinbarung nach § 8 Abs. 7 BMV-Z.',
+  },
 ]
-
 export const THERAPIE: Record<Therapie, TherapieEintrag> = Object.fromEntries(THERAPIEN.map((t) => [t.id, t])) as Record<Therapie, TherapieEintrag>
 export const THERAPIE_NACH_KUERZEL: Record<string, TherapieEintrag> = Object.fromEntries(THERAPIEN.map((t) => [t.kuerzel, t]))
 

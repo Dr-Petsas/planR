@@ -6,9 +6,11 @@ import type { Anpassung, Einstellungen, ListenEintrag, Plan, Position } from '..
 import { planen } from './planung'
 import { standardBegruendung } from './begruendung'
 import { LABOR_AUFSCHLAG_MAX, LABOR_AUFSCHLAG_MIN, zusatzleistungen } from './zusatz'
-import { eigenFinden } from './eigenlabor'
-import { mitDigital } from './digital'
-import { materialErmitteln } from './material'
+import { eigenFinden, type EigenPosition } from './eigenlabor'
+import { DIGITAL_BEB, mitDigital } from './digital'
+import { kronenEinheiten, materialErmitteln, werkstoffVon } from './material'
+import { bebErgaenzen } from './beb-standard'
+import { katalogZuordnen } from './zuordnung'
 
 const gozDaten = aktuell('goz-2012.json', gozMitgeliefert)
 const bebDaten = aktuell('beb-itz-2024.json', bebMitgeliefert)
@@ -21,8 +23,19 @@ export const GENUTZTE_LISTEN: GenutzteListe[] = [
 
 export const GOZ_PUNKTWERT = gozDaten.punktwert
 export const GOZ: Map<string, ListenEintrag> = new Map((gozDaten.eintraege as ListenEintrag[]).map((e) => [e.nr, e]))
-export const BEB: Map<string, ListenEintrag> = new Map((bebDaten.eintraege as ListenEintrag[]).map((e) => [e.nr, e]))
+export const BEB: Map<string, ListenEintrag> = new Map(
+  bebErgaenzen({ eintraege: bebDaten.eintraege as { nr: string; text: string; preis: number }[] }).eintraege.map((e) => [e.nr, e]),
+)
 export const BEB_NAME = bebDaten.name
+
+const LEER: readonly EigenPosition[] = []
+const zugeordnet = new WeakMap<readonly EigenPosition[], EigenPosition[]>()
+/** Eigenlabor der Praxis mit den digitalen Schritten, jede Position ihrem Leistungsschritt zugeordnet (wie im HKP) */
+export function eigenKatalog(k: readonly EigenPosition[] = LEER): EigenPosition[] {
+  let z = zugeordnet.get(k)
+  if (!z) zugeordnet.set(k, (z = katalogZuordnen(mitDigital(k))))
+  return z
+}
 
 export const SCHWELLENWERT = 2.3
 export const HOECHSTSATZ = 3.5
@@ -66,7 +79,10 @@ export function positionen(plan: Plan): { positionen: Position[]; hinweise: stri
   })
   const entfernt = new Set(plan.entfernt)
   const anpassen = (ps: Position[]) => ps.filter((p) => !entfernt.has(p.id)).map((p) => ({ ...p, ...(plan.anpassungen[p.id] as Anpassung | undefined) }))
+  const ohneSintern = new Set(kronenEinheiten(auto.filter((p) => p.ebene === 'BEB'))
+    .filter((e) => e.art === 'keramik' && werkstoffVon(e, plan.werkstoffe ?? {}).werkstoff !== 'zirkon').map((e) => e.zahn))
   const angepasst = anpassen([...auto, ...zusatz.positionen])
+    .filter((p) => !(p.auto && p.ebene === 'BEB' && p.nr === DIGITAL_BEB.sintern && ohneSintern.has(p.zahn)))
   const mat = materialErmitteln([...angepasst, ...plan.manuell].filter((p) => p.ebene === 'BEB'), plan.werkstoffe ?? {})
   const material = anpassen(mat.zeilen.map((z): Position => ({
     id: `mat:${z.zahn}`, ebene: 'MAT', nr: '', zahn: z.zahn, anzahl: z.menge, preis: z.einzel, text: z.text, auto: true, material: true,
@@ -98,7 +114,7 @@ export function kalkulieren(plan: Plan, e: Einstellungen): Kalkulation {
         betrag: runden(einzel * p.anzahl),
       })
     } else if (p.ebene === 'BEB') {
-      const eigen = eigenFinden(mitDigital(e.eigenlabor), p.nr)
+      const eigen = eigenFinden(eigenKatalog(e.eigenlabor), p.nr, { ablauf: plan.abformung, auto: p.auto })
       if (eigen) {
         const einzel = runden(p.preis ?? eigen.preis)
         labor.push({ ...p, eigen: eigen.nr, einzel, text: p.text || eigen.text, betrag: runden(einzel * p.anzahl) })

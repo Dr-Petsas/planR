@@ -27,6 +27,13 @@ export const DIGITAL_KATALOG: readonly EigenPosition[] = [
   { nr: DIGITAL.anprobeProthese, text: 'Anprobeprothese gedruckt (Try-in der CAD-Aufstellung, je Kiefer)', preis: 45 },
 ]
 
+/** BEB-Positionen des digitalen Ablaufs nach Intraoralscan (Standardpositionen jeder BEB-Liste) */
+export const DIGITAL_BEB = {
+  oralscan: '0007', praepFreilegen: '0013', druckstumpf: '0017', sintern: '0032',
+  auftragsdaten: '0901', registrierung: '0902', segmentierung: '0903', segment: '0904', praepgrenze: '0905',
+  glanzbrand: '0906', krone: '0907', glied: '0908', kauflaeche: '0909', verbinder: '0910', nacharbeiten: '0911',
+} as const
+
 /** Schritte, die der Ablauf nicht mehr plant, und ihre BEB-Nachfolger */
 export const DIGITAL_ERSETZT: Readonly<Record<string, string>> = {
   [DIGITAL.daten]: 'BEB 0007, 0901',

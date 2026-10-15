@@ -3,6 +3,8 @@
 // Füllungs-MKV-Planer (KONS/MKV).
 
 import type { Patient, Praxis } from './stammdaten'
+import type { EigenPosition } from './engine/eigenlabor'
+import type { Abformung } from './engine/inlaylabor'
 export type { Patient, Praxis } from './stammdaten'
 
 export type Therapie =
@@ -68,6 +70,8 @@ export interface Plan {
   frei: FreiePosition[]
   regler: Regler
   bemerkung: string
+  /** Inlays: Abdruck mit Gipsmodellen oder Intraoralscan mit digitalem Laborablauf */
+  abformung?: Abformung
 }
 
 export interface Preis {
@@ -84,6 +88,9 @@ export interface Einstellungen {
   naechsteNummer: number
   laborPreise: Preis[]
   materialPreise: Preis[]
+  /** praxiseigene Laborpositionen aus dem PVS (BEB) – Inlay-Labor einzeln statt Pauschale */
+  eigenlabor?: EigenPosition[]
+  praxiskatalog?: { pvs: string; stand: string; anzahl: number }
 }
 
 export interface Zeile {
