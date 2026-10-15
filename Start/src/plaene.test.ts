@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
-  begraben, eingangOffen, ersetzbar, grabAnlegen, hkpKarten, kartePrüfen, loeschbar, modulErsetzen, planDateiAus, planDateiLesen, planFiltern, tagVon,
+  begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, kartePrüfen, loeschbar, modulErsetzen, planDateiAus, planDateiLesen, planFiltern, tagVon,
   type Eingang, type PlanKarte,
 } from './plaene'
+
+describe('entwurfNummer (Sprach-Entwürfe von Clara)', () => {
+  it('eigener Kreis je Jahr, unberührt von den Nummern der Planer', () => {
+    expect(entwurfNummer([], 'KV', 2026)).toBe('KV-2026-C001')
+    expect(entwurfNummer(['KV-2026-001', 'KV-2026-C002', 'KV-2026-C010', 'KV-2025-C044'], 'KV', 2026)).toBe('KV-2026-C011')
+    expect(entwurfNummer(['KV-2026-Cxyz', 'KV-2026-C0'], 'KV', 2026)).toBe('KV-2026-C001')
+  })
+})
 
 const karte = (teil: Partial<PlanKarte>): PlanKarte => ({
   modul: 'kassen-par',

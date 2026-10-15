@@ -88,6 +88,14 @@ export function kartePrüfen(roh: unknown): PlanKarte | null {
   return karte
 }
 
+/** Nummer für einen Sprach-Entwurf von Clara: eigener Kreis („KV-2026-C001“), damit sie keine Nummer eines Planers trifft. */
+export function entwurfNummer(belegt: string[], praefix: string, jahr: number): string {
+  const kopf = `${praefix}-${jahr}-C`
+  const hoechste = belegt.filter((n) => n.startsWith(kopf)).map((n) => Number(n.slice(kopf.length)))
+    .filter((n) => Number.isInteger(n) && n > 0).reduce((a, b) => Math.max(a, b), 0)
+  return `${kopf}${String(hoechste + 1).padStart(3, '0')}`
+}
+
 /** Ersetzt alle Karten eines Moduls. Leere Liste löscht das Modul. */
 export function modulErsetzen(alle: PlanKarte[], modul: string, neu: PlanKarte[]): PlanKarte[] {
   return [...neu.filter((k) => k.modul === modul), ...alle.filter((k) => k.modul !== modul)]

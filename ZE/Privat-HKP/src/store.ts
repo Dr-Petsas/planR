@@ -1,44 +1,16 @@
 import { useEffect, useState } from 'react'
-import type { Einstellungen, Plan, Regler } from './types'
-import { STANDARD_IMPLANTAT } from './engine/planung'
+import type { Einstellungen, Plan } from './types'
 import { markeLesen } from './engine/bruecken'
 import { useAblage } from './ablage'
 import { mk } from './mandant'
-import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
+import { patientMigrieren, praxisMigrieren } from './stammdaten'
+import { neuerPlan, STANDARD_EINSTELLUNGEN } from './planNeu'
+
+export { heute, neuerPlan, STANDARD_EINSTELLUNGEN, STANDARD_REGLER } from './planNeu'
 
 const PLAN_KEY = mk('privat-kv.plan.v1')
 const EINST_KEY = mk('privat-kv.einstellungen.v1')
 const LISTE_KEY = mk('privat-kv.liste.v1')
-
-export const heute = () => new Date().toISOString().slice(0, 10)
-
-export const STANDARD_EINSTELLUNGEN: Einstellungen = {
-  praxis: standardPraxis(),
-  gozFaktor: 2.3,
-  mwst: 7,
-  gueltigMonate: 6,
-  naechsteNummer: 1,
-  eigenlabor: [],
-}
-
-export const STANDARD_REGLER: Regler = { gozStufe: 0, gozFaktor: 0, laborStufe: 0, laborAufschlag: 0, aus: [] }
-
-export function neuerPlan(nummer: number): Plan {
-  return {
-    nummer: `KV-${new Date().getFullYear()}-${String(nummer).padStart(3, '0')}`,
-    datum: heute(),
-    patient: leererPatient(),
-    zaehne: {},
-    abformung: '',
-    abformungProthese: '',
-    implantat: STANDARD_IMPLANTAT,
-    manuell: [],
-    anpassungen: {},
-    entfernt: [],
-    regler: STANDARD_REGLER,
-    bemerkung: '',
-  }
-}
 
 function laden<T>(key: string, standard: T): T {
   try {

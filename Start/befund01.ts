@@ -107,7 +107,7 @@ export function befundFreigeben(alt: Befund01, wo: string, jetzt = new Date().to
   return { ...alt, vorgang: { ...v, freigegeben: jetzt, freigabeWo: wo, phase: v.phase === 'befund' ? 'planung' : v.phase, meldung: '', stand: jetzt } }
 }
 
-const KUERZEL: Record<string, string> = { hkp: 'HKP', par: 'PAR', kb: 'KB', kfo: 'KFO', implantologie: 'IMPL', mkv: 'MKV', kons: 'KONS' }
+const KUERZEL: Record<string, string> = { hkp: 'HKP', kv: 'ZE', par: 'PAR', kb: 'KB', kfo: 'KFO', implantologie: 'IMPL', mkv: 'MKV', kons: 'KONS' }
 
 /** Laufende Vorgänge als Zeilen der Planliste: Befund ohne Plan bzw. in Planung */
 export function vorgangKarten(alle: Record<string, Befund01>, jetzt = Date.now()): PlanKarte[] {

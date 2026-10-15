@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import {
-  befundDateiVon, begraben, eingangOffen, ersetzbar, grabAnlegen, hkpKarten, HKP_VERWERFBAR, kartePrüfen, modulErsetzen, planDateiAus, planDateiLesen,
+  befundDateiVon, begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, HKP_VERWERFBAR, kartePrüfen, modulErsetzen, planDateiAus, planDateiLesen,
   type Eingang, type Grab, type PlanKarte,
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
@@ -936,19 +936,68 @@ async function importieren(w: Wer, roh: unknown, ziel: PlanKarte | null, res: Se
     praxis: ziel?.praxis ?? stempel(w),
   })
   if (!karte) return json(res, 400, { ok: false, meldung: 'Die Plandatei ist unvollständig.' })
-  const gleich = (x: { modul: string; nummer: string }) => x.modul === karte.modul && x.nummer === nummer
+  if ((await dateiLesen(m)).some((k) => k.modul === karte.modul && k.nummer === nummer && !sichtbar(w, k))) {
+    return json(res, 409, { ok: false, meldung: `Die Plan-Nummer ${nummer} gehört schon zu einer anderen Praxis.` })
+  }
+  await inDenEingang(m, karte, plan)
+  json(res, 200, { ok: true, nummer })
+}
+
+/** Plan in Übersicht, Inhalte und Eingang des Planers – der Planer übernimmt ihn beim nächsten Öffnen als Entwurf. */
+async function inDenEingang(m: string, karte: PlanKarte, plan: Record<string, unknown>) {
+  const gleich = (x: { modul: string; nummer: string }) => x.modul === karte.modul && x.nummer === karte.nummer
   const plaene = await dateiLesen(m)
-  if (plaene.some((k) => gleich(k) && !sichtbar(w, k))) return json(res, 409, { ok: false, meldung: `Die Plan-Nummer ${nummer} gehört schon zu einer anderen Praxis.` })
-  await dateiSchreiben(m, modulErsetzen(plaene, karte.modul, [karte, ...plaene.filter((k) => k.modul === karte.modul && k.nummer !== nummer)]))
+  await dateiSchreiben(m, modulErsetzen(plaene, karte.modul, [karte, ...plaene.filter((k) => k.modul === karte.modul && k.nummer !== karte.nummer)]))
   const inhalte = await inhalteLesen(m)
-  inhalte[schluessel(karte.modul, nummer)] = { geaendert, plan }
+  inhalte[schluessel(karte.modul, karte.nummer)] = { geaendert: karte.geaendert, plan }
   await jsonSchreiben(ABLAGE(m, 'inhalte'), inhalte)
   await jsonSchreiben(ABLAGE(m, 'eingang'), [
-    { modul: karte.modul, nummer, patient: karte.patient, betrag: karte.betrag, geaendert, plan, praxis: karte.praxis },
+    { modul: karte.modul, nummer: karte.nummer, patient: karte.patient, betrag: karte.betrag, geaendert: karte.geaendert, plan, praxis: karte.praxis },
     ...(await eingangLesen(m)).filter((e) => !gleich(e)),
   ])
   await graeberSchreiben(m, (await graeberLesen(m)).filter((g) => !gleich(g)))
-  json(res, 200, { ok: true, nummer })
+}
+
+/**
+ * Private Sprach-Entwürfe von Clara (MAS planrEntwuerfe) abholen: erst in MAS mit der neuen Nummer als abgeholt
+ * melden – so kommt ein von Clara gerade zurückgenommener Entwurf nicht mehr an –, dann in den Eingang des Planers.
+ */
+const ENTWURF_PLANER: Record<string, { kuerzel: string; praefix: string }> = { 'privat-kv': { kuerzel: 'ZE', praefix: 'KV' } }
+
+async function entwuerfeAbholen(w: Wer): Promise<void> {
+  if (!masSchluessel()) return
+  let liste: unknown[] = []
+  try {
+    const r = await masPlanr(w, '/entwuerfe')
+    if (!r.ok || !Array.isArray(r.daten.entwuerfe)) return
+    liste = r.daten.entwuerfe
+  } catch {
+    return
+  }
+  const m = w.mandant
+  for (const roh of liste) {
+    const e = (roh ?? {}) as { id?: unknown; modul?: unknown; patient?: unknown; betrag?: unknown; plan?: unknown }
+    const modul = String(e.modul ?? '')
+    const meta = ENTWURF_PLANER[modul]
+    const id = String(e.id ?? '')
+    if (!meta || !/^[\w-]{1,60}$/.test(id) || !e.plan || typeof e.plan !== 'object' || Array.isArray(e.plan)) continue
+    const belegt = [...(await dateiLesen(m)), ...(await graeberLesen(m))].filter((k) => k.modul === modul).map((k) => k.nummer)
+    const nummer = entwurfNummer(belegt, meta.praefix, new Date().getFullYear())
+    const geaendert = new Date().toISOString()
+    const karte = kartePrüfen({
+      modul, kuerzel: meta.kuerzel, art: 'Privat', nummer, patient: String(e.patient ?? ''), betrag: Number(e.betrag) || 0,
+      status: 'entwurf', geaendert, praxis: stempel(w),
+    })
+    if (!karte) continue
+    try {
+      const ab = await masPlanr(w, `/entwuerfe/${encodeURIComponent(id)}/abgeholt`, { method: 'POST', body: { nummer } })
+      if (!ab.ok) continue
+    } catch {
+      continue
+    }
+    await inDenEingang(m, karte, { ...(e.plan as Record<string, unknown>), nummer })
+    console.log(`[plaene] Sprach-Entwurf ${id} als ${modul} ${nummer} abgeholt`)
+  }
 }
 
 /**
@@ -2106,7 +2155,10 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (req.method === 'GET' && (q.get('nur') === 'abgleich' || q.get('nur') === 'geloescht')) {
     // Abgleich für einen Planer: gelöschte Pläne und importierte Pläne seines Moduls
     const modul = q.get('modul') ?? ''
-    Promise.all([graeberLesen(m), eingangLesen(m)]).then(([graeber, eingang]) => json(res, 200, {
+    exklusiv(async () => {
+      if (ENTWURF_PLANER[modul]) await entwuerfeAbholen(w)
+      return Promise.all([graeberLesen(m), eingangLesen(m)])
+    }).then(([graeber, eingang]) => json(res, 200, {
       geloescht: graeber.filter((g) => g.modul !== 'hkp' && (!modul || g.modul === modul) && sichtbar(w, g.karte))
         .map(({ modul: gm, nummer, geaendert }) => ({ modul: gm, nummer, geaendert })),
       eingang: modul ? eingang.filter((e) => e.modul === modul && sichtbar(w, e)) : [],
@@ -2115,6 +2167,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   }
   if (req.method === 'GET') {
     exklusiv(async () => {
+      await entwuerfeAbholen(w)
       const datei = (await dateiLesen(m)).filter((k) => sichtbar(w, k))
       const hkps = await hkpsAusMas(w)
       const plaeneListe = hkps ? modulErsetzen(datei.filter((k) => k.modul !== 'hkp'), 'hkp', hkps) : datei
