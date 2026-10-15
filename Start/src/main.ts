@@ -3,7 +3,7 @@ import './thema'
 import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
-import { PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE } from './pvs'
+import { PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich } from './pvs'
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { apiJson } from './api'
 import { logo } from './logo'
@@ -211,7 +211,7 @@ function pvsZiel(): string {
 /** Wohin der Exportknopf einer Zeile schreibt: HKPs in jedes angebundene PVS, die Privat-/MKV-Pläne bisher nur nach DS-Win */
 function exportZiel(p: PlanKarte): string {
   if (p.modul === 'hkp') return pvsZiel()
-  return PVS_PLANER[p.modul] && einstellungen.pvs === 'dampsoft' ? pvsZiel() : ''
+  return planInsPvsMoeglich(einstellungen.pvs, p.modul) ? pvsZiel() : ''
 }
 
 /** Name des PVS, in dem die Patientensuche sucht */

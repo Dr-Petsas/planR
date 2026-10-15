@@ -118,10 +118,18 @@ export function hkpFuerPvs(plan: Obj, ergebnis: Obj): string {
   })
 }
 
-/** Planer, deren Plan beim Speichern schon fürs Praxisprogramm gerechnet wird (pvsplan.ts); bisher nur DS-Win */
+/** Planer, deren Plan beim Speichern schon fürs Praxisprogramm gerechnet wird (pvsplan.ts) */
 export const PVS_PLANER: Record<string, string> = {
   'privat-kv': 'Privat-ZE-Plan', 'privat-impl': 'Implantologie-Plan', 'privat-kons': 'Kons-Plan', 'kons-mkv': 'Füllungs-MKV',
 }
+
+/** Wohin diese Pläne gehen: DS-Win alle; DENS Kons und Füllungs-MKV als Kostenvoranschlag (Privat-ZE/Implantologie noch ohne DENS-Vorlage) */
+const PLAN_PVS: Record<string, string[]> = {
+  dampsoft: Object.keys(PVS_PLANER),
+  dens: ['privat-kons', 'kons-mkv'],
+}
+
+export const planInsPvsMoeglich = (pvs: string | undefined, modul: string) => !!pvs && (PLAN_PVS[pvs] ?? []).includes(modul)
 
 /** Vermerk, dass ein Plan schon im PVS liegt */
 export interface PvsVermerk {

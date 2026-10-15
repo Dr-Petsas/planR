@@ -9,7 +9,7 @@ import {
 import { planerZuModul } from './src/planer.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import {
-  PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
+  PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
@@ -607,7 +607,8 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
   }
   const c = await pvsConnector(req, w)
   if (!c.rufen) return wegFehler(res, c)
-  if (c.id !== 'dampsoft') return json(res, 400, { ok: false, meldung: `${art}e gehen bisher nur nach DS-Win, noch nicht nach ${c.name}.` })
+  if (!c.id || !planInsPvsMoeglich(c.id, modul)) return json(res, 400, { ok: false, meldung: `${art}e gehen bisher nicht nach ${c.name}.` })
+  const nr = c.id === 'dens' ? 'Kostenvoranschlag Nr.' : 'Plan Nr.'
 
   const patient = (inhalt.plan.patient ?? {}) as PlanPatient
   const angelegt: number[] = []
@@ -620,7 +621,7 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
         method: 'POST', body: { json: JSON.stringify(plan) }, ms: 70_000, headers: { 'X-DSWIN-EDIT': '1' },
       })
       if (!anlage.ok || typeof anlage.daten.number !== 'number') {
-        const schon = angelegt.length ? ` Bereits angelegt: Plan Nr. ${angelegt.join(', ')}.` : ''
+        const schon = angelegt.length ? ` Bereits angelegt: ${nr} ${angelegt.join(', ')}.` : ''
         return json(res, 422, { ok: false, meldung: `${c.name} hat den ${art} nicht übernommen: ${anlage.daten.error ?? `HTTP ${anlage.status}`}.${schon}` })
       }
       angelegt.push(anlage.daten.number)
@@ -632,11 +633,11 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
     const wer = `${patient.vorname ?? ''} ${patient.name ?? ''}`.trim()
     json(res, 200, {
       ok: true,
-      meldung: `${art} für ${wer} in ${c.name} als Plan Nr. ${angelegt.join(' und ')} angelegt. Dort: Patient (Nr. ${wahl.id}) öffnen und die Planauswahl neu laden.`
+      meldung: `${art} für ${wer} in ${c.name} als ${nr} ${angelegt.join(' und ')} angelegt. Dort: Patient (Nr. ${wahl.id}) öffnen und die ${c.id === 'dens' ? 'Kostenvoranschläge' : 'Planauswahl'} neu laden.`
         + (hinweise.length ? ` Hinweise: ${hinweise.join(' ')}` : ''),
     })
   } catch (e) {
-    json(res, 503, { ok: false, meldung: stumm(c, e) + (angelegt.length ? ` Bereits angelegt: Plan Nr. ${angelegt.join(', ')}.` : '') })
+    json(res, 503, { ok: false, meldung: stumm(c, e) + (angelegt.length ? ` Bereits angelegt: ${nr} ${angelegt.join(', ')}.` : '') })
   }
 }
 

@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { befundAuftrag, befundAusPvs, datumIso, hkpFuerPvs, patientWaehlen, planungJeZahn, vermerkText } from './pvs'
+import { befundAuftrag, befundAusPvs, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, vermerkText } from './pvs'
 
 describe('PVS-Vermerk', () => {
   it('ein Plan bzw. MKV und Privatvereinbarung als zwei DS-Win-Pläne', () => {
     const am = '2026-10-15T10:00:00.000Z'
     expect(vermerkText({ pvs: 'dampsoft', patientId: '1', planNr: 17, am }, 'DS-Win')).toBe('In DS-Win als Plan Nr. 17 angelegt (15.10.2026)')
     expect(vermerkText({ pvs: 'dampsoft', patientId: '1', planNr: 17, plaene: [17, 18], am }, 'DS-Win')).toBe('In DS-Win als Plan Nr. 17 und 18 angelegt (15.10.2026)')
+  })
+
+  it('DS-Win nimmt alle Privatpläne, DENS bisher Kons und Füllungs-MKV', () => {
+    expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv'].every((m) => planInsPvsMoeglich('dampsoft', m))).toBe(true)
+    expect(planInsPvsMoeglich('dens', 'kons-mkv')).toBe(true)
+    expect(planInsPvsMoeglich('dens', 'privat-kons')).toBe(true)
+    expect(planInsPvsMoeglich('dens', 'privat-kv')).toBe(false)
+    expect(planInsPvsMoeglich('evident', 'kons-mkv')).toBe(false)
+    expect(planInsPvsMoeglich(undefined, 'kons-mkv')).toBe(false)
   })
 })
 
