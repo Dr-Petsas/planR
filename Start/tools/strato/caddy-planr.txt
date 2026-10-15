@@ -6,7 +6,7 @@ planr.pickadoc.de {
         Strict-Transport-Security "max-age=31536000"
         X-Content-Type-Options nosniff
         Referrer-Policy strict-origin-when-cross-origin
-        Content-Security-Policy "frame-ancestors 'self' https://cal.pickadoc.de https://docgenda.web.app https://docgenda.firebaseapp.com http://localhost:3000"
+        Content-Security-Policy "frame-ancestors 'self' https://cal.pickadoc.de https://docgenda.web.app https://docgenda.firebaseapp.com https://mas.pickadoc-tunnel.com http://localhost:3000"
         -Server
     }
     handle /planer/* {

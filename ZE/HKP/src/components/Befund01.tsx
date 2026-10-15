@@ -55,6 +55,27 @@ function Herkunft({ b }: { b: Befund01 }) {
   )
 }
 
+/** Laufender Vorgang (Befund → Planung): Stand und – ohne offene Änderungen – die Freigabe des unveränderten Befunds */
+function VorgangStand({ b, setMeldung }: { b: Befund01; setMeldung: (s: string) => void }) {
+  const v = b.vorgang
+  if (!v || v.phase === 'angelegt') return null
+  const art = v.modul ? ` · ${v.modul.replace(/^privat-(.*)$/, '$1 privat').toUpperCase()}` : ''
+  return (
+    <span className="b01-vorgang">
+      <b>{v.phase === 'befund' ? 'Befund · noch nichts geplant' : `in Planung${art}`}</b>
+      {v.auftrag && <> – {v.auftrag}</>}
+      {v.freigegeben && <> · freigegeben {uhrzeit(v.freigegeben)}{v.freigabeWo ? ` (${v.freigabeWo})` : ''}</>}
+      {v.meldung && <b className="b01-offen-text"> · {v.meldung}</b>}
+      {v.phase === 'befund' && !anzahl(b.offen) && (
+        <button className="klein" title="Befund unverändert bestätigen – danach wird geplant"
+          onClick={() => { setMeldung(''); befundSchreiben(b.patient).then(setMeldung, (e) => setMeldung(`⚠ ${e instanceof Error ? e.message : String(e)}`)) }}>
+          Befund stimmt – freigeben
+        </button>
+      )}
+    </span>
+  )
+}
+
 async function schreibenFragen(b: Befund01, setMeldung: (s: string) => void) {
   const kiefer = ['OK', 'UK'].filter((k) => Object.keys(b.offen).some((z) => (k === 'OK') === /^[12]/.test(z)))
   if (!confirm(`Befund in ${b.pvs} übernehmen? Geschrieben wird der ganze ${kiefer.map((k) => (k === 'OK' ? 'Oberkiefer' : 'Unterkiefer')).join(' und ')}; der alte Befund bleibt dort als Historie.`)) return
@@ -122,6 +143,7 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei, onSeite }: {
       <span className={`live-punkt${live ? ' an' : ''}`} title={live ? 'live verbunden' : 'keine Live-Verbindung'} aria-hidden="true" />
       <b>Aktueller 01</b>
       {b ? <Herkunft b={b} /> : <span className="klein">{laedt ? 'wird aus dem Praxisprogramm geholt …' : ''}</span>}
+      {b && <VorgangStand b={b} setMeldung={setMeldung} />}
       {meldung && <span className="klein">{meldung}</span>}
       {b && <Schema b={b} plan={plan.zaehne} />}
       {b && (
@@ -190,7 +212,7 @@ export function BefundSeite({ start, onNeuerHkp }: {
           {liste.map((x) => (
             <button key={x.patient} className={`b01-eintrag${x.patient === wahl ? ' aktiv' : ''}`} onClick={() => setWahl(x.patient)}>
               <b>{x.label || `Patient ${x.patient}`}</b>
-              <small>{x.geburt ? datumDe(x.geburt) : ''} · {uhrzeit(x.stand)}{anzahl(x.offen) ? ` · ${anzahl(x.offen)} offen` : ''}</small>
+              <small>{x.geburt ? datumDe(x.geburt) : ''} · {uhrzeit(x.stand)}{anzahl(x.offen) ? ` · ${anzahl(x.offen)} offen` : ''}{x.vorgang && x.vorgang.phase !== 'angelegt' ? (x.vorgang.phase === 'befund' ? ' · Befund' : ' · in Planung') : ''}</small>
             </button>
           ))}
           {!liste.length && <p className="klein">Noch keine Befunde. Patientennummer eingeben und Enter drücken – oder in der Patientensuche „Befund (01)“.</p>}
@@ -200,6 +222,7 @@ export function BefundSeite({ start, onNeuerHkp }: {
           {b && (
             <>
               <p><b>{b.label || `Patient ${b.patient}`}</b>{b.geburt ? `, geb. ${datumDe(b.geburt)}` : ''} · Nr. {b.patient} · <Herkunft b={b} /></p>
+              {b.vorgang && b.vorgang.phase !== 'angelegt' && <p><VorgangStand b={b} setMeldung={setMeldung} /></p>}
               <Schema b={b} gross onAendern={aendern} />
               <p className="klein">Kürzel direkt im Feld ändern (z. B. f, k, kw, x, i, ww). Rosa = noch nicht in {b.pvs}; gilt trotzdem sofort für den nächsten HKP und für Clara.</p>
               <div className="b01-knoepfe">

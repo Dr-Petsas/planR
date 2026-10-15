@@ -21,11 +21,46 @@ export interface Befund01 {
   gelesen: string
   geschrieben: string
   stand: string
+  /** laufender Weg vom Befund zum Plan; null ohne */
+  vorgang?: Vorgang | null
+}
+
+/** Erst steht der Befund, nach seiner Freigabe wird geplant, dann ist der Plan angelegt (Start/befund01.ts) */
+export interface Vorgang {
+  modul: string
+  phase: 'befund' | 'planung' | 'angelegt'
+  seit: string
+  stand: string
+  auftrag: string
+  freigegeben: string
+  freigabeWo: string
+  plan: Record<string, { TP: string; R: string }>
+  hkpId: string
+  meldung: string
 }
 
 export interface BefundAngabe { patient?: string; vorname?: string; name?: string; geburt?: string }
 
+/** Handy-Link aus der Clara-Karte: ein Patient, ohne PlanR-Anmeldung, signiert von MAS */
+export interface BefundLink { c: string; p: string; t: string }
+
+export function befundLinkAus(search: string): BefundLink | null {
+  const q = new URLSearchParams(search)
+  const p = (q.get('befund') ?? '').trim(), t = q.get('bt') ?? '', c = q.get('c') ?? ''
+  return /^\d{1,9}$/.test(p) && /^\d+\.[\w-]+$/.test(t) && /^[\w-]{2,64}$/.test(c) ? { p, t, c } : null
+}
+
 const BASIS = `${PLANR_SERVER}/api/befund`
+let link: BefundLink | null = null
+/** Ab jetzt laufen alle Anfragen über den Handy-Link statt über die Sitzung */
+export const befundLinkSetzen = (l: BefundLink | null) => { link = l }
+const linkSuche = () => (link ? `?${new URLSearchParams({ c: link.c, p: link.p, t: link.t })}` : '')
+
+function ziel(pfad: string) {
+  if (!link) return `${BASIS}${pfad}`
+  const weg = pfad.startsWith('?') ? '' : pfad === '/schreiben' ? '/freigeben' : pfad
+  return `${BASIS}/link${weg}${linkSuche()}`
+}
 
 let befunde: Record<string, Befund01> = {}
 const abonnenten = new Set<() => void>()
@@ -42,10 +77,10 @@ function merken(b: Befund01) {
 export class BefundFehler extends Error {}
 
 async function anfrage(pfad: string, init: RequestInit = {}): Promise<{ befund?: Befund01; befunde?: Befund01[]; meldung?: string }> {
-  const r = await fetch(`${BASIS}${pfad}`, { ...init, credentials: 'include', cache: 'no-store', headers: { 'Content-Type': 'application/json', ...init.headers } })
+  const r = await fetch(ziel(pfad), { ...init, credentials: link ? 'omit' : 'include', cache: 'no-store', headers: { 'Content-Type': 'application/json', ...init.headers } })
   const d = await r.json().catch(() => ({}))
   if (!r.ok || d.ok === false) {
-    throw new BefundFehler(String(d.meldung ?? (r.status === 401 ? 'Bitte in PlanR anmelden.' : `PlanR antwortet mit ${r.status}.`)))
+    throw new BefundFehler(String(d.meldung ?? (r.status === 401 ? (link ? 'Der Link ist abgelaufen.' : 'Bitte in PlanR anmelden.') : `PlanR antwortet mit ${r.status}.`)))
   }
   return d
 }
@@ -66,9 +101,11 @@ const senden = async (pfad: string, body: Record<string, unknown>) => {
 
 /** Zähne ändern – noch nicht im Praxisprogramm, gilt aber sofort für den nächsten Plan (auch für Clara) */
 export const befundAendern = (patient: string, zaehne: Record<string, string>) => senden('/aenderung', { patient, zaehne })
-/** Offene Änderungen ins Praxisprogramm schreiben (der ganze betroffene Kiefer) */
+/** Befund freigeben: offene Änderungen ins Praxisprogramm (der ganze betroffene Kiefer), sonst bestätigt; danach wird geplant */
 export const befundSchreiben = (patient: string) => senden('/schreiben', { patient })
 export const befundVerwerfen = (patient: string) => senden('/verwerfen', { patient })
+/** Vorgang aus der Planliste nehmen – der Befund bleibt */
+export const vorgangEnde = (patient: string) => senden('/vorgang-ende', { patient })
 
 export async function befundListe(): Promise<Befund01[]> {
   const d = await anfrage('/liste')
@@ -87,7 +124,7 @@ const liveMelden = (an: boolean) => {
 
 function liveAn(): () => void {
   if (!quelle && typeof EventSource !== 'undefined') {
-    quelle = new EventSource(`${BASIS}/live`, { withCredentials: true })
+    quelle = link ? new EventSource(`${BASIS}/link/live${linkSuche()}`) : new EventSource(`${BASIS}/live`, { withCredentials: true })
     quelle.onopen = () => liveMelden(true)
     quelle.onerror = () => liveMelden(false)
     quelle.addEventListener('befund', (ev) => {

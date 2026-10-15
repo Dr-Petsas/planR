@@ -20,6 +20,20 @@ export interface PlanKarte {
   imPvs?: string
   /** DS-Win-Praxis (1–9) in einer Praxisgemeinschaft; fehlt = Hauptpraxis des Mandanten */
   praxis?: number
+  /** Noch kein Plan, sondern der laufende Weg vom Befund zum Plan (Start/befund01.ts) */
+  vorgang?: VorgangZeile
+}
+
+export interface VorgangZeile {
+  phase: 'befund' | 'planung' | 'angelegt'
+  modul: string
+  /** Patientennummer im Praxisprogramm */
+  patient: string
+  /** Zähne, die noch nicht im Praxisprogramm stehen */
+  offen: number
+  pvs: string
+  auftrag: string
+  meldung: string
 }
 
 /** Name der Zahnärztin / des Zahnarztes, falls der Plan ihn selbst trägt. */

@@ -140,6 +140,11 @@ main { min-width: 0; }
 .sp-nr, .sp-status { font-size: 13.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-status { color: var(--grau); }
 .kopfzeile .sp-status, .kopfzeile .sp-zeit { color: var(--grau); }
+.zeile.vorgang .sp-art { display: flex; gap: 4px; align-items: center; }
+.kuerzel.befund-icon { min-width: 0; padding: 3px 6px; line-height: 0; background: #fdf1e3; color: #9a5b12; }
+.zeile.vorgang .sp-status { color: #1f2a33; font-weight: 600; white-space: normal; }
+.zeile.vorgang .sp-status small { display: block; font-weight: 400; color: var(--grau); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zeile.vorgang .sp-status small.vorgang-hinweis { color: #b4231a; }
 .sp-betrag { text-align: right; font-variant-numeric: tabular-nums; }
 .sp-zeit { color: var(--grau); font-size: 13px; text-align: right; white-space: nowrap; }
 .leer { margin: 12px 0; color: var(--grau); }

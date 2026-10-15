@@ -33,7 +33,8 @@ import {
 import type { Paket } from './src/paket.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
 import {
-  ablageKuerzen, befundAnsicht, befundLive, befundMelden, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen, zaehneAktuell, type Befund01,
+  ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
+  vorgangBeenden, vorgangKarten, vorgangLaeuft, vorgangMelden, zaehneAktuell, type Befund01,
 } from './befund01.ts'
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
@@ -1579,21 +1580,24 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   if (req.method !== 'GET' && !(req.method === 'POST' && schreibt)) return json(res, 405, { ok: false })
   if (req.method === 'GET' && url.startsWith('/api/intern/befund/')) return json(res, 405, { ok: false })
   const q = new URLSearchParams(query)
-  const clientId = q.get('clientId') ?? ''
-  const z = await zugaengeLesen()
-  if (!/^[A-Za-z0-9_-]{2,64}$/.test(clientId) || !(clientId in z.mandanten || Object.values(z.benutzer).some((b) => b.clientId === clientId))) {
-    return json(res, 404, { ok: false, meldung: 'Praxis unbekannt.' })
-  }
-  const konto = { clientId } as Konto
-  const w: Wer = { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
+  const w = await werFuerClient(q.get('clientId') ?? '')
+  if (!w) return json(res, 404, { ok: false, meldung: 'Praxis unbekannt.' })
   if (url === '/api/intern/praxiskatalog') {
     const a = await katalogLesen(w.mandant)
     return json(res, 200, { ok: true, katalog: a?.katalog ?? null })
   }
   if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
   if (url === '/api/intern/pvs/befund') return internBefund(req, w, q, res)
-  if (url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen') return internBefundAendern(req, w, url, res)
+  if (url.startsWith('/api/intern/befund/')) return internBefundAendern(req, w, url, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
+}
+
+/** Praxis, die nicht per Sitzung kommt (MAS-Schlüssel, Handy-Link) – null, wenn PlanR sie nicht kennt */
+async function werFuerClient(clientId: string): Promise<Wer | null> {
+  const z = await zugaengeLesen()
+  if (!/^[A-Za-z0-9_-]{2,64}$/.test(clientId) || !(clientId in z.mandanten || Object.values(z.benutzer).some((b) => b.clientId === clientId))) return null
+  const konto = { clientId } as Konto
+  return { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
 }
 
 /**
@@ -1617,7 +1621,8 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
     const b = await befundGelesen(w, l)
     return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, datum: l.befund.datum, zaehne: l.befund.zaehne, offen: b.offen, offenWer: b.offenWer, stand: b.stand, geschrieben: b.geschrieben })
   }
-  const s = await befundSchreiben(w, l, Array.isArray(body.kiefer) ? body.kiefer : [], (body.zaehne ?? {}) as Record<string, unknown>)
+  // MAS schreibt nur nach dem Ja im Gespräch
+  const s = await befundSchreiben(w, l, Array.isArray(body.kiefer) ? body.kiefer : [], (body.zaehne ?? {}) as Record<string, unknown>, 'Gespräch')
   if (!('geschrieben' in s)) return json(res, s.status, s.daten)
   return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, geschrieben: s.geschrieben })
 }
@@ -1702,7 +1707,7 @@ async function befundGelesen(w: Wer, l: BefundGelesen): Promise<Befund01> {
 }
 
 /** Kiefer ins PVS (DS-Win hebt den alten Befund als Historie auf); danach stehen sie so im aktuellen Befund. */
-async function befundSchreiben(w: Wer, l: BefundGelesen, kiefer: unknown[], zaehne: Record<string, unknown>): Promise<{ geschrieben: string[]; befund: Befund01 } | BefundFehler> {
+async function befundSchreiben(w: Wer, l: BefundGelesen, kiefer: unknown[], zaehne: Record<string, unknown>, wo: string): Promise<{ geschrieben: string[]; befund: Befund01 } | BefundFehler> {
   const teeth = befundAuftrag(zaehne, kiefer)
   if (!Object.keys(teeth).length) return { status: 400, daten: { ok: false, meldung: 'Im Befund steht kein Zahn der genannten Kiefer.' } }
   const { c, rufen, nummer } = l
@@ -1721,7 +1726,7 @@ async function befundSchreiben(w: Wer, l: BefundGelesen, kiefer: unknown[], zaeh
     console.log('[planr] Befund ins PVS geschrieben', w.mandant, `${(s.daten.selectedTeeth ?? []).length} Zähne`)
     const k = kiefer.map(String)
     const lesen = { patient: nummer, label: l.label, geburt: l.geburt, pvs: c.name ?? '', zaehne: l.befund.zaehne, datum: l.befund.datum }
-    const befund = (await befundAendern(w.mandant, nummer, (alt) => nachSchreiben(alt ?? nachLesen(undefined, lesen), k, zaehne)))!
+    const befund = (await befundAendern(w.mandant, nummer, (alt) => befundFreigeben(nachSchreiben(alt ?? nachLesen(undefined, lesen), k, zaehne), wo)))!
     return { geschrieben: s.daten.selectedTeeth ?? [], befund }
   } catch (e) {
     return { status: 503, daten: { ok: false, pvs: c.name, meldung: stumm(c, e) } }
@@ -1754,11 +1759,25 @@ async function internBefundAendern(req: IncomingMessage, w: Wer, url: string, re
     return json(res, 400, { ok: false, meldung: 'Ungültige Änderung.' })
   }
   const angabe = (k: string) => String(body[k] ?? '').trim()
+  if (url === '/api/intern/befund/vorgang') {
+    // Ohne gemerkten Befund kein Vorgang: MAS meldet erst, nachdem es den 01 über PlanR gelesen hat
+    const nummer = angabe('patient')
+    if (!/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Patientennummer fehlt.' })
+    const teil = {
+      modul: angabe('modul'), phase: angabe('phase'), hkpId: angabe('hkpId'),
+      ...('auftrag' in body ? { auftrag: angabe('auftrag') } : {}),
+      ...('plan' in body ? { plan: body.plan } : {}),
+      ...('meldung' in body ? { meldung: angabe('meldung') } : {}),
+    }
+    const b = await befundAendern(w.mandant, nummer, (a) => a && vorgangMelden(a, teil))
+    return b?.vorgang ? json(res, 200, { ok: true, vorgang: b.vorgang }) : json(res, 404, { ok: false, meldung: 'Zu diesem Patienten liegt noch kein Befund vor.' })
+  }
   if (url === '/api/intern/befund/verwerfen') {
     const nummer = angabe('patient')
     const b = /^\d{1,9}$/.test(nummer) ? await befundAendern(w.mandant, nummer, (a) => a && verwerfen(a)) : undefined
     return b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, 404, { ok: false, meldung: 'Zu diesem Patienten liegt kein Befund vor.' })
   }
+  if (url !== '/api/intern/befund/aenderung') return json(res, 404, { ok: false })
   const zaehne = befundZaehne(body.zaehne)
   if (!zaehne) return json(res, 400, { ok: false, meldung: 'Keine Zähne genannt.' })
   const b = await befundAenderungAnwenden(req, w, angabe, zaehne, angabe('wer').slice(0, 60) || 'Assistentin')
@@ -1806,16 +1825,67 @@ async function befundEndpunkt(req: IncomingMessage, res: ServerResponse, url: st
     const b = await befundAendern(m, nummer, (a) => a && verwerfen(a))
     return b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, 404, { ok: false })
   }
-  if (url === '/api/befund/schreiben') {
-    const l = await pvsBefundLesen(req, w, angabe)
-    if (!('nummer' in l)) return json(res, l.status, l.daten)
-    const frisch = await befundGelesen(w, l)
-    const kiefer = offeneKiefer(frisch)
-    if (!kiefer.length) return json(res, 200, { ok: true, befund: befundAnsicht(frisch), meldung: `Der Befund steht schon so in ${l.c.name}.` })
-    const s = await befundSchreiben(w, l, kiefer, zaehneAktuell(frisch))
-    if (!('geschrieben' in s)) return json(res, s.status, s.daten)
-    return json(res, 200, { ok: true, befund: befundAnsicht(s.befund), meldung: `In ${l.c.name} übernommen.` })
+  if (url === '/api/befund/schreiben') return befundFreigabe(req, w, nummer, 'PlanR', res)
+  if (url === '/api/befund/vorgang-ende') {
+    const b = await befundAendern(m, nummer, (a) => a && vorgangBeenden(a))
+    return b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, 404, { ok: false })
   }
+  json(res, 404, { ok: false })
+}
+
+/**
+ * Freigabe des Befunds (PC oder Handy): offene Kiefer gehen ins PVS, ein unveränderter Befund gilt als bestätigt.
+ * Erst danach steht der Vorgang auf „in Planung“; klappt das Schreiben nicht, bleibt er beim Befund.
+ */
+async function befundFreigabe(req: IncomingMessage, w: Wer, nummer: string, wo: string, res: ServerResponse) {
+  const l = await pvsBefundLesen(req, w, (k) => (k === 'patient' ? nummer : ''))
+  if (!('nummer' in l)) return json(res, l.status, l.daten)
+  const frisch = await befundGelesen(w, l)
+  const kiefer = offeneKiefer(frisch)
+  if (!kiefer.length) {
+    const b = (await befundAendern(w.mandant, nummer, (a) => a && befundFreigeben(a, wo))) ?? frisch
+    return json(res, 200, { ok: true, befund: befundAnsicht(b), meldung: b.vorgang?.freigegeben ? 'Befund bestätigt – es kann geplant werden.' : `Der Befund steht schon so in ${l.c.name}.` })
+  }
+  const s = await befundSchreiben(w, l, kiefer, zaehneAktuell(frisch), wo)
+  if (!('geschrieben' in s)) {
+    const meldung = `Nicht in ${l.c.name} übernommen: ${String(s.daten.meldung ?? '')}`.slice(0, 300)
+    await befundAendern(w.mandant, nummer, (a) => (a && vorgangLaeuft(a) ? vorgangMelden(a, { meldung }) : a))
+    return json(res, s.status, s.daten)
+  }
+  return json(res, 200, { ok: true, befund: befundAnsicht(s.befund), meldung: `In ${l.c.name} übernommen.${s.befund.vorgang?.phase === 'planung' ? ' Es kann geplant werden.' : ''}` })
+}
+
+/** GET /api/befund/link · /link/live, POST /link/aenderung { zaehne } · /link/freigeben – ohne PlanR-Sitzung, nur mit Link */
+async function befundLinkEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
+  res.setHeader('Cache-Control', 'no-store')
+  const zugang = befundLinkPruefen(new URLSearchParams(query), masSchluessel())
+  if (!zugang) return json(res, 401, { ok: false, meldung: 'Der Link ist abgelaufen. Bitte die Assistentin noch einmal nach dem Befund fragen.' })
+  const w = await werFuerClient(zugang.clientId)
+  if (!w) return json(res, 404, { ok: false, meldung: 'Praxis unbekannt.' })
+  const { nummer } = zugang
+  const angabe = (k: string) => (k === 'patient' ? nummer : '')
+  if (req.method === 'GET' && url === '/api/befund/link/live') return befundLive(w.mandant, res, (fertig) => req.on('close', fertig), nummer)
+  if (req.method === 'GET' && url === '/api/befund/link') {
+    const alt = (await befundeLesen(w.mandant))[nummer]
+    if (alt && Date.now() - Date.parse(alt.gelesen) < BEFUND_FRISCH_MS) return json(res, 200, { ok: true, befund: befundAnsicht(alt) })
+    const l = await pvsBefundLesen(req, w, angabe)
+    if ('nummer' in l) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
+    return alt ? json(res, 200, { ok: true, befund: befundAnsicht(alt), meldung: String(l.daten.meldung ?? '') }) : json(res, l.status, l.daten)
+  }
+  if (req.method !== 'POST') return json(res, 404, { ok: false })
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse((await lesenBody(req, 64_000)) || '{}') as Record<string, unknown>
+  } catch {
+    return json(res, 400, { ok: false })
+  }
+  if (url === '/api/befund/link/aenderung') {
+    const zaehne = befundZaehne(body.zaehne)
+    if (!zaehne) return json(res, 400, { ok: false, meldung: 'Keine Zähne genannt.' })
+    const b = await befundAenderungAnwenden(req, w, angabe, zaehne, 'Handy')
+    return 'patient' in b ? json(res, 200, { ok: true, befund: befundAnsicht(b) }) : json(res, b.status, b.daten)
+  }
+  if (url === '/api/befund/link/freigeben') return befundFreigabe(req, w, nummer, 'Handy', res)
   json(res, 404, { ok: false })
 }
 
@@ -1880,9 +1950,10 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog'
-    || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen') {
+    || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen' || url === '/api/intern/befund/vorgang') {
     return void internPvs(req, res, url, query).catch(fehler500(res))
   }
+  if (url === '/api/befund/link' || url.startsWith('/api/befund/link/')) return void befundLinkEndpunkt(req, res, url, query).catch(fehler500(res))
   if (!url.startsWith('/api/')) return next()
   kopf(res, herkunft(req))
   if (req.method === 'OPTIONS') {
@@ -1976,7 +2047,9 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
     exklusiv(async () => {
       const datei = (await dateiLesen(m)).filter((k) => sichtbar(w, k))
       const hkps = await hkpsAusMas(w)
-      const liste = hkps ? modulErsetzen(datei.filter((k) => k.modul !== 'hkp'), 'hkp', hkps) : datei
+      const plaeneListe = hkps ? modulErsetzen(datei.filter((k) => k.modul !== 'hkp'), 'hkp', hkps) : datei
+      const vorgaenge = w.praxen?.length === 0 ? [] : vorgangKarten(await befundeLesen(m))
+      const liste = [...vorgaenge, ...plaeneListe].sort((a, b) => b.geaendert.localeCompare(a.geaendert))
       const namen = await behandlerLesen(m)
       for (const k of liste) if (!k.behandler && namen[k.modul]) k.behandler = namen[k.modul]
       const vermerke = await vermerkeLesen()

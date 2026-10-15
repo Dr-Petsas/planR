@@ -18,6 +18,8 @@ const STATUS: Record<string, string> = {
   genehmigt: 'genehmigt',
   abgelehnt: 'abgelehnt',
   abgerechnet: 'abgerechnet',
+  befund: 'Befund · noch nichts geplant',
+  in_planung: 'in Planung',
 }
 const euro = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -125,7 +127,29 @@ const MIKRO = PFEIL('M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7
 const DELFIN = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 13.2C3.2 12.4 4 11.6 5 10.6 7.6 7.8 11.4 6.2 15 6.8L15.6 4.6 17.2 7.4C19.4 8.4 20.6 10.4 21 12.4L23 11.2 22 14.2 22.6 16.6 20.2 14.8C19.2 13.2 17.4 12 15 11.7 12 11.4 9 12.4 7 14.4L6 17 5.2 14.5C4 14.5 2.8 14.1 2 13.2Z"/><circle cx="6.4" cy="11.7" r=".65" fill="#fff"/></svg>'
 const ZAHNRAD = PFEIL('M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z')
 
+const ZAHN = PFEIL('M7.5 3C5 3 3.5 5 3.5 7.6c0 2.3 1 3.9 1.5 6.3.5 2.4.8 7.1 2.5 7.1 1.6 0 1.7-4.5 2.7-6.4.4-.8.9-1.1 1.8-1.1s1.4.3 1.8 1.1c1 1.9 1.1 6.4 2.7 6.4 1.7 0 2-4.7 2.5-7.1.5-2.4 1.5-4 1.5-6.3C20.5 5 19 3 16.5 3 14.6 3 13.6 4 12 4s-2.6-1-4.5-1Z')
+
+/** Laufender Vorgang: Befund steht (noch nichts geplant) bzw. Plan entsteht gerade */
+function vorgangZeile(p: PlanKarte, i: number): string {
+  const v = p.vorgang!
+  const url = planUrl(p)
+  const name = esc(p.patient)
+  const art = v.modul ? `${p.kuerzel}${p.art === 'Privat' ? ' privat' : ''}` : ''
+  const status = v.phase === 'befund' ? STATUS.befund : `${STATUS.in_planung}${art ? ` · ${art}` : ''}`
+  const hinweis = v.meldung || (v.offen ? `${v.offen} ${v.offen === 1 ? 'Zahn' : 'Zähne'} noch nicht in ${v.pvs}` : '')
+  return `<div class="zeile vorgang${url ? ' mit-link' : ''}" role="row">
+    <span class="sp-art"><span class="kuerzel befund-icon" title="Befund (01)">${ZAHN}</span>${v.modul ? `<span class="kuerzel">${esc(p.kuerzel)}</span>` : ''}</span>
+    ${url ? `<a class="sp-patient" href="${esc(url)}" title="Befund ansehen">${name}</a>` : `<span class="sp-patient">${name}</span>`}
+    <span class="sp-nr">Pat.-Nr. ${esc(v.patient)}</span>
+    <span class="sp-status">${esc(status)}${v.auftrag ? `<small>${esc(v.auftrag)}</small>` : ''}${hinweis ? `<small class="vorgang-hinweis">${esc(hinweis)}</small>` : ''}</span>
+    <span class="sp-betrag"></span>
+    <span class="sp-zeit">${esc(zeit(p.geaendert))}</span>
+    <span class="sp-aktionen"><button type="button" class="aktion tonne" data-vorgang-ende="${i}" title="Aus der Liste nehmen – der Befund bleibt" aria-label="Vorgang aus der Liste nehmen: ${name}">${TONNE}</button></span>
+  </div>`
+}
+
 function zeile(p: PlanKarte, i: number): string {
+  if (p.vorgang) return vorgangZeile(p, i)
   const url = planUrl(p)
   const name = esc(p.patient || 'Ohne Namen')
   const hkp = p.modul === 'hkp'
@@ -594,6 +618,10 @@ function zeichnen() {
     const p = sichtbar[Number(b.dataset.loeschen)]
     if (p) void loeschenFragen(p)
   }))
+  app.querySelectorAll<HTMLButtonElement>('[data-vorgang-ende]').forEach((b) => b.addEventListener('click', () => {
+    const p = sichtbar[Number(b.dataset.vorgangEnde)]
+    if (p?.vorgang) void vorgangEnde(p)
+  }))
   app.querySelectorAll<HTMLButtonElement>('[data-export]').forEach((b) => b.addEventListener('click', () => {
     const p = sichtbar[Number(b.dataset.export)]
     if (p) void exportieren(p)
@@ -732,6 +760,25 @@ async function laden() {
   zeichnen()
 }
 
+async function vorgangEnde(p: PlanKarte) {
+  if (!confirm(`${p.patient} aus der Liste nehmen? Der Befund bleibt gespeichert; geplant wird dann nichts weiter.`)) return
+  try {
+    await apiJson('/api/befund/vorgang-ende', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patient: p.vorgang!.patient }) })
+  } catch { /* Liste zeigt den Stand vom Server */ }
+  await laden()
+}
+
+/** Befund und Planung, die gerade im Gespräch entstehen, erscheinen sofort in der Liste */
+function vorgaengeLive() {
+  if (typeof EventSource === 'undefined') return
+  let uhr = 0
+  new EventSource('/api/befund/live').addEventListener('befund', () => {
+    clearTimeout(uhr)
+    uhr = window.setTimeout(() => { if (!document.hidden) void laden().catch(() => {}) }, 1200)
+  })
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void laden().catch(() => {}) })
+}
+
 async function katalogLaden() {
   try {
     const k = await (await fetch('/api/praxiskatalog?nur=info', { cache: 'no-store' })).json() as { info?: KatalogInfo | null }
@@ -815,6 +862,7 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   sitzungBewachen()
   await einstellungenLaden()
   await laden()
+  if (ich.praxen?.length !== 0) vorgaengeLive()
   if (ich.clara === 'planr') {
     void import('./clara').then((c) => c.claraLaden()).then((s) => {
       if (s?.assistantName && s.assistantName !== assistentin) { assistentin = s.assistantName; zeichnen() }
