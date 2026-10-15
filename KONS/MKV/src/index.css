@@ -181,6 +181,9 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .kv-summe .gesamt { border-top: 2px solid var(--akzent); margin-top: 4px; padding-top: 6px; font-size: 15px; color: var(--akzent-dunkel); }
 .kv-vereinbarung { margin-top: 16px; border-top: 2px solid var(--linie); padding-top: 12px; }
 .kv-bemerkung { white-space: pre-wrap; margin-top: 14px; }
+.kv-begruendung { margin-top: 14px; }
+.kv-begruendung h2 { font-size: 12px; margin: 0 0 4px; }
+.kv-begruendung p { margin: 3px 0; font-size: 11px; }
 .kv-fuss { font-size: 11px; color: var(--grau); margin-top: 6px; }
 .kv-hinweise { margin-top: 18px; font-size: 10.5px; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
 .kv-hinweise p { margin: 4px 0; }

@@ -70,6 +70,8 @@ export interface Plan {
   zaehne: Record<string, ZahnLeistung>
   regler: Regler
   bemerkung: string
+  /** eigene Begründung je GOZ-Nummer für Faktoren über 2,3; ohne Eintrag gilt der Standardtext */
+  begruendungen?: Record<string, string>
   privat?: PrivatWunsch
   /** Inlays: Abdruck mit Gipsmodellen oder Intraoralscan mit digitalem Laborablauf */
   abformung?: Abformung
@@ -110,6 +112,14 @@ export interface Zeile {
   faktor?: number
   einzel: number
   summe: number
+  begruendung?: string // Faktor über 2,3 (§ 10 Abs. 3 GOZ)
+}
+
+export interface Begruendung {
+  nr: string
+  faktor: number // höchster Faktor dieser Nummer im Plan
+  text: string
+  eigen: boolean // von der Praxis geändert statt Standardtext
 }
 
 export interface ZahnErgebnis {
@@ -139,6 +149,7 @@ export interface Rechnung {
   punktwert: number
   punktwertHinweis: string
   vereinbarung2: Zeile[] // Positionen über dem 3,5-fachen Satz (§ 2 Abs. 1 und 2 GOZ)
+  begruendungen: Begruendung[]
   hinweise: string[]
   /** Privatvereinbarung nach § 8 Abs. 7 BMV-Z (nicht Teil der Mehrkosten) */
   privat7: Zeile[]

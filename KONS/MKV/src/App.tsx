@@ -12,6 +12,7 @@ import type { Plan } from './types'
 import Patient from './components/Patient'
 import Zahnschema from './components/Zahnschema'
 import Zahntabelle from './components/Zahntabelle'
+import Begruendungen from './components/Begruendungen'
 import Einstellungen from './components/Einstellungen'
 import Regler from './components/Regler'
 import Vereinbarung from './components/Vereinbarung'
@@ -133,6 +134,7 @@ export default function App() {
                 hinweis="Zähne mit „pw“ (Substanzdefekt) als Kompositfüllung, mit „ww“ (weitgehend zerstört) als Aufbau vormerken – vorhandene Einträge bleiben" />
               <Zahnschema plan={plan} setPlan={setPlan} />
               <Zahntabelle plan={plan} setPlan={setPlan} einst={einst} rechnung={rechnung} />
+              <Begruendungen plan={plan} setPlan={setPlan} rechnung={rechnung} />
               {befundHinweise.length + rechnung.hinweise.length > 0 && (
                 <ul className="hinweise">
                   {befundHinweise.map((h) => <li key={h} className="befund-warnung">{h}</li>)}

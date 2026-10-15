@@ -11,6 +11,7 @@ export function pvsPlaene(plan: Plan, kalk: Kalkulation): PvsPlan[] {
     ...(z.ebene === 'BEB' && /^\d{4}$/.test(z.nr) ? { ebene: 'BEB', nr: z.nr } : z.ebene === 'BEB' ? { ebene: 'LABOR' } : { ebene: 'MAT' }),
     zahn: pvsZahn(z.zahn), anzahl: z.anzahl, einzelpreis: z.einzel, betrag: z.betrag,
     labor: z.eigen ? 'eigen' : 'fremd', ...(z.eigen && z.ebene === 'MAT' ? { eigen: z.eigen } : {}), bezeichnung: z.text.slice(0, 300),
+    mwst: kalk.mwstSatz,
   })
   const positionen: PvsPosition[] = [
     ...kalk.honorar.filter((z) => gueltig(z) && NR.test(z.nr)).map((z): PvsPosition => ({
@@ -19,7 +20,7 @@ export function pvsPlaene(plan: Plan, kalk: Kalkulation): PvsPlan[] {
     })),
     ...kalk.labor.filter(gueltig).map(labor),
     // Praxismaterial (ohne MwSt.) zählt zu Material und Labor der Praxis.
-    ...kalk.material.filter(gueltig).map((z) => ({ ...labor(z), ebene: 'MAT' as const, labor: 'eigen' as const })),
+    ...kalk.material.filter(gueltig).map((z) => ({ ...labor(z), ebene: 'MAT' as const, labor: 'eigen' as const, mwst: 0 })),
   ]
   if (!positionen.some((p) => p.ebene === 'GOZ')) return []
   return [kostenvoranschlag({

@@ -19,6 +19,8 @@ describe('Privat-ZE fürs Praxisprogramm', () => {
     expect(kva.summen.honorar).toBeCloseTo(k.summeHonorar, 2)
     expect(kva.summen.laborEigen + kva.summen.laborFremd).toBeCloseTo(k.summeLaborNetto + k.mwst + k.summeMaterial, 2)
     expect(kva.summen.gesamt).toBeCloseTo(k.gesamt, 2)
+    const lab = kva.positionen.filter((x) => x.ebene === 'BEB' || x.ebene === 'MAT' || x.ebene === 'LABOR')
+    expect(lab.reduce((s, x) => s + x.betrag * (1 + x.mwst! / 100), 0)).toBeCloseTo(kva.summen.laborEigen + kva.summen.laborFremd, 1)
   })
 
   it('Implantatkrone: Implantatleistungen als Art IM, Labor der Praxis als Eigenlabor', () => {

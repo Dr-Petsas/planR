@@ -57,6 +57,8 @@ export interface Kalkulation {
   summeHonorar: number
   summeLaborNetto: number
   mwst: number
+  /** MwSt.-Satz in Prozent auf das Labor (Praxismaterial ohne MwSt.) */
+  mwstSatz: number
   summeMaterial: number
   gesamt: number
   hinweise: string[]
@@ -138,7 +140,7 @@ export function kalkulieren(plan: Plan, e: Einstellungen): Kalkulation {
   const mwst = runden(summeLaborNetto * e.mwst / 100)
   const summeMaterial = summe(material)
   return {
-    honorar, labor, material, summeHonorar, summeLaborNetto, mwst, summeMaterial,
+    honorar, labor, material, summeHonorar, summeLaborNetto, mwst, mwstSatz: e.mwst, summeMaterial,
     gesamt: runden(summeHonorar + summeLaborNetto + mwst + summeMaterial),
     hinweise,
     nichtAngesetzt,

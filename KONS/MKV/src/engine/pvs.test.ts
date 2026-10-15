@@ -27,6 +27,18 @@ describe('Füllungs-MKV fürs Praxisprogramm', () => {
     expect(mkv.summen.gesamt).toBeCloseTo(r.mehrkosten, 2)
   })
 
+  it('Faktor über 2,3: Mehrkostenleistung mit Begründung, eigener Text je Nummer', () => {
+    const p = plan({ '36': { therapie: 'komposit', flaechen: 3, kofferdam: true } })
+    const hoch = { ...p, regler: { ...p.regler, faktor: 3 }, begruendungen: { '2040': 'Kofferdam bei stark geneigtem Zahn nur mit Zusatzklammer.' } }
+    const r = rechnen(hoch, einst)
+    const [mkv] = pvsPlaene(hoch, r)
+    expect(mkv.positionen.find((x) => x.mkv)?.begruendung).toMatch(/Mehrschichttechnik/)
+    expect(mkv.positionen.find((x) => x.nr === '2040')?.begruendung).toBe('Kofferdam bei stark geneigtem Zahn nur mit Zusatzklammer.')
+    expect(r.begruendungen.map((b) => [b.nr, b.eigen])).toEqual([['2100', false], ['2040', true]])
+    const [normal] = pvsPlaene(p, rechnen(p, einst))
+    expect(normal.positionen.some((x) => x.begruendung)).toBe(false)
+  })
+
   it('Keramik-Inlay: Labor mit MwSt. in der Laborsumme, Kürzel Y, Gold-Inlay Kürzel I', () => {
     const p = plan({ '26': { therapie: 'inlay', flaechen: 3, labor: 'keramik' }, '27': { therapie: 'inlay', flaechen: 2, labor: 'gold' } })
     const r = rechnen(p, einst)
@@ -36,6 +48,8 @@ describe('Füllungs-MKV fürs Praxisprogramm', () => {
     const labor = r.zaehne.flatMap((z) => z.zeilen).filter((x) => x.ebene === 'LABOR').reduce((s, x) => s + x.summe, 0)
     expect(mkv.summen.laborEigen + mkv.summen.laborFremd).toBeCloseTo(labor, 2)
     expect(mkv.summen.gesamt).toBeCloseTo(r.mehrkosten, 2)
+    const lab = mkv.positionen.filter((x) => x.ebene === 'BEB' || x.ebene === 'MAT' || x.ebene === 'LABOR')
+    expect(lab.reduce((s, x) => s + x.betrag * (1 + x.mwst! / 100), 0)).toBeCloseTo(labor, 1)
   })
 
   it('Austausch und Glasfaserstift: eigener Kostenvoranschlag nach § 8 Abs. 7 BMV-Z', () => {

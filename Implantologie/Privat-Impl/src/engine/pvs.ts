@@ -21,11 +21,12 @@ export function pvsPlaene(plan: Plan, kalk: Kalkulation): PvsPlan[] {
     ...kalk.labor.filter(gueltig).map((z): PvsPosition => ({
       ...(/^\d{4}$/.test(z.nr) ? { ebene: 'BEB' as const, nr: z.nr } : { ebene: 'LABOR' as const }),
       zahn: pvsZahn(z.zahn), anzahl: z.anzahl, einzelpreis: z.einzel, betrag: z.betrag,
-      labor: z.eigen ? 'eigen' : 'fremd', bezeichnung: z.text.slice(0, 300),
+      labor: z.eigen ? 'eigen' : 'fremd', bezeichnung: z.text.slice(0, 300), mwst: kalk.mwstSatz,
     })),
     // Implantatteile und Material kauft die Praxis ein: Eigenanteil der Praxis an Material und Labor.
     ...kalk.material.filter(gueltig).map((z): PvsPosition => ({
       ebene: 'MAT', zahn: pvsZahn(z.zahn), anzahl: z.anzahl, einzelpreis: z.einzel, betrag: z.betrag, labor: 'eigen', bezeichnung: z.text.slice(0, 300),
+      mwst: kalk.mwstSatz,
     })),
   ]
   if (!positionen.some((p) => p.ebene === 'GOZ' || p.ebene === 'GOAE')) return []

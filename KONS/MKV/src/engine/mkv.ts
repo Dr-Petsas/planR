@@ -12,7 +12,8 @@
 
 import { bemaFuer, LABOR_KLASSE_FAKTOR, THERAPIE } from '../data/katalog'
 import { ermittlePunktwert } from '../punktwerte'
-import type { Einstellungen, Plan, Rechnung, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
+import type { Begruendung, Einstellungen, Plan, Rechnung, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
+import { standardBegruendung } from './begruendung'
 import { BEB, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE, eigenKatalog, gozPunkte, gozText, mwstZeile, runden } from './listen'
 import { inlayLabor, type InlayAuftrag } from './inlaylabor'
 import { ALLE_ZAEHNE, istFrontzahn, regionVon } from './zahnschema'
@@ -188,6 +189,14 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   const mehrkosten = runden(zaehne.reduce((s, x) => s + x.mehrkosten, 0) + begleitSumme)
 
   const vereinbarung2 = [...zaehne.flatMap((z) => z.zeilen), ...begleit].filter((x) => (x.faktor ?? 0) > GOZ_HOECHSTSATZ)
+  const begruendungen = new Map<string, Begruendung>()
+  for (const x of [...zaehne.flatMap((z) => z.zeilen), ...begleit, ...privat7]) {
+    if ((x.ebene !== 'GOZ' && x.ebene !== 'ANALOG') || (x.faktor ?? 0) <= GOZ_SCHWELLE) continue
+    const eigen = plan.begruendungen?.[x.nr]?.trim()
+    x.begruendung = eigen || standardBegruendung(x.nr)
+    const b = begruendungen.get(x.nr)
+    begruendungen.set(x.nr, { nr: x.nr, faktor: Math.max(b?.faktor ?? 0, x.faktor!), text: x.begruendung, eigen: !!eigen })
+  }
   const hinweise: string[] = []
   if (plan.regler.modell !== 'gozDifferenz' && zaehne.some((z) => z.ziel !== undefined)) {
     hinweise.push(plan.regler.modell === 'proZahn'
@@ -205,7 +214,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   if (privat7.length) hinweise.push('Leistungen außerhalb der Mehrkostenregelung stehen auf einer eigenen Privatvereinbarung nach § 8 Abs. 7 BMV-Z.')
 
   return {
-    zaehne, begleit, privat, kassenanteil, mehrkosten, punktwert: pw.wert, punktwertHinweis: pw.hinweis, vereinbarung2, hinweise,
+    zaehne, begleit, privat, kassenanteil, mehrkosten, punktwert: pw.wert, punktwertHinweis: pw.hinweis, vereinbarung2, begruendungen: [...begruendungen.values()], hinweise,
     privat7, privat7Summe,
   }
 }

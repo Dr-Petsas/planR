@@ -1,6 +1,6 @@
 import { kostenvoranschlag, pvsZahn, r2, type PvsPlan, type PvsPosition } from '../pvsplan'
 import type { Plan, Rechnung, Zeile } from '../types'
-import { MWST_NR } from './listen'
+import { MWST_LABOR, MWST_NR } from './listen'
 
 const NR = /^[0-9A-Za-zÄä.-]{1,6}$/
 
@@ -11,18 +11,24 @@ export function pvsPosition(z: Zeile, zahn = z.zahn): PvsPosition | null {
   switch (z.ebene) {
     case 'GOZ': case 'ANALOG': case 'ZUSCHLAG':
       if (!NR.test(z.nr)) return null
-      return { ebene: 'GOZ', nr: z.nr, ...basis, faktor: z.faktor ?? 1, ...(z.ebene === 'ANALOG' ? { bezeichnung: z.text.slice(0, 300) } : {}) }
+      return {
+        ebene: 'GOZ', nr: z.nr, ...basis, faktor: z.faktor ?? 1, ...(z.ebene === 'ANALOG' ? { bezeichnung: z.text.slice(0, 300) } : {}),
+        ...(z.begruendung?.trim() ? { begruendung: z.begruendung.trim() } : {}),
+      }
     case 'GOAE': {
       const nr = z.nr.replace(/^Ä/, '')
       return NR.test(nr) ? { ebene: 'GOAE', nr, ...basis, faktor: z.faktor ?? 1 } : null
     }
     case 'MAT':
-      return { ebene: 'MAT', ...basis, labor: 'eigen', bezeichnung: z.text.slice(0, 300) }
+      return { ebene: 'MAT', ...basis, labor: 'eigen', bezeichnung: z.text.slice(0, 300), mwst: 0 }
     case 'LABOR': {
       const beb = z.nr.match(/^BEB (\d{4})$/)
       const eigen = /\(Praxis [^)]+\)$/.test(z.text)
-      if (z.nr === 'Mat.') return { ebene: 'MAT', ...basis, labor: 'eigen', bezeichnung: z.text.slice(0, 300) }
-      return { ebene: beb ? 'BEB' : 'LABOR', ...(beb ? { nr: beb[1] } : {}), ...basis, labor: eigen ? 'eigen' : 'fremd', bezeichnung: z.text.slice(0, 300) }
+      if (z.nr === 'Mat.') return { ebene: 'MAT', ...basis, labor: 'eigen', bezeichnung: z.text.slice(0, 300), mwst: 0 }
+      return {
+        ebene: beb ? 'BEB' : 'LABOR', ...(beb ? { nr: beb[1] } : {}), ...basis, labor: eigen ? 'eigen' : 'fremd',
+        bezeichnung: z.text.slice(0, 300), mwst: MWST_LABOR,
+      }
     }
   }
   return null

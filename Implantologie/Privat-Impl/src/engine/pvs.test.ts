@@ -21,6 +21,8 @@ describe('Implantologie fürs Praxisprogramm', () => {
     expect(kva.positionen.filter((x) => x.ebene === 'GOZ' || x.ebene === 'GOAE').every((x) => x.art === 'IM' || x.art === 'ZE')).toBe(true)
     expect(kva.summen.honorar).toBeCloseTo(k.summeGoz + k.summeGoae, 2)
     expect(kva.summen.gesamt).toBeCloseTo(k.gesamt, 2)
+    const lab = kva.positionen.filter((x) => x.ebene === 'BEB' || x.ebene === 'MAT' || x.ebene === 'LABOR')
+    expect(lab.reduce((s, x) => s + x.betrag * (1 + x.mwst! / 100), 0)).toBeCloseTo(kva.summen.laborEigen + kva.summen.laborFremd, 1)
   })
 
   it('Analogleistungen als „NNNNa“ mit Leistungstext', () => {

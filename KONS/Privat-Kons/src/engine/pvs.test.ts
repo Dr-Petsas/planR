@@ -21,6 +21,10 @@ describe('Privat-Kons fürs Praxisprogramm', () => {
     expect(kva.positionen.some((x) => x.nr === 'MwSt.')).toBe(false)
     expect(kva.summen.gesamt).toBeCloseTo(r.summe, 2)
     expect(kva.summen.honorar).toBeCloseTo(kva.positionen.filter((x) => x.ebene === 'GOZ' || x.ebene === 'GOAE').reduce((s, x) => s + x.betrag, 0), 2)
+    // Netto je Laborzeile plus deren MwSt.-Satz ergibt die Laborsumme (DENS rechnet so je Laborposition).
+    const lab = kva.positionen.filter((x) => x.ebene === 'BEB' || x.ebene === 'MAT' || x.ebene === 'LABOR')
+    expect(lab.length).toBeGreaterThan(0)
+    expect(lab.reduce((s, x) => s + x.betrag * (1 + x.mwst! / 100), 0)).toBeCloseTo(kva.summen.laborEigen + kva.summen.laborFremd, 1)
   })
 
   it('GOÄ ohne „Ä“, Zuschläge zum Einfachsatz, Regionen ohne Zahnangabe', () => {
@@ -32,6 +36,22 @@ describe('Privat-Kons fürs Praxisprogramm', () => {
     const zuschlag = r.begleit.find((x) => x.ebene === 'ZUSCHLAG')
     if (zuschlag) expect(kva.positionen.find((x) => x.nr === zuschlag.nr)?.faktor).toBe(1)
     expect(kva.summen.gesamt).toBeCloseTo(r.summe, 2)
+  })
+
+  it('Begründung für Faktoren über 2,3: Standard je Leistungsgruppe, eigener Text je Nummer, nur oberhalb der Schwelle', () => {
+    const p = plan({ '46': { therapie: 'komposit', flaechen: 3, faktor: 3 }, '36': { therapie: 'endo', kanaele: 3, vital: false, faktor: 2.8 }, '16': { therapie: 'komposit', flaechen: 1 } })
+    const eigen = 'Kavitätenrand distal tief subgingival, Kofferdam nur mit Ligatur haltbar.'
+    const r = rechnen({ ...p, begruendungen: { '2410': eigen } }, einst)
+    const [kva] = pvsPlaene(p, r)
+    const goz = (nr: string, zahn: string) => kva.positionen.find((x) => x.ebene === 'GOZ' && x.nr === nr && x.zahn === zahn)
+    expect(goz('2100', '46')?.begruendung).toMatch(/Mehrschichttechnik/)
+    expect(goz('2060', '16')?.begruendung).toBeUndefined()
+    expect(r.begruendungen.find((b) => b.nr === '2410')).toMatchObject({ faktor: 2.8, text: eigen, eigen: true })
+    expect(r.begruendungen.find((b) => b.nr === '2100')).toMatchObject({ faktor: 3, eigen: false })
+    for (const x of kva.positionen) {
+      if (x.ebene === 'GOZ' && (x.faktor ?? 0) > 2.3) expect(x.begruendung?.length).toBeGreaterThan(0)
+      expect((x.begruendung ?? '').length).toBeLessThanOrEqual(274)
+    }
   })
 
   it('Inlay-Labor der Praxis als Eigenlabor nach BEB', () => {

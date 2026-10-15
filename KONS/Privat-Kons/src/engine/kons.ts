@@ -6,7 +6,8 @@
 // Zuschlag einmal je Behandlungstag usw.).
 
 import { KLASSE_FAKTOR, THERAPIE, ZUSATZ, ZUSAETZE, type Zusatz } from '../data/katalog'
-import type { Einstellungen, Plan, Rechnung, Region, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
+import type { Begruendung, Einstellungen, Plan, Rechnung, Region, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
+import { standardBegruendung } from './begruendung'
 import {
   BEB, GOAE, GOAE_FAKTOR_TECHNIK, GOAE_PUNKTWERT, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE,
   LASER_HOECHSTBETRAG, eigenKatalog, gozEinfach, gozPunkte, gozText, mwstZeile, runden,
@@ -314,6 +315,14 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   const alle = [...zaehne.flatMap((z) => z.zeilen), ...begleit, ...frei]
   const summe = runden(alle.reduce((s, x) => s + x.summe, 0))
   const vereinbarung2 = alle.filter((x) => (x.ebene === 'GOZ' || x.ebene === 'ANALOG') && (x.faktor ?? 0) > GOZ_HOECHSTSATZ)
+  const begruendungen = new Map<string, Begruendung>()
+  for (const x of alle) {
+    if ((x.ebene !== 'GOZ' && x.ebene !== 'ANALOG') || (x.faktor ?? 0) <= GOZ_SCHWELLE) continue
+    const eigen = plan.begruendungen?.[x.nr]?.trim()
+    x.begruendung = eigen || standardBegruendung(x.nr)
+    const b = begruendungen.get(x.nr)
+    begruendungen.set(x.nr, { nr: x.nr, faktor: Math.max(b?.faktor ?? 0, x.faktor!), text: x.begruendung, eigen: !!eigen })
+  }
 
   const hinweise: string[] = []
   if (alle.some((x) => x.ebene === 'ANALOG')) {
@@ -328,5 +337,5 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   }
   if (inlayZaehne.length && !plan.abformung) hinweise.push('Abformung für die Inlays: Abdruck angenommen – bei Intraoralscan umstellen (GOZ 0065 und digitaler Laborablauf).')
 
-  return { zaehne, begleit, frei, summe, vereinbarung2, hinweise }
+  return { zaehne, begleit, frei, summe, vereinbarung2, begruendungen: [...begruendungen.values()], hinweise }
 }

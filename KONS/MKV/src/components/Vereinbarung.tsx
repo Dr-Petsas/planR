@@ -155,6 +155,13 @@ export default function Vereinbarung({ plan, einst, rechnung }: Props) {
           </div>
         )}
 
+        {rechnung.begruendungen.length > 0 && (
+          <section className="kv-begruendung">
+            <h2>Begründungen für Faktoren über 2,3 (§ 10 Abs. 3 GOZ)</h2>
+            {rechnung.begruendungen.map((b) => <p key={b.nr}><b>GOZ {b.nr}, Faktor {faktorText(b.faktor)}:</b> {b.text}</p>)}
+          </section>
+        )}
+
         {plan.bemerkung && <p className="kv-bemerkung">{plan.bemerkung}</p>}
 
         <div className="kv-hinweise">

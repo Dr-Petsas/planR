@@ -26,6 +26,8 @@ export interface PvsPosition {
   bezeichnung?: string
   /** Begründung des Steigerungsfaktors (DENS: Faktorerklärung der KVA-Zeile) */
   begruendung?: string
+  /** MwSt.-Satz in Prozent auf diese Labor-/Materialzeile, wie der Planer ihn rechnet (DENS setzt ihn je Laborposition) */
+  mwst?: number
 }
 
 export interface PvsPlan {

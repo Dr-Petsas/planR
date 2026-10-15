@@ -33,6 +33,8 @@ export interface Kalkulation {
   summeMaterialNetto: number
   summeLaborNetto: number
   mwst: number
+  /** MwSt.-Satz in Prozent auf Material und Labor */
+  mwstSatz: number
   gesamt: number
   hinweise: string[]
   nichtAngesetzt: string[]
@@ -156,7 +158,7 @@ export function kalkulieren(plan: Plan, einst: Einstellungen): Kalkulation {
 
   return {
     honorarGoz, honorarGoae, material, labor,
-    summeGoz, summeGoae, summeMaterialNetto, summeLaborNetto, mwst,
+    summeGoz, summeGoae, summeMaterialNetto, summeLaborNetto, mwst, mwstSatz: einst.mwst,
     gesamt: runden(summeGoz + summeGoae + summeMaterialNetto + summeLaborNetto + mwst),
     hinweise, nichtAngesetzt,
   }
