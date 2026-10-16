@@ -34,6 +34,27 @@ describe('Ober- und Unterkiefer gemeinsam, Stellen als Zahlwörter (Live 15.10.2
   })
 })
 
+describe('Ganzer Kiefer fehlt, mit Ausnahmen (Eva live 16.10.2026 13:37)', () => {
+  const OK = ['11', '12', '13', '14', '15', '16', '17', '18', '21', '22', '23', '24', '25', '26', '27', '28']
+  it.each([
+    'Du sollst für den Herrn Prodromus Fanelas den Befund im Oberkiefer auf alle Zähne fehlend setzen.',
+    'im Oberkiefer sind alle Zähne fehlend',
+    'im OK fehlen alle Zähne',
+  ])('ganzer Oberkiefer fehlend: %s', (s) => {
+    expect(fehlend(befundVerstehen(s))).toEqual(OK)
+  })
+
+  it.each([
+    ['im Oberkiefer fehlen alle Zähne außer 13 und 23', ['13', '23']],
+    ['im Oberkiefer fehlen alle Zähne bis auf 13 und 23', ['13', '23']],
+    ['im Unterkiefer fehlen alle Zähne ausser den Eckzähnen', ['33', '43']],
+  ])('„%s“: die Ausnahmen bleiben stehen', (s, bleiben) => {
+    const b = befundVerstehen(s)
+    for (const z of bleiben) expect(b[z]).toBe('')
+    expect(fehlend(b)).toHaveLength(16 - bleiben.length)
+  })
+})
+
 describe('Aufträge für beide Kiefer (Live 05.10.2026)', () => {
   it('Hörfehler „Oberkäfer“ + Unterkiefer-Teleskope: zwei Kiefer, Pfeiler auf den Eckzähnen', () => {
     const a = auftragVerstehen(TELE)

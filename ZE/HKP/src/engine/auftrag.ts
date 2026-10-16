@@ -449,7 +449,10 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
       code = naechstes?.nachgestellt ? naechstes.code : letztes
     }
     if (ALLE_FEHLEN.test(x.teil)) {
-      for (const kk of x.k ? [x.k] : (['OK', 'UK'] as Kiefer[])) for (const z of REIHE[kk]) if (!(z in befund)) befund[z] = 'f'
+      const ausnahme = AUSSER.exec(x.teil)
+      const bleiben = new Set(ausnahme ? zaehneIn(ausnahme[1], x.k) : [])
+      for (const kk of x.k ? [x.k] : (['OK', 'UK'] as Kiefer[]))
+        for (const z of REIHE[kk]) if (!(z in befund)) befund[z] = bleiben.has(z) ? '' : 'f'
       return
     }
     if (code === undefined || !x.zs.length) return
@@ -484,7 +487,9 @@ function ohneKieferBefund(text: string): string {
   return rest.length && rest.length < teile.length ? rest.join(', ') : ''
 }
 
-const ALLE_FEHLEN = /\b(fehlen|fehlt) (ihm |ihr )?(schon )?alle z(ä|ae)hne\b|\balle z(ä|ae)hne (fehlen|sind (weg|raus|gezogen))\b|\bzahnlos\b|\bkeine z(ä|ae)hne mehr\b/
+const ALLE_FEHLEN = /\b(fehlen|fehlt) (ihm |ihr )?(schon )?alle z(ä|ae)hne\b|\balle z(ä|ae)hne (fehlen|sind (weg|raus|gezogen|fehlend)|(als |auf )?fehlend)\b|\bzahnlos\b|\bkeine z(ä|ae)hne mehr\b/
+/** „alle Zähne fehlen außer 13 und 23“: was danach kommt, bleibt stehen */
+const AUSSER = /\b(?:au(?:ß|ss)er|bis auf|mit ausnahme (?:von |der |des )?|ausgenommen)\s+(.+)$/
 
 const VERSORGUNGS_TEIL = /prothese|teleskop|konus|doppelkrone|krone|anker|pfeiler|co?ver.?dent|kover|bonus|scan|abdruck|abform|gold|zirkon|keramik|\bnem\b|erstell|plan|hkp|kostenpl/
 
