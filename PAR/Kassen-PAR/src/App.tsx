@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ermittlePunktwert } from './punktwerte'
-import { patientName } from './stammdaten'
+import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
 import { useDatenVersion } from './components/Listen'
 import { diagnostizieren } from './engine/diagnose'
 import { preiseAus, streckeRechnen } from './engine/leistungen'
@@ -25,6 +25,9 @@ const REITER: { id: ReiterId; label: string }[] = [
   { id: 'formulare', label: 'Weitere Formulare' },
   { id: 'einstellungen', label: 'Einstellungen' },
 ]
+
+/** „Neuer Plan für …“ aus der PlanR-Übersicht (?neu=1#patient=…) */
+let neuAuftrag = neuAusAdresse()
 
 export default function App() {
   const [fall, setFall] = useFall()
@@ -73,12 +76,18 @@ export default function App() {
     if (name.trim()) { ablage.speichern(daten); return true }
     return confirm('Der offene Fall hat noch keinen Patientennamen und wird nicht gespeichert. Trotzdem wechseln?')
   }
-  const neu = () => {
+  const neu = (patient?: Partial<Patient> | null) => {
     if (!sichern()) return
-    setFall(neuerFall(einst.naechsteNummer))
+    setFall(mitPatient(neuerFall(einst.naechsteNummer), patient))
     setEinst({ ...einst, naechsteNummer: einst.naechsteNummer + 1 })
     setReiter('antrag')
   }
+  useEffect(() => {
+    if (neuAuftrag === undefined) return
+    const p = neuAuftrag
+    neuAuftrag = undefined
+    neu(p)
+  }, [])
   const oeffnen = (f: typeof fall) => {
     if (!sichern()) return
     setFall(fallMigrieren(f))
@@ -103,7 +112,7 @@ export default function App() {
             PW {punktwert.wert.toFixed(4).replace('.', ',')} €{punktwert.geprueft ? '' : ' (ungeprüft)'}
           </span>
           <span className="kopf-summe">{euro(summe)}</span>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Fall" onLaden={oeffnen} />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Fall" onLaden={oeffnen} />
         </div>
       </header>
 

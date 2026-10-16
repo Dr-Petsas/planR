@@ -1,7 +1,33 @@
 import { describe, expect, it } from 'vitest'
 import {
-  anschrift, anschriftLesen, leererPatient, nameTrennen, patientMigrieren, patientName, praxisMigrieren, standardPraxis,
+  anschrift, anschriftLesen, leererPatient, mitPatient, nameTrennen, patientAusFragment, patientMigrieren, patientName, praxisMigrieren, standardPraxis,
 } from './stammdaten'
+
+const fragment = (o: unknown) => {
+  const bytes = new TextEncoder().encode(JSON.stringify(o))
+  return `#patient=${btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`
+}
+
+describe('Patient aus der PlanR-Übersicht', () => {
+  it('übernimmt Name, Anschrift und Kasse mit Umlauten', () => {
+    expect(patientAusFragment(fragment({ anrede: 'Frau', vorname: 'Jürgen', name: 'Müller', geburtsdatum: '1961-04-02', ort: 'Köln', kassenNr: '104212059' })))
+      .toEqual({ anrede: 'Frau', vorname: 'Jürgen', name: 'Müller', geburtsdatum: '1961-04-02', ort: 'Köln', kassenNr: '104212059' })
+  })
+
+  it('verwirft Fremdes und Ungültiges', () => {
+    expect(patientAusFragment(fragment({ name: 'Berger', anrede: 'Dr.', geburtsdatum: '2.3.70', status: '9', x: 'y' }))).toEqual({ name: 'Berger' })
+    expect(patientAusFragment(fragment({ ort: 'Köln' }))).toBeNull()
+    expect(patientAusFragment('#patient=%%%')).toBeNull()
+    expect(patientAusFragment('#patient=bm9wZQ')).toBeNull()
+    expect(patientAusFragment('')).toBeNull()
+  })
+
+  it('setzt den Patienten in den neuen Plan', () => {
+    const plan = { nummer: 'X', patient: leererPatient() }
+    expect(mitPatient(plan, { name: 'Berger', geburtsdatum: '1970-03-02' }).patient).toMatchObject({ name: 'Berger', geburtsdatum: '1970-03-02', kassenart: 'primaer' })
+    expect(mitPatient(plan, null)).toBe(plan)
+  })
+})
 
 describe('Anmeldedaten', () => {
   it('liest den alten MKV/Kons-Stand mit vollem Namen', () => {

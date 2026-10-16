@@ -22,7 +22,7 @@ import { Befundleiste } from './components/Befundleiste'
 import { befundZeile, datumDe } from './befund01'
 import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
 import type { Einstellungen, Plan } from './types'
-import { patientName } from './stammdaten'
+import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
 
 const hatInhalt = (p: Plan) => Boolean(patientName(p.patient).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP) || p.manuell.length)
 
@@ -34,6 +34,9 @@ const REITER: [Reiter, string][] = [
   ['leistungen', 'Leistungen'],
   ['praxis', 'Praxis & Preise'],
 ]
+
+/** „Neuer Plan für …“ aus der PlanR-Übersicht (?neu=1#patient=…) */
+let neuAuftrag = neuAusAdresse()
 
 export default function App() {
   const [einst, setEinst] = useEinstellungen()
@@ -58,13 +61,19 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
-  const neu = () => {
+  const neu = (patient?: Partial<Patient> | null) => {
     sichern()
     const nr = einst.naechsteNummer + 1
     setEinst({ ...einst, naechsteNummer: nr })
-    setPlan(neuerPlan(nr))
+    setPlan(mitPatient(neuerPlan(nr), patient))
     setReiter('patient')
   }
+  useEffect(() => {
+    if (neuAuftrag === undefined) return
+    const p = neuAuftrag
+    neuAuftrag = undefined
+    neu(p)
+  }, [])
   const oeffnen = (p: Plan) => {
     sichern()
     setPlan(planMigrieren(p))
@@ -111,7 +120,7 @@ export default function App() {
             <b>{euro(kalk.gesamt)}</b>
           </div>
           {implantate.length > 0 && <button className="sekundaer" onClick={implantologieExport} title="Implantatpositionen als Datei für den Implantologie-Planer exportieren">Für Implantologie exportieren</button>}
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
         </header>
         <fieldset className="sperre" disabled={gesperrt}>
           <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />

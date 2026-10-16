@@ -1,8 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import {
-  begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, kartePrüfen, loeschbar, modulErsetzen, planDateiAus, planDateiLesen, planFiltern, tagVon,
+  begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, kartePrüfen, kennungVon, loeschbar, modulErsetzen, planDateiAus, planDateiLesen, planFiltern, tagVon,
   type Eingang, type PlanKarte,
 } from './plaene'
+
+describe('Patient der Zeile im Praxisprogramm (Befund)', () => {
+  it('nimmt die PVS-Nummer, sonst Name mit Geburtsdatum', () => {
+    expect(kennungVon({ id: '4711', quelle: 'pvs', firstName: 'Anna', lastName: 'Berger' })).toEqual({ patient: '4711' })
+    expect(kennungVon({ id: 'abc', pvsNummer: '815' })).toEqual({ patient: '815' })
+    expect(kennungVon({ id: 'mas-1', firstName: 'Anna', lastName: 'Berger', birthDate: '1970-03-02T00:00:00Z' })).toEqual({ vorname: 'Anna', name: 'Berger', geburt: '1970-03-02' })
+    expect(kennungVon({ vorname: '', name: 'Berger', geburtsdatum: '1970-03-02' })).toEqual({ name: 'Berger', geburt: '1970-03-02' })
+  })
+
+  it('ohne Geburtsdatum keine Kennung – der Name allein ist nicht eindeutig', () => {
+    expect(kennungVon({ id: 'mas-1', firstName: 'Anna', lastName: 'Berger' })).toBeUndefined()
+    expect(kennungVon({ name: 'Berger', geburtsdatum: '2.3.70' })).toBeUndefined()
+    expect(kennungVon(null)).toBeUndefined()
+  })
+
+  it('hängt an HKPs aus MAS und an gemeldeten Plänen', () => {
+    const h = hkpKarten([{ id: 'h1', status: 'wartet_auf_freigabe', aktualisiert: '2026-10-16T08:00:00Z', patient: { label: 'Berger, Anna', id: '4711', quelle: 'pvs' } }])
+    expect(h[0].kennung).toEqual({ patient: '4711' })
+    const k = kartePrüfen({ modul: 'privat-kb', nummer: 'KB-1', art: 'Privat', patient: 'Anna Berger', betrag: 0, geaendert: '2026-10-16T08:00:00Z', plan: { patient: { vorname: 'Anna', name: 'Berger', geburtsdatum: '1970-03-02' } } })
+    expect(k?.kennung).toEqual({ vorname: 'Anna', name: 'Berger', geburt: '1970-03-02' })
+  })
+})
 
 describe('entwurfNummer (Sprach-Entwürfe von Clara)', () => {
   it('eigener Kreis je Jahr, unberührt von den Nummern der Planer', () => {

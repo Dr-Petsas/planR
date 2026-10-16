@@ -107,12 +107,6 @@ export const befundVerwerfen = (patient: string) => senden('/verwerfen', { patie
 /** Vorgang aus der Planliste nehmen – der Befund bleibt */
 export const vorgangEnde = (patient: string) => senden('/vorgang-ende', { patient })
 
-export async function befundListe(): Promise<Befund01[]> {
-  const d = await anfrage('/liste')
-  for (const b of d.befunde ?? []) merken(b)
-  return d.befunde ?? []
-}
-
 // Ein Live-Kanal für alle Ansichten; offen, solange jemand zuhört.
 let quelle: EventSource | null = null
 let live = false
@@ -157,7 +151,6 @@ const liveAbo = (f: () => void) => {
 /** Gemerkter Befund des Patienten (live aktualisiert); null, solange noch nicht gelesen */
 export const useBefund = (patient: string | undefined) =>
   useSyncExternalStore(abo, () => (patient ? befunde[patient] ?? null : null))
-export const useBefunde = () => useSyncExternalStore(abo, () => befunde)
 export const useBefundLive = () => useSyncExternalStore(liveAbo, () => live)
 
 /** Zähne des Plans, die vom aktuellen Befund abweichen (leere Felder zählen als „vorhanden“) */

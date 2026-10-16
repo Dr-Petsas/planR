@@ -1,6 +1,7 @@
 /**
  * Patientensuche: Patient im PVS finden (ohne Bridge: Name eintippen), dann
- *  - neuen HKP auf diesen Patienten anlegen (Stammdaten gehen mit in den Planer),
+ *  - seinen Befund (01) ansehen und ändern,
+ *  - einen neuen Plan für diesen Patienten anlegen (Stammdaten gehen mit in den Planer),
  *  - einen HKP aus dem PVS übernehmen oder
  *  - einen schon vorhandenen PlanR-Plan des Patienten öffnen.
  */
@@ -19,10 +20,10 @@ export interface SucheUmgebung {
   pvsHinweis?: string
   /** PlanR-Pläne zu einem Patientennamen */
   planrPlaene: (vorname: string, name: string) => PlanTreffer[]
-  /** Neuen HKP mit diesen Anmeldedaten öffnen */
-  neuerHkp: (p: Stammdaten) => void
-  /** Aktuellen 01-Befund des PVS-Patienten (Nummer) im HKP-Planer zeigen */
-  befundOeffnen?: (patientNr: string) => void
+  /** Neuen Plan mit diesen Anmeldedaten anfangen (Planauswahl) */
+  neuerPlan: (p: Stammdaten) => void
+  /** Aktuellen 01-Befund des PVS-Patienten (Nummer) zeigen */
+  befundOeffnen?: (patientNr: string, titel: string) => void
   /** übernommener HKP (Registernummer) → Liste neu laden und Planer öffnen */
   geoeffnet: (nummer: string, hinweise: string[]) => Promise<void>
   dateiWaehlen: () => void
@@ -58,7 +59,7 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
         <h2>Patientensuche${mitPvs ? `<small>in ${esc(u.pvsName)}</small>` : ''}</h2>
         <button type="button" data-zu aria-label="Schließen">✕</button>
       </div>
-      ${u.pvsHinweis ? `<p class="pvs-hinweis">${esc(u.pvsHinweis)} Sie können den Namen trotzdem eintippen und einen neuen HKP anlegen.</p>` : ''}
+      ${u.pvsHinweis ? `<p class="pvs-hinweis">${esc(u.pvsHinweis)} Sie können den Namen trotzdem eintippen und einen neuen Plan anlegen.</p>` : ''}
       <form class="pvs-suche" data-suche>
         <input type="search" placeholder="${mitPvs ? 'Name oder Patientennummer' : 'Vorname Nachname'}" autocomplete="off" spellcheck="false" aria-label="Patient suchen">
       </form>
@@ -92,8 +93,8 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
       <div class="ps-kopf">
         <div><b>${esc(kopf.name)}${kopf.vorname ? `, ${esc(kopf.vorname)}` : ''}</b><span>${esc(kopf.unter)}</span></div>
         <span class="ps-knoepfe">
-          ${pvsPatient && u.befundOeffnen ? '<button type="button" class="link-knopf" data-befund>Befund (01)</button>' : ''}
-          <button type="button" class="neu-knopf" data-neuer-hkp>Neuen HKP für ${esc(wer)} erstellen</button>
+          ${pvsPatient && u.befundOeffnen ? '<button type="button" class="import-knopf" data-befund>Befund (01)</button>' : ''}
+          <button type="button" class="neu-knopf" data-neuer-hkp>Neuer Plan für ${esc(wer)}</button>
         </span>
       </div>
       ${plaene.length ? `<p class="pvs-titel">Schon in PlanR</p>
@@ -102,7 +103,7 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
           : `<div><b>${esc(p.titel)}</b><span>${esc(p.unter)}</span></div>`).join('')}</div>` : ''}
       <div data-hkps></div>`
     karte.querySelector('[data-neuer-hkp]')!.addEventListener('click', neu)
-    karte.querySelector('[data-befund]')?.addEventListener('click', () => { zu(); u.befundOeffnen?.(pvsPatient!.id) })
+    karte.querySelector('[data-befund]')?.addEventListener('click', () => { zu(); u.befundOeffnen?.(pvsPatient!.id, wer) })
     if (pvsPatient) void hkpsZeigen(pvsPatient)
   }
 
@@ -115,7 +116,7 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
     // Fehlen die Stammdaten (ältere Bridge), reicht der Name aus der Trefferliste
     const daten: Stammdaten = r.ok && r.patient ? r.patient : { vorname: p.vorname, name: p.name, geburtsdatum: p.geburtsdatum }
     zu()
-    u.neuerHkp(daten)
+    u.neuerPlan(daten)
   }
 
   async function importieren(p: Patient, h: Hkp) {
@@ -165,7 +166,7 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
       return status(text ? 'Noch ein Buchstabe …' : '')
     }
     status('')
-    karteZeigen({ vorname, name, unter: 'Anschrift und Kasse tragen Sie im Planer ein.' }, () => { zu(); u.neuerHkp({ vorname, name }) })
+    karteZeigen({ vorname, name, unter: 'Anschrift und Kasse tragen Sie im Planer ein.' }, () => { zu(); u.neuerPlan({ vorname, name }) })
   }
 
   // Jede Eingabe startet eine neue Suche; Antworten älterer Suchen werden verworfen.

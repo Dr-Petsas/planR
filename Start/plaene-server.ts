@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import {
-  befundDateiVon, begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, HKP_VERWERFBAR, kartePrüfen, modulErsetzen, planDateiAus, planDateiLesen,
+  befundDateiVon, begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, HKP_VERWERFBAR, kartePrüfen, kennungVon, modulErsetzen, planDateiAus, planDateiLesen,
   type Eingang, type Grab, type PlanKarte,
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
@@ -2181,9 +2181,14 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
       const namen = await behandlerLesen(m)
       for (const k of liste) if (!k.behandler && namen[k.modul]) k.behandler = namen[k.modul]
       const vermerke = await vermerkeLesen()
+      const inhalte = await inhalteLesen(m)
       for (const k of liste) {
         const v = vermerke[schluessel(k.modul, k.nummer)]
         if (v) k.imPvs = vermerkText(v, pvsVon(v.pvs)?.name ?? v.pvs)
+        if (!k.kennung) {
+          const kennung = kennungVon((inhalte[schluessel(k.modul, k.nummer)]?.plan as { patient?: unknown } | undefined)?.patient)
+          if (kennung) k.kennung = kennung
+        }
       }
       json(res, 200, { plaene: liste })
     }).catch(() => json(res, 500, { plaene: [] }))

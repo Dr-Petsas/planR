@@ -129,7 +129,7 @@ describe('vom Befund zum Plan', () => {
     const planung = { ...vorgangMelden(nachAenderung(basis(), { '26': 'f' }, 'Eva', T1), { modul: 'hkp', phase: 'planung' }, T2), patient: '815', label: 'Probe, Paula' }
     const angelegt = { ...vorgangMelden(basis(), { modul: 'hkp', phase: 'angelegt' }, T2), patient: '9' }
     const karten = vorgangKarten({ '4711': befund, '815': planung, '9': angelegt }, ms(T3)).sort((a, b) => a.geaendert.localeCompare(b.geaendert))
-    expect(karten.map((k) => [k.kuerzel, k.status, k.oeffnen])).toEqual([['01', 'befund', 'befund=4711'], ['HKP', 'in_planung', 'befund=815']])
+    expect(karten.map((k) => [k.kuerzel, k.status, k.kennung])).toEqual([['01', 'befund', { patient: '4711' }], ['HKP', 'in_planung', { patient: '815' }]])
     expect(karten[1].vorgang).toMatchObject({ phase: 'planung', offen: 1, patient: '815' })
   })
 

@@ -79,7 +79,7 @@ main { min-width: 0; }
 .liste { width: 100%; border: 1px solid var(--linie); border-radius: 12px; overflow: hidden; }
 .zeile {
   display: grid;
-  grid-template-columns: 88px minmax(140px, 1.6fr) minmax(90px, 1fr) minmax(120px, .9fr) 120px 158px 196px;
+  grid-template-columns: 88px minmax(140px, 1.6fr) minmax(90px, 1fr) minmax(120px, .9fr) 120px 158px 232px;
   gap: 10px; align-items: center; padding: 11px 10px 11px 16px; position: relative;
   color: inherit; text-decoration: none; border-top: 1px solid var(--linie);
 }
@@ -88,6 +88,12 @@ main { min-width: 0; }
 .zeile a.sp-patient::after { content: ''; position: absolute; inset: 0; }
 .zeile a.sp-patient:focus-visible { outline: none; }
 .zeile a.sp-patient:focus-visible::after { outline: 2px solid var(--akzent); outline-offset: -2px; }
+.zeile button.sp-patient { font: inherit; font-weight: 600; color: inherit; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; }
+.zeile button.sp-patient::after { content: ''; position: absolute; inset: 0; }
+.zeile button.sp-patient:focus-visible { outline: none; }
+.zeile button.sp-patient:focus-visible::after { outline: 2px solid var(--akzent); outline-offset: -2px; }
+.aktion.befund-knopf { color: #9a5b12; }
+.aktion.befund-knopf:hover { background: #fdf1e3; color: #7a4508; }
 .sp-aktionen { display: flex; justify-content: flex-end; gap: 2px; }
 .aktion {
   position: relative; z-index: 1; display: grid; place-items: center; width: 34px; height: 34px;
@@ -239,9 +245,45 @@ main { min-width: 0; }
 .wahl-liste a:hover { background: var(--akzent-hell); }
 .wahl-liste b { display: block; font-weight: 600; }
 .wahl-liste small { display: block; color: var(--grau); font-size: 12px; }
+.neu-knopf.mit-symbol { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Befund (01) eines Patienten */
+.befund-karte { display: flex; flex-direction: column; gap: 12px; padding: 8px 20px 18px; width: min(820px, 100%); }
+.befund-karte .pvs-info { margin: 0; }
+.bz-offen-text { color: #b0306a; font-weight: 600; }
+.bz-vorgang { margin: 0; font-size: 13px; }
+.bz-schema { display: flex; flex-direction: column; gap: 2px; align-self: center; padding: 10px 12px; border: 1px solid var(--linie); border-radius: 12px; }
+.bz-reihe { display: grid; grid-template-columns: repeat(16, 40px); gap: 3px; }
+.bz-reihe > :nth-child(8) { margin-right: 8px; }
+.bz-mitte { height: 1px; background: var(--grau); opacity: .4; margin: 3px 0; }
+.bz-nr { text-align: center; font-size: 11px; color: var(--grau); font-variant-numeric: tabular-nums; }
+.bz-zahn {
+  height: 36px; font: inherit; font-size: 14px; color: var(--text); background: #fff; border: 1px solid var(--linie);
+  border-radius: 7px; cursor: pointer; padding: 0;
+}
+.bz-zahn:hover { border-color: var(--akzent); background: var(--akzent-hell); }
+.bz-zahn.fehlt b { color: var(--grau); }
+.bz-zahn.offen { background: #fde7f1; border-color: #e9a3c4; }
+.bz-zahn.gewaehlt { outline: 2px solid var(--akzent-dunkel); outline-offset: 1px; }
+.bz-wahl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px 10px; border-radius: 10px; background: #f4f7f8; }
+.bz-wahl > span { font-weight: 650; margin-right: 6px; }
+.bz-wahl button {
+  min-width: 36px; height: 32px; font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--linie);
+  border-radius: 7px; background: #fff; cursor: pointer; color: var(--text);
+}
+.bz-wahl button:hover, .bz-wahl button.an { border-color: var(--akzent); background: var(--akzent-hell); }
+.bz-wahl input { width: 80px; height: 32px; font: inherit; font-size: 13px; padding: 0 8px; border: 1px solid var(--linie); border-radius: 7px; }
+.bz-hinweis { margin: 0; font-size: 12px; color: var(--grau); }
+.bz-fuss { flex-wrap: wrap; }
+.bz-fuss button:disabled { opacity: .5; cursor: default; }
+@media (max-width: 760px) {
+  .bz-reihe { grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 2px; }
+  .bz-reihe > :nth-child(8) { margin-right: 3px; }
+  .bz-zahn { height: 30px; font-size: 12px; }
+}
 
 @media (max-width: 980px) {
-  .zeile { grid-template-columns: 72px minmax(0, 1.4fr) minmax(0, .9fr) 110px 196px; }
+  .zeile { grid-template-columns: 72px minmax(0, 1.4fr) minmax(0, .9fr) 110px 232px; }
   .sp-nr, .sp-zeit { display: none; }
 }
 @media (max-width: 800px) {

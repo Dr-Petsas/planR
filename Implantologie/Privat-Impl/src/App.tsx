@@ -18,7 +18,7 @@ import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrZurueck } from './PlanrZurueck'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
-import { patientName } from './stammdaten'
+import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
 import { Befundleiste } from './components/Befundleiste'
 import { befundZeile } from './befund01'
 import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
@@ -33,6 +33,9 @@ const REITER: [Reiter, string][] = [
   ['leistungen', 'Leistungen'],
   ['praxis', 'Praxis & Preise'],
 ]
+
+/** „Neuer Plan für …“ aus der PlanR-Übersicht (?neu=1#patient=…) */
+let neuAuftrag = neuAusAdresse()
 
 export default function App() {
   const [einst, setEinst] = useEinstellungen()
@@ -59,13 +62,19 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
-  const neu = () => {
+  const neu = (patient?: Partial<Patient> | null) => {
     sichern()
     const nr = einst.naechsteNummer + 1
     setEinst({ ...einst, naechsteNummer: nr })
-    setPlan(neuerPlan(nr))
+    setPlan(mitPatient(neuerPlan(nr), patient))
     setReiter('patient')
   }
+  useEffect(() => {
+    if (neuAuftrag === undefined) return
+    const p = neuAuftrag
+    neuAuftrag = undefined
+    neu(p)
+  }, [])
   const oeffnen = (p: Plan) => {
     sichern()
     setPlan(planMigrieren(p))
@@ -101,7 +110,7 @@ export default function App() {
             <span>{plan.nummer}</span>
             <b>{euro(kalk.gesamt)}</b>
           </div>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
         </header>
         <fieldset className="sperre" disabled={gesperrt}>
           <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />

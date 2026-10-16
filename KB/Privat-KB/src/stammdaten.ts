@@ -206,3 +206,49 @@ export const anschrift = (x: { strasse: string; plz: string; ort: string }) => [
 
 /** Briefkopf-Zeile der Praxis: "Praxis · Straße · PLZ Ort" */
 export const praxisZeile = (p: Praxis) => [p.name, p.strasse, plzOrt(p)].filter(Boolean).join(' · ')
+
+/** Felder, die PlanR beim „Neuer Plan für …“ mitgibt (alles andere bleibt beim leeren Plan) */
+const UEBERGABE = ['anrede', 'vorname', 'name', 'geburtsdatum', 'strasse', 'plz', 'ort', 'kasse', 'kassenNr', 'versichertenNr'] as const
+
+/**
+ * Patient aus der PlanR-Übersicht: #patient=<base64url-JSON>.
+ * Steht im Fragment, damit Name und Kasse in keinem Server-Log landen. Ungültiges → null.
+ */
+export function patientAusFragment(hash: string): Partial<Patient> | null {
+  const m = /(?:^#|&)patient=([A-Za-z0-9_-]{1,4000})(?:&|$)/.exec(hash)
+  if (!m) return null
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/')
+    const bytes = Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), (c) => c.charCodeAt(0))
+    const roh = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>
+    if (!roh || typeof roh !== 'object') return null
+    const p: Partial<Patient> = {}
+    for (const k of UEBERGABE) {
+      const v = roh[k]
+      if (typeof v === 'string' && v.trim()) p[k] = v.trim().slice(0, 120)
+    }
+    if (p.anrede && p.anrede !== 'Frau' && p.anrede !== 'Herr') delete p.anrede
+    if (p.geburtsdatum && !/^\d{4}-\d{2}-\d{2}$/.test(p.geburtsdatum)) delete p.geburtsdatum
+    return p.name || p.vorname ? p : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * „Neuer Plan für …“ aus PlanR (?neu=1#patient=…): einmal je Seitenaufruf lesen und die Adresse aufräumen.
+ * undefined = kein Auftrag, null = Auftrag ohne lesbaren Patienten.
+ */
+export function neuAusAdresse(): Partial<Patient> | null | undefined {
+  if (typeof window === 'undefined') return undefined
+  const u = new URL(window.location.href)
+  if (u.searchParams.get('neu') !== '1') return undefined
+  const patient = patientAusFragment(u.hash)
+  u.searchParams.delete('neu')
+  history.replaceState(history.state, '', u.pathname + u.search)
+  return patient
+}
+
+/** Neuer Plan mit den übergebenen Anmeldedaten */
+export const mitPatient = <T extends { patient: Patient }>(plan: T, p?: Partial<Patient> | null): T =>
+  (p ? { ...plan, patient: { ...plan.patient, ...p } } : plan)

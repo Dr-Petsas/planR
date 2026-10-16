@@ -8,6 +8,8 @@ export const PVS_CONNECTOR: Record<string, string> = {
 
 /** PVS, in denen die Patientensuche sucht und ihre HKPs listet (Übernahme nur mit PVS_CONNECTOR) */
 export const PVS_SUCHE: Record<string, string> = { ...PVS_CONNECTOR }
+/** PVS, deren 01-Befund PlanR lesen und als geänderten Befund zurückschreiben kann */
+export const PVS_BEFUND = new Set(['dampsoft'])
 
 export interface PvsTreffer {
   id: string

@@ -22,6 +22,26 @@ export interface PlanKarte {
   praxis?: number
   /** Noch kein Plan, sondern der laufende Weg vom Befund zum Plan (Start/befund01.ts) */
   vorgang?: VorgangZeile
+  /** Wie PlanR den Patienten im Praxisprogramm findet (Befund der Zeile) */
+  kennung?: PatientKennung
+}
+
+/** Patient im Praxisprogramm: Patientennummer oder Name mit Geburtsdatum */
+export interface PatientKennung { patient?: string; vorname?: string; name?: string; geburt?: string }
+
+/**
+ * Kennung aus einer Kennung, einem Plan-Patienten (vorname, name, geburtsdatum) oder einem MAS-Patienten
+ * (pvsNummer bzw. id aus dem PVS, firstName, lastName, birthDate). Ohne Nummer und ohne Name mit Geburtsdatum: undefined.
+ */
+export function kennungVon(roh: unknown): PatientKennung | undefined {
+  if (!roh || typeof roh !== 'object') return undefined
+  const o = roh as Record<string, unknown>
+  const t = (...k: string[]) => k.map((x) => (typeof o[x] === 'string' || typeof o[x] === 'number' ? String(o[x]).trim() : '')).find(Boolean) ?? ''
+  const nummer = t('patient', 'pvsNummer') || (o.quelle === 'pvs' ? t('id') : '')
+  if (/^\d{1,9}$/.test(nummer)) return { patient: nummer }
+  const name = t('name', 'lastName').slice(0, 80), vorname = t('vorname', 'firstName').slice(0, 80)
+  const geburt = t('geburt', 'geburtsdatum', 'birthDate').slice(0, 10)
+  return name && /^\d{4}-\d{2}-\d{2}$/.test(geburt) ? { ...(vorname ? { vorname } : {}), name, geburt } : undefined
 }
 
 export interface VorgangZeile {
@@ -85,6 +105,8 @@ export function kartePrüfen(roh: unknown): PlanKarte | null {
   const behandler = String(e.behandler ?? '').trim().slice(0, 80) || behandlerAusPlan(e.plan)
   if (behandler) karte.behandler = behandler
   if (Number.isInteger(e.praxis) && (e.praxis as number) >= 1 && (e.praxis as number) <= 9) karte.praxis = e.praxis as number
+  const kennung = kennungVon(e.kennung) ?? kennungVon((e.plan as { patient?: unknown } | undefined)?.patient)
+  if (kennung) karte.kennung = kennung
   return karte
 }
 
@@ -214,7 +236,7 @@ interface HkpKopf {
   status?: string
   erstellt?: string
   aktualisiert?: string
-  patient?: { label?: string }
+  patient?: { label?: string; id?: string; quelle?: string; pvsNummer?: string; firstName?: string; lastName?: string; birthDate?: string }
   summen?: { gesamt?: number }
   versorgungText?: string
   /** Lese-Link aus MAS: ohne ihn öffnet der Planer über den Tunnel (kein Praxis-Schlüssel) den HKP nicht; b = Änderungen speichern */
@@ -257,6 +279,7 @@ export function hkpKarten(liste: HkpKopf[]): PlanKarte[] {
       oeffnen: hkpOeffnen(id, h.link),
       befund: befundDateiVon(h),
       praxis: h.praxis,
+      kennung: h.patient,
     })
     if (karte) karten.push(karte)
   }

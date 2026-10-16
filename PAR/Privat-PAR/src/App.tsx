@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/par'
 import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, usePlan, usePlanAblage } from './store'
-import { patientName } from './stammdaten'
+import { mitPatient, neuAusAdresse, patientName, type Patient as Anmeldung } from './stammdaten'
 import { useDatenVersion } from './components/Listen'
 import { ungespeichert } from './ablage'
 import type { Plan } from './types'
@@ -26,6 +26,9 @@ const REITER: { id: Reiter; label: string }[] = [
 
 const hatInhalt = (p: Plan) => Boolean(patientName(p.patient) || p.diagnose || p.cpt.length || p.zusatz.length)
 
+/** „Neuer Plan für …“ aus der PlanR-Übersicht (?neu=1#patient=…) */
+let neuAuftrag = neuAusAdresse()
+
 export default function App() {
   const [einst, setEinst] = useEinstellungen()
   const [plan, setPlan] = usePlan(einst)
@@ -40,12 +43,18 @@ export default function App() {
   const gesperrt = eintrag?.status === 'freigegeben'
 
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
-  const neu = () => {
+  const neu = (patient?: Partial<Anmeldung> | null) => {
     sichern()
-    setPlan(neuerPlan(nummerFormat(einst.naechsteNummer), einst))
+    setPlan(mitPatient(neuerPlan(nummerFormat(einst.naechsteNummer), einst), patient))
     setEinst({ ...einst, naechsteNummer: einst.naechsteNummer + 1 })
     setReiter('patient')
   }
+  useEffect(() => {
+    if (neuAuftrag === undefined) return
+    const p = neuAuftrag
+    neuAuftrag = undefined
+    neu(p)
+  }, [])
   const oeffnen = (p: Plan) => {
     sichern()
     setPlan(planMigrieren(p, einst))
@@ -68,7 +77,7 @@ export default function App() {
             <span>{plan.nummer} · Gesamt</span>
             <b>{euro(rechnung.gesamt)}</b>
           </div>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Plan" onLaden={oeffnen} />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen} />
         </header>
         {(reiter === 'planung' || reiter === 'befund') && (
           <fieldset className="sperre" disabled={gesperrt}>

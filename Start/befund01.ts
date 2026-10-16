@@ -117,7 +117,7 @@ export function vorgangKarten(alle: Record<string, Befund01>, jetzt = Date.now()
     return {
       modul: v.modul || 'hkp', kuerzel: KUERZEL[modul] ?? '01', art: v.modul.startsWith('privat') ? 'Privat' : 'Kasse',
       nummer: `befund-${b.patient}`, patient: b.label || `Patient ${b.patient}`, betrag: 0,
-      status: v.phase === 'befund' ? 'befund' : 'in_planung', geaendert: v.stand, oeffnen: `befund=${b.patient}`,
+      status: v.phase === 'befund' ? 'befund' : 'in_planung', geaendert: v.stand, kennung: { patient: b.patient },
       vorgang: { phase: v.phase, modul: v.modul, patient: b.patient, offen: Object.keys(b.offen).length, pvs: b.pvs, auftrag: v.auftrag, meldung: v.meldung },
     }
   })

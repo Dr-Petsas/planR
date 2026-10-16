@@ -1,10 +1,11 @@
 import './style.css'
 import './thema'
-import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PlanDatei, type PlanKarte } from './plaene'
+import { ersetzbar, loeschbar, planDateiLesen, planFiltern, tagVon, type PatientKennung, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
-import { PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich } from './pvs'
+import { PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich } from './pvs'
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
+import { befundZeigen } from './befund'
 import { apiJson } from './api'
 import { logo } from './logo'
 import { abmelden, anmeldePopup, anmeldePopupEntfernen, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
@@ -32,6 +33,8 @@ let tag = ''
 let planart = ''
 let behandler = ''
 let auswahl = false
+/** Patient, für den die Planauswahl gerade einen neuen Plan anlegt – ohne Patienten gibt es keinen Plan */
+let neuFuer: Stammdaten | null = null
 let einstellungAuf = false
 let einstellungen: Einstellungen = LEER
 /** Bearbeitungsstand im offenen Dialog */
@@ -64,7 +67,7 @@ function ausUrl() {
   tag = q.get('tag') || ''
   planart = (q.get('plan') || '').slice(0, 8)
   behandler = (q.get('behandler') || '').slice(0, 80)
-  auswahl = q.get('neu') === '1'
+  auswahl = q.get('neu') === '1' && !!neuFuer
   const warAuf = einstellungAuf
   einstellungAuf = q.get('einstellungen') === '1' && !auswahl
   if (einstellungAuf && !warAuf) entwurf = einstellungen
@@ -100,6 +103,7 @@ function auswahlSchliessen() {
   if (history.state && (history.state as { neu?: number }).neu) history.back()
   else {
     auswahl = false
+    neuFuer = null
     einstellungAuf = false
     urlSetzen('replace')
     zeichnen()
@@ -129,22 +133,37 @@ const ZAHNRAD = PFEIL('M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.7
 
 const ZAHN = PFEIL('M7.5 3C5 3 3.5 5 3.5 7.6c0 2.3 1 3.9 1.5 6.3.5 2.4.8 7.1 2.5 7.1 1.6 0 1.7-4.5 2.7-6.4.4-.8.9-1.1 1.8-1.1s1.4.3 1.8 1.1c1 1.9 1.1 6.4 2.7 6.4 1.7 0 2-4.7 2.5-7.1.5-2.4 1.5-4 1.5-6.3C20.5 5 19 3 16.5 3 14.6 3 13.6 4 12 4s-2.6-1-4.5-1Z')
 
+/** PVS, dessen 01 PlanR lesen und schreiben kann – nur mit eingeschalteter Bridge */
+function befundPvs(): string {
+  const p = pvsVon(einstellungen.pvs)
+  return p && einstellungen.bridge && PVS_BEFUND.has(p.id) ? p.name : ''
+}
+
+/** Befund-Knopf einer Zeile: öffnet den 01 des Patienten zum Ansehen und Ändern */
+function befundKnopf(p: PlanKarte, i: number): string {
+  const pvs = befundPvs()
+  if (!pvs) return ''
+  const name = esc(p.patient || 'Ohne Namen')
+  return p.kennung
+    ? `<button type="button" class="aktion befund-knopf" data-befund="${i}" title="Befund (01) aus ${esc(pvs)} ansehen und ändern" aria-label="Befund von ${name}">${ZAHN}</button>`
+    : `<span class="aktion aus" title="Ohne Geburtsdatum findet PlanR den Patienten in ${esc(pvs)} nicht sicher – Befund über die Patientensuche öffnen">${ZAHN}</span>`
+}
+
 /** Laufender Vorgang: Befund steht (noch nichts geplant) bzw. Plan entsteht gerade */
 function vorgangZeile(p: PlanKarte, i: number): string {
   const v = p.vorgang!
-  const url = planUrl(p)
   const name = esc(p.patient)
   const art = v.modul ? `${p.kuerzel}${p.art === 'Privat' ? ' privat' : ''}` : ''
   const status = v.phase === 'befund' ? STATUS.befund : `${STATUS.in_planung}${art ? ` · ${art}` : ''}`
   const hinweis = v.meldung || (v.offen ? `${v.offen} ${v.offen === 1 ? 'Zahn' : 'Zähne'} noch nicht in ${v.pvs}` : '')
-  return `<div class="zeile vorgang${url ? ' mit-link' : ''}" role="row">
+  return `<div class="zeile vorgang mit-link" role="row">
     <span class="sp-art"><span class="kuerzel befund-icon" title="Befund (01)">${ZAHN}</span>${v.modul ? `<span class="kuerzel">${esc(p.kuerzel)}</span>` : ''}</span>
-    ${url ? `<a class="sp-patient" href="${esc(url)}" title="Befund ansehen">${name}</a>` : `<span class="sp-patient">${name}</span>`}
+    <button type="button" class="sp-patient link-zeile" data-befund="${i}" title="Befund ansehen und ändern">${name}</button>
     <span class="sp-nr">Pat.-Nr. ${esc(v.patient)}</span>
     <span class="sp-status">${esc(status)}${v.auftrag ? `<small>${esc(v.auftrag)}</small>` : ''}${hinweis ? `<small class="vorgang-hinweis">${esc(hinweis)}</small>` : ''}</span>
     <span class="sp-betrag"></span>
     <span class="sp-zeit">${esc(zeit(p.geaendert))}</span>
-    <span class="sp-aktionen"><button type="button" class="aktion tonne" data-vorgang-ende="${i}" title="Aus der Liste nehmen – der Befund bleibt" aria-label="Vorgang aus der Liste nehmen: ${name}">${TONNE}</button></span>
+    <span class="sp-aktionen">${befundKnopf(p, i)}<button type="button" class="aktion tonne" data-vorgang-ende="${i}" title="Aus der Liste nehmen – der Befund bleibt" aria-label="Vorgang aus der Liste nehmen: ${name}">${TONNE}</button></span>
   </div>`
 }
 
@@ -173,7 +192,7 @@ function zeile(p: PlanKarte, i: number): string {
     <span class="sp-status">${esc(STATUS[p.status] || p.status)}</span>
     <span class="sp-betrag">${p.betrag ? esc(euro(p.betrag)) : ''}</span>
     <span class="sp-zeit">${esc(zeit(p.geaendert))}</span>
-    <span class="sp-aktionen">${export_}${import_}${tonne}</span>
+    <span class="sp-aktionen">${befundKnopf(p, i)}${export_}${import_}${tonne}</span>
   </div>`
 }
 
@@ -261,26 +280,27 @@ function planrPlaene(vorname: string, nachname: string): PlanTreffer[] {
     }))
 }
 
-/** Neuer HKP auf einen Patienten: Anmeldedaten im Fragment (geht nie an einen Server), der Planer liest und löscht es. */
-function hkpNeuOeffnen(p: Stammdaten) {
-  const planer = BEREICHE.flatMap((b) => b.planer).find((x) => x.host === 'hkp')
-  const basis = planer && adresse(planer, location)
-  if (!basis) return melden('Der HKP-Planer ist hier nicht erreichbar.')
+/** Neuer Plan im Planer: Anmeldedaten im Fragment (geht nie an einen Server), der Planer liest und löscht es. */
+function neuUrl(basis: string, p: Stammdaten): string {
   const url = new URL(basis, location.href)
   url.searchParams.set('neu', '1')
   const json = new TextEncoder().encode(JSON.stringify(p))
   url.hash = `patient=${btoa(String.fromCharCode(...json)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`
-  location.href = url.toString()
+  return url.toString()
 }
 
-/** Befundseite des HKP-Planers mit dem aktuellen 01 dieses Patienten */
-function befundOeffnen(patientNr: string) {
-  const planer = BEREICHE.flatMap((b) => b.planer).find((x) => x.host === 'hkp')
-  const basis = planer && adresse(planer, location)
-  if (!basis) return melden('Der HKP-Planer ist hier nicht erreichbar.')
-  const url = new URL(basis, location.href)
-  url.searchParams.set('befund', patientNr)
-  location.href = url.toString()
+/** Neuer Plan für einen Patienten: erst die Planart wählen */
+function neuerPlanFuer(p: Stammdaten) {
+  neuFuer = p
+  auswahl = true
+  einstellungAuf = false
+  urlSetzen('push')
+  zeichnen()
+}
+
+/** Befund (01) eines Patienten: ansehen, ändern, ins PVS speichern, neuen Plan anfangen */
+function befundOeffnen(kennung: PatientKennung, titel: string) {
+  befundZeigen(kennung, titel, { neuerPlan: neuerPlanFuer, geaendert: () => void laden(), assistentin })
 }
 
 /** Aus dem PVS übernommener HKP: Liste neu laden, dann den Planer mit dem Plan öffnen */
@@ -410,13 +430,13 @@ function chips(gruppe: string, gewaehlt: string, eintraege: { id: string; text: 
   return `<div class="chips" role="group">${knopf('', 'Alle')}${eintraege.map((e) => knopf(e.id, e.text)).join('')}</div>`
 }
 
-function auswahlKarte(): string {
+function auswahlKarte(patient: Stammdaten): string {
+  const wer = [patient.vorname, patient.name].filter(Boolean).join(' ')
   const eintrag = (p: (typeof BEREICHE)[number]['planer'][number] | undefined) => {
     if (!p) return '<span class="wahl-leer"></span>'
-      const basis = adresse(p, location)
-      // Der HKP-Planer öffnet sonst den zuletzt bearbeiteten Plan
-      const url = basis && p.host === 'hkp' ? `${basis}${basis.includes('?') ? '&' : '?'}neu=1` : basis
-      const inhalt = `<span class="kuerzel">${esc(p.kuerzel)}</span><span><b>${esc(p.titel)}</b><small>${esc(p.zweck)}</small></span>`
+    const basis = adresse(p, location)
+    const url = basis && neuUrl(basis, patient)
+    const inhalt = `<span class="kuerzel">${esc(p.kuerzel)}</span><span><b>${esc(p.titel)}</b><small>${esc(p.zweck)}</small></span>`
     return url ? `<a href="${esc(url)}">${inhalt}</a>` : `<div>${inhalt}</div>`
   }
   const bloecke = `
@@ -429,7 +449,7 @@ function auswahlKarte(): string {
       <button type="button" class="wahl-grund" data-wahl-zu aria-label="Auswahl schließen"></button>
       <div class="wahl-karte">
         <div class="wahl-kopf">
-          <h2>Welchen Plan?</h2>
+          <h2>Welcher Plan für ${esc(wer)}?${patient.geburtsdatum ? `<small>geb. ${esc(patient.geburtsdatum.split('-').reverse().join('.'))}</small>` : ''}</h2>
           <button type="button" data-wahl-zu aria-label="Schließen">✕</button>
         </div>
         ${bloecke}
@@ -574,8 +594,7 @@ function zeichnen() {
         ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
         ${ich.konto.admin && ich.abo === 'planr' ? '<button type="button" class="import-knopf" data-rechnungen title="Ihr PlanR-Abo: laufender Monat und alle Rechnungen"><span>Rechnungen</span></button>' : ''}
         <button type="button" class="import-knopf" data-einstellungen title="PVS, Bridge und Benutzer einstellen">${ZAHNRAD}<span>Einstellungen</span></button>
-        <button type="button" class="import-knopf" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen: neuen HKP erstellen oder vorhandenen übernehmen` : 'Patient suchen und neuen HKP erstellen'}">${LUPE}<span>Patientensuche</span></button>
-        <button type="button" class="neu-knopf" data-neu>Neuen Plan erstellen</button>
+        <button type="button" class="neu-knopf mit-symbol" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen: Befund ansehen, neuen Plan erstellen oder HKP übernehmen` : 'Patient suchen und neuen Plan erstellen'} – jeder Plan gehört zu einem Patienten">${LUPE}<span>Patientensuche</span></button>
     </div>
   </header>
     ${ich.praxen?.length === 0 ? '<p class="freischalt-hinweis">Sie sind angemeldet, aber noch keiner Praxis zugeordnet. Der Praxis-Admin schaltet Sie in PlanR unter Einstellungen → Benutzer frei.</p>' : ''}
@@ -618,7 +637,7 @@ function zeichnen() {
   </main>
     </div>
     ${meldung ? `<div class="meldung" role="status"><span>${esc(meldung.text)}</span>${meldung.zurueck ? '<button type="button" data-zurueck>Rückgängig</button>' : ''}</div>` : ''}
-    ${auswahl ? auswahlKarte() : ''}
+    ${auswahl && neuFuer ? auswahlKarte(neuFuer) : ''}
     ${einstellungAuf ? einstellungKarte() : ''}`
   app.querySelectorAll<HTMLButtonElement>('[data-loeschen]').forEach((b) => b.addEventListener('click', () => {
     const p = sichtbar[Number(b.dataset.loeschen)]
@@ -627,6 +646,10 @@ function zeichnen() {
   app.querySelectorAll<HTMLButtonElement>('[data-vorgang-ende]').forEach((b) => b.addEventListener('click', () => {
     const p = sichtbar[Number(b.dataset.vorgangEnde)]
     if (p?.vorgang) void vorgangEnde(p)
+  }))
+  app.querySelectorAll<HTMLButtonElement>('[data-befund]').forEach((b) => b.addEventListener('click', () => {
+    const p = sichtbar[Number(b.dataset.befund)]
+    if (p?.kennung) befundOeffnen(p.kennung, p.patient)
   }))
   app.querySelectorAll<HTMLButtonElement>('[data-export]').forEach((b) => b.addEventListener('click', () => {
     const p = sichtbar[Number(b.dataset.export)]
@@ -645,8 +668,8 @@ function zeichnen() {
         ? `Die PlanR-Bridge auf dem Praxisserver ist gerade nicht verbunden – die Suche in ${ziel} geht so nur direkt am Praxis-PC.`
         : `Die Suche in ${ziel} über das Internet braucht die PlanR-Bridge auf dem Praxisserver (Einrichtung → Bridge).`,
       planrPlaene,
-      neuerHkp: hkpNeuOeffnen,
-      befundOeffnen,
+      neuerPlan: neuerPlanFuer,
+      befundOeffnen: befundPvs() ? (nr, titel) => befundOeffnen({ patient: nr }, titel) : undefined,
       dateiWaehlen: () => importWaehlen(null),
       geoeffnet: ausPvsOeffnen,
     })
@@ -743,15 +766,6 @@ function zeichnen() {
     urlSetzen('replace')
     zeichnen()
   }))
-  app.querySelector<HTMLButtonElement>('[data-neu]')!.addEventListener('click', () => {
-    if (auswahl) auswahlSchliessen()
-    else {
-      auswahl = true
-      einstellungAuf = false
-      urlSetzen('push')
-      zeichnen()
-    }
-  })
   app.querySelectorAll<HTMLButtonElement>('[data-wahl-zu]').forEach((b) => b.addEventListener('click', auswahlSchliessen))
   app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', () => { auswahlSchliessen(); void einrichtungZeigen(true) })
 }

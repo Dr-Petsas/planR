@@ -8,7 +8,7 @@ import type { Therapie } from './types'
 import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, useKonsAblage, usePlan } from './store'
 import { ungespeichert } from './ablage'
 import type { Plan } from './types'
-import { patientName } from './stammdaten'
+import { mitPatient, neuAusAdresse, patientName, type Patient as Anmeldung } from './stammdaten'
 import Patient from './components/Patient'
 import Zahnschema from './components/Zahnschema'
 import Zahnkarten from './components/Zahnkarten'
@@ -34,6 +34,9 @@ const BEFUND_ART: Record<Therapie, KonsArt> = {
   komposit: 'fuellung', inlay: 'fuellung', goldhaemmer: 'fuellung', versiegelung: 'fuellung', infiltration: 'fuellung', veneer: 'fuellung',
   aufbau: 'aufbau', endo: 'endo', revision: 'endo', vital: 'endo', bleaching: 'endo',
 }
+
+/** „Neuer Plan für …“ aus der PlanR-Übersicht (?neu=1#patient=…) */
+let neuAuftrag = neuAusAdresse()
 
 export default function App() {
   const [einst, setEinst] = useEinstellungen()
@@ -74,12 +77,18 @@ export default function App() {
   const gesperrt = eintrag?.status === 'freigegeben'
 
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
-  const neu = () => {
+  const neu = (patient?: Partial<Anmeldung> | null) => {
     sichern()
-    setPlan(neuerPlan(nummerFormat(einst.naechsteNummer), einst))
+    setPlan(mitPatient(neuerPlan(nummerFormat(einst.naechsteNummer), einst), patient))
     setEinst({ ...einst, naechsteNummer: einst.naechsteNummer + 1 })
     setReiter('patient')
   }
+  useEffect(() => {
+    if (neuAuftrag === undefined) return
+    const p = neuAuftrag
+    neuAuftrag = undefined
+    neu(p)
+  }, [])
   const oeffnen = (p: Plan) => {
     sichern()
     setPlan(planMigrieren(p, einst))
@@ -102,7 +111,7 @@ export default function App() {
             <span>{plan.nummer} · Gesamt</span>
             <b>{euro(rechnung.summe)}</b>
           </div>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={neu} neuText="Neuer Plan" onLaden={oeffnen} />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen} />
         </header>
         {reiter === 'planung' && (
           <fieldset className="sperre" disabled={gesperrt}>

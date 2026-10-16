@@ -3,8 +3,8 @@ import type { HkpPlan } from '../types'
 import { BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER } from '../engine/zahnschema'
 import { useVerbindung } from '../store/register'
 import {
-  abweichungen, befundAendern, befundHolen, befundListe, befundSchreiben, befundVerwerfen, datumDe, uhrzeit,
-  useBefund, useBefunde, useBefundLive, type Befund01,
+  abweichungen, befundAendern, befundHolen, befundSchreiben, befundVerwerfen, datumDe, uhrzeit,
+  useBefund, useBefundLive, type Befund01,
 } from '../store/befund01'
 
 const ALLE = [...OBERKIEFER, ...UNTERKIEFER]
@@ -15,29 +15,20 @@ const titel = (z: string, c: string) => `${z}: ${c ? BEFUND_KUERZEL[c] ?? c : 'v
 export const befundInPlan = (p: HkpPlan, zaehne: Record<string, string>): HkpPlan =>
   ({ ...p, zaehne: Object.fromEntries(ALLE.map((z) => [z, { ...p.zaehne[z], B: zaehne[z] ?? '' }])) })
 
-function Schema({ b, plan, gross, onAendern }: {
-  b: Befund01
-  plan?: HkpPlan['zaehne']
-  gross?: boolean
-  onAendern?: (z: string, code: string) => void
-}) {
-  const weicht = plan ? abweichungen(plan, b.zaehne) : {}
+function Schema({ b, plan }: { b: Befund01; plan: HkpPlan['zaehne'] }) {
+  const weicht = abweichungen(plan, b.zaehne)
   const reihe = (zs: string[]) => zs.map((z) => {
     const c = b.zaehne[z] ?? ''
     const klasse = [z in b.offen ? 'offen' : '', z in weicht ? 'weicht' : '', c === 'f' ? 'fehlt' : ''].filter(Boolean).join(' ')
     return (
       <div key={z} className={`b01-zahn ${klasse}`} title={`${titel(z, c)}${z in b.offen ? ` – noch nicht in ${b.pvs} (dort: ${b.pvsZaehne[z] || 'vorhanden'})` : ''}${z in weicht ? ` – im Plan: ${weicht[z] || 'vorhanden'}` : ''}`}>
-        {onAendern
-          ? <input key={`${z}-${c}`} defaultValue={c} maxLength={6} aria-label={`Befund ${z}`}
-              onBlur={(e) => { const v = e.target.value.trim().toLowerCase(); if (v !== c) onAendern(z, v) }}
-              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} />
-          : <span className="b01-code">{c || '·'}</span>}
+        <span className="b01-code">{c || '·'}</span>
         <span className="b01-nr">{z}</span>
       </div>
     )
   })
   return (
-    <div className={`b01-schema${gross ? ' gross' : ''}`}>
+    <div className="b01-schema">
       <div className="b01-reihe">{reihe(OBERKIEFER)}</div>
       <div className="b01-reihe uk">{reihe(UNTERKIEFER)}</div>
     </div>
@@ -84,15 +75,15 @@ async function schreibenFragen(b: Befund01, setMeldung: (s: string) => void) {
 }
 
 /**
- * Aktueller 01 im HKP-Planer: holt den Befund des offenen Patienten aus dem Praxisprogramm, zeigt die im Gespräch
- * geänderten Zähne und trägt ihn live in einen freien Plan ein, solange dessen Befund dem bisherigen 01 entspricht.
+ * Aktueller 01 im HKP-Planer: holt den Befund des offenen Patienten aus dem Praxisprogramm und zeigt die im Gespräch
+ * geänderten Zähne. Eine leere Befundzeile bekommt ihn sofort; ein freier Plan folgt ihm live, solange dessen Befund
+ * dem bisherigen 01 entspricht.
  */
-export function AktuellerBefundLeiste({ plan, setPlan, frei, onSeite }: {
+export function AktuellerBefundLeiste({ plan, setPlan, frei }: {
   plan: HkpPlan
   setPlan: (f: (p: HkpPlan) => HkpPlan) => void
   /** Plan ist nicht mit einem HKP im Register verknüpft – dann folgt er dem 01 von selbst */
   frei: boolean
-  onSeite: (patient: string) => void
 }) {
   const v = useVerbindung()
   const { vorname, name, geburtsdatum } = plan.patient
@@ -120,7 +111,7 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei, onSeite }: {
     return () => { weg = true; window.clearTimeout(uhr) }
   }, [schluessel, runde])
 
-  // Live: ein freier Plan, dessen Befund dem bisherigen 01 entspricht (oder noch leer ist), bekommt jede Änderung sofort.
+  // Leere Befundzeile: der 01 steht sofort drin. Live: ein freier Plan, dessen Befund dem bisherigen 01 entspricht, bekommt jede Änderung.
   const vorher = useRef<{ nr: string; zaehne: Record<string, string> } | null>(null)
   const planRef = useRef(plan)
   useEffect(() => { planRef.current = plan })
@@ -128,10 +119,10 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei, onSeite }: {
     if (!b) return
     const alt = vorher.current?.nr === b.patient ? vorher.current.zaehne : null
     vorher.current = { nr: b.patient, zaehne: b.zaehne }
-    if (!frei) return
     const p = planRef.current.zaehne
     const leer = ALLE.every((z) => !String(p[z]?.B ?? '').trim())
-    if ((leer || (alt && !anzahl(abweichungen(p, alt)))) && anzahl(abweichungen(p, b.zaehne))) setPlan((q) => befundInPlan(q, b.zaehne))
+    const folgt = frei && alt && !anzahl(abweichungen(p, alt))
+    if ((leer || folgt) && anzahl(abweichungen(p, b.zaehne))) setPlan((q) => befundInPlan(q, b.zaehne))
   }, [b, frei, setPlan])
 
   const weicht = useMemo(() => (b ? abweichungen(plan.zaehne, b.zaehne) : {}), [b, plan.zaehne])
@@ -158,84 +149,8 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei, onSeite }: {
           {anzahl(b.offen) > 0 && <button className="klein" onClick={() => schreibenFragen(b, setMeldung)}>In {b.pvs} übernehmen</button>}
           {anzahl(b.offen) > 0 && <button className="klein" onClick={() => { if (confirm(`Offene Änderungen verwerfen? Es gilt wieder der Befund aus ${b.pvs}.`)) befundVerwerfen(b.patient).catch(() => {}) }}>Verwerfen</button>}
           <button className="klein" title="Neu aus dem Praxisprogramm lesen" disabled={laedt} onClick={() => setRunde((r) => r + 1)}>↻</button>
-          <button className="klein" onClick={() => onSeite(b.patient)}>Befundseite</button>
         </span>
       )}
     </div>
-  )
-}
-
-/** Eigene Befundseite: zuletzt bearbeitete Befunde der Praxis, live; Zähne direkt änderbar. */
-export function BefundSeite({ start, onNeuerHkp }: {
-  start: string
-  onNeuerHkp: (patient: Pick<HkpPlan['patient'], 'vorname' | 'name' | 'geburtsdatum'>) => void
-}) {
-  const v = useVerbindung()
-  const alle = useBefunde()
-  const live = useBefundLive()
-  const [wahl, setWahl] = useState(start)
-  const [suche, setSuche] = useState('')
-  const [meldung, setMeldung] = useState('')
-  const [laedt, setLaedt] = useState(false)
-  useEffect(() => { if (start) setWahl(start) }, [start])
-  useEffect(() => { if (v.sitzung) befundListe().catch((e) => setMeldung(`⚠ ${e instanceof Error ? e.message : String(e)}`)) }, [v.sitzung])
-  useEffect(() => {
-    if (!v.sitzung || !/^\d{1,9}$/.test(wahl)) return
-    setLaedt(true)
-    setMeldung('')
-    befundHolen({ patient: wahl })
-      .then((d) => setMeldung(d.meldung ? `⚠ ${d.meldung}` : ''))
-      .catch((e) => setMeldung(`⚠ ${e instanceof Error ? e.message : String(e)}`))
-      .finally(() => setLaedt(false))
-  }, [wahl, v.sitzung])
-
-  if (!v.sitzung) return <section className="abschnitt"><h3>Befund (01)</h3><p>Die Befundseite gibt es mit der PlanR-Anmeldung.</p></section>
-  const s = suche.trim().toLowerCase()
-  const liste = Object.values(alle).filter((x) => !s || x.label.toLowerCase().includes(s) || x.patient === s).sort((a, c) => c.stand.localeCompare(a.stand))
-  const b = alle[wahl]
-  const aendern = (z: string, code: string) => { setMeldung(''); befundAendern(wahl, { [z]: code }).catch((e) => setMeldung(`⚠ ${e instanceof Error ? e.message : String(e)}`)) }
-  const neuerHkp = (x: Befund01) => {
-    const [n, vn] = x.label.split(',').map((t) => t.trim())
-    onNeuerHkp({ name: n ?? '', vorname: vn ?? '', geburtsdatum: x.geburt })
-  }
-
-  return (
-    <section className="abschnitt befund-seite">
-      <h3>
-        Befund (01) <span className={`live-punkt${live ? ' an' : ''}`} title={live ? 'live verbunden' : 'keine Live-Verbindung'} aria-hidden="true" />
-        <small> aktuellster Stand je Patient: aus dem Praxisprogramm oder im Gespräch geändert</small>
-      </h3>
-      <div className="b01-seite">
-        <aside>
-          <input placeholder="Patient suchen oder Nummer" value={suche} onChange={(e) => setSuche(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && /^\d{1,9}$/.test(suche.trim())) setWahl(suche.trim()) }} />
-          {liste.map((x) => (
-            <button key={x.patient} className={`b01-eintrag${x.patient === wahl ? ' aktiv' : ''}`} onClick={() => setWahl(x.patient)}>
-              <b>{x.label || `Patient ${x.patient}`}</b>
-              <small>{x.geburt ? datumDe(x.geburt) : ''} · {uhrzeit(x.stand)}{anzahl(x.offen) ? ` · ${anzahl(x.offen)} offen` : ''}{x.vorgang && x.vorgang.phase !== 'angelegt' ? (x.vorgang.phase === 'befund' ? ' · Befund' : ' · in Planung') : ''}</small>
-            </button>
-          ))}
-          {!liste.length && <p className="klein">Noch keine Befunde. Patientennummer eingeben und Enter drücken – oder in der Patientensuche „Befund (01)“.</p>}
-        </aside>
-        <div>
-          {!b && <p>{laedt ? 'Befund wird aus dem Praxisprogramm geholt …' : 'Links einen Patienten wählen.'}</p>}
-          {b && (
-            <>
-              <p><b>{b.label || `Patient ${b.patient}`}</b>{b.geburt ? `, geb. ${datumDe(b.geburt)}` : ''} · Nr. {b.patient} · <Herkunft b={b} /></p>
-              {b.vorgang && b.vorgang.phase !== 'angelegt' && <p><VorgangStand b={b} setMeldung={setMeldung} /></p>}
-              <Schema b={b} gross onAendern={aendern} />
-              <p className="klein">Kürzel direkt im Feld ändern (z. B. f, k, kw, x, i, ww). Rosa = noch nicht in {b.pvs}; gilt trotzdem sofort für den nächsten HKP und für Clara.</p>
-              <div className="b01-knoepfe">
-                {anzahl(b.offen) > 0 && <button onClick={() => schreibenFragen(b, setMeldung)}>In {b.pvs} übernehmen</button>}
-                {anzahl(b.offen) > 0 && <button onClick={() => { if (confirm(`Offene Änderungen verwerfen? Es gilt wieder der Befund aus ${b.pvs}.`)) befundVerwerfen(b.patient).catch(() => {}) }}>Verwerfen</button>}
-                <button disabled={laedt} onClick={() => { setLaedt(true); befundHolen({ patient: b.patient }).catch(() => {}).finally(() => setLaedt(false)) }}>Neu aus {b.pvs} lesen</button>
-                {b.geburt && <button onClick={() => neuerHkp(b)}>Neuer HKP mit diesem Befund</button>}
-              </div>
-            </>
-          )}
-          {meldung && <p className="klein">{meldung}</p>}
-        </div>
-      </div>
-    </section>
   )
 }
