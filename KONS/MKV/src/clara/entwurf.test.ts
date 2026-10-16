@@ -78,3 +78,22 @@ describe('MKV-Entwurf', () => {
     expect(r.hinweise.join(' ')).toMatch(/Zahn 11: Frontzahn: die adhäsive Füllung ist hier Kassenleistung/)
   })
 })
+
+describe('Aufbau und Füllung am selben Zahn (Eva live 16.10.2026 13:34)', () => {
+  const satz = 'MKV für Zahn 2,4. Für einen Stiftaufbau. und eine MOD-Füllung in Keramik, Kunststoffkeramik.'
+
+  it('fragt nach, statt die Füllung stillschweigend fallen zu lassen', () => {
+    const r = mkvEntwurf(satz)
+    expect(r).toMatchObject({ status: 'rueckfrage', grund: 'aufbau_oder_fuellung' })
+    if (r.status === 'rueckfrage') expect(r.frage).toBe('An 24 haben Sie einen Aufbau und eine Füllung genannt; ein Aufbau setzt eine Krone voraus. Soll ich an 24 den Aufbau oder die dreiflächige Füllung planen?')
+  })
+
+  it('die Antwort ("Gewählt: …") entscheidet', () => {
+    expect(kurz(`${satz} Gewählt: die Füllung.`)).toEqual({ 24: 'komposit/3' })
+    expect(ok(mkvEntwurf(`${satz} Gewählt: den Aufbau`)).plan.zaehne['24']).toMatchObject({ therapie: 'aufbau', stift: true })
+  })
+
+  it('verschiedene Zähne bleiben unberührt', () => {
+    expect(kurz('Aufbau an 24 mod und Kompositfüllung an 25 mo')).toEqual({ 24: 'aufbau/3', 25: 'komposit/2' })
+  })
+})

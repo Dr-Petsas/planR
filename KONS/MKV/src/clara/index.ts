@@ -17,7 +17,7 @@ export const ENGINE_STAND = typeof __MKV_ENGINE_STAND__ === 'string' ? __MKV_ENG
 
 export interface Rueckfrage {
   status: 'rueckfrage'
-  grund: 'zaehne' | 'flaechen' | 'befund_konflikt'
+  grund: 'zaehne' | 'flaechen' | 'befund_konflikt' | 'aufbau_oder_fuellung'
   frage: string
   /** bei befund_konflikt: der Zahn, an dem laut Befund keine Füllung geht */
   zahn?: string
@@ -149,6 +149,8 @@ const NUR_VERBINDUNG = /^[\s,]*(?:(?:und|sowie|auch|plus|bei|an|auf|zahn|zähnen
 export function mkvAuftragVerstehen(roh: string): {
   zaehne: Record<string, ZahnLeistung & { flaechenText: string }>
   ohneFlaechen: string[]
+  /** Aufbau und Füllung am selben Zahn genannt – ein Zahn trägt im Planer nur eine Leistung */
+  aufbauUndFuellung: string[]
   abformung?: 'abdruck' | 'scan'
   privat: Plan['privat']
 } {
@@ -174,11 +176,22 @@ export function mkvAuftragVerstehen(roh: string): {
     if (i + 1 < zf.length && flaechenVon[i + 1] && NUR_VERBINDUNG.test(t.slice(zf[i].ende, zf[i + 1].pos))) flaechenVon[i] = flaechenVon[i + 1]
     else if (i > 0 && flaechenVon[i - 1] && NUR_VERBINDUNG.test(t.slice(zf[i - 1].ende, zf[i].pos))) flaechenVon[i] = flaechenVon[i - 1]
   }
+  // Antwort auf die Rückfrage "Aufbau oder Füllung?" (MAS hängt sie als "Gewählt: …" an)
+  const gewaehlt = /\bgew(?:ä|ae)hlt:\s*/gi
+  let schlussAb = -1
+  for (let m = gewaehlt.exec(t); m; m = gewaehlt.exec(t)) schlussAb = m.index + m[0].length
+  const schlussTh = schlussAb < 0 ? [] : tf.filter((f) => f.pos >= schlussAb)
+  const entscheid = new Set(schlussTh.map((f) => f.therapie === 'aufbau')).size === 1 ? schlussTh[0] : undefined
+  const aufbauUndFuellung: string[] = []
   const therapieVon = zf.map((z, i): TherapieFund | undefined => {
     const eigene = thPrefix ? darin(tf, vor(i)) : darin(tf, nach(i))
     const letzte = i === zf.length - 1 && thPrefix ? darin(tf, nach(i)) : []
     const erste = i === 0 && !thPrefix ? darin(tf, vor(i)) : []
-    const kandidaten = [...eigene, ...letzte, ...erste]
+    const kandidaten = [...eigene, ...letzte, ...erste].filter((f) => !schlussTh.includes(f))
+    if (new Set(kandidaten.map((f) => f.therapie === 'aufbau')).size > 1) {
+      if (entscheid) return entscheid.therapie === 'aufbau' ? entscheid : kandidaten.find((f) => f.therapie !== 'aufbau')
+      if (!aufbauUndFuellung.includes(z.zahn)) aufbauUndFuellung.push(z.zahn)
+    }
     if (kandidaten.length) return kandidaten.sort((a, b) => VORRANG.indexOf(a.therapie) - VORRANG.indexOf(b.therapie))[0]
     // weitertragen: "Komposit an 36, 37 und 45" bzw. "36, 37 und 45 Komposit"
     return thPrefix ? tf.filter((f) => f.ende <= z.pos).at(-1) : tf.find((f) => f.pos >= z.ende)
@@ -217,7 +230,7 @@ export function mkvAuftragVerstehen(roh: string): {
     ...(/fluorid/.test(klein) ? { fluorid: true } : {}),
     ...(/oberfl(?:ä|ae)chenan(?:ä|ae)sthes/.test(klein) ? { oberflaeche: true } : {}),
   }
-  return { zaehne, ohneFlaechen, abformung, privat }
+  return { zaehne, ohneFlaechen, aufbauUndFuellung, abformung, privat }
 }
 
 const liste = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} und ${xs.at(-1)}`)
@@ -239,6 +252,15 @@ export function mkvEntwurf(auftragText: string, befund: Record<string, string> =
         status: 'rueckfrage', grund: 'befund_konflikt', zahn,
         frage: `Laut Befund ist ${zahn} ${BEFUND_KUERZEL[code] ? `ein${/zahn$/i.test(BEFUND_KUERZEL[code]) ? '' : 'e'} ${BEFUND_KUERZEL[code]}` : code}, dort geht keine ${art === 'aufbau' ? 'Aufbaufüllung' : 'Füllung'}. Welchen Zahn meinen Sie?`,
       }
+    }
+  }
+  if (a.aufbauUndFuellung.length) {
+    const z = sortiert(a.aufbauUndFuellung)
+    const fl = z.length === 1 ? a.zaehne[z[0]]?.flaechen : undefined
+    return {
+      status: 'rueckfrage', grund: 'aufbau_oder_fuellung',
+      frage: `An ${liste(z)} haben Sie einen Aufbau und eine Füllung genannt; ein Aufbau setzt eine Krone voraus. `
+        + `Soll ich an ${liste(z)} den Aufbau oder die ${fl ? `${['', 'ein', 'zwei', 'drei', 'vier', 'fünf'][fl]}flächige ` : ''}Füllung planen?`,
     }
   }
   if (a.ohneFlaechen.length) {
