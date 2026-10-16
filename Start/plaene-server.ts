@@ -68,6 +68,9 @@ const BUCHUNGEN = `${ORDNER}/buchungen.json`
 const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Bridge.zip`
 /** Dasselbe als Setup in einer Datei; PlanR hängt beim Herunterladen den Einrichtungscode an den Dateinamen. */
 const AGENT_SETUP = `${ORDNER}/downloads/PlanR-Bridge-Setup.exe`
+/** Programmdateien für die Selbstaktualisierung der installierten Bridges, mit signiertem Manifest */
+const BRIDGE_UPDATE = `${ORDNER}/downloads/PlanR-Bridge-Update.zip`
+const BRIDGE_UPDATE_INFO = `${ORDNER}/downloads/PlanR-Bridge-Update.json`
 const TUNNEL_HOST = 'planr.pickadoc-tunnel.com'
 const HERKUNFT = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$|^https:\/\/[a-z0-9-]+\.pickadoc-tunnel\.com$/
 const MODUL_RE = /^[a-z0-9-]{1,40}$/
@@ -1156,6 +1159,7 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
   if (!hub.verbunden(mandant) && !pruefung && !setup) bridgeMelden(mandant, `meldet sich an (${String(req.headers['user-agent'] ?? '').slice(0, 40)})`)
   if (await bridgeWeiterleiten(req, res, url, query)) return
   if (setup) return setupFortschritt(req, res, mandant)
+  if (url.startsWith('/api/pvs-agent/update')) return bridgeUpdate(res, url, mandant, version)
 
   if (pruefung) {
     bridgeGeprueft.set(mandant, Date.now())
@@ -1250,6 +1254,27 @@ function bridgeMelden(mandant: string, text: string) {
   if (Date.now() - (bridgeGemeldet.get(k) ?? 0) < 60_000) return
   bridgeGemeldet.set(k, Date.now())
   console.log('[planr] Bridge', MANDANT_RE.test(mandant) ? mandant : '(ohne Mandant)', text)
+}
+
+/**
+ * Selbstaktualisierung der Bridge: Manifest (Version, Prüfsumme, Signatur) und Programmdateien. Signiert wird auf dem
+ * Entwickler-PC; die Bridge prüft die Signatur selbst – PlanR reicht die Dateien nur durch.
+ */
+async function bridgeUpdate(res: ServerResponse, url: string, mandant: string, version?: string) {
+  if (url === '/api/pvs-agent/update/paket') {
+    const daten = await readFile(BRIDGE_UPDATE).catch(() => null)
+    if (!daten) return json(res, 404, { ok: false })
+    bridgeMelden(mandant, 'lädt das Update')
+    res.setHeader('Content-Type', 'application/zip')
+    return void res.end(daten)
+  }
+  if (url !== '/api/pvs-agent/update') return json(res, 404, { ok: false })
+  const manifest = await jsonLesen<Record<string, unknown> | null>(BRIDGE_UPDATE_INFO, null)
+  if (!manifest || typeof manifest.version !== 'string' || manifest.version === version) {
+    res.statusCode = 204
+    return void res.end()
+  }
+  json(res, 200, manifest)
 }
 
 async function bridgeWeiterleiten(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
@@ -2067,7 +2092,8 @@ const fehler500 = (res: ServerResponse) => (e: unknown) => {
  */
 export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
   const [url, query = ''] = String(req.url ?? '').split('?')
-  if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort' || url === '/api/pvs-agent/setup') return agentEndpunkt(req, res, url, query)
+  if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort' || url === '/api/pvs-agent/setup' ||
+    url === '/api/pvs-agent/update' || url === '/api/pvs-agent/update/paket') return agentEndpunkt(req, res, url, query)
   if (url === '/api/bridge-setup/einloesen') return void bridgeSetupEinloesen(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Der Einrichtungscode kam nicht an.' }) })
   if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip' || url === '/download/PlanR-Bridge.zip') return download(req, res, url)
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
