@@ -182,6 +182,20 @@ export interface MandantEintrag {
   praxen?: PraxisInfo[]
   /** Pläne und HKPs ohne Praxis-Stempel (Altbestand, Clara) gehören zu dieser Praxis */
   hauptpraxis?: number
+  /** Gekoppelt an eine andere Pickadoc-Praxis (verbund.ts): deren Ablage, Register und Bridge */
+  verbund?: VerbundInfo
+}
+
+export interface VerbundInfo {
+  /** Pickadoc-Praxis, deren Ablage diese Praxis mitnutzt */
+  haupt: string
+  hauptName: string
+  gastName: string
+  seit: string
+  /** E-Mail des Admins, der gekoppelt hat */
+  von: string
+  /** Stand vor dem Koppeln – Entkoppeln stellt ihn wieder her */
+  vorher: { eintrag: Omit<MandantEintrag, 'verbund'> | null; praxen: Record<string, number[] | null> }
 }
 
 export interface Zugaenge {

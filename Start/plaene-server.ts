@@ -13,7 +13,7 @@ import {
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
-  setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe,
+  setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe, type AgentStand,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
@@ -36,6 +36,10 @@ import {
   ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, befundOhnePvs, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
   vorgangBeenden, vorgangKarten, vorgangLaeuft, vorgangMelden, zaehneAktuell, type Befund01,
 } from './befund01.ts'
+import {
+  CODE_MINUTEN, bridgeMandanten, codeFinden, codeSetzen, codeVerbrauchen, eigenerMandant, eigenesRegister, entkoppeln, gaesteVon, koppeln, koppelnPruefen,
+  neuerVerbundCode, verbundVon, type VerbundCode,
+} from './verbund.ts'
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
@@ -696,6 +700,30 @@ const stumm = (c: PvsWeg, e?: unknown) => e instanceof Error && e.message === 'n
     : `Der ${c.name}-Connector antwortet nicht – läuft er auf diesem PC?`
 
 /**
+ * Bridge des Mandanten; im Praxis-Verbund auch die einer gekoppelten Praxis – eine Bridge auf dem Praxisserver reicht.
+ * Verbunden geht vor eingerichtet; null = im ganzen Verbund keine eingerichtet.
+ */
+async function bridgeFuer(mandant: string): Promise<{ m: string; stand: AgentStand | null } | null> {
+  const [z, agenten] = await Promise.all([zugaengeLesen(), agentenLesen()])
+  const eingerichtet = bridgeMandanten(z, mandant).filter((k) => agenten[k])
+  if (!eingerichtet.length) return null
+  const m = eingerichtet.find((k) => hub.verbunden(k)) ?? eingerichtet[0]
+  return { m, stand: hub.verbunden(m) }
+}
+
+/** PVS-Einstellung des Mandanten; hat die Haupt-Praxis noch keine, gilt die einer gekoppelten Praxis */
+async function einstellungenImVerbund(mandant: string) {
+  const [alle, z] = await Promise.all([jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {}), zugaengeLesen()])
+  const eigen = alle[mandant] ? einstellungenPruefen(alle[mandant]) : LEER
+  if (eigen.pvs) return eigen
+  for (const k of bridgeMandanten(z, mandant).slice(1)) {
+    const e = alle[k] ? einstellungenPruefen(alle[k]) : LEER
+    if (e.pvs) return e
+  }
+  return eigen
+}
+
+/**
  * Weg zum PVS des Mandanten: über seine Bridge, sobald sie verbunden ist, sonst zum Connector auf diesem PC
  * (nur direkt hier). Wer angemeldet ist, darf – von überall, auch vom Handy; sehen kann er nur seine Praxen.
  * `suche` reicht für Patientensuche und HKP-Liste.
@@ -703,19 +731,18 @@ const stumm = (c: PvsWeg, e?: unknown) => e instanceof Error && e.message === 'n
 async function pvsConnector(req: IncomingMessage, w: Wer, zweck: 'suche' | 'hkp' = 'hkp'): Promise<PvsWeg> {
   const { mandant, praxen } = w
   if (praxen?.length === 0) return { status: 403, fehler: 'Sie sind noch keiner Praxis zugeordnet. Bitte vom Praxis-Admin in PlanR (Einstellungen → Benutzer) freischalten lassen.' }
-  const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
-  const e = alle[mandant] ? einstellungenPruefen(alle[mandant]) : LEER
+  const e = await einstellungenImVerbund(mandant)
   const pvs = pvsVon(e.pvs)
   if (!pvs || !e.bridge) return { fehler: 'Kein Praxisprogramm eingestellt bzw. die Verbindung dorthin ist aus (Einstellungen).' }
   const basis = (zweck === 'suche' ? PVS_SUCHE : PVS_CONNECTOR)[pvs.id]
   if (!basis) return { name: pvs.name, fehler: zweck === 'suche' ? `Für ${pvs.name} gibt es noch keine Patientensuche.` : `HKPs aus ${pvs.name} kann PlanR noch nicht übernehmen.` }
-  const agenten = await agentenLesen()
-  const stand = agenten[mandant] ? hub.verbunden(mandant) : null
+  const bridge = await bridgeFuer(mandant)
+  const stand = bridge?.stand ?? null
   if (stand?.pvs && stand.pvs !== pvs.id) return { status: 409, name: pvs.name, fehler: `Die PlanR-Bridge der Praxis arbeitet mit ${stand.pvs}, eingestellt ist ${pvs.name}.` }
-  if (stand) return { id: pvs.id, name: pvs.name, agent: true, rufen: agentRufer(mandant, praxen) }
-  if (agenten[mandant]) {
-    const zuletzt = hub.zuletzt(mandant)
-    bridgeMelden(mandant, `nicht verbunden (${zuletzt ? `zuletzt vor ${Math.round((Date.now() - zuletzt) / 1000)} s` : 'seit dem Serverstart nie'})`)
+  if (bridge && stand) return { id: pvs.id, name: pvs.name, agent: true, rufen: agentRufer(bridge.m, praxen) }
+  if (bridge) {
+    const zuletzt = hub.zuletzt(bridge.m)
+    bridgeMelden(bridge.m, `nicht verbunden (${zuletzt ? `zuletzt vor ${Math.round((Date.now() - zuletzt) / 1000)} s` : 'seit dem Serverstart nie'})`)
   }
   if (!amPraxisPc(req)) return { status: 503, name: pvs.name, fehler: `Die PlanR-Bridge der Praxis ist nicht verbunden – läuft der Dienst „PlanR-Bridge“ auf dem ${pvs.name}-Server?` }
   return {
@@ -1116,11 +1143,11 @@ const eigeneSeite = (req: IncomingMessage) =>
 function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
   const mandant = w.mandant
   if (req.method === 'GET') {
-    Promise.all([jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {}), agentenLesen()])
-      .then(([alle, agenten]) => {
-        const stand = agenten[mandant] ? hub.verbunden(mandant) : null
-        const agent = agenten[mandant] ? { verbunden: !!stand, pvs: stand?.pvs, version: stand?.version } : null
-        json(res, 200, { ok: true, mandant, einstellungen: alle[mandant] ? einstellungenPruefen(alle[mandant]) : LEER, agent, admin: w.konto.admin })
+    Promise.all([einstellungenImVerbund(mandant), bridgeFuer(mandant)])
+      .then(([e, bridge]) => {
+        const stand = bridge?.stand
+        const agent = bridge ? { verbunden: !!stand, pvs: stand?.pvs, version: stand?.version } : null
+        json(res, 200, { ok: true, mandant, einstellungen: e, agent, admin: w.konto.admin })
       })
       .catch(() => json(res, 500, { ok: false }))
     return
@@ -1419,8 +1446,9 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
   res.setHeader('Cache-Control', 'no-store')
   const m = w.mandant
   if (req.method === 'GET') {
-    const alt = (await agentenLesen())[m]
-    const stand = alt ? hub.verbunden(m) : null
+    const bridge = await bridgeFuer(m)
+    const alt = !!bridge
+    const stand = bridge?.stand ?? null
     const geprueft = !stand && Date.now() - (bridgeGeprueft.get(m) ?? 0) < GEPRUEFT_MS
     const s = bridgeSetup.get(m)
     const setup = s && Date.now() - s.am < SETUP_MS
@@ -1554,6 +1582,107 @@ async function claraEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
   json(res, 405, { ok: false })
 }
 
+// ---------- Praxis-Verbund (verbund.ts) ----------
+
+const VERBUND_CODES = `${ORDNER}/verbund-codes.json`
+const verbundBremse = new Bremse(8, 15 * 60_000)
+const codesLesen = async () => {
+  const roh = await jsonLesen<unknown>(VERBUND_CODES, [])
+  return (Array.isArray(roh) ? roh.filter((c) => c && typeof c.hash === 'string' && typeof c.haupt === 'string') : []) as VerbundCode[]
+}
+/** MAS führt dieselbe Zuordnung, damit Clara/Eva in der Sprach-App ins gemeinsame HKP-Register schreiben */
+const masVerbund = (gast: string, method: 'POST' | 'DELETE', body?: unknown) =>
+  masPlanr({ register: gast } as Wer, '/verbund', { method, body }).catch(() => ({ ok: false, status: 502, daten: {} as Record<string, unknown> }))
+const masMeldung = (r: { daten: Record<string, unknown> }, sonst: string) => (typeof r.daten.message === 'string' && r.daten.message) || sonst
+
+/**
+ * Zwei Pickadoc-Praxen teilen sich PlanR. GET: Stand · POST code: Kopplungscode erzeugen (Haupt-Praxis) ·
+ * POST beitreten {code, bestaetigt}: erst Vorschau, dann koppeln (Gast-Praxis) · DELETE {gast?}: entkoppeln. Nur Admins.
+ */
+async function verbundEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  const ich = w.konto.clientId
+  if (url === '/api/verbund' && req.method === 'GET') {
+    const z = await zugaengeLesen()
+    const v = verbundVon(z, ich)
+    return json(res, 200, {
+      ok: true, admin: w.konto.admin,
+      gast: v ? { haupt: v.haupt, name: v.hauptName, seit: v.seit, von: v.von } : null,
+      gaeste: gaesteVon(z, ich).map(([clientId, g]) => ({ clientId, name: g.gastName, seit: g.seit, von: g.von })),
+    })
+  }
+  if (!eigeneSeite(req)) return json(res, 403, { ok: false })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Praxen koppeln und entkoppeln dürfen nur Praxis-Admins.' })
+
+  if (url === '/api/verbund/code' && req.method === 'POST') {
+    if (verbundVon(await zugaengeLesen(), ich)) return json(res, 409, { ok: false, meldung: 'Ihre Praxis ist selbst an eine andere gekoppelt. Den Code erzeugt die Haupt-Praxis.' })
+    const code = neuerVerbundCode()
+    await exklusiv(async () => jsonSchreiben(VERBUND_CODES, codeSetzen(await codesLesen(), code, ich, w.konto.email)))
+    console.log('[planr] Verbund-Code für', ich, 'von', w.konto.email)
+    return json(res, 200, { ok: true, code, minuten: CODE_MINUTEN })
+  }
+
+  if (url === '/api/verbund/beitreten' && req.method === 'POST') {
+    if (verbundBremse.gesperrt(ip(req))) return json(res, 429, { ok: false, meldung: 'Zu viele falsche Codes. Bitte in 15 Minuten noch einmal versuchen.' })
+    const b = JSON.parse(await lesenBody(req, 1000) || '{}') as { code?: unknown; bestaetigt?: unknown }
+    const code = String(b.code ?? '')
+    const c = codeFinden(await codesLesen(), code)
+    if (!c) {
+      verbundBremse.fehler(ip(req))
+      return json(res, 404, { ok: false, meldung: 'Dieser Code ist ungültig oder abgelaufen. Bitte in der anderen Praxis einen neuen erzeugen.' })
+    }
+    const z = await zugaengeLesen()
+    const grund = koppelnPruefen(z, ich, c.haupt)
+    if (grund) return json(res, 409, { ok: false, meldung: grund })
+    if (b.bestaetigt !== true) {
+      const eigene = (await dateiLesen(mandantVon(z, w.konto))).length
+      const praxen = (z.mandanten[c.haupt]?.praxen ?? []).map((p) => p.name ?? `Praxis ${p.nummer}`)
+      return json(res, 200, { ok: true, vorschau: { von: c.von, praxen, eigenePlaene: eigene } })
+    }
+    const frei = await exklusiv(async () => {
+      const liste = await codesLesen()
+      const noch = codeFinden(liste, code)
+      if (noch) await jsonSchreiben(VERBUND_CODES, codeVerbrauchen(liste, noch))
+      return !!noch
+    })
+    if (!frei) return json(res, 404, { ok: false, meldung: 'Dieser Code wurde eben schon verwendet. Bitte einen neuen erzeugen.' })
+    const m = await masVerbund(ich, 'POST', { haupt: c.haupt, register: registerVon(z, { clientId: c.haupt }) })
+    if (!m.ok) return json(res, m.status === 409 ? 409 : 502, { ok: false, meldung: masMeldung(m, 'Das HKP-Register (MAS) ist gerade nicht erreichbar. Bitte gleich noch einmal versuchen.') })
+    try {
+      await sitzungExklusiv(async () => {
+        const neu = koppeln(await zugaengeLesen(), {
+          gast: ich, haupt: c.haupt, hauptName: String(m.daten.hauptName ?? ''), gastName: String(m.daten.gastName ?? ''), von: w.konto.email, uid: w.konto.uid,
+        })
+        await jsonSchreiben(ZUGAENGE, neu)
+      })
+    } catch (e) {
+      await masVerbund(ich, 'DELETE')
+      return json(res, 409, { ok: false, meldung: e instanceof Error ? e.message : 'Koppeln hat nicht geklappt.' })
+    }
+    console.log('[planr] Verbund:', ich, '→', c.haupt, 'von', w.konto.email)
+    return json(res, 200, { ok: true })
+  }
+
+  if (url === '/api/verbund' && req.method === 'DELETE') {
+    const b = JSON.parse(await lesenBody(req, 1000) || '{}') as { gast?: unknown }
+    const z = await zugaengeLesen()
+    const gast = typeof b.gast === 'string' && b.gast ? b.gast : ich
+    const v = verbundVon(z, gast)
+    if (!v || (gast !== ich && v.haupt !== ich)) return json(res, 404, { ok: false, meldung: 'Diese Kopplung gibt es nicht (mehr).' })
+    const m = await masVerbund(gast, 'DELETE')
+    if (!m.ok) return json(res, 502, { ok: false, meldung: masMeldung(m, 'Das HKP-Register (MAS) ist gerade nicht erreichbar. Bitte gleich noch einmal versuchen.') })
+    try {
+      await sitzungExklusiv(async () => jsonSchreiben(ZUGAENGE, entkoppeln(await zugaengeLesen(), gast)))
+    } catch (e) {
+      await masVerbund(gast, 'POST', { haupt: v.haupt, register: registerVon(z, { clientId: gast }) })
+      return json(res, 409, { ok: false, meldung: e instanceof Error ? e.message : 'Entkoppeln hat nicht geklappt.' })
+    }
+    console.log('[planr] Verbund gelöst:', gast, 'von', v.haupt, 'durch', w.konto.email)
+    return json(res, 200, { ok: true })
+  }
+  json(res, 405, { ok: false })
+}
+
 // ---------- Rechnungen (PlanR-Kunden ohne MAS, rechnung.ts) ----------
 
 const ZAEHLWERK = (m: string) => `${ORDNER}/mandanten/${m}/zaehlwerk.json`
@@ -1623,12 +1752,12 @@ async function abrechnungPflegen(clientId: string, jetzt = new Date()): Promise<
   const paket: Paket = b.clara === 'planr' ? 'planr_clara' : 'planr'
   return rechnungExklusiv(async () => {
     const zg = await zugaengeLesen()
-    const m = mandantVon(zg, { clientId })
+    const m = eigenerMandant(zg, clientId)
     const roh = await jsonLesen<Zaehlwerk | null>(ZAEHLWERK(m), null)
     const neu = !roh?.seit
     const z: Zaehlwerk = neu ? leeresZaehlwerk(jetzt) : { seit: roh.seit, plaene: roh.plaene ?? {}, monate: roh.monate ?? {} }
     const hinweise: string[] = []
-    const gesehen = await planeFuerZaehlwerk(m, registerVon(zg, { clientId }))
+    const gesehen = await planeFuerZaehlwerk(m, eigenesRegister(zg, clientId))
     if (!gesehen) hinweise.push('Das HKP-Register war gerade nicht erreichbar – neue HKPs werden beim nächsten Abgleich gezählt.')
     let geaendert = gesehen ? zaehlwerkAktualisieren(z, gesehen, jetzt, neu) : false
     geaendert = monatMerken(z, monatVon(jetzt.toISOString()), paket) || geaendert || neu
@@ -2126,6 +2255,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
+  if (url === '/api/verbund' || url === '/api/verbund/code' || url === '/api/verbund/beitreten') return void verbundEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/rechnungen' || /^\/api\/rechnungen\/PR-\d{4}-\d{4}$/.test(url)) return void rechnungenEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/befund' || url.startsWith('/api/befund/')) return void befundEndpunkt(req, res, url, new URLSearchParams(query), w).catch(fehler500(res))

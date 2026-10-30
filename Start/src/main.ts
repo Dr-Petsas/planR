@@ -7,6 +7,7 @@ import { PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich } 
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { befundZeigen } from './befund'
 import { apiJson } from './api'
+import { verbundBlock, verbundLaden, verbundVerdrahten } from './verbund'
 import { logo } from './logo'
 import { abmelden, anmeldePopup, anmeldePopupEntfernen, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 
@@ -489,6 +490,7 @@ function einstellungKarte(): string {
           ${ich.konto.admin ? ' · <button type="button" class="link-knopf" data-bridge-laden>Bridge herunterladen</button>' : ' · Herunterladen kann sie der Praxis-Admin.'}</p>` : ''}
         ${katalogBlock()}
         ${benutzerBlock(benutzer)}
+        ${ich.konto.admin ? verbundBlock() : ''}
         <div class="einst-fuss">
           <span>${einstellungen.geaendert ? `Gespeichert ${esc(zeit(einstellungen.geaendert))}` : 'Noch nicht gespeichert'}</span>
           <button type="button" class="import-knopf" data-wahl-zu>Abbrechen</button>
@@ -682,6 +684,7 @@ function zeichnen() {
     zeichnen()
     void katalogLaden().then(() => { if (einstellungAuf && !katalogLaeuft) zeichnen() })
     if (ich.konto.admin) void benutzerLaden().then((b) => { benutzer = b; if (einstellungAuf) zeichnen() })
+    if (ich.konto.admin) void verbundLaden().then(() => { if (einstellungAuf) zeichnen() })
   })
   app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => void einrichtungZeigen())
   app.querySelector<HTMLButtonElement>('[data-clara-dialog]')?.addEventListener('click', () => void claraZeigen())
@@ -713,6 +716,7 @@ function zeichnen() {
       benutzer = await benutzerLaden()
       melden(fehler || 'Zuordnung gespeichert. Sie gilt ab dem nächsten Laden der Seite des Benutzers.')
     }))
+    verbundVerdrahten(form, zeichnen, melden)
     form.querySelector<HTMLButtonElement>('[data-kat-abgleich]')?.addEventListener('click', () => void katalogSenden({ abgleich: true }))
     const wahl = () => ({
       liste: Number(form.querySelector<HTMLSelectElement>('[data-kat-liste]')!.value),
