@@ -15,16 +15,16 @@ const DATEN = join(WURZEL, 'Start', 'public', 'daten')
 
 const PLANER = {
   'ZE/HKP': ['basis', 'kasse', 'labor', 'laborimport'],
-  'ZE/Privat-HKP': ['basis', 'ablage', 'befund', 'labor', 'laborimport', 'praxiskatalog', 'pvsplan'],
-  'Implantologie/Privat-Impl': ['basis', 'ablage', 'befund', 'labor', 'praxiskatalog', 'pvsplan'],
+  'ZE/Privat-HKP': ['basis', 'ablage', 'befund', 'labor', 'laborimport', 'praxiskatalog', 'pvsplan', 'versand'],
+  'Implantologie/Privat-Impl': ['basis', 'ablage', 'befund', 'labor', 'praxiskatalog', 'pvsplan', 'versand'],
   'KONS/MKV': ['basis', 'ablage', 'kasse', 'befund', 'labor', 'inlay', 'praxiskatalog', 'pvsplan'],
-  'KONS/Privat-Kons': ['basis', 'ablage', 'befund', 'labor', 'inlay', 'praxiskatalog', 'pvsplan'],
+  'KONS/Privat-Kons': ['basis', 'ablage', 'befund', 'labor', 'inlay', 'praxiskatalog', 'pvsplan', 'versand'],
   'PAR/Kassen-PAR': ['basis', 'ablage', 'kasse'],
-  'PAR/Privat-PAR': ['basis', 'ablage'],
+  'PAR/Privat-PAR': ['basis', 'ablage', 'versand'],
   'KB/Kassen-KB': ['basis', 'ablage', 'kasse'],
-  'KB/Privat-KB': ['basis', 'ablage', 'pvsplan'],
+  'KB/Privat-KB': ['basis', 'ablage', 'pvsplan', 'versand'],
   'KFO/Kassen-KFO': ['basis', 'ablage', 'kasse'],
-  'KFO/Privat-KFO': ['basis', 'ablage'],
+  'KFO/Privat-KFO': ['basis', 'ablage', 'versand'],
   Start: ['start'],
 }
 
@@ -45,6 +45,7 @@ const SAETZE = {
   laborimport: ['engine/eigenlabor-pdf.ts'],
   praxiskatalog: ['praxiskatalog.ts'],
   pvsplan: ['pvsplan.ts', 'pvsplan.test.ts'],
+  versand: ['versand.ts', 'versand.test.ts', 'pdf.ts', 'components/Versenden.tsx'],
   kasse: ['data/kzv.ts', 'data/punktwerte.json', 'punktwerte.ts', 'punktwerte.test.ts', 'components/Punktwerte.tsx'],
 }
 

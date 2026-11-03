@@ -1,10 +1,10 @@
 /**
  * Stammdatenzeile der Bridge (/patients/<nr>) → Anmeldedaten der Planer (_gemeinsam/stammdaten.ts).
- * DENS liefert Kasse, IK und Versichertennummer; DS-Win nur Name, Geburtsdatum und Anschrift.
+ * DENS liefert Kasse, IK und Versichertennummer; DS-Win nur Name, Geburtsdatum, Anschrift und E-Mail.
  */
 export interface PvsStammdaten {
-  anrede: string; vorname: string; name: string; geburtsdatum: string
-  strasse: string; plz: string; ort: string; kasse: string; kassenNr: string; versichertenNr: string
+  anrede: string; titel: string; vorname: string; name: string; geburtsdatum: string
+  strasse: string; plz: string; ort: string; kasse: string; kassenNr: string; versichertenNr: string; email: string
 }
 
 const text = (z: Record<string, unknown>, k: string) => (typeof z[k] === 'string' ? (z[k] as string).trim() : '')
@@ -20,6 +20,13 @@ export function isoDatum(roh: string): string {
   return m ? `${m[1]}-${m[2]}-${m[3]}` : ''
 }
 
+/** „Herr Dr.“ → Anrede Herr, Titel Dr.; nur Dr./Prof.-Titel werden übernommen */
+function anredeUndTitel(roh: string): { anrede: string; titel: string } {
+  const anrede = /\b(Frau|Herr)\b/.exec(roh)?.[1] ?? ''
+  const titel = roh.replace(/\b(Frau|Herr)\b/, '').trim()
+  return { anrede, titel: /^(Prof\.|Dr\.)/.test(titel) ? titel.slice(0, 40) : '' }
+}
+
 export function stammdatenAusPvs(z: Record<string, unknown>): PvsStammdaten {
   let plz = text(z, 'postalCode')
   let ort = text(z, 'city')
@@ -28,9 +35,11 @@ export function stammdatenAusPvs(z: Record<string, unknown>): PvsStammdaten {
     const m = /^(?:D-)?(\d{4,5})\s+(.+)$/.exec(zusammen)
     if (m) { plz = m[1]; ort = m[2] } else ort = zusammen
   }
-  const titel = text(z, 'title') || text(z, 'salutation')
+  const { anrede, titel } = anredeUndTitel(`${text(z, 'salutation')} ${text(z, 'title')}`)
+  const email = text(z, 'email')
   return {
-    anrede: titel === 'Frau' || titel === 'Herr' ? titel : '',
+    anrede,
+    titel,
     vorname: text(z, 'firstName'),
     name: text(z, 'lastName'),
     geburtsdatum: isoDatum(text(z, 'birthDate')),
@@ -40,5 +49,6 @@ export function stammdatenAusPvs(z: Record<string, unknown>): PvsStammdaten {
     kasse: text(z, 'insurance'),
     kassenNr: /^\d{9}$/.test(text(z, 'insuranceIk')) ? text(z, 'insuranceIk') : '',
     versichertenNr: text(z, 'insuranceNumber'),
+    email: /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email) ? email.slice(0, 120) : '',
   }
 }

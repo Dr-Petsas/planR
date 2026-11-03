@@ -16,6 +16,7 @@ import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { neuerPlan, planMigrieren, useEinstellungen, usePlan, useZeAblage } from './store'
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
+import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrZurueck } from './PlanrZurueck'
 import { Befundleiste } from './components/Befundleiste'
@@ -120,7 +121,8 @@ export default function App() {
             <b>{euro(kalk.gesamt)}</b>
           </div>
           {implantate.length > 0 && <button className="sekundaer" onClick={implantologieExport} title="Implantatpositionen als Datei für den Implantologie-Planer exportieren">Für Implantologie exportieren</button>}
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen}
+            extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: kalk.gesamt, thema: 'Zahnersatz' }} vorher={sichern} />} />
         </header>
         <fieldset className="sperre" disabled={gesperrt}>
           <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />

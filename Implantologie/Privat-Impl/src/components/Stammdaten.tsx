@@ -35,9 +35,11 @@ export function PatientFelder({ patient, onChange, art }: { patient: Patient; on
           <option value="Herr">Herr</option>
         </select>
       </label>
+      <Feld label={b.titel} value={patient.titel ?? ''} platzhalter="z. B. Dr." onChange={(v) => set({ titel: v })} />
       <Feld label={b.vorname} value={patient.vorname} onChange={(v) => set({ vorname: v })} />
       <Feld label={b.name} value={patient.name} onChange={(v) => set({ name: v })} />
       <Feld label={b.geburtsdatum} typ="date" value={patient.geburtsdatum} onChange={(v) => set({ geburtsdatum: v })} />
+      <Feld label={b.email} typ="email" breit value={patient.email ?? ''} platzhalter="für den Versand des Kostenvoranschlags" onChange={(v) => set({ email: v.trim() })} />
       <Feld label={b.strasse} breit value={patient.strasse} onChange={(v) => set({ strasse: v })} />
       <Feld label={b.plz} value={patient.plz} onChange={(v) => set({ plz: v })} />
       <Feld label={b.ort} value={patient.ort} onChange={(v) => set({ ort: v })} />

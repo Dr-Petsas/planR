@@ -7,9 +7,15 @@ describe('Stammdaten aus der Bridge', () => {
       title: 'Frau', firstName: 'Anna', lastName: 'Berger', birthDate: '1961-04-02', street: 'Hauptstr. 1',
       postalCode: '50667', city: 'Köln', insurance: 'AOK Rheinland', insuranceIk: '104212059', insuranceNumber: 'A123456789',
     })).toEqual({
-      anrede: 'Frau', vorname: 'Anna', name: 'Berger', geburtsdatum: '1961-04-02', strasse: 'Hauptstr. 1',
-      plz: '50667', ort: 'Köln', kasse: 'AOK Rheinland', kassenNr: '104212059', versichertenNr: 'A123456789',
+      anrede: 'Frau', titel: '', vorname: 'Anna', name: 'Berger', geburtsdatum: '1961-04-02', strasse: 'Hauptstr. 1',
+      plz: '50667', ort: 'Köln', kasse: 'AOK Rheinland', kassenNr: '104212059', versichertenNr: 'A123456789', email: '',
     })
+  })
+
+  it('Titel und E-Mail für den Versand', () => {
+    expect(stammdatenAusPvs({ title: 'Herr Dr. med.', email: 'k.meier@example.de' })).toMatchObject({ anrede: 'Herr', titel: 'Dr. med.', email: 'k.meier@example.de' })
+    expect(stammdatenAusPvs({ salutation: 'Frau', title: 'Prof. Dr.' })).toMatchObject({ anrede: 'Frau', titel: 'Prof. Dr.' })
+    expect(stammdatenAusPvs({ email: 'kein-mail' }).email).toBe('')
   })
 
   it('DS-Win: PLZ und Ort in einem Feld, keine Kasse', () => {

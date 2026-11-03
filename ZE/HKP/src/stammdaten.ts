@@ -12,6 +12,8 @@ export type Kassenart = 'primaer' | 'ersatz'
 export interface Patient {
   /** '' | 'Frau' | 'Herr' */
   anrede: string
+  /** akademischer Titel, z. B. „Dr.“ (für Anrede und Anschreiben) */
+  titel?: string
   vorname: string
   /** Nachname */
   name: string
@@ -28,6 +30,8 @@ export interface Patient {
   /** Versichertenstatus der eGK (z. B. 1000000) */
   status: string
   kassenart: Kassenart
+  /** für den Versand des Kostenvoranschlags */
+  email?: string
 }
 
 export interface Praxis {
@@ -49,6 +53,7 @@ export interface Praxis {
 
 export const leererPatient = (): Patient => ({
   anrede: '',
+  titel: '',
   vorname: '',
   name: '',
   geburtsdatum: '',
@@ -60,6 +65,7 @@ export const leererPatient = (): Patient => ({
   versichertenNr: '',
   status: '',
   kassenart: 'primaer',
+  email: '',
 })
 
 export const standardPraxis = (): Praxis => ({
@@ -78,6 +84,7 @@ export const standardPraxis = (): Praxis => ({
 /** Beschriftungen – überall dieselben Wörter. */
 export const BESCHRIFTUNG: Record<keyof Patient | `praxis.${keyof Praxis}`, string> = {
   anrede: 'Anrede',
+  titel: 'Titel',
   vorname: 'Vorname',
   name: 'Name',
   geburtsdatum: 'Geburtsdatum',
@@ -89,6 +96,7 @@ export const BESCHRIFTUNG: Record<keyof Patient | `praxis.${keyof Praxis}`, stri
   versichertenNr: 'Versicherten-Nr.',
   status: 'Status',
   kassenart: 'Kassenart',
+  email: 'E-Mail',
   'praxis.name': 'Praxisname',
   'praxis.zahnarzt': 'Zahnärztin / Zahnarzt',
   'praxis.strasse': 'Straße',
@@ -156,6 +164,7 @@ export function patientMigrieren(roh: unknown): Patient {
   if (!strasse && !plz && !ort && text(o.anschrift)) ({ strasse, plz, ort } = anschriftLesen(text(o.anschrift)))
   return {
     anrede: erster(o, 'anrede'),
+    titel: erster(o, 'titel'),
     vorname,
     name,
     geburtsdatum: erster(o, 'geburtsdatum'),
@@ -167,6 +176,7 @@ export function patientMigrieren(roh: unknown): Patient {
     versichertenNr: erster(o, 'versichertenNr', 'versichertennr'),
     status: erster(o, 'status'),
     kassenart: o.kassenart === 'ersatz' ? 'ersatz' : 'primaer',
+    email: erster(o, 'email', 'mail'),
   }
 }
 
@@ -208,7 +218,7 @@ export const anschrift = (x: { strasse: string; plz: string; ort: string }) => [
 export const praxisZeile = (p: Praxis) => [p.name, p.strasse, plzOrt(p)].filter(Boolean).join(' · ')
 
 /** Felder, die PlanR beim „Neuer Plan für …“ mitgibt (alles andere bleibt beim leeren Plan) */
-const UEBERGABE = ['anrede', 'vorname', 'name', 'geburtsdatum', 'strasse', 'plz', 'ort', 'kasse', 'kassenNr', 'versichertenNr'] as const
+const UEBERGABE = ['anrede', 'titel', 'vorname', 'name', 'geburtsdatum', 'strasse', 'plz', 'ort', 'kasse', 'kassenNr', 'versichertenNr', 'email'] as const
 
 /**
  * Patient aus der PlanR-Übersicht: #patient=<base64url-JSON>.

@@ -343,7 +343,7 @@ interface HkpDoc { id?: string; status?: string; version?: number; planJson?: st
 /** HKP-Register des Mandanten (zugaenge.json, sonst die eigene Pickadoc-Praxis) – nie das einer anderen */
 const mas = (w: Wer, pfad: string, init: { method?: string; body?: unknown } = {}) => masPlanr(w, `/hkp${pfad}`, init)
 
-async function masPlanr(w: Wer, pfad: string, init: { method?: string; body?: unknown } = {}): Promise<{ ok: boolean; status: number; daten: Record<string, unknown> }> {
+async function masPlanr(w: Wer, pfad: string, init: { method?: string; body?: unknown; ms?: number } = {}): Promise<{ ok: boolean; status: number; daten: Record<string, unknown> }> {
   const key = masSchluessel()
   if (!key) return { ok: false, status: 503, daten: { message: 'HKP-Register nicht erreichbar (kein PlanR-Schlüssel).' } }
   const [weg, q = ''] = pfad.split('?')
@@ -353,7 +353,7 @@ async function masPlanr(w: Wer, pfad: string, init: { method?: string; body?: un
     method: init.method ?? 'GET',
     headers: { 'X-PlanR-Key': key, 'Content-Type': 'application/json' },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    signal: AbortSignal.timeout(6000),
+    signal: AbortSignal.timeout(init.ms ?? 6000),
   })
   return { ok: r.ok, status: r.status, daten: await r.json().catch(() => ({})) as Record<string, unknown> }
 }
@@ -1582,6 +1582,33 @@ async function claraEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
   json(res, 405, { ok: false })
 }
 
+/**
+ * Kostenvoranschlag per Mail: GET Versandweg (MAS-Praxis → Nadine, sonst Mailprogramm) · POST kontakt {vorname, name, geburtsdatum}
+ * → E-Mail aus der Pickadoc-Kartei · POST senden {to, subject, text, pdf} → Nadine sendet. Immer das Postfach der eigenen Praxis.
+ */
+async function versandEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  const praxis: Wer = { ...w, register: w.konto.clientId }
+  const nadine = (await berechtigung(w.konto.clientId))?.mas === true
+  if (url === '/api/versand' && req.method === 'GET') return json(res, 200, { ok: true, weg: nadine ? 'nadine' : 'mailprogramm' })
+  if (req.method !== 'POST' || !(eigeneSeite(req) || herkunft(req))) return json(res, 403, { ok: false })
+  if (!nadine) return json(res, 409, { ok: false, meldung: 'Versand über Nadine gibt es nur mit Pickadoc MAS.' })
+  const weiter = (r: Awaited<ReturnType<typeof masPlanr>>) => json(res, r.status, r.daten)
+  if (url === '/api/versand/kontakt') {
+    const b = JSON.parse(await lesenBody(req, 2000) || '{}') as Record<string, unknown>
+    const t = (k: string) => String(b[k] ?? '').slice(0, 80)
+    return weiter(await masPlanr(praxis, '/kva/kontakt', { method: 'POST', body: { vorname: t('vorname'), name: t('name'), geburtsdatum: t('geburtsdatum') } }))
+  }
+  if (url === '/api/versand/senden') {
+    const b = JSON.parse(await lesenBody(req, 20_000_000) || '{}') as Record<string, unknown>
+    const body = { to: b.to, subject: b.subject, text: b.text, pdf: b.pdf, wer: w.konto.name || w.konto.email }
+    const r = await masPlanr(praxis, '/kva/senden', { method: 'POST', body, ms: 60_000 })
+    if (r.ok) console.log('[planr] Kostenvoranschlag über Nadine gesendet', w.konto.clientId)
+    return weiter(r)
+  }
+  json(res, 404, { ok: false })
+}
+
 // ---------- Praxis-Verbund (verbund.ts) ----------
 
 const VERBUND_CODES = `${ORDNER}/verbund-codes.json`
@@ -2255,6 +2282,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
+  if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/verbund' || url === '/api/verbund/code' || url === '/api/verbund/beitreten') return void verbundEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/rechnungen' || /^\/api\/rechnungen\/PR-\d{4}-\d{4}$/.test(url)) return void rechnungenEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))

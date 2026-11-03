@@ -14,6 +14,7 @@ import { importAusZe } from './engine/bruecke'
 import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } from './store'
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
+import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrZurueck } from './PlanrZurueck'
 import { PatientFelder } from './components/Stammdaten'
@@ -110,7 +111,8 @@ export default function App() {
             <span>{plan.nummer}</span>
             <b>{euro(kalk.gesamt)}</b>
           </div>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen} />
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen}
+            extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: kalk.gesamt, thema: 'Implantologie' }} vorher={sichern} />} />
         </header>
         <fieldset className="sperre" disabled={gesperrt}>
           <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />

@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties } from 'react'
+import { useRef, type CSSProperties, type ReactNode } from 'react'
 import { datumZeit, type Ablage, type AblageDaten, type AblageEintrag } from '../ablage'
 
 const betragText = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
@@ -12,6 +12,8 @@ interface KnoepfeProps<P> {
   neuText: string
   /** Öffnet einen gespeicherten Plan; ohne diese Angabe gibt es keinen Ablage-Knopf. */
   onLaden?: (plan: P) => void
+  /** weitere Knöpfe vor „Neu“, z. B. Versenden */
+  extra?: ReactNode
 }
 
 const FENSTER: CSSProperties = {
@@ -24,7 +26,7 @@ const FENSTER_KOPF: CSSProperties = {
 }
 
 /** Speichern · Freigeben · Ablage · Neu – gleiche Knöpfe in allen Planern */
-export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText, onLaden }: KnoepfeProps<P>) {
+export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText, onLaden, extra }: KnoepfeProps<P>) {
   const frei = eintrag?.status === 'freigegeben'
   const fenster = useRef<HTMLDialogElement>(null)
   const zu = () => fenster.current?.close()
@@ -61,6 +63,7 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
           <button className="sekundaer" onClick={() => confirm(`${daten.nummer} freigeben? Danach ist der Plan gesperrt.`) && ablage.freigeben(daten)}>Freigeben</button>
         </>
       )}
+      {extra}
       <button className="primaer" onClick={onNeu}>{neuText}</button>
     </div>
   )
