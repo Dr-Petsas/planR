@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { euro, rechnen } from './engine/kb'
+import { pvsPlaene } from './engine/pvs'
 import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, usePlan, usePlanAblage } from './store'
 import { mitPatient, neuAusAdresse, patientName, type Patient as Anmeldung } from './stammdaten'
 import { useDatenVersion } from './components/Listen'
@@ -35,7 +36,7 @@ export default function App() {
   const datenVersion = useDatenVersion()
 
   const rechnung = useMemo(() => rechnen(plan, einst), [plan, einst, datenVersion])
-  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: rechnung.gesamt, plan }
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: rechnung.gesamt, plan, pvs: pvsPlaene(plan, rechnung) }
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'

@@ -123,6 +123,7 @@ export function hkpFuerPvs(plan: Obj, ergebnis: Obj): string {
 /** Planer, deren Plan beim Speichern schon fürs Praxisprogramm gerechnet wird (pvsplan.ts) */
 export const PVS_PLANER: Record<string, string> = {
   'privat-kv': 'Privat-ZE-Plan', 'privat-impl': 'Implantologie-Plan', 'privat-kons': 'Kons-Plan', 'kons-mkv': 'Füllungs-MKV',
+  'privat-kb': 'Schienen-Plan',
 }
 
 /** Wohin diese Pläne gehen: DS-Win alle; DENS Kons, Füllungs-MKV und Implantologie als Kostenvoranschlag, Privat-ZE als Privatprothetik */

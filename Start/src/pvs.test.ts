@@ -9,8 +9,8 @@ describe('PVS-Vermerk', () => {
   })
 
   it('DS-Win und DENS nehmen alle Privatpläne und die Füllungs-MKV', () => {
-    expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv'].every((m) => planInsPvsMoeglich('dampsoft', m))).toBe(true)
-    expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv'].every((m) => planInsPvsMoeglich('dens', m))).toBe(true)
+    expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv', 'privat-kb'].every((m) => planInsPvsMoeglich('dampsoft', m))).toBe(true)
+    expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv', 'privat-kb'].every((m) => planInsPvsMoeglich('dens', m))).toBe(true)
     expect(planInsPvsMoeglich('dens', 'hkp')).toBe(false)
     expect(planInsPvsMoeglich('evident', 'kons-mkv')).toBe(false)
     expect(planInsPvsMoeglich(undefined, 'kons-mkv')).toBe(false)

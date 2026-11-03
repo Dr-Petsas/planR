@@ -22,7 +22,7 @@ const PLANER = {
   'PAR/Kassen-PAR': ['basis', 'ablage', 'kasse'],
   'PAR/Privat-PAR': ['basis', 'ablage'],
   'KB/Kassen-KB': ['basis', 'ablage', 'kasse'],
-  'KB/Privat-KB': ['basis', 'ablage'],
+  'KB/Privat-KB': ['basis', 'ablage', 'pvsplan'],
   'KFO/Kassen-KFO': ['basis', 'ablage', 'kasse'],
   'KFO/Privat-KFO': ['basis', 'ablage'],
   Start: ['start'],
