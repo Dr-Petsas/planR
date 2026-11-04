@@ -128,6 +128,14 @@ const TONNE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true
 const PFEIL = (d: string) => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`
 const EXPORT = PFEIL('M12 4v11M7 10l5 5 5-5M5 20h14')
 const IMPORT = PFEIL('M12 15V4M7 9l5-5 5 5M5 20h14')
+const BRIEF = PFEIL('M3 6h18v12H3zM3 7l9 6 9-6')
+/** Planer mit „Versenden“ (Kostenvoranschlag per E-Mail) */
+const MIT_VERSAND = new Set(['privat-kb', 'privat-kv', 'privat-impl', 'privat-kons', 'privat-par', 'privat-kfo'])
+const versandUrl = (url: string) => {
+  const u = new URL(url, location.href)
+  u.searchParams.set('versand', '1')
+  return u.toString()
+}
 const LUPE = PFEIL('M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.5 15.5 20 20')
 const MIKRO = PFEIL('M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3')
 const DELFIN = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2 13.2C3.2 12.4 4 11.6 5 10.6 7.6 7.8 11.4 6.2 15 6.8L15.6 4.6 17.2 7.4C19.4 8.4 20.6 10.4 21 12.4L23 11.2 22 14.2 22.6 16.6 20.2 14.8C19.2 13.2 17.4 12 15 11.7 12 11.4 9 12.4 7 14.4L6 17 5.2 14.5C4 14.5 2.8 14.1 2 13.2Z"/><circle cx="6.4" cy="11.7" r=".65" fill="#fff"/></svg>'
@@ -184,6 +192,9 @@ function zeile(p: PlanKarte, i: number): string {
     : hkp
       ? `<span class="aktion aus" title="Kein Praxisprogramm mit Bridge eingestellt (Einstellungen)">${EXPORT}</span>`
       : `<button type="button" class="aktion" data-export="${i}" title="Als JSON exportieren" aria-label="Exportieren: ${name}">${EXPORT}</button>`
+  const versand = url && MIT_VERSAND.has(p.modul)
+    ? `<a class="aktion" href="${esc(versandUrl(url))}" title="Kostenvoranschlag per E-Mail an den Patienten" aria-label="Per E-Mail versenden: ${name}">${BRIEF}</a>`
+    : ''
   const import_ = ersetzbar(p)
     ? `<button type="button" class="aktion" data-import="${i}" title="Plan aus JSON-Datei ersetzen" aria-label="Importieren: ${name}">${IMPORT}</button>`
     : `<span class="aktion aus" title="Wartet nicht mehr auf Freigabe – nur in PlanR änderbar">${IMPORT}</span>`
@@ -194,7 +205,7 @@ function zeile(p: PlanKarte, i: number): string {
     <span class="sp-status">${esc(STATUS[p.status] || p.status)}</span>
     <span class="sp-betrag">${p.betrag ? esc(euro(p.betrag)) : ''}</span>
     <span class="sp-zeit">${esc(zeit(p.geaendert))}</span>
-    <span class="sp-aktionen">${befundKnopf(p, i)}${export_}${import_}${tonne}</span>
+    <span class="sp-aktionen">${befundKnopf(p, i)}${versand}${export_}${import_}${tonne}</span>
   </div>`
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { EMAIL, emlEntwurf, mailEntwurf, mailtoLink, pdfDateiname, versandAdresse, type Anschreiben } from '../versand'
 import { herunterladen, pdfAusVorschau } from '../pdf'
 
@@ -11,6 +11,13 @@ const FENSTER: CSSProperties = {
 const KOPF: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid #eee' }
 const FELD: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5 }
 const EINGABE: CSSProperties = { font: 'inherit', fontSize: 13.5, padding: '7px 9px', border: '1px solid #d6d0c4', borderRadius: 7 }
+
+/** `?versand=1` aus der PlanR-Übersicht: Dialog öffnen, sobald der Plan aus `?plan=` offen ist ('' = sofort) */
+let versandWunsch: string | null = (() => {
+  if (typeof location === 'undefined') return null
+  const q = new URLSearchParams(location.search)
+  return q.get('versand') === '1' ? (q.get('plan') ?? '').trim() : null
+})()
 
 async function api<T>(pfad: string, body?: unknown): Promise<T & { ok?: boolean; meldung?: string; message?: string }> {
   const r = await fetch(versandAdresse(pfad), {
@@ -52,6 +59,15 @@ export function VersandKnopf({ anschreiben, vorher }: { anschreiben: Anschreiben
       if (k?.email) setAn((alt) => alt || k.email!)
     }
   }
+
+  useEffect(() => {
+    if (versandWunsch === null || (versandWunsch && anschreiben.nummer !== versandWunsch)) return
+    versandWunsch = null
+    const u = new URL(location.href)
+    u.searchParams.delete('versand')
+    history.replaceState(history.state, '', u.toString())
+    void oeffnen()
+  }, [anschreiben.nummer])
 
   const pdf = async () => {
     setArbeit('PDF wird erstellt …')
