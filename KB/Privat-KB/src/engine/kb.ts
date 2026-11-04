@@ -123,22 +123,32 @@ export function vorlageAnwenden(positionen: Position[], neu: VorlagenPosition[],
   const out = positionen.map((p) => ({ ...p }))
   for (const v of neu) {
     const n = v.nr === 'UKPS' ? { ...v, nr: einst?.ukpsAnalog || '5220' } : v
-    const da = out.find((p) => p.ebene === n.ebene && p.nr === n.nr && p.faktor == null && p.preis == null
+    const da = out.find((p) => p.ebene === n.ebene && p.nr === n.nr && p.faktor == null && p.preis == n.preis
       && !p.analog === !n.analog && (p.text ?? '') === (n.text ?? ''))
     if (da) da.anzahl += n.anzahl
-    else out.push({ id: neueId(), ebene: n.ebene, nr: n.nr, anzahl: n.anzahl, ...(n.analog ? { analog: true, text: n.text } : {}) })
+    else out.push({
+      id: neueId(), ebene: n.ebene, nr: n.nr, anzahl: n.anzahl,
+      ...(n.analog ? { analog: true } : {}),
+      ...(n.text ? { text: n.text } : {}),
+      ...(n.preis != null ? { preis: n.preis } : {}),
+    })
   }
   return out
 }
 
 export const istUkps = (positionen: Position[]) =>
-  positionen.some((p) => p.anzahl > 0 && (p.nr.startsWith('F-UKPS') || (p.analog && /protrusion/i.test(p.text ?? ''))))
+  positionen.some((p) => p.anzahl > 0 && (p.nr.startsWith('F-UKPS') || (p.ebene === 'LABOR' && p.nr === '7607')
+    || (p.analog && /protrusion/i.test(p.text ?? ''))))
+
+/** Laborzeile mit festem Fremdlaborpreis (Vorlage oder Labor-XML) – bleibt beim Umstellen des Abformwegs unberührt. */
+const festpreis = (p: Position) => p.ebene === 'LABOR' && p.preis != null
 
 const menge = (positionen: Position[], ebene: Position['ebene'], nrs: string[]) =>
-  positionen.filter((p) => p.ebene === ebene && !p.analog && nrs.includes(p.nr) && p.anzahl > 0).reduce((s, p) => s + p.anzahl, 0)
+  positionen.filter((p) => p.ebene === ebene && !p.analog && !festpreis(p) && nrs.includes(p.nr) && p.anzahl > 0)
+    .reduce((s, p) => s + p.anzahl, 0)
 
 function ersetzen(positionen: Position[], ebene: Position['ebene'], alt: string[], nr: string, anzahl: number): Position[] {
-  const rest = positionen.filter((p) => !(p.ebene === ebene && !p.analog && alt.includes(p.nr)))
+  const rest = positionen.filter((p) => !(p.ebene === ebene && !p.analog && !festpreis(p) && alt.includes(p.nr)))
   if (!anzahl) return rest
   const da = rest.find((p) => p.ebene === ebene && p.nr === nr && !p.analog && p.preis == null && p.faktor == null)
   if (da) return rest.map((p) => (p === da ? { ...p, anzahl: p.anzahl + anzahl } : p))
@@ -155,7 +165,7 @@ export function abformungAnwenden(positionen: Position[], ziel: Abformung): Posi
     const abdruck = menge(pos, 'GOZ', ['0060'])
     if (abdruck) pos = ersetzen(pos, 'GOZ', ['0060'], '0065', SCAN_BEREICHE_BEIDE_KIEFER * abdruck)
     pos = ersetzen(pos, 'LABOR', LABOR_GIPSMODELLE, '0009', menge(pos, 'LABOR', LABOR_GIPSMODELLE))
-    pos = pos.filter((p) => !(p.ebene === 'LABOR' && !p.analog && LABOR_NUR_ABDRUCK.includes(p.nr)))
+    pos = pos.filter((p) => !(p.ebene === 'LABOR' && !p.analog && !festpreis(p) && LABOR_NUR_ABDRUCK.includes(p.nr)))
     return ersetzen(pos, 'LABOR', ['0701'], '0036', menge(pos, 'LABOR', ['0701']))
   }
   const scan = menge(pos, 'GOZ', ['0065'])

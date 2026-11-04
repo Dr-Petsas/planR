@@ -112,6 +112,8 @@ export interface VorlagenPosition {
   anzahl: number
   analog?: boolean
   text?: string
+  /** Fester Fremdlaborpreis (netto, ohne Preisstufe) */
+  preis?: number
 }
 
 export type VorlagenGruppe = 'Schienen' | 'UKPS bei OSAS' | 'Funktion und Nachsorge'
@@ -127,6 +129,19 @@ export interface Vorlage {
 const G = (nr: string, anzahl = 1): VorlagenPosition => ({ ebene: 'GOZ', nr, anzahl })
 const L = (nr: string, anzahl = 1): VorlagenPosition => ({ ebene: 'LABOR', nr, anzahl })
 const A = (nr: string, text: string, anzahl = 1): VorlagenPosition => ({ ebene: 'GOZ', nr, anzahl, analog: true, text })
+/** Fremdlaborposition mit festem Preis und Text des Labors */
+const F = (nr: string, text: string, preis: number, anzahl = 1): VorlagenPosition => ({ ebene: 'LABOR', nr, anzahl, text, preis })
+
+/** ResMed Narval (Polyamid, digital), Preise der Rechnung 6772594 vom 15.10.2026, netto zzgl. 7 % MwSt. */
+export const RESMED_NARVAL: VorlagenPosition[] = [
+  F('0009', 'Modell aus Kunststoff inkl. Material CAM', 10.14, 2),
+  F('0409', 'Digitale Einartikulation mittelwertig', 14.89),
+  F('7607', 'Unterkieferprotrusionsschiene aus Polyamid (ResMed Narval)', 389.68),
+  F('7626', 'Befestigungselement Protrusionselement UKPS', 26.29, 4),
+  F('7627', 'Montage Protrusionselement UKPS', 26.29, 2),
+  F('0701', 'Versandkosten', 7.17),
+]
+export const RESMED_MUNDOEFFNUNG = F('7628', 'Befestigungselement Mundöffnungsbegrenzung UKPS', 15.10, 4)
 
 export const UKPS_TEXT = 'Unterkieferprotrusionsschiene zweiteilig bei OSAS: Bestimmung der therapeutischen Protrusion, Eingliederung und Einweisung'
 export const UKPS_TITRATION_TEXT = 'Nachstellen der Protrusion einer UKPS (Titration), je Sitzung'
@@ -158,7 +173,15 @@ const SCHIENEN: Omit<Vorlage, 'gruppe'>[] = [
 
 const UKPS: Omit<Vorlage, 'gruppe'>[] = [
   {
-    id: 'ukps', titel: 'UKPS anfertigen', text: 'analog § 6 GOZ, Protrusionsregistrat, Fremdlabor',
+    id: 'ukps-resmed', titel: 'UKPS ResMed Narval', text: 'analog § 6 GOZ, Intraoralscan, Labor ResMed (Preise 10/2026)',
+    pos: [G('0065', 6), A('UKPS', UKPS_TEXT), G('8010'), ...RESMED_NARVAL],
+  },
+  {
+    id: 'ukps-resmed-mo', titel: 'UKPS ResMed Narval + Mundöffnung', text: 'wie oben, mit Mundöffnungsbegrenzung (4 Befestigungen)',
+    pos: [G('0065', 6), A('UKPS', UKPS_TEXT), G('8010'), ...RESMED_NARVAL, RESMED_MUNDOEFFNUNG],
+  },
+  {
+    id: 'ukps', titel: 'UKPS anderes Labor', text: 'analog § 6 GOZ, Protrusionsregistrat, Preis lt. Kostenvoranschlag',
     pos: [G('0060'), A('UKPS', UKPS_TEXT), G('8010'), L('0002', 2), L('0402'), L('F-UKPS'), L('0701'), L('0732', 2)],
   },
   {

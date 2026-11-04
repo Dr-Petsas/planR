@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { abformungAnwenden, laborXmlUebernehmen, rechnen, vorlageAnwenden } from './kb'
+import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, vorlageAnwenden } from './kb'
 import { laborXmlLesen } from '../laborxml'
 import { gozPunkte, GOZ_PUNKTWERT } from './listen'
 import { VORLAGEN } from '../data/katalog'
@@ -85,6 +85,17 @@ describe('Privat-KB-Rechnung', () => {
     const r = rechnen({ ...p, regler: { ...p.regler, laborKlasse: 2 } }, e)
     expect(r.labor.find((z) => z.nr === 'F-UKPS')!.einzel).toBe(624)
     expect(r.warnungen).toEqual([])
+  })
+
+  it('UKPS ResMed Narval: Laborsumme = ResMed-Rechnung netto, Preisstufe und Abformweg ändern nichts', () => {
+    const p = { ...neuerPlan('T-1', einst), positionen: vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps-resmed')!.pos, einst) }
+    const r = rechnen({ ...p, regler: { ...p.regler, laborKlasse: 2 } }, einst)
+    expect(r.summeLabor).toBeCloseTo(589.76, 2)
+    expect(r.labor.find((z) => z.nr === '7607')!.einzel).toBe(389.68)
+    expect(istUkps(p.positionen)).toBe(true)
+    expect(abformungAnwenden(p.positionen, 'abdruck').filter((x) => x.ebene === 'LABOR')).toEqual(p.positionen.filter((x) => x.ebene === 'LABOR'))
+    const mo = { ...p, positionen: vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps-resmed-mo')!.pos, einst) }
+    expect(rechnen(mo, einst).summeLabor).toBeCloseTo(589.76 + 60.4, 2)
   })
 
   it('Intraoralscan: 0065 für beide Kiefer, gedruckte Modelle, Versand bei Datenlieferung', () => {
