@@ -7,7 +7,9 @@ import type { LaborImport } from './laborxml'
 
 export type { Patient, Praxis } from './stammdaten'
 
-export type Ebene = 'GOZ' | 'LABOR' | 'MATERIAL'
+export type Ebene = 'GOZ' | 'GOAE' | 'LABOR' | 'MATERIAL'
+/** Behandlungsthema: bestimmt Grundplan und welche Diagnostik der Umfang-Regler dazunimmt */
+export type Thema = 'osas' | 'bruxismus' | 'cmd'
 export type Abformung = 'abdruck' | 'scan'
 
 export interface Fremdlabor {
@@ -56,6 +58,7 @@ export interface Plan {
   bemerkung: string
   /** Schnellstart-Vorlagen, die im Plan stecken (ein zweiter Klick nimmt sie wieder heraus) */
   vorlagen?: string[]
+  thema?: Thema
 }
 
 export interface Einstellungen {

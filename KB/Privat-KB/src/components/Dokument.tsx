@@ -60,7 +60,7 @@ function Tabelle({ zeilen, mitFaktor }: { zeilen: Zeile[]; mitFaktor: boolean })
       <tbody>
         {zeilen.map((z) => (
           <tr key={z.id}>
-            <td className="mono">{z.nr}</td>
+            <td className="mono">{z.ebene === 'GOAE' ? `Ä${z.nr}` : z.nr}</td>
             <td>{z.text}</td>
             <td className="r">{z.anzahl}</td>
             {mitFaktor && <td className="r">{z.faktor ? faktorText(z.faktor) : ''}</td>}
@@ -117,6 +117,9 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           </p>
           {rechnung.honorar.some((z) => z.bemessung) && (
             <p>Mit „a“ gekennzeichnete Leistungen sind in der GOZ nicht beschrieben und werden nach § 6 Abs. 1 GOZ entsprechend einer gleichwertigen Leistung berechnet.</p>
+          )}
+          {rechnung.honorar.some((z) => z.ebene === 'GOAE') && (
+            <p>Mit „Ä“ gekennzeichnete Röntgenleistungen werden nach der Gebührenordnung für Ärzte berechnet (§ 6 Abs. 2 GOZ).</p>
           )}
           {ukps && <p>Hinweis für gesetzlich Versicherte: Bei ärztlich festgestellter obstruktiver Schlafapnoe und Veranlassung durch einen Schlafmediziner ist die UKPS Leistung der gesetzlichen Krankenversicherung.</p>}
           {rechnung.begruendung.length > 0 && <p>Für Faktoren über 2,3 erhalten Sie die Begründung mit der Rechnung (§ 10 Abs. 3 GOZ).</p>}

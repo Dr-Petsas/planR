@@ -74,6 +74,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .reglerleiste .xml-meldung { position: absolute; top: 100%; left: 0; right: 0; z-index: 6; margin: 2px 0 0; padding: 6px 8px 6px 22px; background: var(--papier); border: 1px solid var(--linie); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
 .reglerleiste .wahl { flex-wrap: nowrap; }
 .reglerleiste .wahl button { padding: 1px 8px; font-size: 12px; }
+.themenwahl { align-items: center; }
+.themenwahl > span { font-size: 11px; margin-right: 2px; }
+.themenwahl button { flex: 1; font-weight: 600; }
 .reglerleiste .klein-btn { padding: 1px 10px; font-size: 11.5px; white-space: nowrap; }
 .kl-block h4 { margin: 0; font-size: 13px; display: flex; align-items: baseline; gap: 6px; }
 .kl-block h4 span { font-size: 11px; font-weight: 400; color: var(--grau); }

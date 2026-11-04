@@ -1,5 +1,6 @@
 import gozMitgeliefert from '../data/goz-2012.json'
 import bebMitgeliefert from '../data/beb-itz-2024.json'
+import goaeDaten from '../data/goae-kb.json'
 import { aktuell } from '../daten'
 import type { GenutzteListe } from '../components/Listen'
 
@@ -30,6 +31,20 @@ export const GOZ_VEREINBARUNG_MAX = 5.0
 export const gozPunkte = (nr: string) => GOZ.get(nr)?.punkte ?? 0
 export const gozText = (nr: string) => GOZ.get(nr)?.text ?? ''
 export const gozEinzel = (nr: string, faktor: number) => runden(gozPunkte(nr) * GOZ_PUNKTWERT * faktor)
+
+/** GOÄ (nach § 6 Abs. 2 GOZ), hier nur Röntgen: Abschnitt O mit Schwelle 1,8 und Höchstsatz 2,5. */
+const GOAE = new Map((goaeDaten.eintraege as (Eintrag & { kat?: string })[]).map((e) => [e.nr, e] as const))
+export const GOAE_PUNKTWERT = goaeDaten.punktwert
+export const ROE_SCHWELLE = 1.8
+export const ROE_HOECHSTSATZ = 2.5
+export const goaeText = (nr: string) => GOAE.get(nr)?.text ?? ''
+export const istRoentgen = (nr: string) => GOAE.get(nr)?.kat === 'O'
+export const goaeEinzel = (nr: string, faktor: number) => runden((GOAE.get(nr)?.punkte ?? 0) * GOAE_PUNKTWERT * faktor)
+export const GOAE_POSITIONEN = [...GOAE.keys()]
+/** Röntgenfaktor zum GOZ-Faktor des Reglers: bis 2,3 höchstens 1,8, darüber gleichmäßig bis 2,5 bei 3,5. */
+export const roentgenFaktor = (f: number) =>
+  f <= GOZ_SCHWELLE ? Math.min(f, ROE_SCHWELLE)
+    : Math.min(ROE_HOECHSTSATZ, Math.round((ROE_SCHWELLE + (f - GOZ_SCHWELLE) * (ROE_HOECHSTSATZ - ROE_SCHWELLE) / (GOZ_HOECHSTSATZ - GOZ_SCHWELLE)) * 10) / 10)
 
 /** Preis der Laborliste für eine Labornummer (undefined = nicht gelistet). */
 export const laborListenPreis = (nr: string | undefined) => (nr ? LABOR.get(nr)?.preis : undefined)

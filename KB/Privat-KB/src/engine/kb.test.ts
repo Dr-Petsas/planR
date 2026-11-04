@@ -4,7 +4,8 @@ import { laborXmlLesen } from '../laborxml'
 import { gozPunkte, GOZ_PUNKTWERT } from './listen'
 import { VORLAGEN } from '../data/katalog'
 import { einstMigrieren, neuerPlan, STANDARD_EINSTELLUNGEN } from '../store'
-import type { Plan } from '../types'
+import type { Plan, Thema } from '../types'
+import { pvsPosition } from './pvs'
 
 const einst = STANDARD_EINSTELLUNGEN
 const planMit = (vorlage: string): Plan => {
@@ -87,18 +88,50 @@ describe('Privat-KB-Rechnung', () => {
     const basis = vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps-resmed')!.pos, einst)
     const nrs = (f: number, pos = basis) => umfangAnwenden(pos, f).filter((p) => p.umfang).map((p) => p.nr)
     expect(nrs(2.3)).toEqual([])
-    expect(nrs(2.6)).toEqual(['8000'])
-    expect(nrs(3.0)).toEqual(['8000', '8010', '8020'])
-    expect(nrs(3.5)).toEqual(['8000', '8010', '8035', '8080'])
+    expect(nrs(2.6)).toEqual(['5004', '8000'])
+    expect(nrs(3.0)).toEqual(['5004', '8000', '8010', '8020'])
+    expect(nrs(3.5)).toEqual(['5004', '8000', '8010', '8035', '8080'])
     // zurück auf 2,3 entfernt sie wieder
     expect(umfangAnwenden(umfangAnwenden(basis, 3.5), 2.3)).toEqual(basis)
     // von Hand gesetzte 8000 und kinematische Achse bleiben allein
     const mit = [...basis, { id: 'x', ebene: 'GOZ' as const, nr: '8000', anzahl: 1 }, { id: 'y', ebene: 'GOZ' as const, nr: '8030', anzahl: 1 }]
-    expect(nrs(3.5, mit)).toEqual(['8010', '8080'])
+    expect(nrs(3.5, mit)).toEqual(['5004', '8010', '8080'])
     // leerer Plan bleibt leer
     expect(umfangAnwenden([], 3.5)).toEqual([])
     const p = { ...neuerPlan('T-1', einst), positionen: umfangAnwenden(basis, 3.5) }
     expect(rechnen(p, einst).hinweise.some((h) => h.startsWith('Begleitpositionen'))).toBe(true)
+  })
+
+  it('Thema: eigene Diagnostik-Leiter je Thema, OPG als GOÄ 5004 mit Röntgenfaktor höchstens 2,5', () => {
+    const basis = vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'michigan')!.pos, einst)
+    const nrs = (f: number, thema: Thema) => umfangAnwenden(basis, f, thema).filter((p) => p.umfang).map((p) => `${p.ebene === 'GOAE' ? 'Ä' : ''}${p.nr}${p.anzahl > 1 ? `×${p.anzahl}` : ''}`)
+    expect(nrs(2.3, 'bruxismus')).toEqual([])
+    expect(nrs(3.3, 'bruxismus')).toEqual(['Ä5004', '8000', '8010×2', '8020', '8050', '8080'])
+    expect(nrs(3.5, 'bruxismus')).toEqual(['Ä5004', '8000', '8010×2', '8035', '8065', '8080'])
+    expect(nrs(2.4, 'cmd')).toEqual(['Ä5004'])
+    expect(nrs(3.5, 'cmd')).toEqual(['Ä5004', '8010×2', '8035', '8065', '8080', '8090'])
+    expect(nrs(3.5, 'osas')).toEqual(['Ä5004', '8000', '8010', '8035', '8080', 'Ä5090'])
+    // von Hand gesetzte 8060 sperrt die Bewegungsaufzeichnung des Reglers
+    const mit8060 = [...basis, { id: 'b', ebene: 'GOZ' as const, nr: '8060', anzahl: 1 }]
+    expect(umfangAnwenden(mit8060, 3.5, 'bruxismus').some((p) => p.umfang && ['8050', '8065'].includes(p.nr))).toBe(false)
+
+    const plan = (faktor: number): Plan => {
+      const p = neuerPlan('T-2', einst)
+      return { ...p, regler: { ...p.regler, faktor, faFaktor: faktor }, positionen: umfangAnwenden(basis, faktor, 'bruxismus') }
+    }
+    const opg = (f: number) => rechnen(plan(f), einst).honorar.find((z) => z.ebene === 'GOAE' && z.nr === '5004')!
+    expect(opg(2.6).faktor).toBe(2)
+    expect(opg(3.5).faktor).toBe(2.5)
+    expect(opg(3.5).einzel).toBe(Math.round(400 * 0.0582873 * 2.5 * 100) / 100)
+    expect(opg(5).faktor).toBe(2.5)
+    const r = rechnen(plan(3.5), einst)
+    expect(r.begruendung.some((z) => z.ebene === 'GOAE')).toBe(true)
+    expect(r.vereinbarung2.some((z) => z.ebene === 'GOAE')).toBe(false)
+    expect(pvsPosition(opg(3.5))).toMatchObject({ ebene: 'GOAE', nr: '5004', faktor: 2.5 })
+  })
+
+  it('Unterfütterung und Prothese umarbeiten sind ZE und keine Schnellstart-Vorlagen', () => {
+    expect(VORLAGEN.some((v) => ['unterfuetterung', 'umarbeitung'].includes(v.id))).toBe(false)
   })
 
   it('Vorlage wieder herausnehmen: nur ihr Beitrag geht, auch beim Intraoralscan', () => {

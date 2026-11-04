@@ -18,6 +18,7 @@ export function pvsPosition(z: Zeile, mwstSatz = 0): PvsPosition | null {
       ...(z.bemessung ? { bezeichnung } : {}),
     }
   }
+  if (z.ebene === 'GOAE') return NR.test(z.nr) ? { ebene: 'GOAE', nr: z.nr, ...basis, faktor: z.faktor ?? 1, art: pvsArt(z.nr, 'ZE') } : null
   if (z.ebene === 'MATERIAL') return { ebene: 'MAT', ...basis, labor: z.ausXml ? 'fremd' : 'eigen', bezeichnung, mwst: z.ausXml ? mwstSatz : 0 }
   return {
     ...(/^\d{4}$/.test(z.nr) ? { ebene: 'BEB' as const, nr: z.nr } : { ebene: 'LABOR' as const }),

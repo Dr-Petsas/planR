@@ -1,8 +1,8 @@
-import type { Abformung, Einstellungen, Plan, Rechnung, Regler as ReglerT } from '../types'
-import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen, umfangAnwenden } from '../engine/kb'
+import type { Abformung, Einstellungen, Plan, Rechnung, Regler as ReglerT, Thema } from '../types'
+import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen, umfangAnwenden, vorlageAnwenden } from '../engine/kb'
 import LaborXmlKnopf from './LaborXmlKnopf'
-import { GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX, gozText } from '../engine/listen'
-import { LABOR_KLASSE_FAKTOR, LABOR_KLASSE_NAMEN, laborKlasseName } from '../data/katalog'
+import { goaeText, GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX, gozText } from '../engine/listen'
+import { LABOR_KLASSE_FAKTOR, LABOR_KLASSE_NAMEN, laborKlasseName, THEMEN, VORLAGEN } from '../data/katalog'
 
 export const ABFORMUNG_NAME: Record<Abformung, string> = { abdruck: 'Abdruck', scan: 'Intraoralscan' }
 
@@ -35,14 +35,36 @@ export default function Regler({ plan, setPlan, einst, setEinst, rechnung }: Pro
   const setR = (patch: Partial<ReglerT>) => setPlan({ ...plan, regler: { ...r, ...patch } })
   const istVorgabe = einst.faktor === r.faktor && einst.faFaktor === r.faFaktor
   const begleit = plan.positionen.filter((p) => p.umfang)
+  const begleitNr = (p: Plan['positionen'][number]) => (p.ebene === 'GOAE' ? `Ä${p.nr}` : `${p.nr}${p.anzahl > 1 ? `×${p.anzahl}` : ''}`)
+
+  const themaWaehlen = (t: Thema) => {
+    const thema = plan.thema === t ? undefined : t
+    const th = THEMEN.find((x) => x.id === thema)
+    const eigene = plan.positionen.filter((p) => !p.umfang)
+    let positionen = eigene
+    let vorlagen = plan.vorlagen
+    if (th && !eigene.length) {
+      positionen = th.vorlagen.reduce((pos, id) => vorlageAnwenden(pos, VORLAGEN.find((v) => v.id === id)?.pos ?? [], einst), eigene)
+      if (plan.abformung === 'scan') positionen = abformungAnwenden(positionen, 'scan')
+      vorlagen = th.vorlagen
+    }
+    const diagnose = th && (!plan.diagnose.trim() || THEMEN.some((x) => x.diagnose === plan.diagnose)) ? th.diagnose : plan.diagnose
+    setPlan({ ...plan, thema, diagnose, vorlagen, positionen: umfangAnwenden(positionen, r.faktor, thema) })
+  }
 
   return (
     <div className="reglerleiste">
       <div className="kl-block kl-fuellung">
+        <div className="wahl themenwahl" title="Thema wählen, dann den Regler nach rechts schieben: mehr Funktionsdiagnostik, Röntgen und höhere Faktoren. Bei leerem Plan kommt der übliche Grundplan dazu.">
+          <span className="grau">Thema</span>
+          {THEMEN.map((t) => (
+            <button key={t.id} className={plan.thema === t.id ? 'aktiv' : ''} aria-pressed={plan.thema === t.id} onClick={() => themaWaehlen(t.id)}>{t.titel}</button>
+          ))}
+        </div>
         <FaktorRegler name="Umfang · Faktor" wert={r.faktor}
-          setzen={(f) => setPlan({ ...plan, regler: { ...r, faktor: f, faFaktor: f }, positionen: umfangAnwenden(plan.positionen, f) })} />
-        <div className="kzeile umfang-info" title={begleit.map((p) => `${p.nr} ${gozText(p.nr)}`).join('\n') || 'ab Faktor 2,6 kommen Begleitpositionen der Funktionsdiagnostik dazu'}>
-          {begleit.length ? <>+ {begleit.map((p) => p.nr).join(', ')} <span className="grau">(Begleitpositionen)</span></> : <span className="grau">einfach – ohne Begleitpositionen (ab 2,6: + 8000 ff.)</span>}
+          setzen={(f) => setPlan({ ...plan, regler: { ...r, faktor: f, faFaktor: f }, positionen: umfangAnwenden(plan.positionen, f, plan.thema) })} />
+        <div className="kzeile umfang-info" title={begleit.map((p) => `${begleitNr(p)} ${p.ebene === 'GOAE' ? goaeText(p.nr) : gozText(p.nr)}`).join('\n') || 'nach rechts kommen Funktionsdiagnostik und Röntgen dazu'}>
+          {begleit.length ? <>+ {begleit.map(begleitNr).join(', ')}</> : <span className="grau">einfach – nach rechts mehr Diagnostik</span>}
         </div>
       </div>
 

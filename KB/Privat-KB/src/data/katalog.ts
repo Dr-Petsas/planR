@@ -4,6 +4,8 @@
 // die Hausliste des Labors (z. B. ITZ) nummeriert teils anders, deshalb ordnet `labor`
 // jeder BEB-Position die Labornummer gleicher Bedeutung zu (Quelle KB/_quellen/privat-kb.json).
 
+import type { Thema } from '../types'
+
 export type GozGruppe = 'Aufbissbehelf' | 'Provisorium' | 'Funktionsanalyse' | 'Begleitend'
 
 export interface GozPosition {
@@ -106,7 +108,7 @@ export const BEB_POSITIONEN: BebPosition[] = [
 export const BEB = new Map(BEB_POSITIONEN.map((b) => [b.nr, b] as const))
 
 export interface VorlagenPosition {
-  ebene: 'GOZ' | 'LABOR'
+  ebene: 'GOZ' | 'GOAE' | 'LABOR'
   /** `UKPS` = Bemessungsleistung aus den Einstellungen */
   nr: string
   anzahl: number
@@ -179,10 +181,6 @@ const SCHIENEN: Omit<Vorlage, 'gruppe'>[] = [
     id: 'digital', titel: 'Digitale Schiene', text: 'Intraoralscan, gefräst (PMMA)',
     pos: [G('0065', 4), G('7010'), L('2957'), L('0732')],
   },
-  {
-    id: 'umarbeitung', titel: 'Prothese umarbeiten', text: 'zum Aufbissbehelf',
-    pos: [G('7020'), L('0002', 2), L('0402'), L('0732', 2)],
-  },
 ]
 
 const UKPS: Omit<Vorlage, 'gruppe'>[] = [
@@ -222,10 +220,6 @@ const FUNKTION: Omit<Vorlage, 'gruppe'>[] = [
     pos: [G('7040', 2), G('7050')],
   },
   {
-    id: 'unterfuetterung', titel: 'Unterfütterung', text: 'Wiederherstellung der Funktion',
-    pos: [G('7030'), L('8015'), L('0732', 2)],
-  },
-  {
     id: 'schienung', titel: 'Semipermanente Schienung', text: 'Ätztechnik, je Interdentalraum',
     pos: [G('7070', 5)],
   },
@@ -252,15 +246,42 @@ export const LABOR_KLASSE_FAKTOR = [0.85, 1, 1.2, 1.5, 1.8]
 export const LABOR_KLASSE_NAMEN = ['günstig', 'Standard', 'hochwertig', 'Premium', 'Spitzenlabor']
 export const laborKlasseName = (k: number) => LABOR_KLASSE_NAMEN[k] ?? 'Standard'
 
+const R = (nr: string): VorlagenPosition => ({ ebene: 'GOAE', nr, anzahl: 1 })
+
+/** Thema: Grundplan (Vorlagen bei leerem Plan), Diagnose-Vorschlag und die Diagnostik-Leiter des Umfang-Reglers */
+export const THEMEN: { id: Thema; titel: string; diagnose: string; vorlagen: string[] }[] = [
+  { id: 'osas', titel: 'OSAS', diagnose: 'Obstruktive Schlafapnoe (OSAS) / Schnarchen', vorlagen: ['ukps-resmed', 'ukps-titration'] },
+  { id: 'bruxismus', titel: 'Bruxismus', diagnose: 'Bruxismus (Knirschen/Pressen)', vorlagen: ['michigan', 'kontrolle'] },
+  { id: 'cmd', titel: 'CMD', diagnose: 'Craniomandibuläre Dysfunktion (CMD)', vorlagen: ['michigan', 'fal', 'kontrolle'] },
+]
+
 /**
- * Umfang-Regler: mit dem Faktor kommen Begleitpositionen der Funktionsdiagnostik dazu (je Faktor-Schwelle).
- * 8020 (arbiträr) und 8035 (kinematisch, elektronisch) schließen sich aus.
+ * Umfang-Regler: je weiter rechts (Faktor), desto mehr Diagnostik – je Thema eigene Leiter.
+ * 8020/8030/8035 (Scharnierachse) und 8050/8060/8065 (Bewegungsaufzeichnung) schließen sich jeweils aus.
  */
-export function umfangPositionen(faktor: number): VorlagenPosition[] {
-  const pos: VorlagenPosition[] = []
-  if (faktor >= 2.6) pos.push(G('8000'))
-  if (faktor >= 3.0) pos.push(G('8010'), G(faktor >= 3.5 ? '8035' : '8020'))
-  if (faktor >= 3.3) pos.push(G('8080'))
-  return pos
+export function umfangPositionen(faktor: number, thema?: Thema): VorlagenPosition[] {
+  const ab = (f: number) => faktor >= f
+  const achse = G(ab(3.5) ? '8035' : '8020')
+  if (thema === 'cmd') {
+    return [
+      ...(ab(2.4) ? [R('5004')] : []),
+      ...(ab(2.6) ? [G('8010', 2), achse] : []),
+      ...(ab(3.0) ? [G(ab(3.5) ? '8065' : '8050'), G('8080')] : []),
+      ...(ab(3.3) ? [G('8090')] : []),
+    ]
+  }
+  if (thema === 'bruxismus') {
+    return [
+      ...(ab(2.6) ? [R('5004'), G('8000')] : []),
+      ...(ab(3.0) ? [G('8010', 2), achse] : []),
+      ...(ab(3.3) ? [G(ab(3.5) ? '8065' : '8050'), G('8080')] : []),
+    ]
+  }
+  return [
+    ...(ab(2.6) ? [R('5004'), G('8000')] : []),
+    ...(ab(3.0) ? [G('8010'), achse] : []),
+    ...(ab(3.3) ? [G('8080'), ...(thema === 'osas' ? [R('5090')] : [])] : []),
+  ]
 }
 export const SCHARNIERACHSE = ['8020', '8030', '8035']
+export const BEWEGUNGSAUFZEICHNUNG = ['8050', '8060', '8065']

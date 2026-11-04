@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
 import { BEB_POSITIONEN, GOZ_POSITIONEN, UKPS_BEMESSUNG_STANDARD, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
 import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden, vorlageEnthalten, vorlageEntfernen } from '../engine/kb'
-import { gozText } from '../engine/listen'
+import { GOAE_POSITIONEN, goaeText, gozText } from '../engine/listen'
 
 interface Props {
   plan: Plan
@@ -25,11 +25,11 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   const vorlageUmschalten = (id: string, pos: VorlagenPosition[]) => {
     const eigene = plan.positionen.filter((p) => !p.umfang)
     if (aktiv.has(id)) {
-      setPlan({ ...plan, vorlagen: [...aktiv].filter((x) => x !== id), positionen: umfangAnwenden(vorlageEntfernen(eigene, pos, plan.abformung, einst), plan.regler.faktor) })
+      setPlan({ ...plan, vorlagen: [...aktiv].filter((x) => x !== id), positionen: umfangAnwenden(vorlageEntfernen(eigene, pos, plan.abformung, einst), plan.regler.faktor, plan.thema) })
       return
     }
     const neu = vorlageAnwenden(eigene, pos, einst)
-    setPlan({ ...plan, vorlagen: [...aktiv, id], positionen: umfangAnwenden(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu, plan.regler.faktor) })
+    setPlan({ ...plan, vorlagen: [...aktiv, id], positionen: umfangAnwenden(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu, plan.regler.faktor, plan.thema) })
   }
 
   const hinzufuegen = () => {
@@ -42,7 +42,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   }
 
   const gruppen = [
-    { titel: 'Honorar (GOZ)', ebenen: ['GOZ'] as Ebene[] },
+    { titel: 'Honorar (GOZ, GOÄ-Röntgen)', ebenen: ['GOZ', 'GOAE'] as Ebene[] },
     { titel: 'Labor und Material (§ 9 GOZ)', ebenen: ['LABOR', 'MATERIAL'] as Ebene[] },
   ]
 
@@ -86,7 +86,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                   const z = zeile(p.id)
                   return (
                     <tr key={p.id} className={z?.ohnePreis ? 'mit-warnung' : ''}>
-                      <td className="mono nr">{p.ebene === 'MATERIAL' ? 'Mat.' : p.analog ? `${p.nr}a` : p.nr}</td>
+                      <td className="mono nr">{p.ebene === 'MATERIAL' ? 'Mat.' : p.ebene === 'GOAE' ? `Ä${p.nr}` : p.analog ? `${p.nr}a` : p.nr}</td>
                       <td className="pos-text">
                         {p.umfang && <span className="xml-marke umfang-marke" title="vom Umfang-Regler hinzugefügt – nur berechnen, wenn erbracht">Umfang</span>}
                         {p.ebene === 'MATERIAL' ? (
@@ -103,7 +103,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                               </select>
                             </small>
                           </div>
-                        ) : ((t) => <span title={t}>{t}</span>)(z?.text ?? (p.ebene === 'GOZ' ? gozText(p.nr) : p.nr))}
+                        ) : ((t) => <span title={t}>{t}</span>)(z?.text ?? (p.ebene === 'GOZ' ? gozText(p.nr) : p.ebene === 'GOAE' ? goaeText(p.nr) : p.nr))}
                         {p.ausXml && <span className="xml-marke" title="Preis aus dem Labor-XML">XML</span>}                        {z?.platzhalter && <span className="xml-marke" title="Platzhalterpreis – Kostenvoranschlag einlesen">Platzhalter</span>}
                       </td>
                       <td className="r">
@@ -111,8 +111,8 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                           onChange={(e) => aendern(p.id, { anzahl: zahl(e.target.value) ?? 0 })} />
                       </td>
                       <td className="r">
-                        {p.ebene === 'GOZ' ? (
-                          <input className="zahl-feld" type="number" min={1} max={5} step={0.1} value={positionsFaktor(p, plan)}
+                        {p.ebene === 'GOZ' || p.ebene === 'GOAE' ? (
+                          <input className="zahl-feld" type="number" min={1} max={p.ebene === 'GOAE' ? 2.5 : 5} step={0.1} value={positionsFaktor(p, plan)}
                             title="eigener Faktor für diese Position (leer = Regler)"
                             onChange={(e) => aendern(p.id, { faktor: zahl(e.target.value) })} />
                         ) : (
@@ -136,9 +136,10 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
           <select value={neuEbene} onChange={(e) => {
             const eb = e.target.value as Ebene
             setNeuEbene(eb)
-            setNeuNr(eb === 'GOZ' ? '7010' : eb === 'LABOR' ? '7621' : '')
+            setNeuNr(eb === 'GOZ' ? '7010' : eb === 'GOAE' ? '5004' : eb === 'LABOR' ? '7621' : '')
           }}>
             <option value="GOZ">GOZ</option>
+            <option value="GOAE">Röntgen (GOÄ)</option>
             <option value="LABOR">Labor (BEB)</option>
             <option value="MATERIAL">Material</option>
           </select>
@@ -154,6 +155,11 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
               <optgroup label="Analog (§ 6 Abs. 1 GOZ)">
                 <option value="analog">Analogleistung, z. B. UKPS – Bemessung wählbar</option>
               </optgroup>
+            </select>
+          )}
+          {neuEbene === 'GOAE' && (
+            <select value={neuNr} onChange={(e) => setNeuNr(e.target.value)}>
+              {GOAE_POSITIONEN.map((nr) => <option key={nr} value={nr}>Ä{nr} {goaeText(nr)}</option>)}
             </select>
           )}
           {neuEbene === 'LABOR' && (

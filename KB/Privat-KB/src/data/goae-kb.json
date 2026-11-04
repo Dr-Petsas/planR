@@ -1,0 +1,10 @@
+{
+  "typ": "goae",
+  "name": "GOÄ – Röntgen für Schienentherapie und Funktionsdiagnostik (für Zahnärzte nach § 6 Abs. 2 GOZ)",
+  "punktwert": 0.0582873,
+  "quelle": "https://www.gesetze-im-internet.de/go__1982/anlage.html",
+  "eintraege": [
+    { "nr": "5004", "punkte": 400, "kat": "O", "text": "Panoramaschichtaufnahme der Kiefer (OPG)" },
+    { "nr": "5090", "punkte": 400, "kat": "O", "text": "Schädel-Übersicht in zwei Ebenen (Fernröntgenseitenbild)" }
+  ]
+}

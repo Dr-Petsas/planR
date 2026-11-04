@@ -6,12 +6,14 @@
 // Preisstufe des Reglers. Regeln aus GOZ Abschnitt H/J (KB/_quellen/privat-kb.json).
 
 import {
-  BEB, istFunktionsanalyse, LABOR_GIPSMODELLE, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, SCHARNIERACHSE, UKPS_BEMESSUNG_STANDARD,
-  umfangPositionen, type VorlagenPosition,
+  BEB, BEWEGUNGSAUFZEICHNUNG, istFunktionsanalyse, LABOR_GIPSMODELLE, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, SCHARNIERACHSE,
+  UKPS_BEMESSUNG_STANDARD, umfangPositionen, type VorlagenPosition,
 } from '../data/katalog'
 import { importVon, type LaborXml } from '../laborxml'
-import type { Abformung, Einstellungen, Plan, Position, Rechnung, Zeile } from '../types'
-import { gozEinzel, gozText, GOZ_HOECHSTSATZ, GOZ_SCHWELLE, laborListenPreis, runden } from './listen'
+import type { Abformung, Einstellungen, Plan, Position, Rechnung, Thema, Zeile } from '../types'
+import {
+  goaeEinzel, goaeText, gozEinzel, gozText, GOZ_HOECHSTSATZ, GOZ_SCHWELLE, istRoentgen, laborListenPreis, roentgenFaktor, ROE_HOECHSTSATZ, ROE_SCHWELLE, runden,
+} from './listen'
 
 export const euro = (x: number) =>
   x.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -32,10 +34,19 @@ const istPlatzhalter = (p: Position, einst: Einstellungen) =>
   p.preis == null && einst.laborPreise[p.nr] == null && !!BEB.get(p.nr)?.fremd
 
 export const positionsFaktor = (p: Position, plan: Plan) =>
-  p.faktor ?? (istFunktionsanalyse(p.nr) ? plan.regler.faFaktor : plan.regler.faktor)
+  p.faktor ?? (p.ebene === 'GOAE' ? roentgenFaktor(plan.regler.faktor) : istFunktionsanalyse(p.nr) ? plan.regler.faFaktor : plan.regler.faktor)
+
+/** Begründungsschwelle und Höchstsatz der Zeile (GOÄ-Röntgen 1,8/2,5, sonst GOZ 2,3/3,5) */
+export const grenzen = (z: { ebene: Zeile['ebene']; nr: string }) =>
+  z.ebene === 'GOAE' && istRoentgen(z.nr) ? { schwelle: ROE_SCHWELLE, hoechst: ROE_HOECHSTSATZ } : { schwelle: GOZ_SCHWELLE, hoechst: GOZ_HOECHSTSATZ }
 
 function zeileAus(p: Position, plan: Plan, einst: Einstellungen): Zeile {
   const anzahl = Math.max(0, p.anzahl || 0)
+  if (p.ebene === 'GOAE') {
+    const faktor = positionsFaktor(p, plan)
+    const einzel = goaeEinzel(p.nr, faktor)
+    return { id: p.id, ebene: 'GOAE', nr: p.nr, text: p.text || goaeText(p.nr) || `GOÄ ${p.nr}`, anzahl, faktor, einzel, summe: runden(einzel * anzahl), ohnePreis: !einzel }
+  }
   if (p.ebene === 'GOZ') {
     const faktor = positionsFaktor(p, plan)
     const einzel = gozEinzel(p.nr, faktor)
@@ -66,8 +77,8 @@ const anzahlVon = (plan: Plan, nr: string) =>
 
 export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   const zeilen = plan.positionen.filter((p) => p.anzahl > 0).map((p) => zeileAus(p, plan, einst))
-  const honorar = zeilen.filter((z) => z.ebene === 'GOZ')
-  const labor = zeilen.filter((z) => z.ebene !== 'GOZ')
+  const honorar = zeilen.filter((z) => z.ebene === 'GOZ' || z.ebene === 'GOAE')
+  const labor = zeilen.filter((z) => z.ebene === 'LABOR' || z.ebene === 'MATERIAL')
   const summeHonorar = runden(honorar.reduce((s, z) => s + z.summe, 0))
   const summeLabor = runden(labor.reduce((s, z) => s + z.summe, 0))
   const mwstSatz = einst.mwst ?? 7
@@ -90,10 +101,12 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     hinweise.push('BEB 7602 (zweiphasig): GOZ-Zuordnung ist strittig (7000 oder 7010) – nach Gestaltung der Oberfläche wählen.')
   }
 
-  const vereinbarung2 = honorar.filter((z) => (z.faktor ?? 0) > GOZ_HOECHSTSATZ)
-  const begruendung = honorar.filter((z) => (z.faktor ?? 0) > GOZ_SCHWELLE && (z.faktor ?? 0) <= GOZ_HOECHSTSATZ)
-  if (begruendung.length) hinweise.push('Faktoren über 2,3 brauchen eine schriftliche Begründung auf der Rechnung (§ 10 Abs. 3 GOZ).')
-  if (vereinbarung2.length) hinweise.push('Faktoren über 3,5 nur mit Vereinbarung nach § 2 Abs. 1 und 2 GOZ vor Behandlungsbeginn.')
+  const vereinbarung2 = honorar.filter((z) => (z.faktor ?? 0) > grenzen(z).hoechst)
+  const begruendung = honorar.filter((z) => (z.faktor ?? 0) > grenzen(z).schwelle && (z.faktor ?? 0) <= grenzen(z).hoechst)
+  if (begruendung.some((z) => z.ebene === 'GOZ')) hinweise.push('Faktoren über 2,3 brauchen eine schriftliche Begründung auf der Rechnung (§ 10 Abs. 3 GOZ).')
+  if (begruendung.some((z) => z.ebene === 'GOAE')) hinweise.push('Röntgen (GOÄ Abschnitt O) über 1,8 braucht eine schriftliche Begründung (§ 12 Abs. 3 GOÄ); höchstens 2,5.')
+  if (vereinbarung2.some((z) => z.ebene === 'GOZ')) hinweise.push('Faktoren über 3,5 nur mit Vereinbarung nach § 2 Abs. 1 und 2 GOZ vor Behandlungsbeginn.')
+  if (vereinbarung2.some((z) => z.ebene === 'GOAE')) warnungen.push('Röntgen (GOÄ Abschnitt O) über 2,5 ist nicht zulässig – auch nicht per Vereinbarung (§ 2 Abs. 3 GOÄ).')
 
   const ukps = istUkps(plan.positionen)
   if (ukps) {
@@ -103,7 +116,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     }
   }
   if (plan.positionen.some((p) => p.umfang)) {
-    hinweise.push('Begleitpositionen des Umfang-Reglers (8000 ff.) nur berechnen, wenn sie indiziert sind, erbracht und dokumentiert werden – sonst in der Zeile entfernen.')
+    hinweise.push('Begleitpositionen des Umfang-Reglers (Funktionsdiagnostik 8000 ff., Röntgen) nur berechnen, wenn sie indiziert sind, erbracht und dokumentiert werden – sonst in der Zeile entfernen. Röntgen nur mit rechtfertigender Indikation (§ 83 StrlSchG) und ohne aktuelle Vorbilder.')
   }
   if (honorar.some((z) => z.bemessung)) {
     hinweise.push('Analogleistung (§ 6 Abs. 1 GOZ): auf der Rechnung die erbrachte Leistung verständlich beschreiben, mit dem Hinweis „entsprechend“ und Nummer und Bezeichnung der Bemessungsleistung (§ 10 Abs. 4 GOZ).')
@@ -129,13 +142,14 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
 }
 
 /** Begleitpositionen zum Faktor des Umfang-Reglers; von Hand gesetzte Positionen bleiben und werden nicht verdoppelt. */
-export function umfangAnwenden(positionen: Position[], faktor: number): Position[] {
+export function umfangAnwenden(positionen: Position[], faktor: number, thema?: Thema): Position[] {
   const eigene = positionen.filter((p) => !p.umfang)
   if (!eigene.length) return eigene
-  const da = (nr: string) => eigene.some((p) => p.ebene === 'GOZ' && !p.analog && p.nr === nr)
-  const neu = umfangPositionen(faktor)
-    .filter((v) => !da(v.nr) && !(SCHARNIERACHSE.includes(v.nr) && SCHARNIERACHSE.some(da)))
-    .map((v): Position => ({ id: neueId(), ebene: 'GOZ', nr: v.nr, anzahl: v.anzahl, umfang: true }))
+  const da = (nr: string, ebene: Position['ebene'] = 'GOZ') => eigene.some((p) => p.ebene === ebene && !p.analog && p.nr === nr)
+  const gruppeBelegt = (nr: string) => [SCHARNIERACHSE, BEWEGUNGSAUFZEICHNUNG].some((g) => g.includes(nr) && g.some((x) => da(x)))
+  const neu = umfangPositionen(faktor, thema)
+    .filter((v) => !da(v.nr, v.ebene) && !gruppeBelegt(v.nr))
+    .map((v): Position => ({ id: neueId(), ebene: v.ebene, nr: v.nr, anzahl: v.anzahl, umfang: true }))
   return [...eigene, ...neu]
 }
 
