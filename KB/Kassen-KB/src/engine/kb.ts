@@ -113,7 +113,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   if (ueberHoechstpreis.length) warnungen.push(`Laborpreis über dem BEL-II-Höchstpreis der KZV (${ueberHoechstpreis.join(', ')}) – die Kasse erstattet höchstens den Listenpreis.`)
   if (plan.fremdlabor.import) {
     hinweise.push(`Laborpreise aus dem Labor-XML ${plan.fremdlabor.import.datei} (Rechnung ${plan.fremdlabor.import.rechnungsnummer || '—'}, ${euro(plan.fremdlabor.import.netto)} netto).`)
-  } else if (plan.labor === 'gewerbe' && labor.length) {
+  } else if (plan.labor === 'gewerbe' && plan.positionen.some((p) => p.ebene === 'BEL' && p.preis == null && p.anzahl > 0)) {
     hinweise.push('Fremdlabor: gerechnet mit dem BEL-II-Höchstpreis – Kostenvoranschlag des Labors als XML einlesen, dann stehen die echten Preise im Plan.')
   }
   const goae = honorar.some((z) => istGoae(z.nr))
@@ -144,13 +144,18 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
 }
 
 /** Fügt die Positionen einer Vorlage an; BEMA 2 nur einmal, sonst gleiche Positionen zusammenzählen. */
-export function vorlageAnwenden(positionen: Position[], neu: { ebene: Position['ebene']; nr: string; anzahl: number }[]): Position[] {
+export function vorlageAnwenden(
+  positionen: Position[], neu: { ebene: Position['ebene']; nr: string; anzahl: number; preis?: number; text?: string }[],
+): Position[] {
   const out = positionen.map((p) => ({ ...p }))
   for (const n of neu) {
-    const da = out.find((p) => p.ebene === n.ebene && p.nr === n.nr && p.preis == null && !p.text)
+    const da = out.find((p) => p.ebene === n.ebene && p.nr === n.nr && p.preis == n.preis && (p.text ?? '') === (n.text ?? ''))
     if (da && n.ebene === 'BEMA' && n.nr === '2') continue
     if (da) da.anzahl += n.anzahl
-    else out.push({ id: neueId(), ebene: n.ebene, nr: n.nr, anzahl: n.anzahl })
+    else out.push({
+      id: neueId(), ebene: n.ebene, nr: n.nr, anzahl: n.anzahl,
+      ...(n.preis != null ? { preis: n.preis } : {}), ...(n.text ? { text: n.text } : {}),
+    })
   }
   return out
 }
@@ -176,9 +181,10 @@ export function abformungAnwenden(positionen: Position[], ziel: Abformung): Posi
     if (da) return rest.map((p) => (p === da ? { ...p, anzahl: p.anzahl + modelle } : p))
     return [...rest, { id: neueId(), ebene: 'PRIVAT', nr: '0009', anzahl: modelle }]
   }
-  const gedruckt = mengeVon(positionen, 'PRIVAT', ['0009'])
+  const gedruckt = positionen.filter((p) => p.ebene === 'PRIVAT' && p.nr === '0009' && p.preis == null && p.anzahl > 0)
+    .reduce((s, p) => s + p.anzahl, 0)
   if (!gedruckt) return positionen
-  const rest = positionen.filter((p) => !(p.ebene === 'PRIVAT' && p.nr === '0009'))
+  const rest = positionen.filter((p) => !(p.ebene === 'PRIVAT' && p.nr === '0009' && p.preis == null))
   const neu: Position[] = [{ id: neueId(), ebene: 'BEL', nr: istUkps(positionen) ? '0015' : '0010', anzahl: gedruckt }]
   // UKPS: keine Pauschale 605, Abformmaterial nur in der tatsächlich entstandenen Höhe.
   if (!istUkps(positionen) && !rest.some((p) => p.ebene === 'MATERIAL' && p.nr === '605')) {

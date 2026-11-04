@@ -3,7 +3,8 @@
 
 import type { Art, Ebene } from '../types'
 
-export interface VorlagenPosition { ebene: Ebene; nr: string; anzahl: number }
+/** `preis`/`text`: fester Fremdlaborpreis und Text des Labors */
+export interface VorlagenPosition { ebene: Ebene; nr: string; anzahl: number; preis?: number; text?: string }
 
 export interface Vorlage {
   id: string
@@ -21,6 +22,18 @@ const A = (anzahl: number): VorlagenPosition => ({ ebene: 'MATERIAL', nr: '605',
 const UKPS_HONORAR = [B('UP1'), B('UP2'), B('UP3')]
 const UKPS_MODELLE = [L('0015', 6), L('0025', 2), L('0115'), L('0125'), L('0205'), L('0217', 2)]
 const UKPS_VERSAND = L('9335', 6)
+
+/** ResMed Narval, Rechnung 6773805 vom 15.10.2026: BEL-Nummer für die Kasse, Preis von ResMed (ohne Rabatt). */
+const R = (ebene: 'BEL' | 'PRIVAT', nr: string, text: string, preis: number, anzahl = 1): VorlagenPosition => ({ ebene, nr, anzahl, preis, text })
+const RESMED_KASSE = [
+  R('PRIVAT', '0009', 'Modell aus Kunststoff inkl. Material CAM (ResMed BEB 0009)', 10.14, 2),
+  R('PRIVAT', '0409', 'Digitale Einartikulation mittelwertig (ResMed BEB 0409)', 14.89),
+  R('BEL', '5010', 'UKPS aus Polyamid, ResMed Narval (BEB 7607)', 389.68),
+  R('BEL', '5100', 'Befestigungselement Protrusionselement UKPS (BEB 7626)', 26.29, 4),
+  R('BEL', '5110', 'Montage Protrusionselement UKPS (BEB 7627)', 26.29, 2),
+  R('BEL', '5200', 'Befestigungselement Mundöffnungsbegrenzung UKPS (BEB 7628)', 15.10, 4),
+  R('BEL', '9335', 'Versandkosten (BEB 0701)', 7.17),
+]
 
 export const VORLAGEN: Vorlage[] = [
   {
@@ -58,8 +71,8 @@ export const VORLAGEN: Vorlage[] = [
     pos: [...UKPS_HONORAR, ...UKPS_MODELLE, L('5010'), L('5100', 4), L('5110', 2), L('5200', 4), UKPS_VERSAND],
   },
   {
-    id: 'ukps-resmed', art: 'ukps', titel: 'UKPS ResMed Narval (Kasse)', text: 'Intraoralscan, Labor ResMed · lateral mit Mundöffnung, BEL-Höchstpreise',
-    pos: [...UKPS_HONORAR, L('5010'), L('5100', 4), L('5110', 2), L('5200', 4), UKPS_VERSAND],
+    id: 'ukps-resmed', art: 'ukps', titel: 'UKPS ResMed Narval (Kasse)', text: 'Intraoralscan, Labor ResMed · lateral mit Mundöffnung, Preise der ResMed-Rechnung',
+    pos: [...UKPS_HONORAR, ...RESMED_KASSE],
   },
   {
     id: 'ukps-oral', art: 'ukps', titel: 'UKPS oral', text: 'VDZI: orales Element · 1× Befestigung, 1× Element',
