@@ -3,6 +3,9 @@ import type { Einstellungen, Plan, Regler } from './types'
 import { useAblage } from './ablage'
 import { mk } from './mandant'
 import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
+import { UKPS_BEMESSUNG_STANDARD } from './data/katalog'
+
+const UKPS_STAND = 'bzaek-2026-07'
 
 const KEY_PLAN = mk('privat-kb.plan.v1')
 const KEY_EINST = mk('privat-kb.einstellungen.v1')
@@ -16,7 +19,8 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   naechsteNummer: 1,
   laborName: '',
   laborPreise: {},
-  ukpsAnalog: '5220',
+  ukpsAnalog: UKPS_BEMESSUNG_STANDARD,
+  ukpsStand: UKPS_STAND,
   mwst: 7,
 }
 
@@ -58,7 +62,9 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
 export function einstMigrieren(roh: unknown): Einstellungen {
   if (!roh || typeof roh !== 'object') return { ...STANDARD_EINSTELLUNGEN, praxis: standardPraxis() }
   const e = roh as Partial<Einstellungen>
-  return { ...STANDARD_EINSTELLUNGEN, ...e, praxis: praxisMigrieren(e.praxis), laborPreise: e.laborPreise ?? {} }
+  // Bis 11/2026 war 5220 voreingestellt – einmalig auf die BZÄK-Empfehlung umstellen, eigene Wahl bleibt danach.
+  const ukps = e.ukpsStand === UKPS_STAND ? {} : { ukpsAnalog: !e.ukpsAnalog || e.ukpsAnalog === '5220' ? UKPS_BEMESSUNG_STANDARD : e.ukpsAnalog, ukpsStand: UKPS_STAND }
+  return { ...STANDARD_EINSTELLUNGEN, ...e, ...ukps, praxis: praxisMigrieren(e.praxis), laborPreise: e.laborPreise ?? {} }
 }
 
 function lade(key: string): unknown | null {

@@ -3,7 +3,7 @@ import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, vorlageAnwend
 import { laborXmlLesen } from '../laborxml'
 import { gozPunkte, GOZ_PUNKTWERT } from './listen'
 import { VORLAGEN } from '../data/katalog'
-import { neuerPlan, STANDARD_EINSTELLUNGEN } from '../store'
+import { einstMigrieren, neuerPlan, STANDARD_EINSTELLUNGEN } from '../store'
 import type { Plan } from '../types'
 
 const einst = STANDARD_EINSTELLUNGEN
@@ -65,10 +65,11 @@ describe('Privat-KB-Rechnung', () => {
   it('UKPS: Analogleistung nach Bemessung aus den Einstellungen, Fremdlabor-Platzhalter', () => {
     const p = { ...neuerPlan('T-1', einst), positionen: vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps')!.pos, einst) }
     const r = rechnen(p, einst)
-    const analog = r.honorar.find((z) => z.bemessung)!
-    expect(analog.nr).toBe('5220a')
-    expect(analog.einzel).toBe(239.31)
-    expect(analog.text).toContain('entsprechend GOZ 5220')
+    expect(r.honorar.filter((z) => z.bemessung).map((z) => z.nr)).toEqual(['4000a', '8050a', '6070a'])
+    const analog = r.honorar.find((z) => z.nr === '6070a')!
+    expect(analog.einzel).toBeCloseTo(336.32, 1)
+    expect(analog.text).toContain('entsprechend GOZ 6070')
+    expect(r.hinweise.some((h) => h.includes('2 × 7010a'))).toBe(true)
     // 2 × Superhartgips 10,40 + Mittelwert 14,75 + UKPS Fremdlabor 480 (Platzhalter) + Versand 8,52 + 2 × Desinfektion 1,80
     expect(r.summeLabor).toBe(527.67)
     expect(r.warnungen.some((w) => w.includes('Fremdlabor-Platzhalter (F-UKPS)'))).toBe(true)
@@ -77,7 +78,15 @@ describe('Privat-KB-Rechnung', () => {
     // andere Bemessung
     const e = { ...einst, ukpsAnalog: '7010' }
     const p2 = { ...p, positionen: vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps')!.pos, e) }
-    expect(rechnen(p2, e).honorar.find((z) => z.bemessung)!.nr).toBe('7010a')
+    const r2 = rechnen(p2, e)
+    expect(r2.honorar.find((z) => z.nr === '7010a')!.anzahl).toBe(2)
+    expect(r2.hinweise.some((h) => h.includes('2 × 7010a'))).toBe(false)
+  })
+
+  it('Alte Voreinstellung 5220 wird einmalig auf die BZÄK-Empfehlung 6070 umgestellt', () => {
+    expect(einstMigrieren({ ukpsAnalog: '5220' }).ukpsAnalog).toBe('6070')
+    expect(einstMigrieren({ ukpsAnalog: '7010' }).ukpsAnalog).toBe('7010')
+    expect(einstMigrieren({ ukpsAnalog: '5220', ukpsStand: 'bzaek-2026-07' }).ukpsAnalog).toBe('5220')
   })
 
   it('Praxispreis für das Fremdlabor ersetzt den Platzhalter', () => {
@@ -107,7 +116,7 @@ describe('Privat-KB-Rechnung', () => {
     expect(scan.find((x) => x.nr === '0065')!.anzahl).toBe(6)
     expect(scan.find((x) => x.nr === '0009')!.anzahl).toBe(2)
     expect(scan.find((x) => x.nr === '0036')!.anzahl).toBe(1)
-    expect(scan.find((x) => x.analog)!.nr).toBe('5220')
+    expect(scan.some((x) => x.analog && x.nr === '6070')).toBe(true)
     const r = rechnen({ ...p, abformung: 'scan', positionen: scan }, einst)
     expect(r.hinweise.some((h) => h.startsWith('Intraoralscan'))).toBe(true)
     const zurueck = abformungAnwenden(scan, 'abdruck')
@@ -129,7 +138,7 @@ describe('Privat-KB-Rechnung', () => {
     expect(r.summeLabor).toBe(515)
     expect(r.warnungen).toEqual([])
     expect(plan.fremdlabor.name).toBe('Schlaflabor-Technik')
-    expect(plan.positionen.filter((x) => x.ebene === 'GOZ').length).toBe(3)
+    expect(plan.positionen.filter((x) => x.ebene === 'GOZ').length).toBe(5)
   })
 
   it('Vorlagen zählen gleiche Positionen zusammen', () => {

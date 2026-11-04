@@ -66,6 +66,8 @@ export interface Einstellungen {
   laborPreise: Record<string, number>
   /** Bemessungsleistung der UKPS-Anfertigung (analog § 6 Abs. 1 GOZ) */
   ukpsAnalog: string
+  /** Stand der UKPS-Voreinstellung (einmalige Umstellung auf die BZÄK-Empfehlung) */
+  ukpsStand?: string
   /** MwSt.-Satz in Prozent auf Laborleistungen (Praxismaterial ohne MwSt.) */
   mwst?: number
 }

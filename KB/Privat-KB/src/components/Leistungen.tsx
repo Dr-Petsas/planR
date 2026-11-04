@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
-import { BEB_POSITIONEN, GOZ_POSITIONEN, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
+import { BEB_POSITIONEN, GOZ_POSITIONEN, UKPS_BEMESSUNG_STANDARD, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
 import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, vorlageAnwenden } from '../engine/kb'
 import { gozText } from '../engine/listen'
 
@@ -27,7 +27,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
 
   const hinzufuegen = () => {
     if (neuEbene === 'GOZ' && neuNr === 'analog') {
-      setPos([...plan.positionen, { id: neueId(), ebene: 'GOZ', nr: einst.ukpsAnalog || '5220', anzahl: 1, analog: true, text: '' }])
+      setPos([...plan.positionen, { id: neueId(), ebene: 'GOZ', nr: einst.ukpsAnalog || UKPS_BEMESSUNG_STANDARD, anzahl: 1, analog: true, text: '' }])
       return
     }
     const nr = neuEbene === 'MATERIAL' ? 'Mat.' : neuNr

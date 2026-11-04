@@ -1,5 +1,5 @@
 import type { Einstellungen as EinstT } from '../types'
-import { BEB_POSITIONEN } from '../data/katalog'
+import { BEB_POSITIONEN, UKPS_BEMESSUNGEN } from '../data/katalog'
 import { GENUTZTE_LISTEN, gozEinzel, gozText, LABORLISTE_NAME, laborListenPreis } from '../engine/listen'
 import { euro } from '../engine/kb'
 import { PraxisFelder } from './Stammdaten'
@@ -52,8 +52,8 @@ export default function Einstellungen({ einst, setEinst }: Props) {
           <label className="feld breit">
             UKPS bei OSAS: Bemessungsleistung (analog § 6 Abs. 1 GOZ)
             <select value={einst.ukpsAnalog} onChange={(e) => set({ ukpsAnalog: e.target.value })}>
-              {['5220', '5230', '7010', '7060'].map((nr) => (
-                <option key={nr} value={nr}>GOZ {nr} – {euro(gozEinzel(nr, 2.3))} bei 2,3 · {gozText(nr).slice(0, 70)}</option>
+              {UKPS_BEMESSUNGEN.map(({ nr, titel }) => (
+                <option key={nr} value={nr}>GOZ {nr} ({titel}) – {euro(gozEinzel(nr, 2.3) * (nr === '7010' ? 2 : 1))} bei 2,3 · {gozText(nr).slice(0, 60)}</option>
               ))}
             </select>
           </label>

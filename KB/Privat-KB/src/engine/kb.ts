@@ -6,7 +6,8 @@
 // Preisstufe des Reglers. Regeln aus GOZ Abschnitt H/J (KB/_quellen/privat-kb.json).
 
 import {
-  BEB, istFunktionsanalyse, LABOR_GIPSMODELLE, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, type VorlagenPosition,
+  BEB, istFunktionsanalyse, LABOR_GIPSMODELLE, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, UKPS_BEMESSUNG_STANDARD,
+  type VorlagenPosition,
 } from '../data/katalog'
 import { importVon, type LaborXml } from '../laborxml'
 import type { Abformung, Einstellungen, Plan, Position, Rechnung, Zeile } from '../types'
@@ -97,6 +98,9 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   const ukps = istUkps(plan.positionen)
   if (ukps) {
     hinweise.push('Gesetzlich Versicherte: die UKPS bei OSAS ist Kassenleistung (BEMA UP1–UP6) – mit Veranlassung Schlafmedizin den Kassen-KB-Planer verwenden.')
+    if (plan.positionen.some((p) => p.analog && /^Eingliederung einer Unterkieferprotrusionsschiene/.test(p.text ?? '') && p.nr !== '7010')) {
+      hinweise.push('PKV und Beihilfe erstatten die Eingliederung der UKPS oft nur nach 2 × 7010a – Patienten vorab über einen möglichen Eigenanteil informieren (BZÄK-Patienteninformation UKPS). Der Vergütungsanspruch bleibt davon unberührt.')
+    }
   }
   if (honorar.some((z) => z.bemessung)) {
     hinweise.push('Analogleistung (§ 6 Abs. 1 GOZ): auf der Rechnung die erbrachte Leistung verständlich beschreiben, mit dem Hinweis „entsprechend“ und Nummer und Bezeichnung der Bemessungsleistung (§ 10 Abs. 4 GOZ).')
@@ -121,11 +125,17 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   }
 }
 
+/** UKPS-Eingliederung: Bemessung aus den Einstellungen; 7010 (PKV/Beihilfe) bei zweiteiliger Schiene zweimal. */
+function ukpsBemessung(v: VorlagenPosition, einst?: Einstellungen): VorlagenPosition {
+  const nr = einst?.ukpsAnalog || UKPS_BEMESSUNG_STANDARD
+  return { ...v, nr, anzahl: v.anzahl * (nr === '7010' ? 2 : 1) }
+}
+
 /** Fügt die Positionen einer Vorlage an; gleiche Positionen werden zusammengezählt. `UKPS` = Bemessung aus den Einstellungen. */
 export function vorlageAnwenden(positionen: Position[], neu: VorlagenPosition[], einst?: Einstellungen): Position[] {
   const out = positionen.map((p) => ({ ...p }))
   for (const v of neu) {
-    const n = v.nr === 'UKPS' ? { ...v, nr: einst?.ukpsAnalog || '5220' } : v
+    const n = v.nr === 'UKPS' ? ukpsBemessung(v, einst) : v
     const da = out.find((p) => p.ebene === n.ebene && p.nr === n.nr && p.faktor == null && p.preis == n.preis
       && !p.analog === !n.analog && (p.text ?? '') === (n.text ?? ''))
     if (da) da.anzahl += n.anzahl

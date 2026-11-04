@@ -31,7 +31,7 @@ describe('Privat-KB fürs Praxisprogramm', () => {
     const p = plan(vorlageAnwenden([], vorlage('ukps'), einst))
     const r = rechnen(p, einst)
     const [kva] = pvsPlaene(p, r)
-    const analog = kva.positionen.find((x) => x.nr?.endsWith('a'))
+    const analog = kva.positionen.find((x) => x.nr === `${einst.ukpsAnalog}a`)
     expect(analog).toMatchObject({ ebene: 'GOZ', nr: `${einst.ukpsAnalog}a` })
     expect(analog?.bezeichnung).toMatch(/Unterkieferprotrusionsschiene/)
     expect(kva.positionen.find((x) => x.ebene === 'LABOR')).toMatchObject({ labor: 'fremd', einzelpreis: 480 })

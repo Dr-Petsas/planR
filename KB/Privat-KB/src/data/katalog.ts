@@ -143,8 +143,22 @@ export const RESMED_NARVAL: VorlagenPosition[] = [
 ]
 export const RESMED_MUNDOEFFNUNG = F('7628', 'Befestigungselement Mundöffnungsbegrenzung UKPS', 15.10, 4)
 
-export const UKPS_TEXT = 'Unterkieferprotrusionsschiene zweiteilig bei OSAS: Bestimmung der therapeutischen Protrusion, Eingliederung und Einweisung'
-export const UKPS_TITRATION_TEXT = 'Nachstellen der Protrusion einer UKPS (Titration), je Sitzung'
+/** Bemessung der UKPS-Eingliederung: BZÄK 07/2026 empfiehlt 6070, PKV und Beihilfe erkennen 2 × 7010 an. */
+export const UKPS_BEMESSUNG_STANDARD = '6070'
+export const UKPS_BEMESSUNGEN: { nr: string; titel: string }[] = [
+  { nr: '6070', titel: 'Empfehlung BZÄK 07/2026' },
+  { nr: '7010', titel: 'PKV und Beihilfe, zweimal (bimaxillär)' },
+  { nr: '5220', titel: 'eigene Wahl' },
+  { nr: '5230', titel: 'eigene Wahl' },
+]
+/** Texte und Bemessungen nach BZÄK, Ausschuss Gebührenrecht, „Unterkieferprotrusionsschiene zur Behandlung der Schlafapnoe“ (Juli 2026) */
+export const UKPS_TEXT = 'Eingliederung einer Unterkieferprotrusionsschiene (zweiteilig, bimaxillär verankert, individuell nachjustierbar)'
+const UKPS_DIAGNOSTIK = [
+  A('4000', 'Eingangsuntersuchung zur Versorgung mit einer Unterkieferprotrusionsschiene'),
+  G('0040'),
+  A('8050', 'Dreidimensionale Registrierung der Startprotrusionsposition'),
+]
+const UKPS_SCAN = [...UKPS_DIAGNOSTIK, G('0065', 6), A('UKPS', UKPS_TEXT)]
 export const VORLAGEN_GRUPPEN: VorlagenGruppe[] = ['Schienen', 'UKPS bei OSAS', 'Funktion und Nachsorge']
 
 /** Typische Behandlungen – fügen GOZ- und Laborpositionen hinzu, alles bleibt einzeln änderbar. */
@@ -173,24 +187,24 @@ const SCHIENEN: Omit<Vorlage, 'gruppe'>[] = [
 
 const UKPS: Omit<Vorlage, 'gruppe'>[] = [
   {
-    id: 'ukps-resmed', titel: 'UKPS ResMed Narval', text: 'analog § 6 GOZ, Intraoralscan, Labor ResMed (Preise 10/2026)',
-    pos: [G('0065', 6), A('UKPS', UKPS_TEXT), G('8010'), ...RESMED_NARVAL],
+    id: 'ukps-resmed', titel: 'UKPS ResMed Narval', text: 'nach BZÄK 07/2026, Intraoralscan, Labor ResMed (Preise 10/2026)',
+    pos: [...UKPS_SCAN, ...RESMED_NARVAL],
   },
   {
     id: 'ukps-resmed-mo', titel: 'UKPS ResMed Narval + Mundöffnung', text: 'wie oben, mit Mundöffnungsbegrenzung (4 Befestigungen)',
-    pos: [G('0065', 6), A('UKPS', UKPS_TEXT), G('8010'), ...RESMED_NARVAL, RESMED_MUNDOEFFNUNG],
+    pos: [...UKPS_SCAN, ...RESMED_NARVAL, RESMED_MUNDOEFFNUNG],
   },
   {
-    id: 'ukps', titel: 'UKPS anderes Labor', text: 'analog § 6 GOZ, Protrusionsregistrat, Preis lt. Kostenvoranschlag',
-    pos: [G('0060'), A('UKPS', UKPS_TEXT), G('8010'), L('0002', 2), L('0402'), L('F-UKPS'), L('0701'), L('0732', 2)],
+    id: 'ukps', titel: 'UKPS anderes Labor', text: 'nach BZÄK 07/2026, Abformung, Preis lt. Kostenvoranschlag',
+    pos: [...UKPS_DIAGNOSTIK, G('0060'), A('UKPS', UKPS_TEXT), L('0002', 2), L('0402'), L('F-UKPS'), L('0701'), L('0732', 2)],
   },
   {
-    id: 'ukps-titration', titel: 'Titration und Kontrollen', text: '2 × Protrusion nachstellen, 2 × Kontrolle',
-    pos: [A('7050', UKPS_TITRATION_TEXT, 2), G('7040', 2)],
+    id: 'ukps-titration', titel: 'Nachadaption und Kontrollen', text: '2 × Protrusionsgrad nachstellen, 2 × Kontrolle (je Sitzung)',
+    pos: [A('5090', 'Nachadaption des Protrusionsgrads einer Unterkieferprotrusionsschiene', 2), A('6210', 'Kontrolle der Unterkieferprotrusionsschiene, ggf. mit einfachen Korrekturen', 2)],
   },
   {
-    id: 'ukps-reparatur', titel: 'UKPS instand setzen', text: 'Wiederherstellung, Fremdlabor',
-    pos: [G('7030'), L('F-UKPS-REP'), L('0701'), L('0732', 2)],
+    id: 'ukps-reparatur', titel: 'UKPS instand setzen', text: 'Wiederherstellung mit Abformung, Fremdlabor',
+    pos: [A('5260', 'Maßnahmen zur Wiederherstellung der Funktion einer Unterkieferprotrusionsschiene (mit Abformung)'), L('F-UKPS-REP'), L('0701'), L('0732', 2)],
   },
 ]
 
