@@ -248,5 +248,19 @@ export const LABOR_NUR_ABDRUCK = ['0241']
 /** 0065 je Kieferhälfte bzw. Frontzahnbereich: beide Kiefer = 6 */
 export const SCAN_BEREICHE_BEIDE_KIEFER = 6
 
-export const LABOR_KLASSE_FAKTOR = [0.85, 1, 1.2]
-export const laborKlasseName = (k: number) => ['günstig', 'Standard', 'hochwertig'][k] ?? 'Standard'
+export const LABOR_KLASSE_FAKTOR = [0.85, 1, 1.2, 1.5, 1.8]
+export const LABOR_KLASSE_NAMEN = ['günstig', 'Standard', 'hochwertig', 'Premium', 'Spitzenlabor']
+export const laborKlasseName = (k: number) => LABOR_KLASSE_NAMEN[k] ?? 'Standard'
+
+/**
+ * Umfang-Regler: mit dem Faktor kommen Begleitpositionen der Funktionsdiagnostik dazu (je Faktor-Schwelle).
+ * 8020 (arbiträr) und 8035 (kinematisch, elektronisch) schließen sich aus.
+ */
+export function umfangPositionen(faktor: number): VorlagenPosition[] {
+  const pos: VorlagenPosition[] = []
+  if (faktor >= 2.6) pos.push(G('8000'))
+  if (faktor >= 3.0) pos.push(G('8010'), G(faktor >= 3.5 ? '8035' : '8020'))
+  if (faktor >= 3.3) pos.push(G('8080'))
+  return pos
+}
+export const SCHARNIERACHSE = ['8020', '8030', '8035']

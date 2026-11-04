@@ -30,6 +30,8 @@ export interface Position {
   analog?: boolean
   /** aus dem Labor-XML übernommen */
   ausXml?: boolean
+  /** vom Umfang-Regler gesetzte Begleitposition (wird beim Verschieben neu bestimmt) */
+  umfang?: boolean
 }
 
 export interface Regler {

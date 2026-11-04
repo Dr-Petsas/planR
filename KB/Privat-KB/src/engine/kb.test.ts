@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, vorlageAnwenden } from './kb'
+import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, umfangAnwenden, vorlageAnwenden } from './kb'
 import { laborXmlLesen } from '../laborxml'
 import { gozPunkte, GOZ_PUNKTWERT } from './listen'
 import { VORLAGEN } from '../data/katalog'
@@ -81,6 +81,33 @@ describe('Privat-KB-Rechnung', () => {
     const r2 = rechnen(p2, e)
     expect(r2.honorar.find((z) => z.nr === '7010a')!.anzahl).toBe(2)
     expect(r2.hinweise.some((h) => h.includes('2 × 7010a'))).toBe(false)
+  })
+
+  it('Umfang-Regler: mit dem Faktor kommen Begleitpositionen dazu, ohne Doppel, 8020/8035 schließen sich aus', () => {
+    const basis = vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps-resmed')!.pos, einst)
+    const nrs = (f: number, pos = basis) => umfangAnwenden(pos, f).filter((p) => p.umfang).map((p) => p.nr)
+    expect(nrs(2.3)).toEqual([])
+    expect(nrs(2.6)).toEqual(['8000'])
+    expect(nrs(3.0)).toEqual(['8000', '8010', '8020'])
+    expect(nrs(3.5)).toEqual(['8000', '8010', '8035', '8080'])
+    // zurück auf 2,3 entfernt sie wieder
+    expect(umfangAnwenden(umfangAnwenden(basis, 3.5), 2.3)).toEqual(basis)
+    // von Hand gesetzte 8000 und kinematische Achse bleiben allein
+    const mit = [...basis, { id: 'x', ebene: 'GOZ' as const, nr: '8000', anzahl: 1 }, { id: 'y', ebene: 'GOZ' as const, nr: '8030', anzahl: 1 }]
+    expect(nrs(3.5, mit)).toEqual(['8010', '8080'])
+    // leerer Plan bleibt leer
+    expect(umfangAnwenden([], 3.5)).toEqual([])
+    const p = { ...neuerPlan('T-1', einst), positionen: umfangAnwenden(basis, 3.5) }
+    expect(rechnen(p, einst).hinweise.some((h) => h.startsWith('Begleitpositionen'))).toBe(true)
+  })
+
+  it('Labor-Preisstufen bis +80 %, Fremdlabor-Festpreise bleiben', () => {
+    const pos = vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'michigan')!.pos, einst)
+    const p = neuerPlan('T-1', einst)
+    const labor = (k: number) => rechnen({ ...p, positionen: pos, regler: { ...p.regler, laborKlasse: k } }, einst).summeLabor
+    expect(labor(4) / labor(1)).toBeCloseTo(1.8, 1)
+    const resmed = vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps-resmed')!.pos, einst)
+    expect(rechnen({ ...p, positionen: resmed, regler: { ...p.regler, laborKlasse: 4 } }, einst).summeLabor).toBeCloseTo(589.76, 2)
   })
 
   it('Alte Voreinstellung 5220 wird einmalig auf die BZÄK-Empfehlung 6070 umgestellt', () => {

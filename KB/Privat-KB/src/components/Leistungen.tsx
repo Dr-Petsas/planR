@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
 import { BEB_POSITIONEN, GOZ_POSITIONEN, UKPS_BEMESSUNG_STANDARD, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
-import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, vorlageAnwenden } from '../engine/kb'
+import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden } from '../engine/kb'
 import { gozText } from '../engine/listen'
 
 interface Props {
@@ -21,8 +21,8 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   const zeile = (id: string) => [...rechnung.honorar, ...rechnung.labor].find((z) => z.id === id)
 
   const vorlageNehmen = (pos: VorlagenPosition[]) => {
-    const neu = vorlageAnwenden(plan.positionen, pos, einst)
-    setPos(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu)
+    const neu = vorlageAnwenden(plan.positionen.filter((p) => !p.umfang), pos, einst)
+    setPos(umfangAnwenden(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu, plan.regler.faktor))
   }
 
   const hinzufuegen = () => {
@@ -64,6 +64,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                     <tr key={p.id} className={z?.ohnePreis ? 'mit-warnung' : ''}>
                       <td className="mono nr">{p.ebene === 'MATERIAL' ? 'Mat.' : p.analog ? `${p.nr}a` : p.nr}</td>
                       <td className="pos-text">
+                        {p.umfang && <span className="xml-marke umfang-marke" title="vom Umfang-Regler hinzugefügt – nur berechnen, wenn erbracht">Umfang</span>}
                         {p.ebene === 'MATERIAL' ? (
                           <input className="text-feld" value={p.text ?? ''} placeholder="Material, z. B. Folie" onChange={(e) => aendern(p.id, { text: e.target.value })} />
                         ) : p.analog ? (
@@ -79,8 +80,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                             </small>
                           </div>
                         ) : ((t) => <span title={t}>{t}</span>)(z?.text ?? (p.ebene === 'GOZ' ? gozText(p.nr) : p.nr))}
-                        {p.ausXml && <span className="xml-marke" title="Preis aus dem Labor-XML">XML</span>}
-                        {z?.platzhalter && <span className="xml-marke" title="Platzhalterpreis – Kostenvoranschlag einlesen">Platzhalter</span>}
+                        {p.ausXml && <span className="xml-marke" title="Preis aus dem Labor-XML">XML</span>}                        {z?.platzhalter && <span className="xml-marke" title="Platzhalterpreis – Kostenvoranschlag einlesen">Platzhalter</span>}
                       </td>
                       <td className="r">
                         <input className="zahl-feld" type="number" min={0} step={1} value={p.anzahl}

@@ -69,6 +69,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .kzeile { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
 .kzeile .text-feld { flex: 1; min-width: 60px; padding: 1px 6px; font-size: 12px; }
 .kzeile .labor-xml { margin: 0; }
+.umfang-marke { margin: 0 6px 0 0; }
+.umfang-info { display: block; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; cursor: help; }
 .reglerleiste .xml-meldung { position: absolute; top: 100%; left: 0; right: 0; z-index: 6; margin: 2px 0 0; padding: 6px 8px 6px 22px; background: var(--papier); border: 1px solid var(--linie); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
 .reglerleiste .wahl { flex-wrap: nowrap; }
 .reglerleiste .wahl button { padding: 1px 8px; font-size: 12px; }

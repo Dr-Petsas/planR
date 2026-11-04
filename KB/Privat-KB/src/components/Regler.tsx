@@ -1,10 +1,10 @@
 import type { Abformung, Einstellungen, Plan, Rechnung, Regler as ReglerT } from '../types'
-import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen } from '../engine/kb'
+import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen, umfangAnwenden } from '../engine/kb'
 import LaborXmlKnopf from './LaborXmlKnopf'
+import { GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX, gozText } from '../engine/listen'
+import { LABOR_KLASSE_FAKTOR, LABOR_KLASSE_NAMEN, laborKlasseName } from '../data/katalog'
 
 export const ABFORMUNG_NAME: Record<Abformung, string> = { abdruck: 'Abdruck', scan: 'Intraoralscan' }
-import { GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX } from '../engine/listen'
-import { laborKlasseName } from '../data/katalog'
 
 interface Props {
   plan: Plan
@@ -34,18 +34,23 @@ export default function Regler({ plan, setPlan, einst, setEinst, rechnung }: Pro
   const r = plan.regler
   const setR = (patch: Partial<ReglerT>) => setPlan({ ...plan, regler: { ...r, ...patch } })
   const istVorgabe = einst.faktor === r.faktor && einst.faFaktor === r.faFaktor
+  const begleit = plan.positionen.filter((p) => p.umfang)
 
   return (
     <div className="reglerleiste">
       <div className="kl-block kl-fuellung">
-        <FaktorRegler name="Schiene/Prov." wert={r.faktor} setzen={(faktor) => setR({ faktor })} />
-        <FaktorRegler name="Funktion" wert={r.faFaktor} setzen={(faFaktor) => setR({ faFaktor })} />
+        <FaktorRegler name="Umfang · Faktor" wert={r.faktor}
+          setzen={(f) => setPlan({ ...plan, regler: { ...r, faktor: f, faFaktor: f }, positionen: umfangAnwenden(plan.positionen, f) })} />
+        <div className="kzeile umfang-info" title={begleit.map((p) => `${p.nr} ${gozText(p.nr)}`).join('\n') || 'ab Faktor 2,6 kommen Begleitpositionen der Funktionsdiagnostik dazu'}>
+          {begleit.length ? <>+ {begleit.map((p) => p.nr).join(', ')} <span className="grau">(Begleitpositionen)</span></> : <span className="grau">einfach – ohne Begleitpositionen (ab 2,6: + 8000 ff.)</span>}
+        </div>
       </div>
 
       <div className="kl-block kl-einlage">
-        <label className="kregler" title="Gilt für Listen- und Praxispreise; in der Zeile eingetragene und eingelesene Preise bleiben fest. −15 % · Liste · +20 %">
+        <label className="kregler" title={`Gilt für Listen- und Praxispreise: ${LABOR_KLASSE_NAMEN.map((n, i) => `${n} ${Math.round((LABOR_KLASSE_FAKTOR[i] - 1) * 100)} %`).join(' · ')}. In der Zeile eingetragene Preise, Fremdlabor-Rechnungen (z. B. ResMed) und eingelesene XML-Preise bleiben fest.`}>
           <span className="kregler-name">Labor <b>{laborKlasseName(r.laborKlasse)}</b></span>
-          <input type="range" min={0} max={2} step={1} value={r.laborKlasse} onChange={(e) => setR({ laborKlasse: +e.target.value })} />
+          <input type="range" min={0} max={LABOR_KLASSE_FAKTOR.length - 1} step={1} value={r.laborKlasse} onChange={(e) => setR({ laborKlasse: +e.target.value })} />
+          <span className="stufe">{((f) => (f === 1 ? 'Liste' : `${f > 1 ? '+' : '−'}${Math.round(Math.abs(f - 1) * 100)} %`))(LABOR_KLASSE_FAKTOR[r.laborKlasse] ?? 1)}</span>
         </label>
         <div className="kzeile">
           <input className="text-feld" value={plan.fremdlabor.name} placeholder="Fremdlabor"

@@ -6,8 +6,8 @@
 // Preisstufe des Reglers. Regeln aus GOZ Abschnitt H/J (KB/_quellen/privat-kb.json).
 
 import {
-  BEB, istFunktionsanalyse, LABOR_GIPSMODELLE, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, UKPS_BEMESSUNG_STANDARD,
-  type VorlagenPosition,
+  BEB, istFunktionsanalyse, LABOR_GIPSMODELLE, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, SCHARNIERACHSE, UKPS_BEMESSUNG_STANDARD,
+  umfangPositionen, type VorlagenPosition,
 } from '../data/katalog'
 import { importVon, type LaborXml } from '../laborxml'
 import type { Abformung, Einstellungen, Plan, Position, Rechnung, Zeile } from '../types'
@@ -102,6 +102,9 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
       hinweise.push('PKV und Beihilfe erstatten die Eingliederung der UKPS oft nur nach 2 × 7010a – Patienten vorab über einen möglichen Eigenanteil informieren (BZÄK-Patienteninformation UKPS). Der Vergütungsanspruch bleibt davon unberührt.')
     }
   }
+  if (plan.positionen.some((p) => p.umfang)) {
+    hinweise.push('Begleitpositionen des Umfang-Reglers (8000 ff.) nur berechnen, wenn sie indiziert sind, erbracht und dokumentiert werden – sonst in der Zeile entfernen.')
+  }
   if (honorar.some((z) => z.bemessung)) {
     hinweise.push('Analogleistung (§ 6 Abs. 1 GOZ): auf der Rechnung die erbrachte Leistung verständlich beschreiben, mit dem Hinweis „entsprechend“ und Nummer und Bezeichnung der Bemessungsleistung (§ 10 Abs. 4 GOZ).')
   }
@@ -123,6 +126,17 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     honorar, labor, summeHonorar, summeLabor, mwst, mwstSatz, gesamt: runden(summeHonorar + summeLabor + mwst),
     vereinbarung2, begruendung, hinweise, warnungen,
   }
+}
+
+/** Begleitpositionen zum Faktor des Umfang-Reglers; von Hand gesetzte Positionen bleiben und werden nicht verdoppelt. */
+export function umfangAnwenden(positionen: Position[], faktor: number): Position[] {
+  const eigene = positionen.filter((p) => !p.umfang)
+  if (!eigene.length) return eigene
+  const da = (nr: string) => eigene.some((p) => p.ebene === 'GOZ' && !p.analog && p.nr === nr)
+  const neu = umfangPositionen(faktor)
+    .filter((v) => !da(v.nr) && !(SCHARNIERACHSE.includes(v.nr) && SCHARNIERACHSE.some(da)))
+    .map((v): Position => ({ id: neueId(), ebene: 'GOZ', nr: v.nr, anzahl: v.anzahl, umfang: true }))
+  return [...eigene, ...neu]
 }
 
 /** UKPS-Eingliederung: Bemessung aus den Einstellungen; 7010 (PKV/Beihilfe) bei zweiteiliger Schiene zweimal. */
