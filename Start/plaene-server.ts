@@ -43,7 +43,7 @@ import {
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
-const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde') => `${ORDNER}/mandanten/${mandant}/${name}.json`
+const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet') => `${ORDNER}/mandanten/${mandant}/${name}.json`
 /** Pickadoc-Praxis → Mandant, Benutzer → DS-Win-Praxen (anmeldung.ts) */
 const ZUGAENGE = `${ORDNER}/zugaenge.json`
 const SITZUNGEN = `${ORDNER}/sitzungen.json`
@@ -564,6 +564,18 @@ const agentRufer = (mandant: string, praxen: number[] | null): Rufer => async <T
   if (Date.now() - start > 5000) console.log('[planr] Bridge', mandant, method, pfad.split('?')[0], '->', r.status, 'nach', Math.round((Date.now() - start) / 1000), 's')
   if (!r.ok) bridgeMelden(mandant, `${method} ${pfad.split('?')[0]} -> ${r.status} ${String((r.daten as { error?: unknown }).error ?? '').slice(0, 160)}`)
   return r as { ok: boolean; status: number; daten: T & { error?: string } }
+}
+
+/** Privatpläne mit „Versenden“ im Planer */
+const MIT_VERSAND = new Set(['privat-kb', 'privat-kv', 'privat-impl', 'privat-kons', 'privat-par', 'privat-kfo'])
+interface VersandVermerk { am: string; an: string; weg: 'nadine' | 'mailprogramm' }
+const versendetLesen = async (m: string) => {
+  const roh = await jsonLesen<unknown>(ABLAGE(m, 'versendet'), {})
+  return (roh && typeof roh === 'object' && !Array.isArray(roh) ? roh : {}) as Record<string, VersandVermerk>
+}
+const versandText = (v: VersandVermerk) => {
+  const am = new Date(v.am).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return v.weg === 'nadine' ? `Am ${am} über Nadine an ${v.an || 'den Patienten'} gesendet` : `Am ${am} als Mail an ${v.an || 'den Patienten'} vorbereitet (Mailprogramm)`
 }
 
 const vermerkeLesen = async () => {
@@ -1592,6 +1604,19 @@ async function versandEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
   const nadine = (await berechtigung(w.konto.clientId))?.mas === true
   if (url === '/api/versand' && req.method === 'GET') return json(res, 200, { ok: true, weg: nadine ? 'nadine' : 'mailprogramm' })
   if (req.method !== 'POST' || !(eigeneSeite(req) || herkunft(req))) return json(res, 403, { ok: false })
+  if (url === '/api/versand/vermerk') {
+    const b = JSON.parse(await lesenBody(req, 2000) || '{}') as Record<string, unknown>
+    const nummer = String(b.nummer ?? '').slice(0, 80)
+    const an = String(b.an ?? '').trim().slice(0, 200)
+    const weg = b.weg === 'nadine' ? 'nadine' : 'mailprogramm'
+    return exklusiv(async () => {
+      const k = (await dateiLesen(w.mandant)).find((x) => MIT_VERSAND.has(x.modul) && x.nummer === nummer && sichtbar(w, x))
+      if (!k) return json(res, 404, { ok: false })
+      const vermerk: VersandVermerk = { am: new Date().toISOString(), an, weg }
+      await jsonSchreiben(ABLAGE(w.mandant, 'versendet'), { ...await versendetLesen(w.mandant), [schluessel(k.modul, k.nummer)]: vermerk })
+      json(res, 200, { ok: true })
+    })
+  }
   if (!nadine) return json(res, 409, { ok: false, meldung: 'Versand über Nadine gibt es nur mit Pickadoc MAS.' })
   const weiter = (r: Awaited<ReturnType<typeof masPlanr>>) => json(res, r.status, r.daten)
   if (url === '/api/versand/kontakt') {
@@ -2282,7 +2307,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
-  if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))
+  if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden' || url === '/api/versand/vermerk') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/verbund' || url === '/api/verbund/code' || url === '/api/verbund/beitreten') return void verbundEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/rechnungen' || /^\/api\/rechnungen\/PR-\d{4}-\d{4}$/.test(url)) return void rechnungenEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
@@ -2378,10 +2403,13 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
       const namen = await behandlerLesen(m)
       for (const k of liste) if (!k.behandler && namen[k.modul]) k.behandler = namen[k.modul]
       const vermerke = await vermerkeLesen()
+      const versendet = await versendetLesen(m)
       const inhalte = await inhalteLesen(m)
       for (const k of liste) {
         const v = vermerke[schluessel(k.modul, k.nummer)]
         if (v) k.imPvs = vermerkText(v, pvsVon(v.pvs)?.name ?? v.pvs)
+        const vs = versendet[schluessel(k.modul, k.nummer)]
+        if (vs) k.versendet = versandText(vs)
         if (!k.kennung) {
           const kennung = kennungVon((inhalte[schluessel(k.modul, k.nummer)]?.plan as { patient?: unknown } | undefined)?.patient)
           if (kennung) k.kennung = kennung

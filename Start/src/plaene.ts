@@ -18,6 +18,8 @@ export interface PlanKarte {
   befund?: string
   /** HKP liegt schon im Praxisprogramm (Text für die Liste) */
   imPvs?: string
+  /** Kostenvoranschlag per E-Mail an den Patienten (Text für die Liste) */
+  versendet?: string
   /** DS-Win-Praxis (1–9) in einer Praxisgemeinschaft; fehlt = Hauptpraxis des Mandanten */
   praxis?: number
   /** Noch kein Plan, sondern der laufende Weg vom Befund zum Plan (Start/befund01.ts) */

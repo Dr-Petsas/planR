@@ -129,6 +129,7 @@ const PFEIL = (d: string) => `<svg viewBox="0 0 24 24" width="18" height="18" ar
 const EXPORT = PFEIL('M12 4v11M7 10l5 5 5-5M5 20h14')
 const IMPORT = PFEIL('M12 15V4M7 9l5-5 5 5M5 20h14')
 const BRIEF = PFEIL('M3 6h18v12H3zM3 7l9 6 9-6')
+const BRIEF_GESENDET = PFEIL('M13 18H3V6h18v6M3 7l9 6 9-6M15 18l2.5 2.5L22 16')
 /** Planer mit „Versenden“ (Kostenvoranschlag per E-Mail) */
 const MIT_VERSAND = new Set(['privat-kb', 'privat-kv', 'privat-impl', 'privat-kons', 'privat-par', 'privat-kfo'])
 const versandUrl = (url: string) => {
@@ -193,7 +194,7 @@ function zeile(p: PlanKarte, i: number): string {
       ? `<span class="aktion aus" title="Kein Praxisprogramm mit Bridge eingestellt (Einstellungen)">${EXPORT}</span>`
       : `<button type="button" class="aktion" data-export="${i}" title="Als JSON exportieren" aria-label="Exportieren: ${name}">${EXPORT}</button>`
   const versand = url && MIT_VERSAND.has(p.modul)
-    ? `<a class="aktion" href="${esc(versandUrl(url))}" title="Kostenvoranschlag per E-Mail an den Patienten" aria-label="Per E-Mail versenden: ${name}">${BRIEF}</a>`
+    ? `<a class="aktion versand${p.versendet ? ' versendet' : ''}" href="${esc(versandUrl(url))}" title="${esc(p.versendet ? `${p.versendet} – erneut senden` : 'Kostenvoranschlag per E-Mail an den Patienten')}" aria-label="Per E-Mail versenden: ${name}">${p.versendet ? BRIEF_GESENDET : BRIEF}</a>`
     : ''
   const import_ = ersetzbar(p)
     ? `<button type="button" class="aktion" data-import="${i}" title="Plan aus JSON-Datei ersetzen" aria-label="Importieren: ${name}">${IMPORT}</button>`

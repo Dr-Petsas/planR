@@ -79,7 +79,9 @@ export function VersandKnopf({ anschreiben, vorher }: { anschreiben: Anschreiben
     setMeldung(null)
     try {
       vorher?.()
-      setMeldung({ ok: true, text: await fn() })
+      const text = await fn()
+      setMeldung({ ok: true, text })
+      void api('/vermerk', { nummer: anschreiben.nummer, an: an.trim(), weg }).catch(() => {})
     } catch (e) {
       setMeldung({ ok: false, text: e instanceof Error ? e.message : String(e) })
     } finally {
