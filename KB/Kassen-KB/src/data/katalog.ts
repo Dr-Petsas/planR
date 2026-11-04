@@ -58,6 +58,10 @@ export const VORLAGEN: Vorlage[] = [
     pos: [...UKPS_HONORAR, ...UKPS_MODELLE, L('5010'), L('5100', 4), L('5110', 2), L('5200', 4), UKPS_VERSAND],
   },
   {
+    id: 'ukps-resmed', art: 'ukps', titel: 'UKPS ResMed Narval (Kasse)', text: 'Intraoralscan, Labor ResMed · lateral mit Mundöffnung, BEL-Höchstpreise',
+    pos: [...UKPS_HONORAR, L('5010'), L('5100', 4), L('5110', 2), L('5200', 4), UKPS_VERSAND],
+  },
+  {
     id: 'ukps-oral', art: 'ukps', titel: 'UKPS oral', text: 'VDZI: orales Element · 1× Befestigung, 1× Element',
     pos: [...UKPS_HONORAR, ...UKPS_MODELLE, L('5010'), L('5100'), L('5110'), UKPS_VERSAND],
   },

@@ -28,6 +28,12 @@ describe('Listen', () => {
 })
 
 describe('Kassen-KB-Rechnung', () => {
+  it('UKPS ResMed Narval: BEL-Höchstpreise KZV Nordrhein', () => {
+    const nordrhein: Einstellungen = { ...bayern, praxis: { ...bayern.praxis, plz: '40235' } }
+    const r = rechnen(mit(['ukps-resmed'], nordrhein), nordrhein)
+    expect(r.labor.map((z) => z.nr)).toEqual(['501 0', '510 0', '511 0', '520 0', '933 5'])
+    expect(r.summeLabor).toBe(472.75)
+  })
   it('K1 mit Laborkette der KZV Bayern (Gewerbe)', () => {
     const r = rechnen(mit(['k1']), bayern)
     // BEMA 2 (20 P.) + K1 (106 P.) × 1,2
