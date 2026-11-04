@@ -264,6 +264,14 @@ fieldset.sperre:disabled { opacity: .62; }
 .text-feld { width: 100%; padding: 3px 6px; border: 1px solid var(--linie); border-radius: 5px; background: white; }
 .pos-neu { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 6px; border-top: 1px dashed var(--linie); }
 .pos-neu select { padding: 5px 7px; border: 1px solid var(--linie); border-radius: 6px; background: white; max-width: 460px; }
+.vorschlaege { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; margin: 8px 0 4px; }
+.vs-titel { grid-column: 1 / -1; font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--stahl); }
+.vs-karte { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 7px 10px; border: 1px solid var(--linie); border-left: 3px solid var(--akzent); border-radius: 8px; background: white; cursor: pointer; transition: background .12s, transform .12s; }
+.vs-karte:hover { background: #f6f9fb; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+.vs-kopf { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.vs-preis { font-weight: 700; color: var(--akzent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vs-warum { font-size: 11px; color: var(--grau); line-height: 1.3; }
+.einzeln-link { font-size: 11.5px; margin-top: 4px; }
 .grau { color: var(--grau); }
 .hinweise li.warn { color: var(--rot); }
 .kl-block .text-feld { margin-top: 6px; }

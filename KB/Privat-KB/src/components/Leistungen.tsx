@@ -3,6 +3,10 @@ import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
 import { BEB_POSITIONEN, GOZ_POSITIONEN, UKPS_BEMESSUNG_STANDARD, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
 import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden, vorlageEnthalten, vorlageEntfernen } from '../engine/kb'
 import { GOAE_POSITIONEN, goaeText, gozText } from '../engine/listen'
+import { vorschlaege, vorschlagAnwenden } from '../engine/vorschlaege'
+
+/** Prothese umarbeiten und Unterfütterung gehören in den ZE-Planer */
+const ZE_LEISTUNGEN = ['7020', '7030']
 
 interface Props {
   plan: Plan
@@ -16,6 +20,7 @@ const zahl = (v: string) => (v === '' || Number.isNaN(+v) ? undefined : +v)
 export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   const [neuEbene, setNeuEbene] = useState<Ebene>('GOZ')
   const [neuNr, setNeuNr] = useState('7010')
+  const [einzeln, setEinzeln] = useState(false)
   const setPos = (positionen: Position[]) => setPlan({ ...plan, positionen })
   const aendern = (id: string, patch: Partial<Position>) => setPos(plan.positionen.map((p) => (p.id === id ? { ...p, ...patch } : p)))
   const zeile = (id: string) => [...rechnung.honorar, ...rechnung.labor].find((z) => z.id === id)
@@ -132,6 +137,25 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
           )
         })}
 
+        {(() => {
+          const vs = vorschlaege(plan, einst)
+          return vs.length > 0 && (
+            <div className="vorschlaege">
+              <span className="vs-titel">Passt dazu</span>
+              {vs.map((v) => (
+                <button key={v.id} className="vs-karte" onClick={() => setPlan(vorschlagAnwenden(plan, v, einst))}
+                  title={`Fügt hinzu: ${v.pos.map((p) => `${p.ebene === 'GOAE' ? 'Ä' : p.ebene === 'LABOR' ? 'BEB ' : ''}${p.nr}${p.anzahl > 1 ? ` × ${p.anzahl}` : ''}`).join(', ')}`}>
+                  <span className="vs-kopf"><b>{v.titel}</b><span className="vs-preis">{v.mehr >= 0 ? '+' : ''}{euro(v.mehr)}</span></span>
+                  <span className="vs-warum">{v.warum}</span>
+                </button>
+              ))}
+            </div>
+          )
+        })()}
+
+        {!einzeln ? (
+          <button className="link-btn einzeln-link" onClick={() => setEinzeln(true)}>einzelne Position …</button>
+        ) : (
         <div className="pos-neu">
           <select value={neuEbene} onChange={(e) => {
             const eb = e.target.value as Ebene
@@ -147,7 +171,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
             <select value={neuNr} onChange={(e) => setNeuNr(e.target.value)}>
               {['Aufbissbehelf', 'Provisorium', 'Funktionsanalyse', 'Begleitend'].map((gr) => (
                 <optgroup key={gr} label={gr}>
-                  {GOZ_POSITIONEN.filter((g) => g.gruppe === gr).map((g) => (
+                  {GOZ_POSITIONEN.filter((g) => g.gruppe === gr && !ZE_LEISTUNGEN.includes(g.nr)).map((g) => (
                     <option key={g.nr} value={g.nr}>{g.nr} {gozText(g.nr).slice(0, 70)}</option>
                   ))}
                 </optgroup>
@@ -175,8 +199,10 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
               </optgroup>
             </select>
           )}
-          <button className="sekundaer klein-btn" onClick={hinzufuegen}>Position hinzufügen</button>
+          <button className="sekundaer klein-btn" onClick={hinzufuegen}>hinzufügen</button>
+          <button className="x" title="schließen" onClick={() => setEinzeln(false)}>×</button>
         </div>
+        )}
       </div>
       {(rechnung.warnungen.length > 0 || rechnung.hinweise.length > 0) && (
         <ul className="hinweise">

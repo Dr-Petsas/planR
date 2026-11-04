@@ -6,6 +6,7 @@ import { VORLAGEN } from '../data/katalog'
 import { einstMigrieren, neuerPlan, STANDARD_EINSTELLUNGEN } from '../store'
 import type { Plan, Thema } from '../types'
 import { pvsPosition } from './pvs'
+import { vorschlaege, vorschlagAnwenden } from './vorschlaege'
 
 const einst = STANDARD_EINSTELLUNGEN
 const planMit = (vorlage: string): Plan => {
@@ -128,6 +129,21 @@ describe('Privat-KB-Rechnung', () => {
     expect(r.begruendung.some((z) => z.ebene === 'GOAE')).toBe(true)
     expect(r.vereinbarung2.some((z) => z.ebene === 'GOAE')).toBe(false)
     expect(pvsPosition(opg(3.5))).toMatchObject({ ebene: 'GOAE', nr: '5004', faktor: 2.5 })
+  })
+
+  it('Vorschläge: passend zu Plan und Thema, nie Vorhandenes, mit Mehrbetrag', () => {
+    const vor = (id: string) => VORLAGEN.find((v) => v.id === id)!.pos
+    const p0 = neuerPlan('T-3', einst)
+    const ukps: Plan = { ...p0, thema: 'osas', regler: { ...p0.regler, faktor: 2.3, faFaktor: 2.3 }, positionen: vorlageAnwenden([], vor('ukps-resmed'), einst) }
+    expect(vorschlaege(ukps, einst).map((v) => v.id)).toEqual(['titration', 'morgenschiene', 'mundoeffnung', 'opg'])
+    const mit = vorschlagAnwenden(ukps, vorschlaege(ukps, einst)[0], einst)
+    expect(vorschlaege(mit, einst).map((v) => v.id)).toEqual(['morgenschiene', 'mundoeffnung', 'opg', 'frs'])
+    const v = vorschlaege(ukps, einst).find((x) => x.id === 'opg')!
+    expect(v.mehr).toBe(Math.round(400 * 0.0582873 * 1.8 * 100) / 100)
+
+    const schiene: Plan = { ...p0, thema: 'cmd', regler: { ...p0.regler, faktor: 2.3, faFaktor: 2.3 }, positionen: vorlageAnwenden([], vor('michigan'), einst) }
+    expect(vorschlaege(schiene, einst).map((x) => x.id)).toEqual(['fal', 'opg', 'kontrolle'])
+    expect(vorschlaege({ ...schiene, positionen: [] }, einst)).toEqual([])
   })
 
   it('Unterfütterung und Prothese umarbeiten sind ZE und keine Schnellstart-Vorlagen', () => {
