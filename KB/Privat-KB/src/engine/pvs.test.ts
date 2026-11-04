@@ -21,9 +21,9 @@ describe('Privat-KB fürs Praxisprogramm', () => {
     expect(kva.positionen.filter((x) => x.ebene === 'GOZ').map((x) => x.nr)).toEqual(r.honorar.map((z) => z.nr))
     expect(kva.positionen.filter((x) => x.ebene === 'BEB').map((x) => x.nr)).toEqual(r.labor.map((z) => z.nr))
     expect(kva.positionen.find((x) => x.nr === '7010')).toMatchObject({ faktor: p.regler.faktor, art: 'ZE', zahn: '' })
-    expect(kva.positionen.find((x) => x.nr === '0002')).toMatchObject({ anzahl: 3, labor: 'fremd', mwst: 0 })
+    expect(kva.positionen.find((x) => x.nr === '0002')).toMatchObject({ anzahl: 3, labor: 'fremd', mwst: 7 })
     expect(kva.summen.honorar).toBeCloseTo(r.summeHonorar, 2)
-    expect(kva.summen.laborEigen + kva.summen.laborFremd).toBeCloseTo(r.summeLabor, 2)
+    expect(kva.summen.laborEigen + kva.summen.laborFremd).toBeCloseTo(r.summeLabor + r.mwst, 2)
     expect(kva.summen.gesamt).toBeCloseTo(r.gesamt, 2)
   })
 
@@ -51,7 +51,8 @@ describe('Privat-KB fürs Praxisprogramm', () => {
     expect(kva.positionen.find((x) => x.nr === '8000')?.faktor).toBe(p.regler.faFaktor)
     expect(kva.positionen.find((x) => x.ebene === 'MAT')).toMatchObject({ labor: 'eigen', einzelpreis: 12.5, bezeichnung: 'Abformmaterial' })
     expect(kva.positionen.filter((x) => x.ebene === 'MAT')).toHaveLength(1)
-    expect(kva.summen.laborEigen + kva.summen.laborFremd).toBeCloseTo(192.5, 2)
+    // 200 Labor − 20 Rabatt = 180 mit 7 % MwSt. (12,60), Praxismaterial 12,50 ohne
+    expect(kva.summen.laborEigen + kva.summen.laborFremd).toBeCloseTo(205.1, 2)
     expect(kva.summen.gesamt).toBeCloseTo(r.gesamt, 2)
   })
 

@@ -80,6 +80,7 @@ export default function Regler({ plan, setPlan, einst, setEinst, rechnung }: Pro
         <dl className="kl-werte">
           <dt>Honorar (GOZ)</dt><dd>{euro(rechnung.summeHonorar)}</dd>
           <dt>Labor und Material</dt><dd>{euro(rechnung.summeLabor)}</dd>
+          {rechnung.mwst > 0 && <><dt>MwSt. {rechnung.mwstSatz} % Labor</dt><dd>{euro(rechnung.mwst)}</dd></>}
           <dt className="kl-summe">Gesamt</dt><dd className="kl-summe">{euro(rechnung.gesamt)}</dd>
         </dl>
         <button className="klein-btn sekundaer" disabled={istVorgabe} onClick={() => setEinst({ ...einst, faktor: r.faktor, faFaktor: r.faFaktor })}

@@ -66,6 +66,8 @@ export interface Einstellungen {
   laborPreise: Record<string, number>
   /** Bemessungsleistung der UKPS-Anfertigung (analog § 6 Abs. 1 GOZ) */
   ukpsAnalog: string
+  /** MwSt.-Satz in Prozent auf Laborleistungen (Praxismaterial ohne MwSt.) */
+  mwst?: number
 }
 
 export interface Zeile {
@@ -90,7 +92,11 @@ export interface Rechnung {
   honorar: Zeile[]
   labor: Zeile[]
   summeHonorar: number
+  /** Labor und Material netto */
   summeLabor: number
+  /** MwSt. auf Laborleistungen und Labormaterial aus dem Labor-XML */
+  mwst: number
+  mwstSatz: number
   gesamt: number
   /** Positionen über dem 3,5-fachen Satz (§ 2 Abs. 1 und 2 GOZ) */
   vereinbarung2: Zeile[]

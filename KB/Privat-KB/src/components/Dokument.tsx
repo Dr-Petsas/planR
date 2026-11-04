@@ -102,6 +102,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
             <div className="kv-summe">
               <div><span>Honorar nach GOZ</span><b>{euro(rechnung.summeHonorar)}</b></div>
               <div><span>Material- und Laborkosten (§ 9 GOZ)</span><b>{euro(rechnung.summeLabor)}</b></div>
+              {rechnung.mwst > 0 && <div><span>MwSt. {rechnung.mwstSatz} % auf Laborleistungen</span><b>{euro(rechnung.mwst)}</b></div>}
               <div className="gesamt"><span>voraussichtliche Gesamtkosten</span><b>{euro(rechnung.gesamt)}</b></div>
             </div>
           </>

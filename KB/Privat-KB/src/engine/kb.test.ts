@@ -30,7 +30,8 @@ describe('Privat-KB-Rechnung', () => {
     expect(r.summeHonorar).toBe(103.49)
     // Labor aus der Laborliste: 3 Modelle à 10,40, Dublieren 21,33, Mittelwert 14,75, Schiene 110,70, 2 × Desinfektion 1,80
     expect(r.summeLabor).toBe(181.58)
-    expect(r.gesamt).toBe(285.07)
+    expect(r.mwst).toBe(12.71)
+    expect(r.gesamt).toBe(297.78)
     expect(r.warnungen).toEqual([])
   })
 
@@ -91,6 +92,7 @@ describe('Privat-KB-Rechnung', () => {
     const p = { ...neuerPlan('T-1', einst), positionen: vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps-resmed')!.pos, einst) }
     const r = rechnen({ ...p, regler: { ...p.regler, laborKlasse: 2 } }, einst)
     expect(r.summeLabor).toBeCloseTo(589.76, 2)
+    expect(r.mwst).toBe(41.28)
     expect(r.labor.find((z) => z.nr === '7607')!.einzel).toBe(389.68)
     expect(istUkps(p.positionen)).toBe(true)
     expect(abformungAnwenden(p.positionen, 'abdruck').filter((x) => x.ebene === 'LABOR')).toEqual(p.positionen.filter((x) => x.ebene === 'LABOR'))

@@ -4,10 +4,10 @@ import type { Plan, Rechnung, Zeile } from '../types'
 const NR = /^[0-9A-Za-zÄÖÜäöü.-]{1,6}$/
 
 /**
- * Eine Zeile des KB-Plans als Position fürs Praxisprogramm. Der Planer rechnet Labor ohne MwSt. (mwst 0);
- * Rabatte (negativer Preis) bleiben nur in der Laborsumme.
+ * Eine Zeile des KB-Plans als Position fürs Praxisprogramm. MwSt. wie im Planer: Laborleistungen und Labormaterial
+ * aus dem XML mit `mwstSatz`, Praxismaterial ohne; Rabatte (negativer Preis) bleiben nur in der Laborsumme.
  */
-export function pvsPosition(z: Zeile): PvsPosition | null {
+export function pvsPosition(z: Zeile, mwstSatz = 0): PvsPosition | null {
   if (z.anzahl <= 0 || z.einzel < 0) return null
   const basis = { zahn: '', anzahl: z.anzahl, einzelpreis: z.einzel, betrag: z.summe }
   const bezeichnung = z.text.slice(0, 300)
@@ -18,16 +18,16 @@ export function pvsPosition(z: Zeile): PvsPosition | null {
       ...(z.bemessung ? { bezeichnung } : {}),
     }
   }
-  if (z.ebene === 'MATERIAL') return { ebene: 'MAT', ...basis, labor: z.ausXml ? 'fremd' : 'eigen', bezeichnung, mwst: 0 }
+  if (z.ebene === 'MATERIAL') return { ebene: 'MAT', ...basis, labor: z.ausXml ? 'fremd' : 'eigen', bezeichnung, mwst: z.ausXml ? mwstSatz : 0 }
   return {
     ...(/^\d{4}$/.test(z.nr) ? { ebene: 'BEB' as const, nr: z.nr } : { ebene: 'LABOR' as const }),
-    ...basis, labor: 'fremd', bezeichnung, mwst: 0,
+    ...basis, labor: 'fremd', bezeichnung, mwst: mwstSatz,
   }
 }
 
 /** Privat-KB (Schienen, Funktionsdiagnostik) als Kostenvoranschlag: jede GOZ- und Laborzeile einzeln. */
 export function pvsPlaene(plan: Plan, r: Rechnung): PvsPlan[] {
-  const positionen = [...r.honorar, ...r.labor].map(pvsPosition).filter((p): p is PvsPosition => p !== null)
+  const positionen = [...r.honorar, ...r.labor].map((z) => pvsPosition(z, r.mwstSatz)).filter((p): p is PvsPosition => p !== null)
   if (!positionen.some((p) => p.ebene === 'GOZ')) return []
-  return [kostenvoranschlag({ art: 'ZE', titel: `PlanR Schiene ${plan.nummer}`, datum: plan.datum, positionen, laborBrutto: r.summeLabor })]
+  return [kostenvoranschlag({ art: 'ZE', titel: `PlanR Schiene ${plan.nummer}`, datum: plan.datum, positionen, laborBrutto: r.summeLabor + r.mwst })]
 }

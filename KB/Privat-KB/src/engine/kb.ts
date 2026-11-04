@@ -69,6 +69,9 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   const labor = zeilen.filter((z) => z.ebene !== 'GOZ')
   const summeHonorar = runden(honorar.reduce((s, z) => s + z.summe, 0))
   const summeLabor = runden(labor.reduce((s, z) => s + z.summe, 0))
+  const mwstSatz = einst.mwst ?? 7
+  const mwstBasis = labor.filter((z) => z.ebene === 'LABOR' || z.ausXml).reduce((s, z) => s + z.summe, 0)
+  const mwst = runden(Math.max(0, mwstBasis) * mwstSatz / 100)
 
   const hinweise: string[] = []
   const warnungen: string[] = []
@@ -113,7 +116,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   }
 
   return {
-    honorar, labor, summeHonorar, summeLabor, gesamt: runden(summeHonorar + summeLabor),
+    honorar, labor, summeHonorar, summeLabor, mwst, mwstSatz, gesamt: runden(summeHonorar + summeLabor + mwst),
     vereinbarung2, begruendung, hinweise, warnungen,
   }
 }

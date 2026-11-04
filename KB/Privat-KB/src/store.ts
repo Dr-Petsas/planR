@@ -17,6 +17,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   laborName: '',
   laborPreise: {},
   ukpsAnalog: '5220',
+  mwst: 7,
 }
 
 export const reglerAus = (e: Einstellungen): Regler => ({ faktor: e.faktor, faFaktor: e.faFaktor, laborKlasse: 1 })
