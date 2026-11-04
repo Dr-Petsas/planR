@@ -34,6 +34,9 @@ export interface Ablage<P> {
   freigeben: (daten: AblageDaten<P>) => void
   zuruecknehmen: (nummer: string) => void
   loeschen: (nummer: string) => void
+  /** In der PlanR-Übersicht angeklickter Plan (`?plan=`), sobald er in der Ablage liegt */
+  zuOeffnen?: AblageEintrag<P>
+  geoeffnet?: () => void
 }
 
 const HOECHSTENS = 200
@@ -106,6 +109,41 @@ async function abgleichHolen<P>(modul: string): Promise<{ geloescht: { nummer: s
   }
 }
 
+/** `?plan=<nummer>` aus der PlanR-Übersicht */
+const angefragt = typeof location === 'undefined' ? '' : (new URLSearchParams(location.search).get('plan') ?? '').trim().slice(0, 80)
+
+/** Gespeicherter Stand eines Plans aus der PlanR-Übersicht (gemeldet aus einem anderen Browser) */
+async function inhaltHolen<P>(modul: string, nummer: string): Promise<AblageEintrag<P> | null> {
+  if (!HUB_MODUL[modul] || !nummer || typeof fetch !== 'function') return null
+  try {
+    const q = new URLSearchParams({ nur: 'inhalt', modul, nummer })
+    const r = await fetch(`${hubAdresse()}?${q}`, { cache: 'no-store', credentials: 'include' })
+    if (!r.ok) return null
+    const d = (await r.json()) as Partial<AblageEintrag<P>>
+    if (!d.plan || typeof d.geaendert !== 'string') return null
+    return {
+      nummer, patient: String(d.patient ?? ''), betrag: Number(d.betrag) || 0, geaendert: d.geaendert,
+      status: d.status === 'freigegeben' ? 'freigegeben' : 'entwurf', plan: d.plan,
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Der Stand aus der Übersicht ersetzt den des Browsers nur, wenn er neuer ist. */
+export function angefragtUebernehmen<P>(liste: AblageEintrag<P>[], e: AblageEintrag<P> | null): AblageEintrag<P>[] {
+  if (!e) return liste
+  const da = liste.find((x) => x.nummer === e.nummer)
+  if (da && (da.geaendert || '') >= e.geaendert) return liste
+  return [e, ...liste.filter((x) => x.nummer !== e.nummer)].slice(0, HOECHSTENS)
+}
+
+function anfrageErledigt() {
+  const u = new URL(location.href)
+  u.searchParams.delete('plan')
+  history.replaceState(history.state, '', u.toString())
+}
+
 /** Zahnärztin/Zahnarzt aus dem Plan oder aus den Praxis-Einstellungen desselben Mandanten. */
 function behandlerVon(key: string, plan: unknown): string {
   const aus = (x: unknown) => (typeof x === 'string' ? x.trim().slice(0, 80) : '')
@@ -154,18 +192,25 @@ function lesen<P>(key: string): AblageEintrag<P>[] {
 
 export function useAblage<P>(key: string): Ablage<P> {
   const [liste, setListe] = useState<AblageEintrag<P>[]>(() => lesen<P>(key))
+  const [anfrage, setAnfrage] = useState<{ nummer: string; bereit: boolean } | null>(
+    () => (angefragt && HUB_MODUL[modulVon(key)] ? { nummer: angefragt, bereit: false } : null))
   useEffect(() => {
     localStorage.setItem(key, JSON.stringify(liste))
     hubMelden(key, liste)
   }, [key, liste])
   useEffect(() => {
     let vorbei = false
-    void abgleichHolen<P>(modulVon(key)).then(({ geloescht, eingang }) => {
-      if (vorbei || (!geloescht.length && !eingang.length)) return
-      setListe((alt) => {
-        const neu = abgleichen(alt, geloescht, eingang)
-        return neu.length === alt.length && neu.every((e, i) => e === alt[i]) ? alt : neu
-      })
+    const modul = modulVon(key)
+    const nummer = anfrage && !anfrage.bereit ? anfrage.nummer : ''
+    void Promise.all([abgleichHolen<P>(modul), nummer ? inhaltHolen<P>(modul, nummer) : null]).then(([{ geloescht, eingang }, gewuenscht]) => {
+      if (vorbei) return
+      if (geloescht.length || eingang.length || gewuenscht) {
+        setListe((alt) => {
+          const neu = angefragtUebernehmen(abgleichen(alt, geloescht, eingang), gewuenscht)
+          return neu.length === alt.length && neu.every((e, i) => e === alt[i]) ? alt : neu
+        })
+      }
+      if (nummer) setAnfrage({ nummer, bereit: true })
     })
     return () => { vorbei = true }
   }, [key])
@@ -196,7 +241,16 @@ export function useAblage<P>(key: string): Ablage<P> {
     return alt.filter((e) => e.nummer !== nummer)
   }), [key])
 
-  return { liste, eintrag, speichern, freigeben, zuruecknehmen, loeschen }
+  const zuOeffnen = anfrage?.bereit ? liste.find((e) => e.nummer === anfrage.nummer) : undefined
+  const geoeffnet = useCallback(() => {
+    setAnfrage(null)
+    anfrageErledigt()
+  }, [])
+  useEffect(() => {
+    if (anfrage?.bereit && !liste.some((e) => e.nummer === anfrage.nummer)) geoeffnet()
+  }, [anfrage, liste, geoeffnet])
+
+  return { liste, eintrag, speichern, freigeben, zuruecknehmen, loeschen, zuOeffnen, geoeffnet }
 }
 
 /** Unterscheidet sich der offene Plan vom abgelegten Stand? */

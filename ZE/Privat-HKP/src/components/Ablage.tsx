@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { datumZeit, type Ablage, type AblageDaten, type AblageEintrag } from '../ablage'
 
 const betragText = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
@@ -29,6 +29,12 @@ const FENSTER_KOPF: CSSProperties = {
 export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText, onLaden, extra }: KnoepfeProps<P>) {
   const frei = eintrag?.status === 'freigegeben'
   const fenster = useRef<HTMLDialogElement>(null)
+  const ziel = ablage.zuOeffnen
+  useEffect(() => {
+    if (!ziel) return
+    ablage.geoeffnet?.()
+    onLaden?.(ziel.plan)
+  }, [ziel])
   const zu = () => fenster.current?.close()
   return (
     <div className="aktionen">

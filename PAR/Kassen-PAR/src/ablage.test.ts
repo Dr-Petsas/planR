@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { abgleichen, datumZeit, ohneGeloeschte, ungespeichert, type AblageEintrag } from './ablage'
+import { abgleichen, angefragtUebernehmen, datumZeit, ohneGeloeschte, ungespeichert, type AblageEintrag } from './ablage'
+
+describe('Plan aus der Übersicht öffnen', () => {
+  const e = (nummer: string, geaendert: string, plan: object): AblageEintrag<object> => ({ nummer, patient: '', betrag: 0, geaendert, status: 'entwurf', plan })
+  it('fehlt im Browser: wird übernommen', () => {
+    expect(angefragtUebernehmen([e('A', '2026-11-01', {})], e('B', '2026-11-03', { x: 1 })).map((x) => x.nummer)).toEqual(['B', 'A'])
+  })
+  it('neuerer Stand ersetzt, älterer nicht', () => {
+    const lokal = [e('B', '2026-11-02', { alt: true })]
+    expect(angefragtUebernehmen(lokal, e('B', '2026-11-03', { neu: true }))[0].plan).toEqual({ neu: true })
+    expect(angefragtUebernehmen(lokal, e('B', '2026-11-01', { aelter: true }))).toBe(lokal)
+    expect(angefragtUebernehmen(lokal, null)).toBe(lokal)
+  })
+})
 
 const eintrag = (plan: object): AblageEintrag<object> => ({ nummer: 'X-1', patient: '', betrag: 0, geaendert: '', status: 'entwurf', plan })
 

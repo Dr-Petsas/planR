@@ -2341,6 +2341,19 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
     return
   }
   const q = new URLSearchParams(query)
+  if (req.method === 'GET' && q.get('nur') === 'inhalt') {
+    // Ein Plan aus der Übersicht für den Planer – auch wenn ihn ein anderer Browser gespeichert hat
+    const modul = q.get('modul') ?? ''
+    const nummer = q.get('nummer') ?? ''
+    if (!MODUL_RE.test(modul) || modul === 'hkp' || !nummer || nummer.length > 80) return json(res, 400, { ok: false })
+    Promise.all([dateiLesen(m), inhalteLesen(m)]).then(([datei, inhalte]) => {
+      const k = datei.find((x) => x.modul === modul && x.nummer === nummer && sichtbar(w, x))
+      const i = k ? inhalte[schluessel(modul, nummer)] : undefined
+      if (!k || !i?.plan) return json(res, 404, { ok: false })
+      json(res, 200, { ok: true, nummer, patient: k.patient, betrag: k.betrag, status: k.status, geaendert: i.geaendert || k.geaendert, plan: i.plan })
+    }).catch(() => json(res, 500, { ok: false }))
+    return
+  }
   if (req.method === 'GET' && (q.get('nur') === 'abgleich' || q.get('nur') === 'geloescht')) {
     // Abgleich für einen Planer: gelöschte Pläne und importierte Pläne seines Moduls
     const modul = q.get('modul') ?? ''

@@ -116,9 +116,10 @@ function planUrl(p: PlanKarte): string | null {
   if (!planer) return null
   const basis = adresse(planer, location)
   if (!basis) return null
-  if (!p.oeffnen) return basis
   const url = new URL(basis, location.href)
-  new URLSearchParams(p.oeffnen).forEach((v, k) => url.searchParams.set(k, v))
+  if (p.oeffnen) new URLSearchParams(p.oeffnen).forEach((v, k) => url.searchParams.set(k, v))
+  else if (p.modul !== 'hkp' && p.nummer) url.searchParams.set('plan', p.nummer)
+  else return basis
   return url.toString()
 }
 
