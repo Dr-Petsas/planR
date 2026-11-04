@@ -52,16 +52,32 @@ input, select, textarea { font: inherit; color: inherit; }
 .sekundaer:hover:not(:disabled) { background: var(--akzent-hell); }
 .klein-btn { padding: 3px 12px; font-size: 12px; }
 
-.reglerleiste { display: grid; grid-template-columns: 1.2fr 1fr 0.9fr; gap: 10px; padding: 10px 24px; }
+.reglerleiste { display: grid; grid-template-columns: 1.3fr 1.3fr auto auto; gap: 8px; padding: 6px 24px; }
 .kl-block {
-  background: var(--papier); border: 1px solid var(--linie); border-top: 4px solid var(--grau); border-radius: 8px;
-  padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  background: var(--papier); border: 1px solid var(--linie); border-left: 3px solid var(--grau); border-radius: 6px;
+  padding: 3px 10px; display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; position: relative;
 }
+.kregler { display: grid; grid-template-columns: 128px minmax(60px, 1fr) auto; align-items: center; gap: 8px; font-size: 12px; white-space: nowrap; }
+.kregler:not(:has(.stufe)) { grid-template-columns: 128px minmax(60px, 1fr); }
+.kregler-name { color: var(--grau); overflow: hidden; text-overflow: ellipsis; }
+.kregler-name b { color: var(--tinte); }
+.kregler input[type=range] { width: 100%; margin: 0; height: 16px; accent-color: var(--stahl); cursor: pointer; }
+.kl-einlage .kregler input[type=range] { accent-color: #8a7a55; }
+.stufe { font-size: 10.5px; padding: 0 6px; border-radius: 999px; background: var(--grund); color: var(--grau); min-width: 40px; text-align: center; }
+.stufe.warn { background: var(--warn-hell); color: var(--warn); }
+.stufe.rot { background: var(--rot-hell); color: var(--rot); font-weight: 600; }
+.kzeile { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.kzeile .text-feld { flex: 1; min-width: 60px; padding: 1px 6px; font-size: 12px; }
+.kzeile .labor-xml { margin: 0; }
+.reglerleiste .xml-meldung { position: absolute; top: 100%; left: 0; right: 0; z-index: 6; margin: 2px 0 0; padding: 6px 8px 6px 22px; background: var(--papier); border: 1px solid var(--linie); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.reglerleiste .wahl { flex-wrap: nowrap; }
+.reglerleiste .wahl button { padding: 1px 8px; font-size: 12px; }
+.reglerleiste .klein-btn { padding: 1px 10px; font-size: 11.5px; white-space: nowrap; }
 .kl-block h4 { margin: 0; font-size: 13px; display: flex; align-items: baseline; gap: 6px; }
 .kl-block h4 span { font-size: 11px; font-weight: 400; color: var(--grau); }
-.kl-fuellung { border-top-color: var(--stahl); }
-.kl-einlage { border-top-color: #8a7a55; }
-.kl-summenblock { border-top-color: var(--akzent); }
+.kl-fuellung { border-left-color: var(--stahl); }
+.kl-einlage { border-left-color: #8a7a55; }
+.kl-summenblock { border-left-color: var(--akzent); }
 .regler { display: grid; gap: 1px; font-size: 12px; }
 .regler-kopf b { color: var(--tinte); }
 .regler-kopf small { color: var(--grau); }
@@ -73,19 +89,22 @@ input, select, textarea { font: inherit; color: inherit; }
 .modell-wahl { display: flex; gap: 4px; }
 .modell-wahl button { flex: 1; border: 1px solid var(--linie); background: white; border-radius: 6px; padding: 4px 6px; font-size: 11.5px; color: var(--grau); }
 .modell-wahl button.aktiv { background: var(--stahl); border-color: var(--stahl); color: white; font-weight: 600; }
-.kl-werte { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; margin: 0; font-size: 12px; }
+.kl-werte { display: grid; grid-template-columns: auto auto; gap: 0 10px; margin: 0; font-size: 12px; white-space: nowrap; }
 .kl-werte dt { color: #555; }
 .kl-werte dd { margin: 0; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .kl-werte .kl-summe { font-weight: 700; color: var(--tinte); border-top: 1px solid var(--linie); padding-top: 2px; font-size: 13px; }
 .kl-summenblock .klein-btn { align-self: flex-start; margin-top: auto; }
 
 /* ---------- Arbeitsfläche ---------- */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.app > .kopfbereich { position: static; flex: none; }
 .arbeitsflaeche {
-  display: grid; grid-template-columns: minmax(640px, 1fr) minmax(520px, 760px);
-  gap: 24px; padding: 16px 24px; align-items: start;
+  flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px; padding: 12px 24px 0;
 }
-.editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.vorschau { position: sticky; top: 220px; max-height: calc(100vh - 240px); overflow: auto; border-radius: 4px; box-shadow: 0 6px 24px rgba(60, 40, 10, .12); }
+.editor { display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow: auto; padding-bottom: 16px; }
+.vorschau { overflow: auto; border-radius: 4px; box-shadow: 0 6px 24px rgba(60, 40, 10, .12); margin-bottom: 12px; }
+.editor > .reiter { position: sticky; top: 0; z-index: 2; background: var(--grund); }
 
 .reiter { display: flex; gap: 4px; border-bottom: 1px solid var(--linie); }
 .reiter button { background: none; border: none; padding: 10px 14px; color: var(--grau); border-bottom: 2px solid transparent; margin-bottom: -1px; }
@@ -188,14 +207,16 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 .kv-unterschriften span { display: block; border-bottom: 1px solid #555; height: 12mm; margin-bottom: 3px; }
 
 @media (max-width: 1400px) {
-  .arbeitsflaeche { grid-template-columns: 1fr; }
-  .vorschau { position: static; max-height: none; }
-  .reglerleiste { padding: 8px 16px; gap: 8px; }
-  .kl-block { padding: 6px 10px; gap: 4px; }
-  .regler-info:not(.begruendung) { display: none; }
+  .reglerleiste, .arbeitsflaeche { padding-left: 12px; padding-right: 12px; }
+  .kregler, .kregler:not(:has(.stufe)) { grid-template-columns: 104px minmax(50px, 1fr) auto; }
+}
+@media (max-width: 1100px) {
+  .reglerleiste { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 900px) {
-  .kopfbereich { position: static; }
+  .app { height: auto; }
+  .arbeitsflaeche { grid-template-columns: 1fr; }
+  .editor, .vorschau { overflow: visible; }
   .reglerleiste { grid-template-columns: 1fr; }
 }
 
@@ -247,6 +268,21 @@ fieldset.sperre:disabled { opacity: .62; }
 .xml-marke { margin-left: 6px; padding: 0 4px; border-radius: 3px; background: var(--akzent-hell); color: var(--akzent); font-size: 10px; font-weight: 600; }
 .link-btn { border: none; background: none; padding: 0; color: var(--akzent); text-decoration: underline; cursor: pointer; font-size: inherit; }
 .vorlagen-gruppe { margin: 10px 0 4px; font-size: 11px; font-weight: 600; color: var(--grau); text-transform: uppercase; letter-spacing: .4px; }
+.vorlagen-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-bottom: 6px; }
+.vorlagen-zeile .vorlagen-gruppe { margin: 0; width: 150px; flex: none; }
+.vorlage-chip { border: 1px solid var(--linie); background: white; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--tinte); }
+.vorlage-chip:hover:not(:disabled) { border-color: var(--akzent); background: var(--akzent-hell); }
+.pos-tabelle td.pos-text { max-width: 0; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.analog-zeile { display: flex; align-items: center; gap: 6px; }
+.analog-zeile .text-feld { flex: 1; min-width: 80px; }
+.analog-zeile small { white-space: nowrap; flex: none; }
+.analog-zeile select { width: 68px; padding: 1px 2px; border: 1px solid var(--linie); border-radius: 5px; background: white; font-size: 12px; }
+.pos-tabelle .zahl-feld { width: 58px; padding: 2px 4px; }
+.block { padding: 10px 14px; }
+.block-kopf { display: flex; align-items: baseline; justify-content: space-between; }
+.block-kopf .link-btn { font-size: 12px; font-weight: 400; color: var(--rot); }
+.block h3 small { font-weight: 400; font-size: 12px; }
+.kopfleiste { padding-top: 6px; padding-bottom: 6px; }
 .schalter { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .wahl { display: flex; gap: 4px; flex-wrap: wrap; }
 .wahl button { border: 1px solid var(--linie); background: white; border-radius: 6px; padding: 5px 10px; font-size: 12.5px; color: var(--grau); }

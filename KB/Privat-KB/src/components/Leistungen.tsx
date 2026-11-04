@@ -42,26 +42,13 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   return (
     <>
       <div className="block">
-        <h3>Behandlung wählen</h3>
-        <p className="hilfe">Jede Vorlage fügt die üblichen GOZ- und Laborpositionen hinzu – Anzahl, Faktor und Preis bleiben einzeln änderbar.</p>
-        {VORLAGEN_GRUPPEN.map((gr) => (
-          <div key={gr}>
-            <div className="vorlagen-gruppe">{gr}</div>
-            <div className="vorlagen">
-              {VORLAGEN.filter((v) => v.gruppe === gr).map((v) => (
-                <button key={v.id} className="vorlage" onClick={() => vorlageNehmen(v.pos)}>
-                  <b>{v.titel}</b>
-                  <small>{v.text}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="block">
-        <h3>Positionen</h3>
-        {plan.positionen.length === 0 && <p className="leer">Noch keine Position – oben eine Behandlung wählen oder unten einzeln hinzufügen.</p>}
+        <h3 className="block-kopf">
+          Positionen
+          {plan.positionen.length > 0 && (
+            <button className="link-btn" onClick={() => window.confirm('Alle Positionen aus dem Plan entfernen?') && setPos([])}>alle entfernen</button>
+          )}
+        </h3>
+        {plan.positionen.length === 0 && <p className="leer">Noch keine Position – unten eine Vorlage wählen oder einzeln hinzufügen.</p>}
         {gruppen.map((g) => {
           const pos = plan.positionen.filter((p) => g.ebenen.includes(p.ebene))
           if (!pos.length) return null
@@ -76,22 +63,22 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
                   return (
                     <tr key={p.id} className={z?.ohnePreis ? 'mit-warnung' : ''}>
                       <td className="mono nr">{p.ebene === 'MATERIAL' ? 'Mat.' : p.analog ? `${p.nr}a` : p.nr}</td>
-                      <td>
+                      <td className="pos-text">
                         {p.ebene === 'MATERIAL' ? (
                           <input className="text-feld" value={p.text ?? ''} placeholder="Material, z. B. Folie" onChange={(e) => aendern(p.id, { text: e.target.value })} />
                         ) : p.analog ? (
-                          <>
-                            <input className="text-feld" value={p.text ?? ''} placeholder="erbrachte Leistung" onChange={(e) => aendern(p.id, { text: e.target.value })} />
-                            <small className="grau">
-                              entsprechend GOZ{' '}
+                          <div className="analog-zeile">
+                            <input className="text-feld" value={p.text ?? ''} placeholder="erbrachte Leistung" title={p.text} onChange={(e) => aendern(p.id, { text: e.target.value })} />
+                            <small className="grau" title={`entsprechend GOZ ${p.nr}: ${gozText(p.nr)}`}>
+                              entspr.{' '}
                               <select value={p.nr} onChange={(e) => aendern(p.id, { nr: e.target.value })}>
-                                {[...new Set([p.nr, '5220', '5230', '7010', '7050', '7060', '8010', '2270'])].map((nr) => (
+                                {[...new Set([p.nr, '6070', '7010', '4000', '8050', '5090', '6210', '5260', '7050', '7060', '5220', '5230', '8010', '2270'])].map((nr) => (
                                   <option key={nr} value={nr}>{nr} {gozText(nr).slice(0, 50)}</option>
                                 ))}
                               </select>
                             </small>
-                          </>
-                        ) : <span>{z?.text ?? (p.ebene === 'GOZ' ? gozText(p.nr) : p.nr)}</span>}
+                          </div>
+                        ) : ((t) => <span title={t}>{t}</span>)(z?.text ?? (p.ebene === 'GOZ' ? gozText(p.nr) : p.nr))}
                         {p.ausXml && <span className="xml-marke" title="Preis aus dem Labor-XML">XML</span>}
                         {z?.platzhalter && <span className="xml-marke" title="Platzhalterpreis – Kostenvoranschlag einlesen">Platzhalter</span>}
                       </td>
@@ -160,6 +147,18 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
           )}
           <button className="sekundaer klein-btn" onClick={hinzufuegen}>Position hinzufügen</button>
         </div>
+      </div>
+
+      <div className="block">
+        <h3>Vorlage hinzufügen <small className="grau">fügt die üblichen GOZ- und Laborpositionen an – oben einzeln änderbar</small></h3>
+        {VORLAGEN_GRUPPEN.map((gr) => (
+          <div key={gr} className="vorlagen-zeile">
+            <span className="vorlagen-gruppe">{gr}</span>
+            {VORLAGEN.filter((v) => v.gruppe === gr).map((v) => (
+              <button key={v.id} className="vorlage-chip" title={v.text} onClick={() => vorlageNehmen(v.pos)}>+ {v.titel}</button>
+            ))}
+          </div>
+        ))}
       </div>
 
       {(rechnung.warnungen.length > 0 || rechnung.hinweise.length > 0) && (

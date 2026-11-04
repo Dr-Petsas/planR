@@ -62,7 +62,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <div className="app">
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">
@@ -121,6 +121,6 @@ export default function App() {
           <Dokument plan={plan} einst={einst} rechnung={rechnung} />
         </div>
       </div>
-    </>
+    </div>
   )
 }
