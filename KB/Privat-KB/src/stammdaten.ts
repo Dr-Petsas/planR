@@ -180,8 +180,35 @@ export function patientMigrieren(roh: unknown): Patient {
   }
 }
 
+/** Praxiskopf vom PlanR-Server (/api/praxisdaten); alle Planer teilen sich diesen Speicher. */
+export const ZENTRALE_PRAXIS_KEY = 'planr.praxis.zentral.v1'
+
+function zentralePraxis(): Roh {
+  try {
+    const r = typeof localStorage === 'undefined' ? null : JSON.parse(localStorage.getItem(ZENTRALE_PRAXIS_KEY) ?? 'null')
+    return r && typeof r === 'object' && !Array.isArray(r) ? r as Roh : {}
+  } catch {
+    return {}
+  }
+}
+
+/** Leere Felder (und der Vorgabename „Zahnarztpraxis“) kommen aus dem zentralen Praxiskopf; eigene Einträge bleiben. */
+export function mitZentralerPraxis(p: Praxis, zentral: Roh = zentralePraxis()): Praxis {
+  const leer = standardPraxis()
+  const out = { ...p }
+  for (const k of Object.keys(leer) as (keyof Praxis)[]) {
+    const z = text(zentral[k]).trim()
+    if (z && (!out[k] || out[k] === leer[k])) out[k] = z
+  }
+  return out
+}
+
 /** Liest jeden früheren Praxis-Stand (plzOrt, behandler) und eine alte, getrennt gespeicherte KZV-Wahl. */
 export function praxisMigrieren(roh: unknown, altKzvNr = ''): Praxis {
+  return mitZentralerPraxis(praxisLesen(roh, altKzvNr))
+}
+
+function praxisLesen(roh: unknown, altKzvNr: string): Praxis {
   const p = standardPraxis()
   if (!roh || typeof roh !== 'object') return { ...p, kzvNr: altKzvNr }
   const o = roh as Roh

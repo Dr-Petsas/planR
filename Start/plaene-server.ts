@@ -566,6 +566,24 @@ const agentRufer = (mandant: string, praxen: number[] | null): Rufer => async <T
   return r as { ok: boolean; status: number; daten: T & { error?: string } }
 }
 
+/** Praxiskopf der Planer: gepflegte Daten je Praxis-Nr. (praxisdaten.json), sonst Buchung und PVS-Praxisname */
+const PRAXISDATEN = (m: string) => `${ORDNER}/mandanten/${m}/praxisdaten.json`
+const PRAXIS_FELDER = ['name', 'zahnarzt', 'strasse', 'plz', 'ort', 'telefon', 'email', 'zahnarztNr', 'abrechnungsNr'] as const
+async function praxisdaten(res: ServerResponse, w: Wer) {
+  const z = await zugaengeLesen()
+  const nr = w.praxen?.[0] ?? w.haupt
+  const gepflegt = (await jsonLesen<Record<string, Record<string, unknown>>>(PRAXISDATEN(w.mandant), {}))?.[String(nr)] ?? {}
+  const b = await buchungFuer(z, w.konto.clientId).catch(() => null)
+  const pvsName = z.mandanten[w.konto.clientId]?.praxen?.find((p) => p.nummer === nr)?.name ?? ''
+  const roh: Record<string, unknown> = {
+    ...(b ? { name: b.praxis.name, strasse: b.praxis.strasse, plz: b.praxis.plz, ort: b.praxis.ort, telefon: b.praxis.telefon, email: b.praxis.email } : {}),
+    ...(pvsName ? { zahnarzt: pvsName } : {}),
+    ...gepflegt,
+  }
+  const praxis = Object.fromEntries(PRAXIS_FELDER.map((k) => [k, typeof roh[k] === 'string' ? (roh[k] as string).trim() : '']).filter(([, v]) => v))
+  json(res, 200, { ok: true, nummer: nr, praxis })
+}
+
 /** Privatpläne mit „Versenden“ im Planer */
 const MIT_VERSAND = new Set(['privat-kb', 'privat-kv', 'privat-impl', 'privat-kons', 'privat-par', 'privat-kfo'])
 interface VersandVermerk { am: string; an: string; weg: 'nadine' | 'mailprogramm' }
@@ -2305,6 +2323,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/bridge-paket') return void bridgePaket(req, res, w).catch(fehler500(res))
   if (url === '/api/bridge-setup') return void bridgeSetupLaden(req, res, w).catch(fehler500(res))
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
+  if (url === '/api/praxisdaten' && req.method === 'GET') return void praxisdaten(res, w).catch(fehler500(res))
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden' || url === '/api/versand/vermerk') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))

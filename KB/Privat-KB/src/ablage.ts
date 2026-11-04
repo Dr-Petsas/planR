@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ZENTRALE_PRAXIS_KEY } from './stammdaten'
 
 /**
  * Ablage gespeicherter Pläne mit Freigabe-Status (im Browser, localStorage).
@@ -67,6 +68,24 @@ const hubAdresse = () => (typeof location === 'undefined' ? 'http://127.0.0.1:51
   : location.pathname.startsWith('/planer/') ? `${location.origin}/api/plaene`
   : location.hostname.endsWith('.pickadoc-tunnel.com') ? 'https://planr.pickadoc-tunnel.com/api/plaene'
     : `http://${location.hostname}:5189/api/plaene`)
+
+/** Praxiskopf vom Server holen; beim ersten neuen Stand einmal neu laden, damit die Planer-Einstellungen ihn übernehmen. */
+function praxisAbgleichen() {
+  if (typeof fetch !== 'function' || typeof localStorage === 'undefined' || typeof location === 'undefined') return
+  fetch(hubAdresse().replace(/\/plaene$/, '/praxisdaten'), { cache: 'no-store', credentials: 'include' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d: { praxis?: Record<string, string> } | null) => {
+      if (!d?.praxis || !Object.keys(d.praxis).length) return
+      const neu = JSON.stringify(d.praxis)
+      if (localStorage.getItem(ZENTRALE_PRAXIS_KEY) === neu) return
+      localStorage.setItem(ZENTRALE_PRAXIS_KEY, neu)
+      if (sessionStorage.getItem(ZENTRALE_PRAXIS_KEY)) return
+      sessionStorage.setItem(ZENTRALE_PRAXIS_KEY, '1')
+      location.reload()
+    })
+    .catch(() => {})
+}
+praxisAbgleichen()
 
 /** In der PlanR-Übersicht gelöschte Pläne; ein später erneut gespeicherter Stand bleibt. */
 export function ohneGeloeschte<E extends { nummer: string; geaendert: string }>(liste: E[], geloescht: { nummer: string; geaendert: string }[]): E[] {

@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
-  anschrift, anschriftLesen, leererPatient, mitPatient, nameTrennen, patientAusFragment, patientMigrieren, patientName, praxisMigrieren, standardPraxis,
+  anschrift, anschriftLesen, leererPatient, mitPatient, mitZentralerPraxis, nameTrennen, patientAusFragment, patientMigrieren, patientName, praxisMigrieren,
+  standardPraxis,
 } from './stammdaten'
+
+describe('Zentraler Praxiskopf', () => {
+  it('füllt leere Felder und den Vorgabenamen, eigene Einträge bleiben', () => {
+    const zentral = { name: 'Zahnarztpraxis Dr. Petsas', strasse: 'Luise-Rainer-Str. 6-10', telefon: '0211 1', fremd: 'x' }
+    const p = mitZentralerPraxis({ ...standardPraxis(), telefon: '0211 999' }, zentral)
+    expect(p.name).toBe('Zahnarztpraxis Dr. Petsas')
+    expect(p.strasse).toBe('Luise-Rainer-Str. 6-10')
+    expect(p.telefon).toBe('0211 999')
+    expect('fremd' in p).toBe(false)
+    expect(mitZentralerPraxis({ ...standardPraxis(), name: 'Praxis Muster' }, zentral).name).toBe('Praxis Muster')
+  })
+})
 
 const fragment = (o: unknown) => {
   const bytes = new TextEncoder().encode(JSON.stringify(o))
