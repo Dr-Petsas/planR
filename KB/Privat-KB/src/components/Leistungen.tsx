@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
 import { BEB_POSITIONEN, GOZ_POSITIONEN, UKPS_BEMESSUNG_STANDARD, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
-import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden } from '../engine/kb'
+import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden, vorlageEnthalten, vorlageEntfernen } from '../engine/kb'
 import { gozText } from '../engine/listen'
 
 interface Props {
@@ -20,9 +20,16 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
   const aendern = (id: string, patch: Partial<Position>) => setPos(plan.positionen.map((p) => (p.id === id ? { ...p, ...patch } : p)))
   const zeile = (id: string) => [...rechnung.honorar, ...rechnung.labor].find((z) => z.id === id)
 
-  const vorlageNehmen = (pos: VorlagenPosition[]) => {
-    const neu = vorlageAnwenden(plan.positionen.filter((p) => !p.umfang), pos, einst)
-    setPos(umfangAnwenden(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu, plan.regler.faktor))
+  const aktiv = new Set(plan.vorlagen
+    ?? VORLAGEN.filter((v) => vorlageEnthalten(plan.positionen, v.pos, plan.abformung, einst)).map((v) => v.id))
+  const vorlageUmschalten = (id: string, pos: VorlagenPosition[]) => {
+    const eigene = plan.positionen.filter((p) => !p.umfang)
+    if (aktiv.has(id)) {
+      setPlan({ ...plan, vorlagen: [...aktiv].filter((x) => x !== id), positionen: umfangAnwenden(vorlageEntfernen(eigene, pos, plan.abformung, einst), plan.regler.faktor) })
+      return
+    }
+    const neu = vorlageAnwenden(eigene, pos, einst)
+    setPlan({ ...plan, vorlagen: [...aktiv, id], positionen: umfangAnwenden(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu, plan.regler.faktor) })
   }
 
   const hinzufuegen = () => {
@@ -47,7 +54,11 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
             <span className="ss-titel">{gr}</span>
             <div className="ss-knoepfe">
               {VORLAGEN.filter((v) => v.gruppe === gr).map((v) => (
-                <button key={v.id} className="ss-knopf" title={`${v.titel}: ${v.text}`} onClick={() => vorlageNehmen(v.pos)}>{v.titel}</button>
+                <button key={v.id} className={`ss-knopf${aktiv.has(v.id) ? ' aktiv' : ''}`} aria-pressed={aktiv.has(v.id)}
+                  title={`${v.titel}: ${v.text}${aktiv.has(v.id) ? ' – im Plan, Klick nimmt sie wieder heraus' : ''}`}
+                  onClick={() => vorlageUmschalten(v.id, v.pos)}>
+                  {aktiv.has(v.id) && <span className="ss-haken">✓</span>}{v.titel}
+                </button>
               ))}
             </div>
           </div>
@@ -58,7 +69,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
         <h3 className="block-kopf">
           Positionen
           {plan.positionen.length > 0 && (
-            <button className="link-btn" onClick={() => window.confirm('Alle Positionen aus dem Plan entfernen?') && setPos([])}>alle entfernen</button>
+            <button className="link-btn" onClick={() => window.confirm('Alle Positionen aus dem Plan entfernen?') && setPlan({ ...plan, positionen: [], vorlagen: [] })}>alle entfernen</button>
           )}
         </h3>
         {plan.positionen.length === 0 && <p className="leer">Noch keine Position – oben eine Behandlung anklicken oder unten einzeln hinzufügen.</p>}

@@ -163,6 +163,25 @@ export function vorlageAnwenden(positionen: Position[], neu: VorlagenPosition[],
   return out
 }
 
+/** Nimmt die Positionen einer Vorlage wieder heraus (Anzahl abziehen, leere Zeilen entfernen); fremde Positionen bleiben. */
+export function vorlageEntfernen(positionen: Position[], vorlage: VorlagenPosition[], abformung: Abformung, einst?: Einstellungen): Position[] {
+  const out = positionen.map((p) => ({ ...p }))
+  for (const n of abformungAnwenden(vorlageAnwenden([], vorlage, einst), abformung)) {
+    const da = out.find((p) => p.anzahl > 0 && gleicheLeistung(p, n))
+    if (da) da.anzahl -= n.anzahl
+  }
+  return out.filter((p) => p.anzahl > 0)
+}
+
+/** Steckt die Vorlage vollständig im Plan? (für Pläne ohne gemerkte Vorlagen) */
+export function vorlageEnthalten(positionen: Position[], vorlage: VorlagenPosition[], abformung: Abformung, einst?: Einstellungen): boolean {
+  const beitrag = abformungAnwenden(vorlageAnwenden([], vorlage, einst), abformung)
+  return beitrag.length > 0 && beitrag.every((n) => positionen.some((p) => !p.umfang && gleicheLeistung(p, n) && p.anzahl >= n.anzahl))
+}
+
+const gleicheLeistung = (p: Position, n: Position) =>
+  p.ebene === n.ebene && p.nr === n.nr && !p.analog === !n.analog && (!n.analog || (p.text ?? '') === (n.text ?? ''))
+
 export const istUkps = (positionen: Position[]) =>
   positionen.some((p) => p.anzahl > 0 && (p.nr.startsWith('F-UKPS') || (p.ebene === 'LABOR' && p.nr === '7607')
     || (p.analog && /protrusion/i.test(p.text ?? ''))))

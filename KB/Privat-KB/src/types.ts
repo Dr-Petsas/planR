@@ -54,6 +54,8 @@ export interface Plan {
   abformung: Abformung
   fremdlabor: Fremdlabor
   bemerkung: string
+  /** Schnellstart-Vorlagen, die im Plan stecken (ein zweiter Klick nimmt sie wieder heraus) */
+  vorlagen?: string[]
 }
 
 export interface Einstellungen {

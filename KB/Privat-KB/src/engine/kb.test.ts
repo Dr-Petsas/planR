@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, umfangAnwenden, vorlageAnwenden } from './kb'
+import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, umfangAnwenden, vorlageAnwenden, vorlageEnthalten, vorlageEntfernen } from './kb'
 import { laborXmlLesen } from '../laborxml'
 import { gozPunkte, GOZ_PUNKTWERT } from './listen'
 import { VORLAGEN } from '../data/katalog'
@@ -99,6 +99,20 @@ describe('Privat-KB-Rechnung', () => {
     expect(umfangAnwenden([], 3.5)).toEqual([])
     const p = { ...neuerPlan('T-1', einst), positionen: umfangAnwenden(basis, 3.5) }
     expect(rechnen(p, einst).hinweise.some((h) => h.startsWith('Begleitpositionen'))).toBe(true)
+  })
+
+  it('Vorlage wieder herausnehmen: nur ihr Beitrag geht, auch beim Intraoralscan', () => {
+    const vor = (id: string) => VORLAGEN.find((v) => v.id === id)!.pos
+    const kontrolle = vorlageAnwenden([], vor('kontrolle'), einst)
+    for (const abformung of ['abdruck', 'scan'] as const) {
+      const mit = abformungAnwenden(vorlageAnwenden(kontrolle, vor('michigan'), einst), abformung)
+      const ohne = vorlageEntfernen(mit, vor('michigan'), abformung, einst)
+      expect(ohne.map((p) => [p.nr, p.anzahl])).toEqual(kontrolle.map((p) => [p.nr, p.anzahl]))
+    }
+    const ukps = abformungAnwenden(vorlageAnwenden([], vor('ukps-resmed'), einst), 'scan')
+    expect(vorlageEntfernen(ukps, vor('ukps-resmed'), 'scan', einst)).toEqual([])
+    expect(vorlageEnthalten(ukps, vor('ukps-resmed'), 'scan', einst)).toBe(true)
+    expect(vorlageEnthalten(ukps, vor('ukps-titration'), 'scan', einst)).toBe(false)
   })
 
   it('Labor-Preisstufen bis +80 %, Fremdlabor-Festpreise bleiben', () => {
