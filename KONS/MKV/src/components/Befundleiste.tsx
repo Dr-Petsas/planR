@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { beimAblegenAbo } from '../ablage'
 import {
-  ALLE_ZAEHNE, BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER, abweichungen, befundAendern, befundHolen, befundSchreiben, befundVerwerfen,
-  datumDe, uhrzeit, useBefund, useBefundLive, type Befund01,
+  ALLE_ZAEHNE, BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER, abweichungen, befundAendern, befundFolgen, befundHolen, befundMitPlanSchreiben,
+  befundPlanPatient, befundSchreiben, befundVerwerfen, befundVormerken, datumDe, uhrzeit, useBefund, useBefundLive, zeilenAenderung, type Befund01,
 } from '../befund01'
 
 const anzahl = (o: Record<string, string>) => Object.keys(o).length
@@ -29,19 +30,34 @@ function Schema({ b, zeile }: { b: Befund01; zeile?: Record<string, { B?: string
   )
 }
 
+/** In der App (immer eingebunden): beim Speichern bzw. Freigeben geht der im Plan geänderte Befund ins Praxisprogramm */
+export function useBefundMitPlan(aktiv: boolean) {
+  useEffect(() => {
+    if (!aktiv) return
+    return beimAblegenAbo(() => {
+      void befundMitPlanSchreiben().catch((e) => alert(`Befund nicht ins Praxisprogramm übernommen: ${e instanceof Error ? e.message : String(e)}`))
+    })
+  }, [aktiv])
+}
+
 /**
  * Befund (01) als erster Schritt jedes Plans: holt den aktuellen Befund des Patienten aus dem Praxisprogramm
  * (derselbe Stand wie im HKP-Planer und bei Clara), zeigt ihn und gibt ihn dem Planer. Planer mit Befundzeile
- * (B) bekommen ihn automatisch, solange ihre Zeile leer ist oder dem bisherigen 01 entspricht.
+ * (B) und `auto` halten sie mit dem 01 gleich – in beide Richtungen.
  */
-export function Befundleiste({ patient, zeile, onUebernehmen, onBefund, auto = false, uebernehmenText = 'In Plan übernehmen', hinweis }: {
+export function Befundleiste({ patient, zeile, planId = '', onUebernehmen, onBefund, auto = false, uebernehmenText = 'In Plan übernehmen', hinweis }: {
   patient: { vorname: string; name: string; geburtsdatum: string }
   /** Befundzeile (B) des Plans – für Abweichungen und „Plan-Befund als 01“; fehlt bei Planern ohne Befundzeile */
   zeile?: Record<string, { B?: string }>
+  /** Nummer des offenen Plans: ein anderer Plan übernimmt beim Öffnen den aktuellen 01 */
+  planId?: string
   onUebernehmen: (zaehne: Record<string, string>) => void
   /** jeder neue Stand des 01 (auch live), z. B. für Warnungen an fehlenden oder überkronten Zähnen */
   onBefund?: (b: Befund01 | null) => void
-  /** Befundzeile automatisch füllen, solange sie leer ist oder dem bisherigen 01 folgt */
+  /**
+   * Befundzeile mit dem 01 abgleichen: beim Öffnen übernehmen, live folgen, im Plan geänderte Zähne als 01 vormerken
+   * und beim Speichern bzw. Freigeben ins Praxisprogramm schreiben. Aus bei gesperrten (freigegebenen) Plänen.
+   */
   auto?: boolean
   uebernehmenText?: string
   /** kurzer Satz, was das Übernehmen in diesem Planer bewirkt */
@@ -71,26 +87,57 @@ export function Befundleiste({ patient, zeile, onUebernehmen, onBefund, auto = f
         .finally(() => { if (!weg) setLaedt(false) })
     }, 700)
     return () => { weg = true; window.clearTimeout(uhr) }
-  }, [schluessel, runde])
+  }, [schluessel, runde, planId])
 
   const melde = useRef(onBefund)
   useEffect(() => { melde.current = onBefund })
   useEffect(() => { melde.current?.(b) }, [b])
 
-  // Live: eine Befundzeile, die leer ist oder dem bisherigen 01 entspricht, folgt jeder Änderung sofort.
-  const vorher = useRef<{ nr: string; zaehne: Record<string, string> } | null>(null)
+  // Abgleich mit dem 01 (nur `auto`): beim Öffnen steht der 01 im Plan, danach folgt jeder Zahn, der dem 01 folgte.
+  // Im Plan geänderte Zähne werden als 01 vorgemerkt und beim Speichern bzw. Freigeben ins Praxisprogramm geschrieben.
+  const vorher = useRef<{ nr: string; plan: string; zaehne: Record<string, string> } | null>(null)
   const zeileRef = useRef(zeile)
+  const bRef = useRef(b)
+  bRef.current = b
   const uebernehmen = useRef(onUebernehmen)
+  const eigene = useRef(new Set<string>())
+  const basis = useRef<{ plan: string; zeile: Record<string, { B?: string }> } | null>(null)
   useEffect(() => { zeileRef.current = zeile; uebernehmen.current = onUebernehmen })
+  const abgleich = auto && !!zeile
+  const fehler = (e: unknown) => setMeldung(fehlerText(e))
+
   useEffect(() => {
     if (!b) return
-    const alt = vorher.current?.nr === b.patient ? vorher.current.zaehne : null
-    vorher.current = { nr: b.patient, zaehne: b.zaehne }
+    const gleich = vorher.current?.nr === b.patient && vorher.current.plan === planId
+    const alt = gleich ? vorher.current!.zaehne : null
+    vorher.current = { nr: b.patient, plan: planId, zaehne: b.zaehne }
     const z = zeileRef.current
     if (!auto || !z) return
-    const leer = ALLE_ZAEHNE.every((n) => !String(z[n]?.B ?? '').trim())
-    if ((leer || (alt && !anzahl(abweichungen(z, alt)))) && anzahl(abweichungen(z, b.zaehne))) uebernehmen.current(b.zaehne)
-  }, [b, auto])
+    const weicht = abweichungen(z, b.zaehne)
+    for (const n of [...eigene.current]) if (!(n in weicht)) eigene.current.delete(n)
+    befundVormerken(b.patient, Object.fromEntries([...eigene.current].map((n) => [n, weicht[n]])), fehler)
+    const ziel = befundFolgen(z, alt, b.zaehne, eigene.current)
+    if (ziel) uebernehmen.current(ziel)
+  }, [b, auto, planId])
+
+  useEffect(() => {
+    const vor = basis.current
+    basis.current = zeile ? { plan: planId, zeile } : null
+    if (vor && vor.plan !== planId) eigene.current.clear()
+    if (!auto || !zeile || !vor || vor.plan !== planId || vor.zeile === zeile) return
+    const aktuell = bRef.current?.patient === nr ? bRef.current : null
+    if (!aktuell) return
+    if (ALLE_ZAEHNE.every((n) => !String(zeile[n]?.B ?? '').trim())) {
+      eigene.current.clear()
+      uebernehmen.current(aktuell.zaehne)
+      return
+    }
+    const geaendert = zeilenAenderung(vor.zeile, zeile, aktuell.zaehne)
+    for (const n of Object.keys(geaendert)) eigene.current.add(n)
+    befundVormerken(aktuell.patient, geaendert, fehler)
+  }, [zeile, auto, planId])
+
+  useEffect(() => { befundPlanPatient(abgleich && b ? b.patient : '') }, [abgleich, b?.patient])
 
   const weicht = useMemo(() => (b && zeile ? abweichungen(zeile, b.zaehne) : {}), [b, zeile])
   if (abgemeldet) return null
@@ -105,14 +152,14 @@ export function Befundleiste({ patient, zeile, onUebernehmen, onBefund, auto = f
       <b>Befund (01)</b>
       {b
         ? <span>aus {b.pvs}{b.pvsDatum ? ` vom ${datumDe(b.pvsDatum)}` : ''}{b.geschrieben && !offen && <> · zuletzt übernommen {uhrzeit(b.geschrieben)}</>}
-            {offen > 0 && <b className="b01-offen-text"> · {offen} {offen === 1 ? 'Änderung' : 'Änderungen'} noch nicht in {b.pvs}</b>}</span>
+            {offen > 0 && <b className="b01-offen-text"> · {offen} {offen === 1 ? 'Änderung' : 'Änderungen'} noch nicht in {b.pvs}{abgleich ? ' – wird beim Speichern übernommen' : ''}</b>}</span>
         : <span className="klein">{laedt ? 'wird aus dem Praxisprogramm geholt …' : ''}</span>}
       {meldung && <span className="klein">{meldung}</span>}
       {b && <Schema b={b} zeile={zeile} />}
       {b && (
         <span className="aktionen">
           {(!zeile || anzahl(weicht) > 0) && <button className="klein" title={hinweis} onClick={() => onUebernehmen(b.zaehne)}>{uebernehmenText}</button>}
-          {zeile && anzahl(weicht) > 0 && (
+          {zeile && !abgleich && anzahl(weicht) > 0 && (
             <button className="klein" title={`Befundzeile des Plans als 01 vormerken (${anzahl(weicht)} Zähne) – gilt dann auch im HKP und für Clara`}
               onClick={() => { setMeldung(''); befundAendern(b.patient, weicht).catch((e) => setMeldung(fehlerText(e))) }}>
               Plan-Befund als 01

@@ -203,6 +203,76 @@ export function abweichungen(plan: Record<string, { B?: string }>, aktuell: Reco
   return aus
 }
 
+const kuerzel = (v: unknown) => String(v ?? '').trim().toLowerCase()
+
+/** Zähne, die in der Befundzeile seit `vorher` geändert wurden und vom 01 abweichen – nur sie gehen als Änderung an den 01 */
+export function zeilenAenderung(vorher: Record<string, { B?: string }>, jetzt: Record<string, { B?: string }>, aktuell: Record<string, string>): Record<string, string> {
+  const aus: Record<string, string> = {}
+  for (const z of ALLE_ZAEHNE) {
+    const j = kuerzel(jetzt[z]?.B)
+    if (j !== kuerzel(vorher[z]?.B) && j !== kuerzel(aktuell[z])) aus[z] = j
+  }
+  return aus
+}
+
+/**
+ * Befundzeile nach dem 01: ohne `alt` (Plan gerade geöffnet) bekommt jeder Zahn den 01, sonst nur die Zähne, die dem
+ * alten 01 folgten und sich darin geändert haben. `eigene` (gerade im Plan geändert, noch nicht im 01) bleiben.
+ * Ergebnis: alle 32 Zähne, oder null, wenn sich nichts ändert.
+ */
+export function befundFolgen(zeile: Record<string, { B?: string }>, alt: Record<string, string> | null, neu: Record<string, string>, eigene: ReadonlySet<string> = new Set()): Record<string, string> | null {
+  let anders = false
+  const aus = Object.fromEntries(ALLE_ZAEHNE.map((z) => {
+    const p = kuerzel(zeile[z]?.B)
+    const n = kuerzel(neu[z])
+    const folgt = !eigene.has(z) && (!alt || (p === kuerzel(alt[z]) && n !== kuerzel(alt[z])))
+    if (folgt && n !== p) anders = true
+    return [z, folgt ? n : p]
+  }))
+  return anders ? aus : null
+}
+
+/* Im Plan geänderte Zähne gesammelt vormerken – ein Aufruf je Tipp-Pause statt je Taste. */
+let wartend: { patient: string; zaehne: Record<string, string>; fehler?: (e: unknown) => void } | null = null
+let wartendUhr: ReturnType<typeof setTimeout> | undefined
+let laufend: Promise<unknown> = Promise.resolve()
+
+/** Gesammelte Planänderungen jetzt an den 01 geben und abwarten */
+export async function vormerkenAbschliessen(): Promise<void> {
+  clearTimeout(wartendUhr)
+  const w = wartend
+  wartend = null
+  if (!w) return void (await laufend)
+  const p = befundAendern(w.patient, w.zaehne)
+  laufend = p.catch(() => {})
+  try {
+    await p
+  } catch (e) {
+    w.fehler?.(e)
+    throw e
+  }
+}
+
+export function befundVormerken(patient: string, zaehne: Record<string, string>, fehler?: (e: unknown) => void, ms = 900) {
+  if (!Object.keys(zaehne).length) return
+  if (wartend && wartend.patient !== patient) void vormerkenAbschliessen().catch(() => {})
+  wartend = { patient, zaehne: { ...wartend?.zaehne, ...zaehne }, fehler }
+  clearTimeout(wartendUhr)
+  wartendUhr = setTimeout(() => void vormerkenAbschliessen().catch(() => {}), ms)
+}
+
+/** Patient des offenen Plans, dessen Befund beim Speichern bzw. Freigeben ins Praxisprogramm geht ('' = keiner) */
+let planPatient = ''
+export const befundPlanPatient = (patient: string) => { planPatient = patient }
+
+/** Speichern/Freigeben des Plans: offene Befundänderungen des Plan-Patienten ins Praxisprogramm; '' ohne Änderungen */
+export async function befundMitPlanSchreiben(): Promise<string> {
+  await vormerkenAbschliessen()
+  const b = planPatient ? befunde[planPatient] : undefined
+  if (!b || !Object.keys(b.offen).length) return ''
+  return befundSchreiben(b.patient)
+}
+
 /** 01 in die Befundzeile eines Plans (alle 32 Zähne; Planung und weitere Angaben bleiben) */
 export function befundZeile<Z extends { B: string }>(zaehne: Record<string, Z>, befund: Record<string, string>, leer: () => Z): Record<string, Z> {
   return Object.fromEntries(ALLE_ZAEHNE.map((z) => [z, { ...(zaehne[z] ?? leer()), B: befund[z] ?? '' }]))

@@ -3,8 +3,8 @@ import type { HkpPlan } from '../types'
 import { BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER } from '../engine/zahnschema'
 import { useVerbindung } from '../store/register'
 import {
-  abweichungen, befundAendern, befundHolen, befundSchreiben, befundVerwerfen, datumDe, uhrzeit,
-  useBefund, useBefundLive, type Befund01,
+  abweichungen, befundAendern, befundFolgen, befundHolen, befundPlanPatient, befundSchreiben, befundVerwerfen, befundVormerken, datumDe, uhrzeit,
+  useBefund, useBefundLive, zeilenAenderung, type Befund01,
 } from '../store/befund01'
 
 const ALLE = [...OBERKIEFER, ...UNTERKIEFER]
@@ -35,13 +35,13 @@ function Schema({ b, plan }: { b: Befund01; plan: HkpPlan['zaehne'] }) {
   )
 }
 
-function Herkunft({ b }: { b: Befund01 }) {
+function Herkunft({ b, frei }: { b: Befund01; frei: boolean }) {
   const offen = anzahl(b.offen)
   return (
     <span>
       aus {b.pvs}{b.pvsDatum ? ` vom ${datumDe(b.pvsDatum)}` : ''}
       {b.geschrieben && !offen && <> · zuletzt übernommen {uhrzeit(b.geschrieben)}</>}
-      {offen > 0 && <b className="b01-offen-text"> · {offen} {offen === 1 ? 'Änderung' : 'Änderungen'} noch nicht in {b.pvs}{b.offenWer ? ` (${b.offenWer}, ${uhrzeit(b.stand)})` : ''}</b>}
+      {offen > 0 && <b className="b01-offen-text"> · {offen} {offen === 1 ? 'Änderung' : 'Änderungen'} noch nicht in {b.pvs}{b.offenWer ? ` (${b.offenWer}, ${uhrzeit(b.stand)})` : ''}{frei ? ' – wird beim Speichern übernommen' : ''}</b>}
     </span>
   )
 }
@@ -111,19 +111,52 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei }: {
     return () => { weg = true; window.clearTimeout(uhr) }
   }, [schluessel, runde])
 
-  // Leere Befundzeile: der 01 steht sofort drin. Live: ein freier Plan, dessen Befund dem bisherigen 01 entspricht, bekommt jede Änderung.
+  // Leere Befundzeile: der 01 steht sofort drin. Ein freier Plan ist mit dem 01 im Gleichlauf: beim Öffnen gilt der 01,
+  // live folgt jeder Zahn, der ihm folgte; im Plan geänderte Zähne werden vorgemerkt und beim Anlegen im Register
+  // ins Praxisprogramm geschrieben. Ein Plan im Register behält seinen Befund.
   const vorher = useRef<{ nr: string; zaehne: Record<string, string> } | null>(null)
   const planRef = useRef(plan)
+  const bRef = useRef(b)
+  bRef.current = b
+  const eigene = useRef(new Set<string>())
+  const basis = useRef<{ schluessel: string; zaehne: HkpPlan['zaehne'] } | null>(null)
   useEffect(() => { planRef.current = plan })
+  const fehler = (e: unknown) => setMeldung(`⚠ ${e instanceof Error ? e.message : String(e)}`)
   useEffect(() => {
     if (!b) return
     const alt = vorher.current?.nr === b.patient ? vorher.current.zaehne : null
     vorher.current = { nr: b.patient, zaehne: b.zaehne }
     const p = planRef.current.zaehne
     const leer = ALLE.every((z) => !String(p[z]?.B ?? '').trim())
-    const folgt = frei && alt && !anzahl(abweichungen(p, alt))
-    if ((leer || folgt) && anzahl(abweichungen(p, b.zaehne))) setPlan((q) => befundInPlan(q, b.zaehne))
+    if (!frei) {
+      if (leer && anzahl(abweichungen(p, b.zaehne))) setPlan((q) => befundInPlan(q, b.zaehne))
+      return
+    }
+    const weicht = abweichungen(p, b.zaehne)
+    for (const n of [...eigene.current]) if (!(n in weicht)) eigene.current.delete(n)
+    befundVormerken(b.patient, Object.fromEntries([...eigene.current].map((n) => [n, weicht[n]])), fehler)
+    const ziel = befundFolgen(p, alt, b.zaehne, eigene.current)
+    if (ziel) setPlan((q) => befundInPlan(q, ziel))
   }, [b, frei, setPlan])
+
+  useEffect(() => {
+    const vor = basis.current
+    basis.current = { schluessel, zaehne: plan.zaehne }
+    if (vor && vor.schluessel !== schluessel) eigene.current.clear()
+    if (!frei || !vor || vor.schluessel !== schluessel || vor.zaehne === plan.zaehne) return
+    const aktuell = bRef.current?.patient === nr ? bRef.current : null
+    if (!aktuell) return
+    if (ALLE.every((z) => !String(plan.zaehne[z]?.B ?? '').trim())) {
+      eigene.current.clear()
+      setPlan((q) => befundInPlan(q, aktuell.zaehne))
+      return
+    }
+    const geaendert = zeilenAenderung(vor.zaehne, plan.zaehne, aktuell.zaehne)
+    for (const n of Object.keys(geaendert)) eigene.current.add(n)
+    befundVormerken(aktuell.patient, geaendert, fehler)
+  }, [plan.zaehne, frei, schluessel, setPlan])
+
+  useEffect(() => { befundPlanPatient(frei && b ? b.patient : '') }, [frei, b?.patient])
 
   const weicht = useMemo(() => (b ? abweichungen(plan.zaehne, b.zaehne) : {}), [b, plan.zaehne])
   if (!v.sitzung || (!schluessel && !(name.trim() && !geburtsdatum))) return null
@@ -133,14 +166,14 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei }: {
     <div className="register-leiste befund-leiste bildschirm">
       <span className={`live-punkt${live ? ' an' : ''}`} title={live ? 'live verbunden' : 'keine Live-Verbindung'} aria-hidden="true" />
       <b>Aktueller 01</b>
-      {b ? <Herkunft b={b} /> : <span className="klein">{laedt ? 'wird aus dem Praxisprogramm geholt …' : ''}</span>}
+      {b ? <Herkunft b={b} frei={frei} /> : <span className="klein">{laedt ? 'wird aus dem Praxisprogramm geholt …' : ''}</span>}
       {b && <VorgangStand b={b} setMeldung={setMeldung} />}
       {meldung && <span className="klein">{meldung}</span>}
       {b && <Schema b={b} plan={plan.zaehne} />}
       {b && (
         <span className="aktionen">
           {anzahl(weicht) > 0 && <button className="klein" title="Befund-Zeile des Plans durch den aktuellen 01 ersetzen" onClick={() => setPlan((p) => befundInPlan(p, b.zaehne))}>In Plan übernehmen</button>}
-          {anzahl(weicht) > 0 && (
+          {!frei && anzahl(weicht) > 0 && (
             <button className="klein" title={`Befund-Zeile des Plans als 01 vormerken (${anzahl(weicht)} Zähne) – gilt dann auch für Clara`}
               onClick={() => { setMeldung(''); befundAendern(b.patient, weicht).catch((e) => setMeldung(`⚠ ${e instanceof Error ? e.message : String(e)}`)) }}>
               Plan-Befund als 01

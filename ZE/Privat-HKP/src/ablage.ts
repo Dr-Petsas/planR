@@ -211,6 +211,13 @@ function lesen<P>(key: string): AblageEintrag<P>[] {
   }
 }
 
+/** Was beim Speichern bzw. Freigeben eines Plans mitgehen muss (z. B. der geänderte Befund ins Praxisprogramm) */
+const beimAblegen = new Set<() => void>()
+export function beimAblegenAbo(f: () => void): () => void {
+  beimAblegen.add(f)
+  return () => { beimAblegen.delete(f) }
+}
+
 export function useAblage<P>(key: string): Ablage<P> {
   const [liste, setListe] = useState<AblageEintrag<P>[]>(() => lesen<P>(key))
   const [anfrage, setAnfrage] = useState<{ nummer: string; bereit: boolean } | null>(
@@ -237,6 +244,7 @@ export function useAblage<P>(key: string): Ablage<P> {
   }, [key])
 
   const ablegen = useCallback((d: AblageDaten<P>, status?: AblageStatus) => {
+    beimAblegen.forEach((f) => f())
     setListe((alt) => {
       const vorher = alt.find((e) => e.nummer === d.nummer)
       const neuStatus = status ?? vorher?.status ?? 'entwurf'

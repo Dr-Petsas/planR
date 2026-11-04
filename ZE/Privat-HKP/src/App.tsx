@@ -19,7 +19,7 @@ import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrZurueck } from './PlanrZurueck'
-import { Befundleiste } from './components/Befundleiste'
+import { Befundleiste, useBefundMitPlan } from './components/Befundleiste'
 import { befundZeile, datumDe } from './befund01'
 import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
 import type { Einstellungen, Plan } from './types'
@@ -62,12 +62,13 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
+  useBefundMitPlan(!gesperrt)
   const neu = (patient?: Partial<Patient> | null) => {
     sichern()
     const nr = einst.naechsteNummer + 1
     setEinst({ ...einst, naechsteNummer: nr })
     setPlan(mitPatient(neuerPlan(nr), patient))
-    setReiter('patient')
+    setReiter(patient?.name && patient.geburtsdatum ? 'planung' : 'patient')
   }
   useEffect(() => {
     if (neuAuftrag === undefined) return
@@ -151,7 +152,7 @@ export default function App() {
             <fieldset className="sperre" disabled={gesperrt}>
             <div className="block">
               <h3>Befund und Planung</h3>
-              <Befundleiste patient={plan.patient} zeile={plan.zaehne} auto
+              <Befundleiste patient={plan.patient} zeile={plan.zaehne} planId={plan.nummer} auto={!gesperrt}
                 hinweis="Befundzeile (B) durch den aktuellen 01 ersetzen – die Planung bleibt"
                 onUebernehmen={(b) => setPlan((p) => ({ ...p, zaehne: befundZeile(p.zaehne, b, () => ({ B: '', TP: '' })) }))} />
               <p className="hilfe">Befund (Kleinbuchstaben) und Planung (Großbuchstaben) mit den bekannten Kürzeln eintragen – z. B. Befund <b>kw</b>, Planung <b>KM</b>; Lücke <b>f</b> mit <b>BM</b>; Implantat <b>SKM</b>. Der Befund kommt aus dem Praxisprogramm (01), sobald Name und Geburtsdatum stehen. Es gibt keine Regelversorgung: geplant und berechnet wird genau, was eingetragen ist.</p>

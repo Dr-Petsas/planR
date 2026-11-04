@@ -20,7 +20,7 @@ import { PlanrZurueck } from './PlanrZurueck'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
 import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
-import { Befundleiste } from './components/Befundleiste'
+import { Befundleiste, useBefundMitPlan } from './components/Befundleiste'
 import { befundZeile } from './befund01'
 import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
 
@@ -63,12 +63,13 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
+  useBefundMitPlan(!gesperrt)
   const neu = (patient?: Partial<Patient> | null) => {
     sichern()
     const nr = einst.naechsteNummer + 1
     setEinst({ ...einst, naechsteNummer: nr })
     setPlan(mitPatient(neuerPlan(nr), patient))
-    setReiter('patient')
+    setReiter(patient?.name && patient.geburtsdatum ? 'planung' : 'patient')
   }
   useEffect(() => {
     if (neuAuftrag === undefined) return
@@ -144,7 +145,7 @@ export default function App() {
             <div className="block">
               <h3>Befund und Planung</h3>
               <p className="hilfe">Befund (klein) und Planung (groß) je Zahn eintragen – z. B. Befund <b>f</b> (Lücke), Planung <b>I</b> (Implantat), <b>IS</b> (Sofortimplantat), <b>IA</b> (Implantat + Augmentation), <b>EX/OX</b> (Entfernung). Mit Name und Geburtsdatum kommt der Befund (01) aus dem Praxisprogramm.</p>
-              <Befundleiste patient={plan.patient} zeile={plan.zaehne} auto
+              <Befundleiste patient={plan.patient} zeile={plan.zaehne} planId={plan.nummer} auto={!gesperrt}
                 hinweis="Befundzeile durch den aktuellen 01 ersetzen – die Planung bleibt"
                 onUebernehmen={(b) => setPlan((p) => ({ ...p, zaehne: befundZeile(p.zaehne, b, () => ({ B: '', TP: '' })) }))} />
               <Zahnschema zaehne={plan.zaehne} onChange={(zaehne) => setPlan({ ...plan, zaehne })} />

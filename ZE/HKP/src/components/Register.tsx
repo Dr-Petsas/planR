@@ -7,6 +7,7 @@ import {
   type HkpStatus, type RegisterDateiKopf, type RegisterKopf,
 } from '../store/register'
 import type { RegisterAbgleich } from '../store/registerAbgleich'
+import { befundMitPlanSchreiben } from '../store/befund01'
 
 const datum = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('de-DE') : '')
 const zeit = (iso?: string) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '')
@@ -41,6 +42,7 @@ export function RegisterLeiste({ r, plan, ergebnis, onStatus, onNeu }: {
     if (freigeben && !confirm('HKP speichern und freigeben?')) return
     setLegtAn(true)
     try {
+      await befundMitPlanSchreiben().catch((e) => alert(`Befund nicht ins Praxisprogramm übernommen: ${e instanceof Error ? e.message : String(e)}`))
       const h = await registerAnlegen(plan, ergebnis)
       aktivSetzen({ id: h.id, version: h.version, status: h.status, label: h.patient.label, stand: planStand(plan) })
       if (freigeben) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALLE_ZAEHNE, abweichungen, befundZeile, konsHinweis, konsKandidaten, konsWarnungen } from './befund01'
+import { ALLE_ZAEHNE, abweichungen, befundFolgen, befundZeile, konsHinweis, konsKandidaten, konsWarnungen, zeilenAenderung } from './befund01'
 
 describe('Befund (01) als erster Schritt', () => {
   it('Abweichungen: leere Felder zählen als vorhanden, Groß/klein egal', () => {
@@ -42,5 +42,28 @@ describe('Befund (01) als erster Schritt', () => {
       'Zahn 46: laut 01 erneuerungsbedürftige Krone – Zugang durch die Krone',
       'Zahn 36: laut 01 erneuerungsbedürftige Krone – Planung prüfen',
     ])
+  })
+})
+
+describe('Befundzeile und 01 im Gleichlauf', () => {
+  it('beim Öffnen gilt der 01 für jeden Zahn, auch wenn der Plan schon einen Befund hatte', () => {
+    const z = befundFolgen({ 16: { B: 'k' }, 36: { B: 'f' } }, null, { 16: 'kw', 36: 'f', 46: 'x' })!
+    expect(z).toMatchObject({ 16: 'kw', 36: 'f', 46: 'x', 11: '' })
+    expect(Object.keys(z)).toHaveLength(ALLE_ZAEHNE.length)
+    expect(befundFolgen({ 16: { B: 'kw' } }, null, { 16: 'kw' })).toBeNull()
+  })
+
+  it('live folgt nur der Zahn, der dem alten 01 entsprach; eigene Änderungen bleiben', () => {
+    const zeile = { 16: { B: 'kw' }, 26: { B: 'x' }, 36: { B: 'f' } }
+    const alt = { 16: 'kw', 26: 'pw', 36: 'f' }
+    const z = befundFolgen(zeile, alt, { 16: 'k', 26: 'ww', 36: 'f' }, new Set(['36']))!
+    expect(z).toMatchObject({ 16: 'k', 26: 'x', 36: 'f' })
+    expect(befundFolgen(zeile, alt, alt)).toBeNull()
+  })
+
+  it('als Änderung an den 01 gehen nur im Plan geänderte Zähne, die vom 01 abweichen', () => {
+    const vorher = { 16: { B: 'kw' }, 26: { B: 'pw' } }
+    expect(zeilenAenderung(vorher, { 16: { B: 'KW' }, 26: { B: 'ww' }, 36: { B: 'f' } }, { 26: 'pw', 36: 'f' })).toEqual({ 26: 'ww' })
+    expect(zeilenAenderung(vorher, { 16: { B: '' }, 26: { B: 'pw' } }, { 16: 'kw', 26: 'pw' })).toEqual({ 16: '' })
   })
 })
