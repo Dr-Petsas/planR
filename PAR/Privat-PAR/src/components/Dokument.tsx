@@ -1,6 +1,7 @@
 import type { Einstellungen, Phase, Plan, Rechnung, Zeile } from '../types'
 import { PHASE_NAME, VARIANTE_NAME } from '../data/katalog'
 import { euro, faktorText } from '../engine/par'
+import { begruendungen } from '../engine/begruendung'
 import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
 import Arztstempel from './Arztstempel'
 
@@ -74,6 +75,7 @@ function Tabelle({ zeilen }: { zeilen: Zeile[] }) {
 
 export default function Dokument({ plan, einst, rechnung }: Props) {
   const phasen = (Object.keys(PHASE_NAME) as Phase[]).filter((p) => rechnung.zeilen.some((z) => z.phase === p))
+  const begr = begruendungen(rechnung.zeilen)
   return (
     <>
       <div className="kv-blatt">
@@ -99,6 +101,13 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
 
         {plan.bemerkung && <p className="kv-bemerkung">{plan.bemerkung}</p>}
 
+        {begr.length > 0 && (
+          <section className="kv-begruendung">
+            <h2>Begründung der Faktoren über 2,3 (§ 10 Abs. 3 GOZ)</h2>
+            {begr.map(({ zeile: z, text }) => <p key={z.id}><b>GOZ {z.nr}, Faktor {faktorText(z.faktor)}:</b> {text}</p>)}
+          </section>
+        )}
+
         <div className="kv-hinweise">
           <p>
             Die Beträge sind voraussichtlich; das endgültige Honorar richtet sich nach dem tatsächlichen Aufwand und dem
@@ -111,7 +120,6 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           {plan.variante === 'aktuell' && (
             <p>Die Analogbewertung folgt der Neubewertung der Bundeszahnärztekammer 2026; private Versicherungen und Beihilfe erstatten unter Umständen nur nach den Beschlüssen des Beratungsforums.</p>
           )}
-          {rechnung.begruendung.length > 0 && <p>Für Faktoren über 2,3 erhalten Sie die Begründung mit der Rechnung (§ 10 Abs. 3 GOZ).</p>}
           {rechnung.vereinbarung2.length > 0 && <p>Für Faktoren über 3,5 gilt die gesonderte Vereinbarung nach § 2 GOZ (Folgeblatt).</p>}
           {plan.gkv && (
             <p>

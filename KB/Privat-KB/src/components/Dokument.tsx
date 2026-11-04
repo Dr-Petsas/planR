@@ -1,5 +1,6 @@
 import type { Einstellungen, Plan, Rechnung, Zeile } from '../types'
 import { euro, faktorText, istUkps } from '../engine/kb'
+import { begruendungen } from '../engine/begruendung'
 import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
 import Arztstempel from './Arztstempel'
 
@@ -78,6 +79,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
   const leer = !rechnung.honorar.length && !rechnung.labor.length
   const ukps = istUkps(plan.positionen)
   const labor = plan.fremdlabor.name || einst.laborName
+  const begr = begruendungen(rechnung.honorar)
   return (
     <>
       <div className="kv-blatt">
@@ -111,6 +113,15 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
 
         {plan.bemerkung && <p className="kv-bemerkung">{plan.bemerkung}</p>}
 
+        {begr.length > 0 && (
+          <section className="kv-begruendung">
+            <h2>Begründung der Faktoren über dem Schwellenwert ({begr.some((b) => b.zeile.ebene === 'GOAE') ? '§ 10 Abs. 3 GOZ, § 12 Abs. 3 GOÄ' : '§ 10 Abs. 3 GOZ'})</h2>
+            {begr.map(({ zeile: z, text }) => (
+              <p key={z.id}><b>{z.ebene === 'GOAE' ? `GOÄ ${z.nr}` : `GOZ ${z.nr}`}, Faktor {faktorText(z.faktor ?? 0)}:</b> {text}</p>
+            ))}
+          </section>
+        )}
+
         <div className="kv-hinweise">
           <p>
             Die Beträge sind voraussichtlich; das endgültige Honorar richtet sich nach dem tatsächlichen Aufwand.
@@ -123,7 +134,6 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
             <p>Mit „Ä“ gekennzeichnete Röntgenleistungen werden nach der Gebührenordnung für Ärzte berechnet (§ 6 Abs. 2 GOZ).</p>
           )}
           {ukps && <p>Hinweis für gesetzlich Versicherte: Bei ärztlich festgestellter obstruktiver Schlafapnoe und Veranlassung durch einen Schlafmediziner ist die UKPS Leistung der gesetzlichen Krankenversicherung.</p>}
-          {rechnung.begruendung.length > 0 && <p>Für Faktoren über 2,3 erhalten Sie die Begründung mit der Rechnung (§ 10 Abs. 3 GOZ).</p>}
           {rechnung.vereinbarung2.length > 0 && <p>Für Faktoren über 3,5 gilt die gesonderte Vereinbarung nach § 2 GOZ (Blatt 2).</p>}
           {!ukps && <p>
             Gesetzlich Versicherte: Die Leistungen sind privat zu tragen; sie werden nur nach schriftlicher Vereinbarung vor

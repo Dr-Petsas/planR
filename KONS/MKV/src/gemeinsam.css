@@ -86,3 +86,8 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
 .arzt-fehlt { position: absolute; right: 0; top: 0; max-width: 46mm; font-size: 9px; line-height: 1.25; color: #b45309; text-align: right; }
 .kv-unterschriften:has(.arzt-unterschrift) { align-items: end; }
 @media print { .arzt-fehlt { display: none; } }
+
+/* Begründungen der Faktoren über dem Schwellenwert (§ 10 Abs. 3 GOZ) im Kostenvoranschlag */
+.kv-begruendung { margin-top: 14px; break-inside: avoid; }
+.kv-begruendung h2 { font-size: 12px; margin: 0 0 4px; }
+.kv-begruendung p { margin: 3px 0; font-size: 11px; }

@@ -1,5 +1,6 @@
 import type { Einstellungen, Plan, Rechnung, Zeile } from '../types'
 import { euro, faktorText } from '../engine/kfo'
+import { begruendungen } from '../engine/begruendung'
 import { KRITERIEN_REGELBISS, KRITERIEN_UMFORMUNG } from '../data/katalog'
 import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
 import Arztstempel from './Arztstempel'
@@ -94,6 +95,7 @@ function Kriterien({ plan }: { plan: Plan }) {
 export default function Dokument({ plan, einst, rechnung }: Props) {
   const leer = !rechnung.aufgabe.length && !rechnung.honorar.length && !rechnung.labor.length && !rechnung.mehr.length
   const einzel = rechnung.summeHonorar - rechnung.summeAufgabe
+  const begr = begruendungen([...rechnung.aufgabe, ...rechnung.honorar])
   return (
     <>
       <div className="kv-blatt">
@@ -139,13 +141,21 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
 
         {plan.bemerkung && <p className="kv-bemerkung">{plan.bemerkung}</p>}
 
+        {begr.length > 0 && (
+          <section className="kv-begruendung">
+            <h2>Begründung der Faktoren über dem Schwellenwert ({begr.some((b) => b.zeile.ebene === 'GOAE') ? '§ 10 Abs. 3 GOZ, § 12 Abs. 3 GOÄ' : '§ 10 Abs. 3 GOZ'})</h2>
+            {begr.map(({ zeile: z, text }) => (
+              <p key={z.id}><b>{z.ebene === 'GOAE' ? 'GOÄ' : 'GOZ'} {z.nr}, Faktor {faktorText(z.faktor ?? 0)}:</b> {text}</p>
+            ))}
+          </section>
+        )}
+
         <div className="kv-hinweise">
           <p>
             Die Beträge sind voraussichtlich. Die Leistungen der Behandlungsaufgabe umfassen alle im Behandlungsplan festgelegten
             Maßnahmen innerhalb eines Zeitraums von bis zu vier Jahren; der endgültige Steigerungsfaktor wird mit der Schlussrechnung
             festgelegt. Material- und Laborkosten werden nach tatsächlichem Anfall berechnet.
           </p>
-          {rechnung.begruendung.length > 0 && <p>Für Faktoren über dem Schwellenwert erhalten Sie die Begründung mit der Rechnung.</p>}
           {rechnung.vereinbarung2.length > 0 && <p>Für Faktoren über 3,5 gilt die gesonderte Vereinbarung nach § 2 GOZ.</p>}
           {rechnung.mehr.length > 0 && <p>Die Mehrkosten für Material über dem Standard gelten nur mit der gesonderten Vereinbarung über Materialmehrkosten.</p>}
           <p>Ob und in welchem Umfang eine private Versicherung oder Beihilfe erstattet, richtet sich nach Ihrem Vertrag bzw. den Beihilfevorschriften.</p>
