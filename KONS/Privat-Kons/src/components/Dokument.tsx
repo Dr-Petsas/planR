@@ -1,7 +1,8 @@
 import { Fragment } from 'react'
 import type { Einstellungen, Plan, Rechnung, Vereinbarungsart, Zeile } from '../types'
 import { euro, faktorText } from '../engine/kons'
-import { anschrift, patientName, plzOrt } from '../stammdaten'
+import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
+import Arztstempel from './Arztstempel'
 
 interface Props {
   plan: Plan
@@ -61,10 +62,10 @@ function Kopf({ plan, einst }: Omit<Props, 'rechnung'>) {
   )
 }
 
-const Unterschriften = () => (
+const Unterschriften = ({ praxis }: { praxis: Praxis }) => (
   <div className="kv-unterschriften">
     <div><span />Ort, Datum, Unterschrift Patient/in</div>
-    <div><span />Unterschrift Zahnärztin / Zahnarzt</div>
+    <div><Arztstempel praxis={praxis} />Unterschrift Zahnärztin / Zahnarzt</div>
   </div>
 )
 
@@ -134,7 +135,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           {rechnung.vereinbarung2.length > 0 && <p>Für Faktoren über 3,5 gilt die gesonderte Vereinbarung nach § 2 GOZ (Blatt 2).</p>}
           <p>Gültig bis {gueltigBis(plan.datum, einst.gueltigMonate)}.{plan.vereinbarung !== 'pkv' && ' Die Vereinbarung muss vor Behandlungsbeginn unterschrieben vorliegen.'}</p>
         </div>
-        <Unterschriften />
+        <Unterschriften praxis={einst.praxis} />
       </div>
 
       {rechnung.vereinbarung2.length > 0 && (
@@ -156,7 +157,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
             </tbody>
           </table>
           <p className="kv-erstattung">Eine Erstattung der Vergütung durch Erstattungsstellen ist möglicherweise nicht in vollem Umfang gewährleistet.</p>
-          <Unterschriften />
+          <Unterschriften praxis={einst.praxis} />
         </div>
       )}
     </>

@@ -2,7 +2,8 @@ import type { Einstellungen, Plan, Rechnung, Stufen, Zeile } from '../types'
 import { BEHANDLUNGSART_NAME, PLANART_NAME, RASTER_119, RASTER_120, kigText } from '../data/katalog'
 import { euro, faktorText, pwText, rasterPunkte } from '../engine/kfo'
 import { FORMULAR_NAME } from '../engine/listen'
-import { anschrift, patientName, plzOrt } from '../stammdaten'
+import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
+import Arztstempel from './Arztstempel'
 
 interface Props {
   plan: Plan
@@ -95,10 +96,10 @@ function RasterTabelle({ plan, rechnung }: Omit<Props, 'einst'>) {
   )
 }
 
-const Unterschriften = ({ links }: { links: string }) => (
+const Unterschriften = ({ links, praxis }: { links: string; praxis: Praxis }) => (
   <div className="kv-unterschriften">
     <div><span />{links}</div>
-    <div><span />Unterschrift Zahnärztin / Zahnarzt</div>
+    <div><Arztstempel praxis={praxis} />Unterschrift Zahnärztin / Zahnarzt</div>
   </div>
 )
 
@@ -212,7 +213,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
             nach BEMA) und bei der ich nichts zusätzlich zahlen muss. Im Wissen um diesen Anspruch wünsche ich die oben genannten
             privaten Leistungen und verpflichte mich, die anfallenden Mehrkosten selbst zu tragen.
           </p>
-          <Unterschriften links="Ort, Datum, Unterschrift Zahlungspflichtige/r" />
+          <Unterschriften links="Ort, Datum, Unterschrift Zahlungspflichtige/r" praxis={einst.praxis} />
         </div>
       )}
     </>

@@ -1,6 +1,7 @@
 import type { Einstellungen, Plan, Rechnung, Zeile } from '../types'
 import { euro, faktorText, istUkps } from '../engine/kb'
-import { anschrift, patientName, plzOrt } from '../stammdaten'
+import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
+import Arztstempel from './Arztstempel'
 
 interface Props {
   plan: Plan
@@ -41,10 +42,10 @@ function Kopf({ plan, einst }: Omit<Props, 'rechnung'>) {
   )
 }
 
-const Unterschriften = () => (
+const Unterschriften = ({ praxis }: { praxis: Praxis }) => (
   <div className="kv-unterschriften">
     <div><span />Ort, Datum, Unterschrift Patient/in</div>
-    <div><span />Unterschrift Zahnärztin / Zahnarzt</div>
+    <div><Arztstempel praxis={praxis} />Unterschrift Zahnärztin / Zahnarzt</div>
   </div>
 )
 
@@ -131,7 +132,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           </p>}
           <p>Dieser Kostenvoranschlag gilt bis {gueltigBis(plan.datum, einst.gueltigMonate)}.</p>
         </div>
-        <Unterschriften />
+        <Unterschriften praxis={einst.praxis} />
       </div>
 
       {rechnung.vereinbarung2.length > 0 && (
@@ -143,7 +144,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           <p className="kv-erstattung">
             Eine Erstattung der Vergütung durch Erstattungsstellen ist möglicherweise nicht in vollem Umfang gewährleistet.
           </p>
-          <Unterschriften />
+          <Unterschriften praxis={einst.praxis} />
         </div>
       )}
     </>

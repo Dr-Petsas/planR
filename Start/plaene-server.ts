@@ -16,6 +16,7 @@ import {
   setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe, type AgentStand,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
+import { arztAusPickadoc } from './pickadocArzt.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, mandantVon, neuesToken, registerVon,
@@ -581,7 +582,8 @@ async function praxisdaten(res: ServerResponse, w: Wer) {
     ...gepflegt,
   }
   const praxis = Object.fromEntries(PRAXIS_FELDER.map((k) => [k, typeof roh[k] === 'string' ? (roh[k] as string).trim() : '']).filter(([, v]) => v))
-  json(res, 200, { ok: true, nummer: nr, praxis })
+  const arzt = await arztAusPickadoc(w.konto.clientId, w.konto.uid, String(praxis.zahnarzt ?? '')).catch(() => null)
+  json(res, 200, { ok: true, nummer: nr, praxis, ...(arzt ? { arzt: { name: arzt.name, signatur: arzt.signatur } } : {}) })
 }
 
 /** Privatpläne mit „Versenden“ im Planer */

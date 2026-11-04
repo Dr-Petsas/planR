@@ -50,3 +50,12 @@ describe('Ablage', () => {
     expect(abgleichen(liste, [], [])).toEqual(liste)
   })
 })
+
+describe('Arztstempel', () => {
+  it('Stempelzeilen wie im Briefkopf, Zahnarzt nicht doppelt', async () => {
+    const { stempelZeilen } = await import('./arzt')
+    const p = { name: 'Zahnarztpraxis Dr. med. dent. Michael Petsas', zahnarzt: 'Dr. med. dent. Michael Petsas', strasse: 'Luise-Rainer-Str. 6-10', plz: '40235', ort: 'D\u00fcsseldorf', telefon: '0211 3029 3029' }
+    expect(stempelZeilen(p)).toEqual(['Zahnarztpraxis', 'Dr. med. dent. Michael Petsas', 'Luise-Rainer-Str. 6-10', '40235 D\u00fcsseldorf', 'Tel. 0211 3029 3029'])
+    expect(stempelZeilen({ ...p, name: 'Praxis am Markt', zahnarzt: '' }, 'Dr. Michael Petsas')[1]).toBe('Dr. Michael Petsas')
+  })
+})

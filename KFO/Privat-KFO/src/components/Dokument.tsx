@@ -1,7 +1,8 @@
 import type { Einstellungen, Plan, Rechnung, Zeile } from '../types'
 import { euro, faktorText } from '../engine/kfo'
 import { KRITERIEN_REGELBISS, KRITERIEN_UMFORMUNG } from '../data/katalog'
-import { anschrift, patientName, plzOrt } from '../stammdaten'
+import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
+import Arztstempel from './Arztstempel'
 
 interface Props {
   plan: Plan
@@ -42,10 +43,10 @@ function Kopf({ plan, einst }: Omit<Props, 'rechnung'>) {
   )
 }
 
-const Unterschriften = () => (
+const Unterschriften = ({ praxis }: { praxis: Praxis }) => (
   <div className="kv-unterschriften">
     <div><span />Ort, Datum, Unterschrift Patient/in bzw. Zahlungspflichtige/r</div>
-    <div><span />Unterschrift Zahnärztin / Zahnarzt</div>
+    <div><Arztstempel praxis={praxis} />Unterschrift Zahnärztin / Zahnarzt</div>
   </div>
 )
 
@@ -150,7 +151,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           <p>Ob und in welchem Umfang eine private Versicherung oder Beihilfe erstattet, richtet sich nach Ihrem Vertrag bzw. den Beihilfevorschriften.</p>
           <p>Dieser Heil- und Kostenplan gilt bis {gueltigBis(plan.datum, einst.gueltigMonate)}.</p>
         </div>
-        <Unterschriften />
+        <Unterschriften praxis={einst.praxis} />
       </div>
 
       {rechnung.mehr.length > 0 && (
@@ -184,7 +185,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           <p className="kv-erstattung">
             Eine Erstattung durch Erstattungsstellen ist möglicherweise nicht im vollen Umfang gewährleistet.
           </p>
-          <Unterschriften />
+          <Unterschriften praxis={einst.praxis} />
         </div>
       )}
 
@@ -197,7 +198,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           <p className="kv-erstattung">
             Eine Erstattung der Vergütung durch Erstattungsstellen ist möglicherweise nicht in vollem Umfang gewährleistet.
           </p>
-          <Unterschriften />
+          <Unterschriften praxis={einst.praxis} />
         </div>
       )}
     </>

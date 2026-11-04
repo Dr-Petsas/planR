@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ZENTRALE_PRAXIS_KEY } from './stammdaten'
+import { arztUebernehmen } from './arzt'
 
 /**
  * Ablage gespeicherter Pläne mit Freigabe-Status (im Browser, localStorage).
@@ -74,7 +75,8 @@ function praxisAbgleichen() {
   if (typeof fetch !== 'function' || typeof localStorage === 'undefined' || typeof location === 'undefined') return
   fetch(hubAdresse().replace(/\/plaene$/, '/praxisdaten'), { cache: 'no-store', credentials: 'include' })
     .then((r) => (r.ok ? r.json() : null))
-    .then((d: { praxis?: Record<string, string> } | null) => {
+    .then((d: { praxis?: Record<string, string>; arzt?: { name?: unknown; signatur?: unknown } } | null) => {
+      void arztUebernehmen(d?.arzt)
       if (!d?.praxis || !Object.keys(d.praxis).length) return
       const neu = JSON.stringify(d.praxis)
       if (localStorage.getItem(ZENTRALE_PRAXIS_KEY) === neu) return

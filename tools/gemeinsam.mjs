@@ -35,7 +35,7 @@ const SAETZE = {
     'stammdaten.ts', 'stammdaten.test.ts', 'components/Stammdaten.tsx',
     'daten.ts', 'components/Listen.tsx', 'gemeinsam.css', 'thema.ts',
   ],
-  ablage: ['ablage.ts', 'ablage.test.ts', 'components/Ablage.tsx'],
+  ablage: ['ablage.ts', 'ablage.test.ts', 'components/Ablage.tsx', 'arzt.ts', 'components/Arztstempel.tsx'],
   befund: ['befund01.ts', 'befund01.test.ts', 'components/Befundleiste.tsx'],
   labor: [
     'engine/eigenlabor.ts', 'engine/eigenlabor.test.ts', 'engine/digital.ts',

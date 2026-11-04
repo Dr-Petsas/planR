@@ -1,5 +1,6 @@
 import type { Einstellungen, Plan } from '../types'
 import { plzOrt, praxisZeile } from '../stammdaten'
+import Arztstempel from './Arztstempel'
 import { euro, type Kalkulation, type Zeile } from '../engine/berechnung'
 import { ALLE_ZAEHNE, BEFUND_KUERZEL, PLANUNG_KUERZEL } from '../engine/zahnschema'
 import { SITZUNG_NAME } from '../engine/planung'
@@ -204,14 +205,14 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
             </table>
           </div>
           <footer className="kv-unterschriften">
-            <div><span />Ort, Datum, Unterschrift Zahnärztin / Zahnarzt</div>
+            <div><Arztstempel praxis={praxis} />Ort, Datum, Unterschrift Zahnärztin / Zahnarzt</div>
             <div><span />Ort, Datum, Unterschrift Patient/in</div>
           </footer>
         </section>
       )}
 
       <footer className="kv-unterschriften">
-        <div><span />Ort, Datum, Unterschrift Zahnärztin / Zahnarzt</div>
+        <div><Arztstempel praxis={praxis} />Ort, Datum, Unterschrift Zahnärztin / Zahnarzt</div>
         <div><span />Ich bin mit der geplanten Behandlung einverstanden.<br />Ort, Datum, Unterschrift Patient/in</div>
       </footer>
     </article>
