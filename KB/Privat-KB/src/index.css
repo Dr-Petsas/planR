@@ -270,10 +270,16 @@ fieldset.sperre:disabled { opacity: .62; }
 .xml-marke { margin-left: 6px; padding: 0 4px; border-radius: 3px; background: var(--akzent-hell); color: var(--akzent); font-size: 10px; font-weight: 600; }
 .link-btn { border: none; background: none; padding: 0; color: var(--akzent); text-decoration: underline; cursor: pointer; font-size: inherit; }
 .vorlagen-gruppe { margin: 10px 0 4px; font-size: 11px; font-weight: 600; color: var(--grau); text-transform: uppercase; letter-spacing: .4px; }
-.vorlagen-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-bottom: 6px; }
-.vorlagen-zeile .vorlagen-gruppe { margin: 0; width: 150px; flex: none; }
-.vorlage-chip { border: 1px solid var(--linie); background: white; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--tinte); }
-.vorlage-chip:hover:not(:disabled) { border-color: var(--akzent); background: var(--akzent-hell); }
+.schnellstart { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; }
+.ss-gruppe { --ss: var(--stahl); --ss-hell: var(--stahl-hell); background: var(--papier); border: 1px solid var(--linie); border-radius: 10px; padding: 7px 9px 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: inset 0 3px 0 var(--ss); }
+.ss-1 { --ss: var(--akzent); --ss-hell: var(--akzent-hell); }
+.ss-2 { --ss: #8a7a55; --ss-hell: #f3eedf; }
+.ss-titel { font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ss); }
+.ss-knoepfe { display: flex; flex-wrap: wrap; gap: 4px; }
+.ss-knopf { border: 1px solid transparent; background: var(--ss-hell); color: var(--tinte); border-radius: 6px; padding: 3px 9px; font-size: 12px; line-height: 1.3; transition: background .12s, border-color .12s, transform .12s; }
+.ss-knopf:hover:not(:disabled) { background: white; border-color: var(--ss); transform: translateY(-1px); box-shadow: 0 2px 6px rgba(60, 40, 10, .1); }
+.ss-knopf:active:not(:disabled) { transform: none; }
+@media (max-width: 1250px) { .schnellstart { grid-template-columns: 1fr; } }
 .pos-tabelle td.pos-text { max-width: 0; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .analog-zeile { display: flex; align-items: center; gap: 6px; }
 .analog-zeile .text-feld { flex: 1; min-width: 80px; }

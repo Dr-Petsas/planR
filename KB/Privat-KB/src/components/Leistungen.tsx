@@ -41,6 +41,19 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
 
   return (
     <>
+      <div className="schnellstart" title="Ein Klick fügt die üblichen GOZ- und Laborpositionen der Behandlung zum Plan hinzu">
+        {VORLAGEN_GRUPPEN.map((gr, i) => (
+          <div key={gr} className={`ss-gruppe ss-${i}`}>
+            <span className="ss-titel">{gr}</span>
+            <div className="ss-knoepfe">
+              {VORLAGEN.filter((v) => v.gruppe === gr).map((v) => (
+                <button key={v.id} className="ss-knopf" title={`${v.titel}: ${v.text}`} onClick={() => vorlageNehmen(v.pos)}>{v.titel}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="block">
         <h3 className="block-kopf">
           Positionen
@@ -48,7 +61,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
             <button className="link-btn" onClick={() => window.confirm('Alle Positionen aus dem Plan entfernen?') && setPos([])}>alle entfernen</button>
           )}
         </h3>
-        {plan.positionen.length === 0 && <p className="leer">Noch keine Position – unten eine Vorlage wählen oder einzeln hinzufügen.</p>}
+        {plan.positionen.length === 0 && <p className="leer">Noch keine Position – oben eine Behandlung anklicken oder unten einzeln hinzufügen.</p>}
         {gruppen.map((g) => {
           const pos = plan.positionen.filter((p) => g.ebenen.includes(p.ebene))
           if (!pos.length) return null
@@ -148,19 +161,6 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
           <button className="sekundaer klein-btn" onClick={hinzufuegen}>Position hinzufügen</button>
         </div>
       </div>
-
-      <div className="block">
-        <h3>Vorlage hinzufügen <small className="grau">fügt die üblichen GOZ- und Laborpositionen an – oben einzeln änderbar</small></h3>
-        {VORLAGEN_GRUPPEN.map((gr) => (
-          <div key={gr} className="vorlagen-zeile">
-            <span className="vorlagen-gruppe">{gr}</span>
-            {VORLAGEN.filter((v) => v.gruppe === gr).map((v) => (
-              <button key={v.id} className="vorlage-chip" title={v.text} onClick={() => vorlageNehmen(v.pos)}>+ {v.titel}</button>
-            ))}
-          </div>
-        ))}
-      </div>
-
       {(rechnung.warnungen.length > 0 || rechnung.hinweise.length > 0) && (
         <ul className="hinweise">
           {rechnung.warnungen.map((h) => <li key={h} className="warn">{h}</li>)}
