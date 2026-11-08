@@ -10,6 +10,7 @@ import {
 } from '../engine/termine'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
 import type { DiagnoseErgebnis, ParFall, Planung, Termin, TerminArt, UptModul } from '../types'
+import { ReglerKlappe } from './Handy'
 
 interface Props {
   fall: ParFall
@@ -73,13 +74,15 @@ export default function StreckeReiter({ fall, setFall, diag, preise }: Props) {
           <div className="gross"><span>Gesamt</span><b>{euro(summen.summe)}</b></div>
           <div><span>erbracht</span><b>{euro(summen.erbracht)}</b></div>
         </div>
-        <div className="umsatz-regler">
-          <Regler min={summen.basis} max={summen.potential} wert={summen.summe}
-            onChange={(v) => setFall({ ...fall, zielGesamt: v, termine: reglerGesamt(fall, preise, v) })} />
-          <p className="hinweis-klein">Der Regler verteilt den Zielumsatz reihum auf alle offenen Termine: erst
-            Kassen-Begleitleistungen, dann private Zusatzleistungen, je Termin die wertvollste zuerst.
-            Von Hand Gewähltes bleibt, ★ = vom Regler.</p>
-        </div>
+        <ReglerKlappe>
+          <div className="umsatz-regler">
+            <Regler min={summen.basis} max={summen.potential} wert={summen.summe}
+              onChange={(v) => setFall({ ...fall, zielGesamt: v, termine: reglerGesamt(fall, preise, v) })} />
+            <p className="hinweis-klein">Der Regler verteilt den Zielumsatz reihum auf alle offenen Termine: erst
+              Kassen-Begleitleistungen, dann private Zusatzleistungen, je Termin die wertvollste zuerst.
+              Von Hand Gewähltes bleibt, ★ = vom Regler.</p>
+          </div>
+        </ReglerKlappe>
         <div className="knopf-spalte">
           <button onClick={() => setFall({ ...fall, zielGesamt: 0, termine: fall.termine.map((t) => (t.erbracht ? t : { ...t, auto: [] })) })}>Regler zurücksetzen</button>
           <button onClick={() => setOffen(alleOffen ? new Set() : new Set(fall.termine.map((t) => t.id)))}>{alleOffen ? 'Alle zuklappen' : 'Alle aufklappen'}</button>

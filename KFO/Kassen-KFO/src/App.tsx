@@ -13,6 +13,7 @@ import Dokument from './components/Dokument'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
+import { ReglerKlappe } from './components/Handy'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -82,9 +83,11 @@ export default function App() {
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen} />
         </header>
         {reiter === 'planung' && (
-          <fieldset className="sperre" disabled={gesperrt}>
-            <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />
-          </fieldset>
+          <ReglerKlappe>
+            <fieldset className="sperre" disabled={gesperrt}>
+              <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />
+            </fieldset>
+          </ReglerKlappe>
         )}
       </div>
 

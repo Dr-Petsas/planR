@@ -14,6 +14,7 @@ import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
+import { ReglerKlappe } from './components/Handy'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -82,9 +83,11 @@ export default function App() {
             extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: rechnung.gesamt, thema: 'Kieferorthopädie' }} vorher={sichern} />} />
         </header>
         {reiter === 'planung' && (
-          <fieldset className="sperre" disabled={gesperrt}>
-            <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />
-          </fieldset>
+          <ReglerKlappe>
+            <fieldset className="sperre" disabled={gesperrt}>
+              <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />
+            </fieldset>
+          </ReglerKlappe>
         )}
       </div>
 

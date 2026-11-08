@@ -1,6 +1,7 @@
 /** Logo-Link zurück zur Planübersicht. Daneben Zurück und Vor für die geöffneten Pläne. */
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { arbeitStandard, planrLeiste, type PlanPunkt } from './arbeitFenster'
+import { blaetterEinpassen } from './components/Handy'
 
 function planNav(richtung: 'zurueck' | 'vor') {
   if (window.parent !== window) {
@@ -33,6 +34,7 @@ export function PlanrLeiste({ punkte, aktiv, onWahl, versand = false }: {
 
 export function PlanrZurueck() {
   useEffect(() => arbeitStandard(), [])
+  useEffect(() => blaetterEinpassen(), [])
   const mandant = new URLSearchParams(window.location.search).get('mandant')
   const q = mandant ? `?mandant=${encodeURIComponent(mandant)}` : ''
   const href = window.location.pathname.startsWith('/planer/') ? `/${q}`

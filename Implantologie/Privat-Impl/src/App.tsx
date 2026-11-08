@@ -17,6 +17,7 @@ import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
+import { ReglerKlappe } from './components/Handy'
 import { implAnmelden } from './arbeitPlan'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
@@ -124,9 +125,11 @@ export default function App() {
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen}
             extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: kalk.gesamt, thema: 'Implantologie' }} vorher={sichern} />} />
         </header>
-        <fieldset className="sperre" disabled={gesperrt}>
-          <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
-        </fieldset>
+        <ReglerKlappe>
+          <fieldset className="sperre" disabled={gesperrt}>
+            <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+          </fieldset>
+        </ReglerKlappe>
       </div>
 
       <main className="arbeitsflaeche">

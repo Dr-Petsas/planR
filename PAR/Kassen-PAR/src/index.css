@@ -320,6 +320,17 @@ textarea.textbox { display: block; width: 100%; box-sizing: border-box; }
   .strecke-links { width: 100%; position: static; max-height: none; }
   .ts-grid { grid-template-columns: 1fr; }
 }
+/* Handy: Umsatz einspaltig und nicht klebend, Strecke über die volle Breite */
+@media (max-width: 840px) {
+  .umsatz-leiste { position: static; min-height: 0; grid-template-columns: 1fr; padding: 10px; }
+  .umsatz-leiste .summen { grid-template-columns: repeat(2, 1fr); }
+  .umsatz-leiste .regler-knopf { width: 100%; margin: 0; }
+  .knopf-spalte button { white-space: normal; }
+  .strecke { align-items: stretch; }
+  .timeline { padding: 8px; }
+  .result-header { grid-template-columns: 1fr; gap: 8px; padding: 10px; }
+  .ts-cockpit { flex-wrap: wrap; }
+}
 
 /* Formulare (A4) */
 .formular-wahl { display: flex; gap: 4px; flex-wrap: wrap; }

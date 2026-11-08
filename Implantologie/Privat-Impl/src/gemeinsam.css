@@ -91,3 +91,17 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
 .kv-begruendung { margin-top: 14px; break-inside: avoid; }
 .kv-begruendung h2 { font-size: 12px; margin: 0 0 4px; }
 .kv-begruendung p { margin: 3px 0; font-size: 11px; }
+
+/* Handy (components/Handy.tsx) wie im Kassen-HKP: Regler hinter dem Knopf, Blatt bleibt A4 und wird verkleinert */
+.regler-knopf { display: none; }
+@media (max-width: 840px) {
+  html, body { overflow-x: hidden; }
+  .regler-knopf {
+    display: block; width: calc(100% - 16px); margin: 8px; min-height: 44px; padding: 5px 10px;
+    border: 1px solid #d63384; border-radius: 12px; background: #d63384; color: #fff;
+    font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .kv-blatt, .ef2, .a4 { width: 210mm; max-width: none; flex: 0 0 auto; zoom: var(--handy-zoom, 1); }
+  .vorschau, .druck-bereich { min-width: 0; max-width: 100%; }
+  select, .pos-neu select { max-width: 100%; }
+}

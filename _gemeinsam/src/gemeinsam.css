@@ -97,10 +97,11 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
 @media (max-width: 840px) {
   html, body { overflow-x: hidden; }
   .regler-knopf {
-    display: block; width: calc(100% - 16px); margin: 8px; min-height: 44px; padding: 8px 14px;
+    display: block; width: calc(100% - 16px); margin: 8px; min-height: 44px; padding: 5px 10px;
     border: 1px solid #d63384; border-radius: 12px; background: #d63384; color: #fff;
-    font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    font: inherit; font-weight: 700; cursor: pointer;
   }
   .kv-blatt, .ef2, .a4 { width: 210mm; max-width: none; flex: 0 0 auto; zoom: var(--handy-zoom, 1); }
   .vorschau, .druck-bereich { min-width: 0; max-width: 100%; }
+  select, .pos-neu select { max-width: 100%; }
 }
