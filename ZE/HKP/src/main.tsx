@@ -10,7 +10,8 @@ import { linkZugang, mobilGewuenscht } from './store/mobilLink'
 import { befundLinkAus } from './store/befund01'
 
 const suche = window.location.search
-const zugang = mobilGewuenscht(suche, window.matchMedia?.('(max-width: 760px)').matches ?? false) ? linkZugang(suche) : null
+const schmal = window.matchMedia?.('(max-width: 760px)').matches ?? false
+const zugang = mobilGewuenscht(suche, schmal, window.parent !== window) ? linkZugang(suche) : null
 const befundLink = zugang ? null : befundLinkAus(suche)
 
 createRoot(document.getElementById('root')!).render(

@@ -12,6 +12,8 @@ export interface Ich {
   clara?: 'voll' | 'planr' | 'aus'
   /** 'planr' = PlanR-Abo ohne MAS (eigene Rechnungen), 'mas' = über Pickadoc MAS */
   abo?: 'planr' | 'mas' | ''
+  /** Eigenes Profilfoto liegt auf dem Server */
+  foto?: boolean
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)

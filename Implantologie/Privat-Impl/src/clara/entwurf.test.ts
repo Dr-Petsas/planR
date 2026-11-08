@@ -38,6 +38,21 @@ describe('Implantologie per Sprache', () => {
     expect(goz(r)).toContain('9110@OK-R')
   })
 
+  it('Sinuslift je Seite: extern rechts, intern links, Front ohne Sinus', () => {
+    const r = ok(implEntwurf('Implantate an 12, 14, 16, 22, 24 und 26, externer Sinuslift rechts, interner Sinuslift links'))
+    expect(r.plan.regionen['OK-R']).toMatchObject({ sinusExtern: true })
+    expect(r.plan.regionen['OK-R']?.sinusIntern).toBeUndefined()
+    expect(r.plan.regionen['OK-L']).toMatchObject({ sinusIntern: true })
+    expect(r.plan.regionen['OK-L']?.sinusExtern).toBeUndefined()
+    expect(r.plan.regionen['OK-F']?.sinusExtern).toBeUndefined()
+    expect(r.plan.regionen['OK-F']?.sinusIntern).toBeUndefined()
+    expect(goz(r)).toContain('9120@OK-R')
+    expect(goz(r)).toContain('9110@OK-L')
+    expect(goz(r).filter((z) => z.startsWith('9120'))).toEqual(['9120@OK-R'])
+    expect(goz(r).filter((z) => z.startsWith('9110'))).toEqual(['9110@OK-L'])
+    expect(r.hinweise).toContain('Den externen Sinuslift habe ich rechts angesetzt, den internen links.')
+  })
+
   it('Sinuslift im Unterkiefer wird nicht angesetzt', () => {
     const r = ok(implEntwurf('Implantat 36, Sinuslift extern'))
     expect(r.plan.regionen['UK-L']?.sinusExtern).toBeUndefined()

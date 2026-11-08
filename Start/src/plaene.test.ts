@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, kartePrüfen, kennungVon, loeschbar, modulErsetzen, planDateiAus, planDateiLesen, planFiltern, tagVon,
+  begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, kartePrüfen, kennungVon, loeschbar, modulErsetzen, nummerMitReihe, planDateiAus, planDateiLesen, planFiltern, planNummer, tagVon,
   type Eingang, type PlanKarte,
 } from './plaene'
 
@@ -23,6 +23,17 @@ describe('Patient der Zeile im Praxisprogramm (Befund)', () => {
     expect(h[0].kennung).toEqual({ patient: '4711' })
     const k = kartePrüfen({ modul: 'privat-kb', nummer: 'KB-1', art: 'Privat', patient: 'Anna Berger', betrag: 0, geaendert: '2026-10-16T08:00:00Z', plan: { patient: { vorname: 'Anna', name: 'Berger', geburtsdatum: '1970-03-02' } } })
     expect(k?.kennung).toEqual({ vorname: 'Anna', name: 'Berger', geburt: '1970-03-02' })
+  })
+})
+
+describe('planNummer', () => {
+  it('setzt Kürzel, Jahr, Buchstabe und drei Ziffern', () => {
+    expect(planNummer('HKP', 1, 2026)).toBe('HKP-2026-A001')
+    expect(planNummer('HKP', 934, 2026)).toBe('HKP-2026-A934')
+    expect(planNummer('IMPL', 1000, 2026)).toBe('IMPL-2026-B001')
+    expect(planNummer('IMPL', 2000, 2026)).toBe('IMPL-2026-C002')
+    expect(nummerMitReihe('IMPL-2026-001')).toBe('IMPL-2026-A001')
+    expect(nummerMitReihe('IMPL-2026-C001')).toBe('IMPL-2026-C001')
   })
 })
 

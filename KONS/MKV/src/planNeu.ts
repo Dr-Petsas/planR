@@ -1,4 +1,5 @@
 import type { Einstellungen, Plan, Regler } from './types'
+import { planNummer } from './ablage'
 import { STANDARD_LABOR } from './data/katalog'
 import { leererPatient, standardPraxis } from './stammdaten'
 
@@ -25,7 +26,7 @@ export const reglerAus = (e: Einstellungen): Regler => ({
   laborKlasse: 1,
 })
 
-export const nummerFormat = (n: number) => `FMKV-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => planNummer('FMKV', n)
 
 export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {

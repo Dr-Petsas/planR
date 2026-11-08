@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Zahnschema } from './components/Zahnschema'
 import { Leistungen } from './components/Leistungen'
 import { Kostenvoranschlag } from './components/Kostenvoranschlag'
@@ -18,7 +18,8 @@ import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
-import { PlanrZurueck } from './PlanrZurueck'
+import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
+import { privatAnmelden } from './arbeitPlan'
 import { Befundleiste, useBefundMitPlan } from './components/Befundleiste'
 import { befundZeile, datumDe } from './befund01'
 import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
@@ -61,6 +62,13 @@ export default function App() {
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
+  const planRef = useRef(plan)
+  const sperreRef = useRef(gesperrt)
+  useEffect(() => { planRef.current = plan; sperreRef.current = gesperrt })
+  useEffect(() => privatAnmelden(
+    () => ({ plan: planRef.current, gesperrt: sperreRef.current }),
+    (neu) => setPlan(neu),
+  ), [setPlan])
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   useBefundMitPlan(!gesperrt)
   const neu = (patient?: Partial<Patient> | null) => {
@@ -107,6 +115,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <PlanrLeiste punkte={REITER.map(([id, text]) => ({ id, text }))} aktiv={reiter} onWahl={(id) => setReiter(id as Reiter)} versand />
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">

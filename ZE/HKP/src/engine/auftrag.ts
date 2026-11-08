@@ -9,9 +9,10 @@ import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './reg
 import { privatStufeAnwenden, regelUebernehmen } from './aufwertung'
 import { BEFUND_KUERZEL, FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerblendbereich, istWeisheitszahn, kieferVon } from './zahnschema'
 import { WERKSTOFFE, WERKSTOFFE_FUER, kronenEinheiten, type Werkstoff } from './material'
-import { ausfuehrungIn } from './ausfuehrung'
+import { ausfuehrungIn, zaehneFuerVerblendung, type Verblendung } from './ausfuehrung'
+import { ALLON_SITZ, prothetikIn, type AbutmentArt, type AnkerArt, type KronenArt, type Retention } from './vokabular'
 
-export type Versorgung = 'teleskopprothese' | 'totalprothese' | 'kronen' | 'bruecke' | 'implantatkronen'
+export type Versorgung = 'teleskopprothese' | 'totalprothese' | 'kronen' | 'bruecke' | 'implantatkronen' | 'locator' | 'steg' | 'allon' | 'inlay'
 export type Kiefer = 'OK' | 'UK'
 
 export interface HkpAuftrag {
@@ -25,6 +26,10 @@ export interface HkpAuftrag {
   glieder?: string[]
   coverDenture: boolean
   mitAchtern: boolean
+  /** Interimsprothese (Befundklasse 5), nur für den genannten Kiefer */
+  interim?: boolean
+  /** Immediatprothese, nur für den genannten Kiefer */
+  immediat?: boolean
   abformung?: Exclude<Abformung, ''>
   werkstoff?: Werkstoff
   labor?: HkpPlan['einstellungen']['labor']
@@ -32,6 +37,22 @@ export interface HkpAuftrag {
   implantatSystem?: string
   /** Eigenlabor-Stufe „Kasse → Privat“ */
   privatStufe?: number
+  /** Teilverblendung, vestibuläre Verblendung, Vollverblendung oder unverblendet */
+  verblendung?: Verblendung
+  /** Locator, Kugelkopf, Steg oder Teleskop – steuert die Ankerzeile */
+  anker?: AnkerArt
+  /** All-on-4 oder All-on-6, wenn keine Sitze genannt wurden */
+  allon?: 4 | 6
+  retention?: Retention
+  abutment?: AbutmentArt
+  kronenart?: KronenArt
+  /** monolithisch, ohne Verblendschicht */
+  form?: 'vollanatomisch'
+  flaechen?: 1 | 2 | 3 | 4
+  flaechenGenannt?: boolean
+  aufImplantat?: boolean
+  sekundaer?: boolean
+  loeffel?: 'offen' | 'geschlossen'
   /** laut Ansage zu entfernen bzw. zu erhalten */
   entfernen: string[]
   erhalten: string[]
@@ -157,6 +178,76 @@ export function zaehneIn(teil: string, kiefer?: Kiefer): string[] {
   return out
 }
 
+const STELLE_EINZEL = '[1-8]|eins|zwei|drei|vier|f(?:ü|ue)nf|sechs|sieben|acht'
+
+function stelleNummer(w: string): string | undefined {
+  if (/^[1-8]$/.test(w)) return w
+  const n = STELLE[w]
+  return n ? String(n) : undefined
+}
+
+/** Ohne genannten Kiefer alle vier Quadranten. „im Oberkiefer“ nur 1 und 2. */
+function quadrantenAus(t: string, kiefer?: Kiefer): string[] {
+  const okWort = /\b(ok|oberkiefer|oben)\b/.test(t)
+  const ukWort = /\b(uk|unterkiefer|unten)\b/.test(t)
+  const ok = kiefer === 'OK' || (okWort && !ukWort)
+  const uk = kiefer === 'UK' || (ukWort && !okWort)
+  if (ok && !uk) return ['1', '2']
+  if (uk && !ok) return ['4', '3']
+  return ['1', '2', '4', '3']
+}
+
+/**
+ * „Implantate in der Region 3, 4 und 6 in jedem Quadranten“
+ * → 13, 14, 16, 23, 24, 26, 33, 34, 36, 43, 44, 46.
+ * Gesprochen, auch ohne Komma und mit STT „regione“.
+ */
+function implantRegionen(text: string, kiefer?: Kiefer): string[] {
+  const t = norm(text)
+  if (!/implantat/.test(t) || !/quadrant/.test(t)) return []
+  const liste = new RegExp(`((?:${STELLE_EINZEL})(?:\\s*(?:,|und|sowie)?\\s+(?:${STELLE_EINZEL})){1,7})`, 'g')
+  const fund = t.match(new RegExp(`\\bregi(?:o|on)\\w*\\s+${liste.source}`))
+    ?? t.match(new RegExp(`\\b(?:in der|in den|an den)\\s+${liste.source}`))
+  if (!fund) return []
+  const stellen = [...fund[1].matchAll(new RegExp(STELLE_EINZEL, 'g'))].map((x) => stelleNummer(x[0])).filter((x): x is string => !!x)
+  const out: string[] = []
+  for (const q of quadrantenAus(t, kiefer)) for (const s of stellen) {
+    const z = q + s
+    if (/^[1-4][1-8]$/.test(z) && !out.includes(z)) out.push(z)
+  }
+  return out
+}
+
+/** „von 4 auf 6“, „von 3 auf 3“: Stellen im Quadranten, nicht die FDI-Nummer 46. */
+function positionsSpannen(t: string, kiefer?: Kiefer): { anker: string[]; glieder: string[] } {
+  const anker: string[] = []
+  const glieder: string[] = []
+  const re = new RegExp(`(?:\\bvon|\\bab)\\s+(?:(?:der|dem|die|den|zahn)\\s+)?(${STELLE_EINZEL})(?!\\d)\\s+(?:auf|bis|nach|zu)\\s+(?:(?:die|den|der|dem|zahn)\\s+)?(${STELLE_EINZEL})(?!\\d)`, 'g')
+  const qs = quadrantenAus(t, kiefer)
+  const dazuAnker = (z: string) => { if (!anker.includes(z)) anker.push(z) }
+  const dazuGlied = (z: string) => { if (!glieder.includes(z) && !anker.includes(z)) glieder.push(z) }
+  const ausSpanne = (von: string, bis: string) => {
+    const zs = zahnSpanne(von, bis)
+    if (zs.length < 2) return
+    dazuAnker(zs[0])
+    dazuAnker(zs[zs.length - 1])
+    for (const z of zs.slice(1, -1)) dazuGlied(z)
+  }
+  for (const m of t.matchAll(re)) {
+    const a = stelleNummer(m[1])
+    const b = stelleNummer(m[2])
+    if (!a || !b) continue
+    if (a === b) {
+      const kieferSet = new Set(qs.map((q) => (q === '1' || q === '2' ? 'OK' : 'UK')))
+      if (kieferSet.has('OK')) ausSpanne(`1${a}`, `2${b}`)
+      if (kieferSet.has('UK')) ausSpanne(`4${a}`, `3${b}`)
+      continue
+    }
+    for (const q of qs) ausSpanne(q + a, q + b)
+  }
+  return { anker, glieder }
+}
+
 const satzteile = (t: string) => norm(t).split(/[,;.]| und nach | sowie | dazu | außerdem | ausserdem /).map((s) => s.trim()).filter(Boolean)
 
 const KIEFER_WORT = /\b(ok|o\.k\.|oberkiefer|oben|uk|u\.k\.|unterkiefer|unten)\b/g
@@ -189,13 +280,10 @@ function kieferAbschnitte(text: string): { kiefer: Kiefer; text: string }[] {
 /** „Totalprothese für beide Kiefer“, „oben und unten“ – eine Versorgung für OK und UK */
 const BEIDE_KIEFER = /\bbeide(n)? kiefer|\bbeidkiefer|\bok und uk\b|\buk und ok\b|\boben und unten\b|\bunten und oben\b/
 
+const KIEFERWEIT = new Set<Versorgung>(['teleskopprothese', 'totalprothese', 'locator', 'steg', 'allon'])
+
 function versorgungIn(t: string, coverDenture: boolean): Versorgung | undefined {
-  if (/teleskop|konus|doppelkrone/.test(t) || coverDenture) return 'teleskopprothese'
-  if (/totalprothese|vollprothese|totale/.test(t)) return 'totalprothese'
-  if (/br(ü|ue)cke/.test(t)) return 'bruecke'
-  if (/implantat/.test(t)) return 'implantatkronen'
-  if (/krone/.test(t)) return 'kronen'
-  return undefined
+  return prothetikIn(t).versorgung ?? (coverDenture ? 'teleskopprothese' : undefined)
 }
 
 export function auftragVerstehen(text: string): HkpAuftrag {
@@ -206,9 +294,11 @@ export function auftragVerstehen(text: string): HkpAuftrag {
   const beide = BEIDE_KIEFER.test(norm(text))
   // Gleiche Prothese für beide Kiefer: jeder Kiefer liest den ganzen Satz („auf den Eckzähnen“ gilt oben und unten)
   const gemeinsam = KIEFER_GEMEINSAM.test(norm(text))
-    && (auftrag.versorgung === 'teleskopprothese' || auftrag.versorgung === 'totalprothese')
+    && KIEFERWEIT.has(auftrag.versorgung ?? 'kronen')
     && new Set(abschnitte.map((a) => einzelAuftrag(a.text).versorgung).filter(Boolean)).size <= 1
-  if (abschnitte.length < 2 && !(beide && auftrag.versorgung === 'totalprothese') && !gemeinsam) return auftrag
+  const fuerBeide = beide && (auftrag.versorgung === 'totalprothese' || auftrag.versorgung === 'allon')
+  if (abschnitte.length < 2 && !fuerBeide && !gemeinsam)
+    return brueckenKiefer(auftrag) ?? auftrag
   const roh = gemeinsam
     ? (['OK', 'UK'] as Kiefer[]).map((k) => einzelAuftrag(text, k))
     : abschnitte.map((a) => ({ ...einzelAuftrag(a.text), kiefer: a.kiefer }))
@@ -218,21 +308,52 @@ export function auftragVerstehen(text: string): HkpAuftrag {
     const t = norm(abschnitte[i].text)
     if (x.versorgung || /nichts|kein/.test(t) || befundWort(t, true)) return
     const nachbar = roh.slice(0, i).reverse().find((y) => y.versorgung) ?? roh.slice(i + 1).find((y) => y.versorgung)
-    if (nachbar?.versorgung) x.versorgung = nachbar.versorgung
+    if (nachbar?.versorgung) {
+      x.versorgung = nachbar.versorgung
+      // „All-on-6 oben und unten“: der zweite Kiefer trägt nur „unten“ und würde sonst zu All-on-4.
+      if (x.allon == null && nachbar.allon) x.allon = nachbar.allon
+      // „im Unterkiefer von 44 auf 46“ enthält das Wort Brücke nicht. Die Spanne wird erst hier gelesen.
+      if (x.versorgung === 'bruecke') brueckeVerstehen(norm(abschnitte[i].text), x)
+    }
   })
-  if (beide && auftrag.versorgung === 'totalprothese')
+  if (fuerBeide)
     for (const k of ['OK', 'UK'] as const)
-      if (!roh.some((x) => x.kiefer === k && x.versorgung)) roh.push({ ...einzelAuftrag(text), kiefer: k, versorgung: 'totalprothese', pfeiler: [] })
+      if (!roh.some((x) => x.kiefer === k && x.versorgung))
+        roh.push({ ...einzelAuftrag(text), kiefer: k, versorgung: auftrag.versorgung, allon: auftrag.allon })
   const teile = roh
-    .filter((x) => x.versorgung && x.versorgung !== 'kronen' && x.versorgung !== 'implantatkronen')
+    .filter((x) => x.versorgung && x.versorgung !== 'kronen' && x.versorgung !== 'implantatkronen' && x.versorgung !== 'inlay')
     .filter((x, i, alle) => alle.findIndex((y) => y.kiefer === x.kiefer) === i)
   const kiefer = new Set(teile.map((x) => x.kiefer))
   if (!teile.length) return auftrag
-  for (const x of teile) x.pfeiler = x.pfeiler.filter((z) => kieferVon(z) === x.kiefer)
+  for (const x of teile) {
+    x.pfeiler = x.pfeiler.filter((z) => kieferVon(z) === x.kiefer)
+    if (x.glieder) x.glieder = x.glieder.filter((z) => kieferVon(z) === x.kiefer)
+  }
   if (kiefer.size === 1) return { ...auftrag, ...teile[0], text, bonus: auftrag.bonus, haertefall: auftrag.haertefall }
   return { ...auftrag, versorgung: teile[0].versorgung, kiefer: undefined, teile,
-    pfeiler: teile.flatMap((x) => x.pfeiler), coverDenture: teile.some((x) => x.coverDenture) }
+    pfeiler: teile.flatMap((x) => x.pfeiler), glieder: teile.flatMap((x) => x.glieder ?? []),
+    coverDenture: teile.some((x) => x.coverDenture) }
 }
+
+type ListenArt = 'entfernen' | 'erhalten'
+const LISTEN_VERB: Record<ListenArt, RegExp> = { entfernen: /entfern|extrah|ziehen|gezogen|raus/, erhalten: /bleib|erhalt|behalt|stehen/ }
+const listenArt = (teil: string): ListenArt | undefined =>
+  LISTEN_VERB.entfernen.test(teil) ? 'entfernen' : LISTEN_VERB.erhalten.test(teil) ? 'erhalten' : undefined
+const ersterZahnIn = (teil: string) => teil.search(new RegExp(`\\b${ZAHN_WORT}`))
+/** „Entfernung der Zähne 15“: das Verb steht vor dem ersten Zahn, die Aufzählung danach gehört dazu */
+const verbVorn = (teil: string, art: ListenArt) => {
+  const zahn = ersterZahnIn(teil)
+  return zahn >= 0 && teil.search(LISTEN_VERB[art]) < zahn
+}
+/** „…, 22 und 25 werden entfernt“: Verb in der Mehrzahl hinter den Zähnen nimmt die Aufzählung davor mit */
+function listeDanach(teil?: string): ListenArt | undefined {
+  const art = teil ? listenArt(teil) : undefined
+  if (!art || !teil || /\b(?:wird|soll|muss|ist|bleibt|steht)\b/.test(teil)) return undefined
+  const zahn = ersterZahnIn(teil)
+  return zahn < 0 || teil.search(LISTEN_VERB[art]) > zahn ? art : undefined
+}
+const ZAEHNE_VORWORT = /^\s*(?:(?:die|der|den)\s+)?(?:zahn|z(?:ä|ae)hne)\s+/
+const nurZaehne = (teil: string) => NUR_ZAEHNE.test(teil) || NUR_ZAEHNE.test(teil.replace(ZAEHNE_VORWORT, ''))
 
 function einzelAuftrag(text: string, kiefer?: Kiefer): HkpAuftrag {
   const t = norm(text)
@@ -240,12 +361,28 @@ function einzelAuftrag(text: string, kiefer?: Kiefer): HkpAuftrag {
     text, pfeiler: [], entfernen: [], erhalten: [],
     coverDenture: /co?ver.?dent|kover.?dent|deckprothese/.test(t),
     mitAchtern: /(mit|inklusive|inkl\.?|samt) (den )?achter/.test(t),
+    interim: /interim|provisorisch|übergangsprothese|uebergangsprothese/.test(t),
+    immediat: /immediat|sofortprothese/.test(t),
   }
   auftrag.versorgung = versorgungIn(t, auftrag.coverDenture)
   auftrag.kiefer = kiefer ?? kieferIn(t)
   const nummern = [...t.matchAll(FDI)].map((m) => kieferVon(m[1]))
   if (!auftrag.kiefer && nummern.length && nummern.every((k) => k === nummern[0])) auftrag.kiefer = nummern[0]
   Object.assign(auftrag, ausfuehrungIn(text))
+  const worte = prothetikIn(t)
+  if (worte.versorgung) auftrag.versorgung = worte.versorgung
+  if (worte.anker) auftrag.anker = worte.anker
+  if (worte.allon) auftrag.allon = worte.allon
+  if (worte.retention) auftrag.retention = worte.retention
+  if (worte.abutment) auftrag.abutment = worte.abutment
+  if (worte.kronenart) auftrag.kronenart = worte.kronenart
+  if (worte.form) auftrag.form = worte.form
+  if (worte.flaechen) auftrag.flaechen = worte.flaechen
+  if (worte.flaechenGenannt) auftrag.flaechenGenannt = true
+  if (worte.aufImplantat) auftrag.aufImplantat = true
+  if (worte.sekundaer) auftrag.sekundaer = true
+  if (worte.loeffel) auftrag.loeffel = worte.loeffel
+  if (worte.kronenart === 'galvano' && !auftrag.verblendung) auftrag.verblendung = 'keine'
 
   if (/h(ä|ae)rtefall/.test(t)) auftrag.haertefall = true
   if (/(kein|ohne)(en)? bonus/.test(t)) auftrag.bonus = '60'
@@ -255,22 +392,45 @@ function einzelAuftrag(text: string, kiefer?: Kiefer): HkpAuftrag {
 
   const alleTeile = satzteile(text)
   let pfeilerDavor = false
+  let listeDavor: ListenArt | undefined
   alleTeile.forEach((teil, i) => {
     const zs = zaehneIn(teil, auftrag.kiefer)
-    if (!zs.length) return
+    if (!zs.length) {
+      listeDavor = undefined
+      return
+    }
+    // „nach Entfernung der Zähne 15, 12, 11 und 25“ / „die Zähne 12, 11 und 25 werden entfernt“:
+    // die ganze Aufzählung gehört zum Verb, nicht nur ihr erster Zahn (Anruf 06.11.2026 08:38)
+    if (nurZaehne(teil)) {
+      // „…, die Zähne 12, 11“ beginnt eine neue Aufzählung, auch direkt hinter Pfeilern
+      const fortsetzung = pfeilerDavor && !ZAEHNE_VORWORT.test(teil)
+      const art = listeDavor ?? (fortsetzung ? undefined : listeDanach(alleTeile.slice(i + 1).find((u) => !nurZaehne(u))))
+      if (art) {
+        auftrag[art].push(...zs.filter((z) => !auftrag[art].includes(z)))
+        pfeilerDavor = false
+        return
+      }
+    }
     if (NUR_ZAEHNE.test(teil)) {
       // „Teleskope auf 13, 23 und 14“: Aufzählung setzt die Pfeiler fort – außer „…, 34, 35 fehlen“
       const weiter = alleTeile.slice(i + 1).find((u) => !NUR_ZAEHNE.test(u))
-      if (pfeilerDavor && !(weiter && befundWort(weiter, true)))
+      // nur ein nachgestelltes Befund-Wort beendet die Aufzählung, „…, nach Entfernung der Zähne 15“ nicht
+      const befund = weiter ? befundWort(weiter, true) : undefined
+      const zahnDort = weiter ? ersterZahnIn(weiter) : -1
+      if (pfeilerDavor && !(befund && (zahnDort < 0 || befund.index > zahnDort)))
         auftrag.pfeiler.push(...zs.filter((z) => !auftrag.pfeiler.includes(z)))
       return
     }
     pfeilerDavor = false
-    if (/entfern|extrah|ziehen|gezogen|raus/.test(teil)) auftrag.entfernen.push(...zs)
-    else if (/bleib|erhalt|behalt|stehen/.test(teil)) auftrag.erhalten.push(...zs)
-    else if (/teleskop|konus|doppelkrone|pfeiler|krone|anker|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil)
+    listeDavor = undefined
+    const art = listenArt(teil)
+    if (art) {
+      auftrag[art].push(...zs)
+      if (verbVorn(teil, art)) listeDavor = art
+    }
+    else if (/teleskop|konus|doppelkrone|pfeiler|krone|anker|locator|locater|druckknopf|kugel(?:kopf|anker)|novaloc|equator|steg|inlay|onlay|tabletop|teilkrone|veneer|galvano|suprakonstruktion|abutment|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil)
       // Einzelzahn: „Implantat am Zahn 26“, „in Region 26“ (Anruf 07.10.2026 19:36)
-      || ((auftrag.versorgung === 'implantatkronen' || auftrag.versorgung === 'kronen')
+      || ((auftrag.versorgung === 'implantatkronen' || auftrag.versorgung === 'kronen' || auftrag.versorgung === 'inlay')
         && /implantat|\b(?:am|an|bei|f(?:ü|ue)r) (?:zahn )?[1-4][1-8]\b|\bzahn [1-4][1-8]\b|\bregion?\b/.test(teil))) {
       // „Teleskop auf 13 und 23 ersetzte Zähne 14 …“: ab dem Befund-Wort sind es keine Pfeiler mehr,
       // ebenso ab „und die Zähne 14 bis 17 ersetzen“ (Verb hinten)
@@ -296,11 +456,32 @@ const GLIED_DANACH = new RegExp(`${GLIED_WORT}\\s+(?:(?:auf|in|bei|regio|f(?:ü|
  * („15 ist ein Brückenglied“) oder die Zähne zwischen genau zwei Ankern. Einzahl-Form („16 und 15 ist ein Glied“)
  * nimmt nur den Zahn direkt am Glied-Wort.
  */
+/** Brücken in beiden Kiefern aus einem Satz („jeweils von 4 auf 6 und von 3 auf 3“) */
+function brueckenKiefer(a: HkpAuftrag): HkpAuftrag | undefined {
+  if (a.versorgung !== 'bruecke') return undefined
+  const zs = [...a.pfeiler, ...(a.glieder ?? [])]
+  if (new Set(zs.map(kieferVon)).size < 2) return undefined
+  const teile = (['OK', 'UK'] as const).map((k) => ({
+    ...a,
+    kiefer: k,
+    pfeiler: a.pfeiler.filter((z) => kieferVon(z) === k),
+    glieder: (a.glieder ?? []).filter((z) => kieferVon(z) === k),
+  })).filter((t) => t.pfeiler.length >= 2 && (t.glieder?.length ?? 0) > 0)
+  if (teile.length < 2) return undefined
+  return {
+    ...a, kiefer: undefined, teile,
+    pfeiler: teile.flatMap((t) => t.pfeiler),
+    glieder: teile.flatMap((t) => t.glieder ?? []),
+  }
+}
+
 function brueckeVerstehen(t: string, a: HkpAuftrag) {
   const nummern = (s: string) => [...s.matchAll(FDI)].map((m) => m[1])
   const spannen = [...t.matchAll(BRUECKEN_SPANNE)].filter((m) => kieferVon(m[1]) === kieferVon(m[2]))
   const anker: string[] = []
   for (const m of spannen) for (const z of [m[1], m[2]]) if (!anker.includes(z)) anker.push(z)
+  const stellen = positionsSpannen(t, a.kiefer)
+  for (const z of stellen.anker) if (!anker.includes(z)) anker.push(z)
   const glieder: string[] = []
   const dazu = (zs: string[]) => zs.forEach((z) => !glieder.includes(z) && !anker.includes(z) && glieder.push(z))
   for (const m of t.matchAll(GLIED_DAVOR)) {
@@ -312,6 +493,7 @@ function brueckeVerstehen(t: string, a: HkpAuftrag) {
     dazu(/glieder/.test(m[0]) ? zs : zs.slice(0, 1))
   }
   for (const m of spannen) dazu(zahnSpanne(m[1], m[2]).slice(1, -1))
+  for (const z of stellen.glieder) dazu([z])
   const pfeiler = [...anker, ...a.pfeiler.filter((z) => !anker.includes(z))].filter((z) => !glieder.includes(z))
   if (!glieder.length && pfeiler.length === 2 && kieferVon(pfeiler[0]) === kieferVon(pfeiler[1]))
     dazu(zahnSpanne(pfeiler[0], pfeiler[1]).slice(1, -1))
@@ -335,8 +517,9 @@ const BEFUND_ARTEN: { re: RegExp; code: string; versorgung?: true }[] = [
   { re: /implantat\w*[- ]?br(?:ü|ue)cken[- ]?glied|br(?:ü|ue)cken[- ]?glied\w* auf implantat/, code: 'sb', versorgung: true },
   { re: /implantat\w*[- ]?(?:steg|verbindungselement)/, code: 'so', versorgung: true },
   { re: /implantat\w*[- ]?prothese|implantatgetragene\w* prothese/, code: 'se', versorgung: true },
-  { re: /implantat[- ]?kron|implantatgetragene\w* kron|kronen? auf (?:dem |einem )?implantat/, code: 'sk', versorgung: true },
-  { re: /\b(?:ist|sind|hat|haben|mit|tr(?:ä|ae)gt) (?:ein(?:em)? )?implantat\b|implantat\w* (?:ist |sind )?(?:vorhanden|intakt|drin|versorgt|in ordnung)|\b(?:ist|sind|bereits|schon) implantiert/, code: 'i', versorgung: true },
+  { re: /druckknopf|locator|locater|kugel(?:kopf|anker)|novaloc|equator/, code: 'so', versorgung: true },
+  { re: /implantat[- ]?kron|implantatgetragene\w* kron|kronen? auf (?:dem |einem )?implantat|suprakonstruktion/, code: 'sk', versorgung: true },
+  { re: /\b(?:ist|sind|hat|haben|mit|tr(?:ä|ae)gt) (?:ein(?:em)? )?implantat\w*|implantat\w* (?:ist |sind )?(?:vorhanden|intakt|drin|versorgt|in ordnung)|implantat\w*\s+(?:an|auf|in|bei|regio)|\b(?:ist|sind|bereits|schon) implantiert/, code: 'i', versorgung: true },
   { re: /\b[1-4][1-8] (?:ein )?implantate?$/, code: 'i', versorgung: true },
   { re: /(?:adh(?:ä|ae)siv|klebe)[- ]?br(?:ü|ue)cken[- ]?glied/, code: 'ab', versorgung: true },
   { re: /adh(?:ä|ae)siv|klebebr(?:ü|ue)cke|maryland/, code: 'a', versorgung: true },
@@ -420,6 +603,14 @@ function befundTeilen(teil: string): string[] {
 
 /** Gesprochener Befund („es fehlen 15 bis 18 und 25 bis 28, 13 bis 23 vorhanden“) → eHKP-Kürzel je Zahn */
 export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
+  // Punkt trennt Sätze. Sonst übernimmt „vorhanden“ am Satzende die Aufzählung davor
+  // („fehlen 18 bis 14, 12, 11. Nur 13 und 23 sind vorhanden“).
+  const saetze = norm(text).split(/[.!?]+\s*/).map((s) => s.trim()).filter(Boolean)
+  if (saetze.length > 1) {
+    const befund: Befund = {}
+    for (const s of saetze) Object.assign(befund, befundVerstehen(s, kiefer))
+    return befund
+  }
   const befund: Befund = {}
   const nurKiefer = new Set<Kiefer>()
   const roh = satzteile(text).flatMap(befundTeilen)
@@ -434,7 +625,9 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
   const teile = roh.map((teil, i) => {
     const k = kieferFuer(i)
     const treffer = befundWort(teil)
-    const ersterZahn = teil.search(/\b[1-4][1-8]\b|er(n|s)?\b|front|eckz/)
+    // „er“ ohne Wortanfang traf das „er“ in „Kiefer“. Die Aufzählung galt dann als
+    // nachgestellt und übernahm das Verb des nächsten Satzes (live 05.11.2026).
+    const ersterZahn = teil.search(/\b[1-4][1-8]\b|\b(?:einser|einer|zweier|dreier|vierer|f(?:ü|ue)nfer|sechser|siebe?ner|achter)n?\b|\bfront|\beckz/)
     return {
       teil, k, zs: zaehneFuer(teil, k), code: treffer?.code,
       /** Verb am Ende („…, die Sechser und Siebener fehlen“) gilt auch für die Satzteile davor */
@@ -442,11 +635,20 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
     }
   })
   let letztes: string | undefined
+  // „fehlen 18 bis 14, 12, 11 und 24 bis 28. Nur 13 und 23 sind vorhanden“:
+  // die Aufzählung behält das vorn stehende Verb. Ein nachgestelltes Verb gilt
+  // nur, solange keins davor steht. Sonst übernimmt der zweite Satz die Liste,
+  // und das Handy zeigt andere Zähne als das Diktat (live 05.11.2026).
+  let aufzaehlung = false
   teile.forEach((x, i) => {
     let code = x.code
     if (code === undefined) {
       const naechstes = teile.slice(i + 1).find((y) => y.code !== undefined)
-      code = naechstes?.nachgestellt ? naechstes.code : letztes
+      // „die Front, die Fünfer fehlen“: die zahnlosen Teile gehören zum nachgestellten Verb.
+      // „fehlen 18, 12, 11“: ohne solches Verb bleibt das vorn stehende.
+      code = naechstes?.nachgestellt ? naechstes.code
+        : aufzaehlung && letztes !== undefined ? letztes
+        : letztes
     }
     if (ALLE_FEHLEN.test(x.teil)) {
       const ausnahme = AUSSER.exec(x.teil)
@@ -460,6 +662,7 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
     for (const z of x.zs) if (!(sammelbegriff && z in befund)) befund[z] = code
     if (code === '' && x.k && /\bnur\b/.test(x.teil)) nurKiefer.add(x.k)
     letztes = code
+    if (x.code !== undefined) aufzaehlung = !x.nachgestellt
   })
   for (const k of nurKiefer) for (const z of REIHE[k]) if (!(z in befund)) befund[z] = 'f'
   // „Im Unterkiefer sind alle Zähne vorhanden“ gilt dem genannten Kiefer, auch wenn der Auftrag im OK liegt
@@ -468,9 +671,18 @@ export function befundVerstehen(text: string, kiefer?: Kiefer): Befund {
   for (const k of alleDaTeile) if (k) alleDa.add(k)
   if (alleDaTeile.includes(null) || (!alleDaTeile.length && ALLE_DA.test(norm(text))))
     for (const k of kiefer ? [kiefer] : (['OK', 'UK'] as Kiefer[])) alleDa.add(k)
-  for (const k of alleDa) for (const z of REIHE[k]) if (!(z in befund) && !istWeisheitszahn(z)) befund[z] = ''
+  // „alle Zähne“ meint auch die Achter. „alle anderen“ lässt nicht genannte Achter,
+  // wie bisher, aus – die nimmt ein neuer Befund sonst als fehlend.
+  const mitAchten = /\balle z(?:ä|ae)hne\b/.test(norm(text)) && !/\balle (?:anderen|(?:ü|ue)brigen)\b/.test(norm(text))
+  for (const k of alleDa) for (const z of REIHE[k]) if (!(z in befund) && (mitAchten || !istWeisheitszahn(z))) befund[z] = ''
   if (kiefer && /alle (anderen|übrigen|uebrigen|restlichen) fehlen|sonst (fehlt|fehlen) alle|rest fehlt|(anderen|übrigen|uebrigen|restlichen) z(ä|ae)hne (sind |werden )?(ersetzt|fehlen)/.test(norm(text)))
     for (const z of REIHE[kiefer]) if (!(z in befund)) befund[z] = 'f'
+  // Zahnlos mit Implantaten in genannten Regionen: die Zähne fehlen, an den Implantaten steht i.
+  const sitze = implantRegionen(text, kiefer)
+  if (sitze.length && /\bzahnlos\b/.test(norm(text))) {
+    for (const kk of new Set(sitze.map(kieferVon))) for (const z of REIHE[kk]) if (!(z in befund)) befund[z] = 'f'
+    for (const z of sitze) befund[z] = 'i'
+  }
   return befund
 }
 
@@ -491,7 +703,7 @@ const ALLE_FEHLEN = /\b(fehlen|fehlt) (ihm |ihr )?(schon )?alle z(ä|ae)hne\b|\b
 /** „alle Zähne fehlen außer 13 und 23“: was danach kommt, bleibt stehen */
 const AUSSER = /\b(?:au(?:ß|ss)er|bis auf|mit ausnahme (?:von |der |des )?|ausgenommen)\s+(.+)$/
 
-const VERSORGUNGS_TEIL = /prothese|teleskop|konus|doppelkrone|krone|anker|pfeiler|co?ver.?dent|kover|bonus|scan|abdruck|abform|gold|zirkon|keramik|\bnem\b|erstell|plan|hkp|kostenpl/
+const VERSORGUNGS_TEIL = /prothese|teleskop|konus|doppelkrone|krone|anker|pfeiler|co?ver.?dent|kover|bonus|scan|abdruck|abform|gold|zirkon|keramik|\bnem\b|erstell|plan|hkp|kostenpl|inlay|onlay|tabletop|teilkrone|galvano|abutment|suprakonstruktion|locator|druckknopf|kugelkopf|novaloc|steg|all[\s-]*on|veneer/
 
 /** Befund-Satzteile aus einem gesprochenen Auftrag („… die Sechser und Siebener fehlen …“), sonst '' */
 /** Satzteil, der nur Zähne aufzählt („die Vierer“, „Fünfer“) – sein Verb steht weiter hinten */
@@ -558,6 +770,14 @@ function befundSaetze(text: string): string {
 
 const liste = (zs: string[]) => (zs.length <= 1 ? zs.join('') : `${zs.slice(0, -1).join(', ')} und ${zs[zs.length - 1]}`)
 const fehlt = (b: Befund, z: string) => FEHLEND.has((b[z] ?? '').trim().toLowerCase())
+/** i/sk/st: Implantat oder implantatgetragene Krone. ix kommt raus und ist ebenfalls kein Zahn. */
+const IMPLANTAT_BLEIBT = /^(i|sk|skw|st|stw)$/
+const implantatBleibt = (code: string) => IMPLANTAT_BLEIBT.test(code.trim().toLowerCase())
+const zahnStehtNoch = (b: Befund, z: string) => {
+  if (!(z in b) || fehlt(b, z)) return false
+  const k = (b[z] ?? '').trim().toLowerCase()
+  return !implantatBleibt(k) && k !== 'ix'
+}
 
 /** Erzeugt aus Auftrag und Befund einen gerechneten Plan – oder eine Rückfrage. */
 export function planAusAuftrag(auftrag: HkpAuftrag, befundRoh: Befund, optionen: PlanOptionen = {}): PlanErgebnis | Rueckfrage {
@@ -569,58 +789,98 @@ export function planAusAuftrag(auftrag: HkpAuftrag, befundRoh: Befund, optionen:
   for (const teil of teile) {
     if (!teil.versorgung)
       return { status: 'rueckfrage', grund: 'versorgung', frage: 'Welche Versorgung soll ich planen – zum Beispiel Teleskopprothese, Totalprothese oder Kronen?' }
-    if (!teil.kiefer && !['kronen', 'bruecke', 'implantatkronen'].includes(teil.versorgung))
+    if (!teil.kiefer && !['kronen', 'bruecke', 'implantatkronen', 'inlay'].includes(teil.versorgung ?? ''))
       return { status: 'rueckfrage', grund: 'kiefer', frage: 'Für welchen Kiefer – Oberkiefer oder Unterkiefer?' }
   }
-  const nurTotal = teile.every((x) => x.versorgung === 'totalprothese')
-  if (!Object.keys(befund).length && !nurTotal)
+  const ohneBefundOk = teile.every((x) => x.versorgung === 'totalprothese' || x.versorgung === 'allon')
+  if (!Object.keys(befund).length && !ohneBefundOk)
     return { status: 'rueckfrage', grund: 'befund_fehlt', frage: 'Ich habe keinen Befund. Welche Zähne fehlen, und welche sind vorhanden?' }
 
   const tp: Record<string, string> = {}
   for (const teil of teile) {
     const r = teil.versorgung === 'kronen'
       ? kronenPlanen(teil, befund, tp)
-      : teil.versorgung === 'bruecke'
-        ? brueckePlanen(teil, befund, tp)
-        : teil.versorgung === 'implantatkronen'
-          ? implantatPlanen(teil, befund, tp)
-          : kieferPlanen(teil, teil.kiefer!, befund, tp, hinweise)
+      : teil.versorgung === 'inlay'
+        ? inlayPlanen(teil, befund, tp, hinweise)
+          : teil.versorgung === 'bruecke'
+          ? brueckePlanen(teil, befund, tp, hinweise)
+          : teil.versorgung === 'implantatkronen'
+            ? implantatPlanen(teil, befund, tp)
+            : teil.versorgung === 'allon'
+              ? allonPlanen(teil, befund, tp, hinweise)
+              : kieferPlanen(teil, teil.kiefer!, befund, tp, hinweise)
     if (r) return r
   }
   return planRechnen(auftrag, teile, befund, tp, hinweise, optionen)
 }
 
-function brueckePlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string, string>): Rueckfrage | undefined {
+function brueckePlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string, string>, hinweise: string[]): Rueckfrage | undefined {
   const anker = auftrag.pfeiler
   const glieder = auftrag.glieder ?? []
   if (anker.length < 2 || !glieder.length || new Set([...anker, ...glieder].map(kieferVon)).size > 1)
     return { status: 'rueckfrage', grund: 'pfeiler', frage: 'Von welchem bis zu welchem Zahn soll die Brücke gehen – zum Beispiel von 14 auf 16?' }
-  const ankerFehlt = anker.filter((z) => fehlt(befund, z) && befund[z] !== 'x')
+  const implant = !!auftrag.aufImplantat || anker.some((z) => befund[z] === 'i' || (befund[z] ?? '').startsWith('s'))
+  const ankerFehlt = anker.filter((z) => fehlt(befund, z) && befund[z] !== 'x' && !implant)
   if (ankerFehlt.length)
     return { status: 'rueckfrage', grund: 'pfeiler_fehlt', zaehne: ankerFehlt, frage: `Laut Befund ${ankerFehlt.length > 1 ? 'fehlen' : 'fehlt'} ${liste(ankerFehlt)}. Auf welchen Zähnen soll die Brücke stattdessen verankert sein?` }
-  const stehen = glieder.filter((z) => z in befund && !fehlt(befund, z))
+  const stehen = glieder.filter((z) => z in befund && !fehlt(befund, z) && befund[z] !== 'i')
   if (stehen.length)
     return { status: 'rueckfrage', grund: 'glied_vorhanden', zaehne: stehen, frage: `Laut Befund ${stehen.length > 1 ? 'sind' : 'ist'} ${liste(stehen)} noch vorhanden. Soll ich ${stehen.length > 1 ? 'sie' : 'ihn'} als zu entfernen planen? Dann sagen Sie zum Beispiel: ${stehen[0]} wird entfernt.` }
   for (const z of glieder) if (!(z in befund)) befund[z] = 'f'
-  const keramik = auftrag.werkstoff && WERKSTOFFE[auftrag.werkstoff].art === 'keramik'
-  if (keramik) {
+  const keramik = !!(auftrag.werkstoff && WERKSTOFFE[auftrag.werkstoff].art === 'keramik')
+  const vollverblendet = auftrag.verblendung === 'voll'
+  if (implant) {
+    for (const z of anker) {
+      if (!(z in befund)) befund[z] = 'f'
+      tp[z] = implantKrone(auftrag)
+    }
+    for (const z of glieder) tp[z] = implantGlied(auftrag)
+    const region = ['14', '16', '13', '23'].every((z) => anker.includes(z)) || ['44', '46', '43', '33'].every((z) => anker.includes(z))
+    if (region && !hinweise.some((h) => h.startsWith('Brücken je Kiefer')))
+      hinweise.push('Brücken je Kiefer von 4 auf 6 beidseits und von 3 auf 3. Die Siebener liegen außerhalb der Brücken und werden nicht ersetzt.')
+    if (vollverblendet && auftrag.form === 'vollanatomisch' && !hinweise.some((h) => h.startsWith('Vollverblendung auf dem Zirkon')))
+      hinweise.push('Vollverblendung auf dem Zirkon: keramische Verblendung (BEB 2612), nicht die unverblendete Vollanatomie.')
+  } else if (vollverblendet || (keramik && auftrag.form !== 'vollanatomisch')) {
+    for (const z of anker) tp[z] = 'KM'
+    for (const z of glieder) tp[z] = 'BM'
+  } else if (auftrag.form === 'vollanatomisch') {
+    for (const z of anker) tp[z] = 'ZA'
+    for (const z of glieder) tp[z] = 'ZAB'
+  } else if (keramik) {
     for (const z of anker) tp[z] = 'KM'
     for (const z of glieder) tp[z] = 'BM'
   }
   return undefined
 }
 
+const keramikAuftrag = (a: HkpAuftrag) => !!(a.werkstoff && WERKSTOFFE[a.werkstoff].art === 'keramik')
+
+/** Implantatkrone: 2200, als Brückenanker 5000. Eine genannte Vollverblendung geht vor der unverblendeten Vollanatomie. */
+function implantKrone(a: HkpAuftrag) {
+  if (a.verblendung === 'voll') return 'SKM'
+  if (a.form === 'vollanatomisch') return 'ZAS'
+  if (keramikAuftrag(a)) return 'SKM'
+  if (a.verblendung === 'teil' || a.verblendung === 'vestibulaer') return 'SKV'
+  return 'SK'
+}
+
+function implantGlied(a: HkpAuftrag) {
+  if (a.verblendung === 'voll') return 'SBM'
+  if (a.form === 'vollanatomisch') return 'ZAB'
+  if (keramikAuftrag(a)) return 'SBM'
+  return 'SB'
+}
+
 /** Implantatkronen (TP SK) auf fehlenden Zähnen; ein laut Befund stehender Zahn muss erst als „wird entfernt“ genannt sein */
 function implantatPlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string, string>): Rueckfrage | undefined {
   const sitze = auftrag.pfeiler
   if (!sitze.length) return { status: 'rueckfrage', grund: 'pfeiler', frage: 'Auf welche Zähne sollen die Implantatkronen – zum Beispiel auf 14 und 15?' }
-  const stehen = sitze.filter((z) => z in befund && !fehlt(befund, z))
+  const stehen = sitze.filter((z) => zahnStehtNoch(befund, z))
   if (stehen.length)
     return { status: 'rueckfrage', grund: 'zahn_vorhanden', zaehne: stehen, frage: `Laut Befund ${stehen.length > 1 ? 'sind' : 'ist'} ${liste(stehen)} noch vorhanden. ${stehen.length > 1 ? 'Werden sie' : 'Wird er'} vorher entfernt? Dann sagen Sie zum Beispiel: ${stehen[0]} wird entfernt.` }
-  const keramik = auftrag.werkstoff && WERKSTOFFE[auftrag.werkstoff].art === 'keramik'
   for (const z of sitze) {
     if (!(z in befund)) befund[z] = 'f'
-    tp[z] = keramik ? 'SKM' : 'SK'
+    tp[z] = implantKrone(auftrag)
   }
   return undefined
 }
@@ -637,39 +897,171 @@ function kieferPlanen(auftrag: HkpAuftrag, kiefer: Kiefer, befund: Befund, tp: R
       hinweise.push(`${name}: kein Befund genannt – für die Totalprothese als zahnlos angenommen.`)
       unbekannt.length = 0
     }
-    const pfeiler = auftrag.versorgung === 'teleskopprothese' ? auftrag.pfeiler.filter((z) => kieferVon(z) === kiefer) : []
-    if (auftrag.versorgung === 'teleskopprothese' && !pfeiler.length)
-      return { status: 'rueckfrage', grund: 'pfeiler', frage: 'Auf welchen Zähnen sollen die Teleskope sitzen?' }
-    const ohnePfeiler = pfeiler.filter((z) => fehlt(befund, z))
-    if (ohnePfeiler.length)
-      return { status: 'rueckfrage', grund: 'pfeiler_fehlt', zaehne: ohnePfeiler, frage: `Laut Befund ${ohnePfeiler.length > 1 ? 'fehlen' : 'fehlt'} ${liste(ohnePfeiler)}. Auf welchen Zähnen sollen die Teleskope stattdessen sitzen?` }
+    const ankerVersorgung = auftrag.versorgung === 'teleskopprothese' || auftrag.versorgung === 'locator' || auftrag.versorgung === 'steg'
+    const pfeiler = ankerVersorgung ? auftrag.pfeiler.filter((z) => kieferVon(z) === kiefer) : []
+    if (ankerVersorgung && !pfeiler.length) {
+      const was = auftrag.versorgung === 'locator' ? 'die Druckknöpfe oder Kugelköpfe' : auftrag.versorgung === 'steg' ? 'der Implantatsteg' : 'die Teleskope'
+      return { status: 'rueckfrage', grund: 'pfeiler', frage: `Auf welchen Zähnen oder Implantaten soll ${was} sitzen?` }
+    }
+    const aufImplantat = auftrag.versorgung === 'locator' || auftrag.versorgung === 'steg' || !!auftrag.aufImplantat
+    if (aufImplantat && pfeiler.length) {
+      const stehen = pfeiler.filter((z) => z in befund && !fehlt(befund, z))
+      if (stehen.length)
+        return { status: 'rueckfrage', grund: 'zahn_vorhanden', zaehne: stehen, frage: `Laut Befund ${stehen.length > 1 ? 'sind' : 'ist'} ${liste(stehen)} noch vorhanden. ${stehen.length > 1 ? 'Werden sie' : 'Wird er'} vorher entfernt? Dann sagen Sie zum Beispiel: ${stehen[0]} wird entfernt.` }
+      for (const z of pfeiler) if (!(z in befund)) befund[z] = 'f'
+    } else {
+      const ohnePfeiler = pfeiler.filter((z) => fehlt(befund, z))
+      if (ohnePfeiler.length)
+        return { status: 'rueckfrage', grund: 'pfeiler_fehlt', zaehne: ohnePfeiler, frage: `Laut Befund ${ohnePfeiler.length > 1 ? 'fehlen' : 'fehlt'} ${liste(ohnePfeiler)}. Auf welchen Zähnen sollen die Teleskope stattdessen sitzen?` }
+    }
     const offen = reihe.filter((z) => !istWeisheitszahn(z) && z in befund && !fehlt(befund, z) && !pfeiler.includes(z) && !auftrag.erhalten.includes(z))
-    const deckend = auftrag.coverDenture || auftrag.versorgung === 'totalprothese'
+    const deckend = auftrag.coverDenture || auftrag.versorgung === 'totalprothese' || auftrag.versorgung === 'locator' || auftrag.versorgung === 'steg'
     if (deckend && offen.length)
       return { status: 'rueckfrage', grund: 'restzaehne', zaehne: offen, frage: `Im ${kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'} ${offen.length > 1 ? 'stehen' : 'steht'} noch ${liste(offen)}. ${offen.length > 1 ? 'Sollen die' : 'Soll er'} erhalten bleiben oder entfernt werden?` }
     if (unbekannt.length) hinweise.push(`Kein Befund für ${liste(unbekannt)} – als vorhanden angenommen.`)
     const achter = reihe.filter((z) => istWeisheitszahn(z) && !(z in befund))
     for (const z of achter) befund[z] = 'f'
     if (achter.length) hinweise.push(`${liste(achter)} nicht genannt – als fehlend angenommen.`)
-    for (const z of pfeiler) tp[z] = imVerblendbereich(z) ? 'TV' : 'T'
+    const keramikTel = keramikAuftrag(auftrag)
+    const bogen = pfeiler.map((z) => reihe.indexOf(z)).filter((i) => i >= 0)
+    const von = bogen.length ? Math.min(...bogen) : -1
+    const bis = bogen.length ? Math.max(...bogen) : -1
+    for (const z of pfeiler) tp[z] = ankerKuerzel(auftrag, z, keramikTel)
     for (const z of reihe) {
       if (pfeiler.includes(z) || !fehlt(befund, z)) continue
       if (istWeisheitszahn(z) && !auftrag.mitAchtern) continue
-      tp[z] = 'E'
+      const i = reihe.indexOf(z)
+      tp[z] = auftrag.versorgung === 'steg' && i > von && i < bis ? 'SEO' : 'E'
     }
+    if (auftrag.versorgung === 'locator') hinweise.push(`${auftrag.anker === 'kugel' ? 'Kugelkopfanker' : 'Druckknopfanker'} angenommen: GOZ 5030 je Implantat und GOZ 5080 je Verbindungselement, Matrize und Patrize zusammen.`)
+    if (auftrag.versorgung === 'steg') hinweise.push('Implantatsteg angenommen: je Spanne eine Stegverbindung, je Implantat eine Kappe zur Aufnahme des Stegs.')
+    if (keramikTel && auftrag.versorgung === 'teleskopprothese') hinweise.push('Zirkon-Primärteleskop angenommen: Teleskopkrone plus Zuschlag für Keramik, das Sekundärteil bleibt das Teleskop.')
     if (auftrag.coverDenture) hinweise.push('Cover-Denture: gaumen- bzw. schleimhautgetragene Deckprothese auf den Teleskopen. Metallbasis (Befund 4.5) nur bei Notwendigkeit ankreuzen.')
   }
+  return undefined
+}
+
+function ankerKuerzel(a: HkpAuftrag, z: string, keramikTel: boolean) {
+  if (a.versorgung === 'locator' || a.versorgung === 'steg') return 'SO'
+  if (a.sekundaer) return a.verblendung === 'voll' ? 'T2M' : a.verblendung === 'keine' ? 'T2' : imVerblendbereich(z) ? 'T2V' : 'T2'
+  if (keramikTel) return `${a.aufImplantat ? 'STZ' : 'TZ'}${a.verblendung === 'voll' ? 'V' : ''}`
+  if (a.aufImplantat) return a.verblendung === 'voll' ? 'STM' : a.verblendung === 'keine' ? 'ST' : imVerblendbereich(z) ? 'STV' : 'ST'
+  if (a.verblendung === 'voll') return 'TM'
+  if (a.verblendung === 'keine') return 'T'
+  return imVerblendbereich(z) ? 'TV' : 'T'
+}
+
+function kronenKuerzel(a: HkpAuftrag) {
+  const keramik = keramikAuftrag(a)
+  if (a.kronenart === 'veneer') return 'VE'
+  if (a.kronenart === 'teilkrone' || a.kronenart === 'tabletop') return keramik ? 'PKM' : 'PK'
+  if (a.kronenart === 'galvano') return 'K'
+  if (a.form === 'vollanatomisch') return 'ZA'
+  if (keramik) return 'KM'
   return undefined
 }
 
 function kronenPlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string, string>): Rueckfrage | undefined {
   const kronen = auftrag.pfeiler
   if (!kronen.length) return { status: 'rueckfrage', grund: 'pfeiler', frage: 'Welche Zähne sollen überkront werden?' }
-  const ohneBefund = kronen.filter((z) => !KRONE_NOETIG.has(befund[z] ?? ''))
-  if (ohneBefund.length)
-    return { status: 'rueckfrage', grund: 'krone_befund', zaehne: ohneBefund, frage: `Für ${liste(ohneBefund)} steht im Befund keine Kronenbedürftigkeit. Ist ${ohneBefund.length > 1 ? 'sie' : 'er'} überkronungsbedürftig oder ist die Krone erneuerungsbedürftig?` }
-  const keramik = auftrag.werkstoff && WERKSTOFFE[auftrag.werkstoff].art === 'keramik'
-  if (keramik) for (const z of kronen) tp[z] = 'KM'
+  const sonder = !!(auftrag.kronenart || auftrag.form === 'vollanatomisch')
+  if (sonder) {
+    const weg = kronen.filter((z) => fehlt(befund, z))
+    if (weg.length)
+      return { status: 'rueckfrage', grund: 'zahn_vorhanden', zaehne: weg, frage: `${liste(weg)} ${weg.length > 1 ? 'fehlen' : 'fehlt'}. Eine Krone, ein Tabletop oder ein Veneer braucht den Zahn.` }
+    for (const z of kronen) if (!(z in befund)) befund[z] = ''
+  } else {
+    const ohneBefund = kronen.filter((z) => !KRONE_NOETIG.has(befund[z] ?? ''))
+    if (ohneBefund.length)
+      return { status: 'rueckfrage', grund: 'krone_befund', zaehne: ohneBefund, frage: `Für ${liste(ohneBefund)} steht im Befund keine Kronenbedürftigkeit. Ist ${ohneBefund.length > 1 ? 'sie' : 'er'} überkronungsbedürftig oder ist die Krone erneuerungsbedürftig?` }
+  }
+  for (const z of kronen) {
+    const k = kronenKuerzel(auftrag)
+    if (k) tp[z] = k
+  }
+  return undefined
+}
+
+function inlayPlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string, string>, hinweise: string[]): Rueckfrage | undefined {
+  const zs = auftrag.pfeiler
+  if (!zs.length) return { status: 'rueckfrage', grund: 'pfeiler', frage: 'Auf welchen Zähnen soll das Inlay oder Onlay sitzen?' }
+  const weg = zs.filter((z) => fehlt(befund, z))
+  if (weg.length)
+    return { status: 'rueckfrage', grund: 'zahn_vorhanden', zaehne: weg, frage: `${liste(weg)} ${weg.length > 1 ? 'fehlen' : 'fehlt'}. Ein Inlay oder Onlay braucht den Zahn.` }
+  const keramik = keramikAuftrag(auftrag)
+  const fl = auftrag.flaechen ?? 2
+  for (const z of zs) {
+    if (!(z in befund)) befund[z] = ''
+    tp[z] = auftrag.kronenart === 'onlay' ? (keramik ? 'ONK' : 'ON') : `${keramik ? 'C' : 'I'}${fl}`
+  }
+  if (auftrag.kronenart === 'onlay') hinweise.push('Onlay mehrflächig nach GOZ 2170 angenommen. Deckt es Höcker, ist es eine Teilkrone nach GOZ 2220 – dann Teilkrone sagen.')
+  else if (!auftrag.flaechenGenannt) hinweise.push('Flächen nicht genannt, zweiflächig angenommen (GOZ 2160).')
+  return undefined
+}
+
+const zahnFrage = (zs: string[]) => zs.length > 1
+  ? `Die Zähne ${liste(zs)} stehen noch. Werden sie vorher entfernt?`
+  : `Der Zahn ${zs[0]} steht noch. Wird er vorher entfernt?`
+
+/** Festsitzende Ganzkieferbrücke auf 4 oder 6 Implantaten. Ohne genannte Sitze gelten die üblichen Positionen. */
+function allonPlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string, string>, hinweise: string[]): Rueckfrage | undefined {
+  const kiefer = auftrag.kiefer
+  if (!kiefer) return { status: 'rueckfrage', grund: 'kiefer', frage: 'All-on-4 oder All-on-6 – für welchen Kiefer?' }
+  const n = auftrag.allon ?? 4
+  const name = kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'
+  const reihe = REIHE[kiefer]
+  const genannt = auftrag.pfeiler.filter((z) => kieferVon(z) === kiefer)
+  // All-on-6 bleibt sechs Implantate, auch wenn nur ein Teil der Sitze schon genannt ist.
+  let sitze = genannt.length && genannt.length < n
+    ? [...new Set([...ALLON_SITZ[n][kiefer], ...genannt])]
+    : genannt.length >= n ? [...genannt] : [...ALLON_SITZ[n][kiefer]]
+  if (genannt.length) sitze.sort((a, b) => reihe.indexOf(a) - reihe.indexOf(b))
+  if (!genannt.length) hinweise.push(`All-on-${n} ${name}: übliche Implantatpositionen ${sitze.join(', ')} angenommen.`)
+  const unbekannt = reihe.filter((z) => !(z in befund) && !istWeisheitszahn(z))
+  if (unbekannt.length === reihe.filter((z) => !istWeisheitszahn(z)).length) {
+    for (const z of reihe) befund[z] = 'f'
+    hinweise.push(`${name}: kein Befund genannt – für All-on-${n} als zahnlos angenommen.`)
+  }
+  const enden = () => sitze.map((z) => reihe.indexOf(z)).filter((i) => i >= 0)
+  let [von, bis] = [Math.min(...enden()), Math.max(...enden())]
+  for (const z of reihe.slice(von, bis + 1)) if (implantatBleibt(befund[z] ?? '') && !sitze.includes(z)) sitze.push(z)
+  sitze.sort((a, b) => reihe.indexOf(a) - reihe.indexOf(b))
+  ;[von, bis] = [Math.min(...enden()), Math.max(...enden())]
+  const imBogen = reihe.slice(von, bis + 1)
+  const glieder = imBogen.filter((z) => !sitze.includes(z))
+  const voraus = `All-on-${n} im ${name} ist eine festsitzende Brücke auf ${n === 6 ? 'sechs' : 'vier'} Implantaten. Dafür muss der Kiefer zahnlos sein.`
+  const stehen = reihe.filter((z) => imBogen.includes(z) && zahnStehtNoch(befund, z))
+  if (stehen.length)
+    return { status: 'rueckfrage', grund: sitze.some((z) => stehen.includes(z)) ? 'zahn_vorhanden' : 'glied_vorhanden', zaehne: stehen, frage: `${voraus} ${zahnFrage(stehen)}` }
+  const aussen = reihe.filter((z) => !imBogen.includes(z) && !istWeisheitszahn(z) && zahnStehtNoch(befund, z))
+  if (aussen.length)
+    return { status: 'rueckfrage', grund: 'restzaehne', zaehne: aussen, frage: `${voraus} ${zahnFrage(aussen)} Hinter dem letzten Implantat setze ich keine Freiendglieder.` }
+  const bestehend = sitze.filter((z) => implantatBleibt(befund[z] ?? ''))
+  const implantAussen = reihe.filter((z) => !sitze.includes(z) && implantatBleibt(befund[z] ?? ''))
+  for (const z of reihe) {
+    const k = (befund[z] ?? '').trim().toLowerCase()
+    if (implantatBleibt(k) && k !== 'i') befund[z] = 'i'
+    else if (k === 'ix') befund[z] = 'f'
+  }
+  if (bestehend.length) hinweise.push(`${name}: die Implantate an ${liste(bestehend)} bleiben. Die All-on-${n} sitzt darauf.`)
+  if (implantAussen.length) hinweise.push(`${name}: Implantate an ${liste(implantAussen)} liegen außerhalb der All-on-${n} und bleiben.`)
+  for (const z of sitze) {
+    if (!(z in befund)) befund[z] = 'f'
+    tp[z] = implantKrone(auftrag)
+  }
+  for (const z of glieder) {
+    if (!(z in befund)) befund[z] = 'f'
+    tp[z] = implantGlied(auftrag)
+  }
+  const distal: string[] = []
+  for (const z of reihe) {
+    if (tp[z]) continue
+    if (!(z in befund)) befund[z] = 'f'
+    tp[z] = ')('
+    if (!istWeisheitszahn(z)) distal.push(z)
+  }
+  if (distal.length) hinweise.push(`All-on-${n}: hinter dem letzten Implantat keine Freiendglieder – ${liste(distal)} werden nicht ersetzt.`)
+  hinweise.push(`All-on-${n} angenommen: festsitzende implantatgetragene Brücke, je Implantat ein Anker und je Spanne ein Brückenglied. Der Festzuschuss folgt dem Befund des zahnlosen Kiefers.`)
   return undefined
 }
 
@@ -680,7 +1072,7 @@ function planRechnen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, t
   for (const [z, t] of Object.entries(tp)) plan.zaehne[z].TP = t
   plan.abformung = auftrag.abformung ?? optionen.abformung ?? 'abdruck'
   if (!auftrag.abformung && !optionen.abformung) hinweise.push('Abformung nicht genannt – konventioneller Abdruck angenommen.')
-  if (teile.some((x) => x.versorgung === 'teleskopprothese')) plan.abformungProthese = plan.abformung
+  if (teile.some((x) => x.versorgung === 'teleskopprothese' || x.versorgung === 'locator' || x.versorgung === 'steg')) plan.abformungProthese = plan.abformung
   const bonus = auftrag.bonus ?? optionen.bonus
   plan.zuschuss = { bonus: bonus ?? '60', haertefall: !!(auftrag.haertefall ?? optionen.haertefall) }
   if (!bonus) hinweise.push('Bonus nicht bekannt – 60 % angenommen.')
@@ -693,11 +1085,82 @@ function planRechnen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, t
     ...(optionen.praxisPlz ? { praxisPlz: optionen.praxisPlz } : {}),
   }
   const system = auftrag.implantatSystem ?? optionen.implantatSystem
-  if (system) plan.implantat = { ...plan.implantat, system }
+  const abutment = auftrag.abutment ?? (auftrag.retention === 'verschraubt' ? 'individuell' : auftrag.retention === 'zementiert' ? 'standard' : undefined)
+  if (system || abutment || (auftrag.loeffel && plan.abformung !== 'scan')) {
+    plan.implantat = {
+      ...plan.implantat,
+      ...(system ? { system } : {}),
+      ...(abutment ? { abutment } : {}),
+      ...(auftrag.loeffel && plan.abformung !== 'scan' ? { abformung: auftrag.loeffel } : {}),
+    }
+  }
+  const haltung = [
+    auftrag.retention === 'verschraubt' ? 'verschraubte' : auftrag.retention === 'zementiert' ? 'zementierte' : '',
+    auftrag.form === 'vollanatomisch' && auftrag.versorgung !== 'kronen' && auftrag.versorgung !== 'bruecke' ? 'vollanatomische' : '',
+  ].filter(Boolean).join(' ')
+  const ankerGesagt = auftrag.allon ? `All-on-${auftrag.allon}`
+    : auftrag.anker === 'kugel' ? 'Kugelkopfanker'
+      : auftrag.versorgung === 'locator' ? (/locator|novaloc|equator/i.test(auftrag.text) ? 'Locator' : 'Druckknopfanker')
+        : auftrag.versorgung === 'steg' ? 'Implantatsteg'
+          : auftrag.kronenart === 'galvano' && auftrag.versorgung === 'teleskopprothese' ? 'Galvanoteleskope'
+            : keramikAuftrag(auftrag) && auftrag.versorgung === 'teleskopprothese' ? 'Zirkon-Primärteleskope'
+              : undefined
+  const kronenArt = auftrag.kronenart === 'inlay' ? (keramikAuftrag(auftrag) ? 'Keramikinlays' : 'Inlays')
+    : auftrag.kronenart === 'onlay' ? 'Onlays'
+      : auftrag.kronenart === 'tabletop' ? 'Tabletops'
+        : auftrag.kronenart === 'teilkrone' ? 'Teilkronen'
+          : auftrag.kronenart === 'veneer' ? 'Veneers'
+            : auftrag.kronenart === 'galvano' && auftrag.versorgung !== 'teleskopprothese' ? 'Galvanokronen'
+              : auftrag.form === 'vollanatomisch' && (auftrag.versorgung === 'kronen' || auftrag.versorgung === 'bruecke') ? 'vollanatomische Zirkonkronen'
+                : undefined
+  const abutmentWort = auftrag.abutment === 'keramik' ? 'mit Keramikabutment'
+    : auftrag.abutment === 'individuell' ? 'mit individuellem Abutment'
+      : auftrag.abutment === 'standard' ? 'mit konfektioniertem Abutment'
+        : undefined
+  plan.einstellungen = {
+    ...plan.einstellungen,
+    ...(ankerGesagt ? { ankerGesagt } : {}),
+    ...(haltung ? { haltung } : {}),
+    ...(kronenArt ? { kronenArt } : {}),
+    ...(abutmentWort ? { abutmentWort } : {}),
+  }
+  if (auftrag.retention === 'verschraubt') {
+    const welches = auftrag.abutment === 'keramik' ? 'Keramikabutment auf Ti-Base (BEB 6906)' : auftrag.abutment === 'standard' ? 'konfektioniertes Abutment (BEB 4421)' : 'individuelles Abutment auf Ti-Base (BEB 2033)'
+    hinweise.push(`Verschraubt angenommen: Verschraubung und Schraubenkanal sind in der Kronenposition enthalten. ${welches}.`)
+  } else if (auftrag.retention === 'zementiert') {
+    const welches = auftrag.abutment === 'keramik' ? 'Keramikabutment (BEB 6906)' : auftrag.abutment === 'individuell' ? 'individuelles Abutment (BEB 2033)' : 'konfektioniertes Abutment (BEB 4421)'
+    hinweise.push(`Zementiert angenommen: das Zementieren ist in der Kronenposition enthalten. ${welches}.`)
+  } else if (auftrag.abutment) {
+    hinweise.push(auftrag.abutment === 'keramik' ? 'Keramikabutment angenommen (BEB 6906 auf Ti-Base).' : auftrag.abutment === 'individuell' ? 'Individuelles Abutment angenommen (BEB 2033 auf Ti-Base).' : 'Konfektioniertes Abutment angenommen (BEB 4421).')
+  }
+  if (auftrag.kronenart === 'galvano') hinweise.push('Galvano angenommen: die Laborliste hat keine eigene Galvanoposition. Gerechnet wird die metallische Krone oder das Teleskop in Hochgold.')
+  if (auftrag.kronenart === 'tabletop') hinweise.push('Tabletop als Teilkrone angenommen (GOZ 2220).')
 
-  const regel = therapieAnwenden(regelversorgungErmitteln(plan.zaehne, regelOptionen(plan)), plan.zaehne, plan)
+  const prothese = (t: HkpAuftrag) => t.versorgung === 'totalprothese'
+  plan.weitere = {
+    ...plan.weitere,
+    interimOK: teile.some((t) => !!t.interim && t.kiefer === 'OK' && prothese(t)),
+    interimUK: teile.some((t) => !!t.interim && t.kiefer === 'UK' && prothese(t)),
+    immediatOK: teile.some((t) => !!t.immediat && t.kiefer === 'OK' && prothese(t)),
+    immediatUK: teile.some((t) => !!t.immediat && t.kiefer === 'UK' && prothese(t)),
+  }
+  const geplant = new Set<Kiefer>()
+  for (const t of teile) if (t.kiefer) geplant.add(t.kiefer)
+  if (!geplant.size) for (const z of Object.keys(tp)) geplant.add(kieferVon(z))
+  const regelOpt = { ...regelOptionen(plan), ...(geplant.size ? { nurKiefer: [...geplant] } : {}) }
+  const regel = therapieAnwenden(regelversorgungErmitteln(plan.zaehne, regelOpt), plan.zaehne, plan)
   let fertig = regelUebernehmen(plan, regel)
   hinweise.push(...regel.hinweise)
+  if (auftrag.verblendung) {
+    fertig = {
+      ...fertig,
+      zaehne: zaehneFuerVerblendung(fertig, auftrag.verblendung, auftrag.werkstoff),
+      einstellungen: { ...fertig.einstellungen, verblendung: auftrag.verblendung },
+    }
+    const regel2 = therapieAnwenden(regelversorgungErmitteln(fertig.zaehne, { ...regelOptionen(fertig), ...regelOpt }), fertig.zaehne, fertig)
+    fertig = regelUebernehmen(fertig, regel2)
+    for (const h of regel2.hinweise) if (!hinweise.includes(h)) hinweise.push(h)
+  }
   const stufe = auftrag.privatStufe ?? optionen.privatStufe ?? 0
   if (stufe > 0 && fertig.einstellungen.labor === 'praxis') {
     const r = privatStufeAnwenden(fertig, stufe)

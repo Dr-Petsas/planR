@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan } from './types'
 import { markeLesen } from './engine/bruecken'
-import { useAblage } from './ablage'
+import { nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { patientMigrieren, praxisMigrieren } from './stammdaten'
 import { neuerPlan, STANDARD_EINSTELLUNGEN } from './planNeu'
@@ -26,7 +26,7 @@ function laden<T>(key: string, standard: T): T {
 /** früher eine Wahl 'beides' = Zähne gescannt, Überabdruck für den herausnehmbaren Teil */
 export function planMigrieren(p: Plan): Plan {
   const abformung: Partial<Plan> = (p.abformung as string) === 'beides' ? { abformung: 'scan', abformungProthese: 'abdruck' } : {}
-  return { ...p, ...abformung, patient: patientMigrieren(p.patient), zaehne: markenMigrieren(p.zaehne) }
+  return { ...p, ...abformung, patient: patientMigrieren(p.patient), zaehne: markenMigrieren(p.zaehne), nummer: nummerMitReihe(p.nummer) }
 }
 
 /** Brückenstriche, die im Kürzel selbst stehen („-KM“), in die Brückenmarken übernehmen */

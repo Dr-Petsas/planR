@@ -58,6 +58,7 @@ label.check input { width: auto; }
 .r { text-align: right; }
 
 /* ---------- Kopf ---------- */
+html.planr-eingebettet .kopfleiste { display: none !important; }
 .kopfleiste {
   display: flex; align-items: center; justify-content: space-between;
   background: #fff; border-bottom: 3px solid var(--rot); padding: 8px 20px;
@@ -142,9 +143,18 @@ label.check input { width: auto; }
 .km-tabelle td { padding: .4mm 1mm; }
 .km-tabelle select { font-size: 8pt; width: 100%; }
 .km-offen select { border-color: var(--rot); color: var(--rot); }
+.regler-knopf { display: none; }
 @media (max-width: 1000px) {
   .arbeitsflaeche { grid-template-columns: 1fr; }
   .kostenleiste { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--linie); }
+}
+@media (max-width: 840px) {
+  html, body { overflow-x: hidden; }
+  .hauptspalte, .arbeitsflaeche, main { max-width: 100%; min-width: 0; }
+  .regler-knopf {
+    display: block; width: calc(100% - 16px); margin: 8px; min-height: 44px;
+    border-radius: 12px; font-weight: 700; background: var(--rot); color: #fff; border-color: var(--rot);
+  }
 }
 
 .zusatz-chip.chip-eigen { background: #e9f5ec; border-color: #9fd0ad; color: #1e6b35; }

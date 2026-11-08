@@ -1,9 +1,9 @@
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import {
-  befundDateiVon, begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, HKP_VERWERFBAR, kartePrüfen, kennungVon, modulErsetzen, planDateiAus, planDateiLesen,
+  befundDateiVon, begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, HKP_VERWERFBAR, kartePrüfen, kennungVon, modulErsetzen, nummerMitReihe, planDateiAus, planDateiLesen, planNummer,
   type Eingang, type Grab, type PlanKarte,
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
@@ -16,7 +16,9 @@ import {
   setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe, type AgentStand,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
-import { arztAusPickadoc } from './pickadocArzt.ts'
+import { arztAusPickadoc, avatarHolen } from './pickadocArzt.ts'
+import { freieSlots, kalenderGehoert, kalenderStand, terminEintragen } from './terminKalender.ts'
+import { geschlecht, kalenderErlaubt, stammAus, type Stamm } from './src/termin.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, mandantVon, neuesToken, registerVon,
@@ -44,7 +46,7 @@ import {
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
-const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet') => `${ORDNER}/mandanten/${mandant}/${name}.json`
+const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine') => `${ORDNER}/mandanten/${mandant}/${name}.json`
 /** Pickadoc-Praxis → Mandant, Benutzer → DS-Win-Praxen (anmeldung.ts) */
 const ZUGAENGE = `${ORDNER}/zugaenge.json`
 const SITZUNGEN = `${ORDNER}/sitzungen.json`
@@ -213,6 +215,12 @@ const ip = (req: IncomingMessage) => {
   return String(req.headers['cf-connecting-ip'] ?? '') || weiter || direkt
 }
 
+/** Profilfoto je Konto, nur das eigene, nur JPEG nach dem Zuschnitt im Browser */
+function profilPfad(uid: string): string | null {
+  if (!/^[A-Za-z0-9_-]{6,128}$/.test(uid)) return null
+  return `${ORDNER}/profile/${uid}.jpg`
+}
+
 const werInfo = (w: Wer, z: Zugaenge) => ({
   ok: true,
   konto: { name: w.konto.name, email: w.konto.email, admin: w.konto.admin },
@@ -221,7 +229,72 @@ const werInfo = (w: Wer, z: Zugaenge) => ({
   praxisNamen: Object.fromEntries((z.mandanten[w.konto.clientId]?.praxen ?? []).map((p) => [p.nummer, p.name ?? `Praxis ${p.nummer}`])),
   clara: berechtigungen.get(w.konto.clientId)?.b.clara ?? 'aus',
   abo: ((b) => (b?.mas ? 'mas' : b?.planr ? 'planr' : ''))(berechtigungen.get(w.konto.clientId)?.b),
+  foto: (() => { const p = profilPfad(w.konto.uid); return !!p && existsSync(p) })(),
 })
+
+function lesenBytes(req: IncomingMessage, hoechstens: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const teile: Buffer[] = []
+    let n = 0
+    req.on('data', (c: Buffer) => {
+      n += c.length
+      if (n > hoechstens) {
+        reject(new Error('zu_gross'))
+        req.destroy()
+        return
+      }
+      teile.push(c)
+    })
+    req.on('end', () => resolve(Buffer.concat(teile)))
+    req.on('error', reject)
+  })
+}
+
+const pickadocFoto = new Map<string, { art: string; daten: Buffer | null; bis: number }>()
+
+/** Eigenes Foto, sonst das Porträt aus dem Pickadoc-Profil. */
+async function profilAusPickadoc(w: Wer): Promise<{ art: string; daten: Buffer } | null> {
+  const key = `${w.konto.clientId}|${w.konto.uid}`
+  const alt = pickadocFoto.get(key)
+  if (alt && alt.bis > Date.now()) return alt.daten ? { art: alt.art, daten: alt.daten } : null
+  const bild = await avatarHolen(w.konto.clientId, w.konto.uid).catch(() => null)
+  pickadocFoto.set(key, { art: bild?.art ?? '', daten: bild?.daten ?? null, bis: Date.now() + (bild ? 10 : 1) * 60_000 })
+  return bild
+}
+
+function fotoSenden(res: ServerResponse, art: string, daten: Buffer) {
+  res.statusCode = 200
+  res.setHeader('Content-Type', art)
+  res.setHeader('Cache-Control', 'private, no-store')
+  res.end(daten)
+}
+
+/** GET liefert das Foto, PUT speichert ein JPEG, DELETE entfernt es. */
+async function profilFoto(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  const datei = profilPfad(w.konto.uid)
+  if (!datei || !eigeneSeite(req)) return json(res, 403, { ok: false })
+  if (req.method === 'GET') {
+    try {
+      fotoSenden(res, 'image/jpeg', await readFile(datei))
+    } catch {
+      const fremd = await profilAusPickadoc(w)
+      if (!fremd) return json(res, 404, { ok: false })
+      fotoSenden(res, fremd.art, fremd.daten)
+    }
+    return
+  }
+  if (req.method === 'DELETE') {
+    await rm(datei, { force: true })
+    return json(res, 200, { ok: true })
+  }
+  if (req.method !== 'PUT') return json(res, 405, { ok: false })
+  let roh: Buffer
+  try { roh = await lesenBytes(req, 200_000) } catch { return json(res, 413, { ok: false, meldung: 'Das Bild ist zu groß.' }) }
+  if (roh.length < 32 || roh[0] !== 0xff || roh[1] !== 0xd8 || roh[2] !== 0xff) return json(res, 400, { ok: false, meldung: 'Bitte ein Foto wählen.' })
+  await mkdir(dirname(datei), { recursive: true })
+  await writeFile(datei, roh)
+  json(res, 200, { ok: true })
+}
 
 /** GET: wer bin ich · POST {email, passwort}: anmelden · DELETE: abmelden */
 async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
@@ -359,19 +432,39 @@ async function masPlanr(w: Wer, pfad: string, init: { method?: string; body?: un
   return { ok: r.ok, status: r.status, daten: await r.json().catch(() => ({})) as Record<string, unknown> }
 }
 
-/** HKPs der eigenen Praxen; ohne Praxis-Stempel (Altbestand, Clara) zählen sie zur Hauptpraxis. */
+/** HKPs der eigenen Praxen. Die Register-Kennung bleibt, die sichtbare Nummer ist HKP-Jahr-A001. */
+async function hkpSchein(mandant: string, karten: PlanKarte[]): Promise<PlanKarte[]> {
+  const datei = `${ORDNER}/mandanten/${mandant}/hkp-nummern.json`
+  const buch = await jsonLesen<Record<string, string>>(datei, {})
+  const belegt = new Set(Object.values(buch).filter((n) => typeof n === 'string'))
+  let neu = false
+  const offen = karten.filter((k) => !buch[k.nummer]).sort((a, b) => a.geaendert.localeCompare(b.geaendert))
+  for (const k of offen) {
+    const jahr = Number(k.geaendert.slice(0, 4)) || new Date().getFullYear()
+    let lauf = 1
+    let nr = planNummer('HKP', lauf, jahr)
+    while (belegt.has(nr) && lauf < 20000) nr = planNummer('HKP', ++lauf, jahr)
+    buch[k.nummer] = nr
+    belegt.add(nr)
+    neu = true
+  }
+  if (neu) await jsonSchreiben(datei, buch)
+  return karten.map((k) => ({ ...k, schein: buch[k.nummer] || nummerMitReihe(k.nummer) }))
+}
+
 async function hkpsAusMas(w: Wer): Promise<PlanKarte[] | null> {
   try {
     const r = await mas(w, '?link=1')
     if (!r.ok) return null
     const liste = (Array.isArray(r.daten.hkps) ? r.daten.hkps : []) as (Parameters<typeof hkpKarten>[0][number] & { praxis?: unknown })[]
-    return hkpKarten(liste.filter((h) => darfSehen(w.praxen, praxisNr(h.praxis) ?? undefined, w.haupt)))
+    const karten = hkpKarten(liste.filter((h) => darfSehen(w.praxen, praxisNr(h.praxis) ?? undefined, w.haupt)))
+    return hkpSchein(w.mandant, karten)
   } catch {
     return null
   }
 }
 
-interface Berechtigung { erlaubt: boolean; mas: boolean; planr: boolean; clara: 'voll' | 'planr' | 'aus' }
+interface Berechtigung { erlaubt: boolean; mas: boolean; planr: boolean; clara: 'voll' | 'planr' | 'aus'; doku: boolean }
 const berechtigungen = new Map<string, { b: Berechtigung; zeit: number }>()
 
 /**
@@ -388,7 +481,7 @@ async function berechtigung(clientId: string): Promise<Berechtigung | null> {
     })
     const d = await r.json() as Partial<Berechtigung> & { ok?: boolean }
     if (!r.ok || !d.ok) throw new Error(`berechtigung ${r.status}`)
-    const b: Berechtigung = { erlaubt: d.erlaubt === true, mas: d.mas === true, planr: d.planr === true, clara: d.clara === 'voll' || d.clara === 'planr' ? d.clara : 'aus' }
+    const b: Berechtigung = { erlaubt: d.erlaubt === true, mas: d.mas === true, planr: d.planr === true, clara: d.clara === 'voll' || d.clara === 'planr' ? d.clara : 'aus', doku: d.doku === true }
     berechtigungen.set(clientId, { b, zeit: Date.now() })
     return b
   } catch {
@@ -592,6 +685,11 @@ interface VersandVermerk { am: string; an: string; weg: 'nadine' | 'mailprogramm
 const versendetLesen = async (m: string) => {
   const roh = await jsonLesen<unknown>(ABLAGE(m, 'versendet'), {})
   return (roh && typeof roh === 'object' && !Array.isArray(roh) ? roh : {}) as Record<string, VersandVermerk>
+}
+interface TerminVermerk { iso: string; behandler: string; grund: string; minuten: number; am: string }
+const termineLesen = async (m: string) => {
+  const roh = await jsonLesen<unknown>(ABLAGE(m, 'termine'), {})
+  return (roh && typeof roh === 'object' && !Array.isArray(roh) ? roh : {}) as Record<string, TerminVermerk>
 }
 const versandText = (v: VersandVermerk) => {
   const am = new Date(v.am).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -847,6 +945,7 @@ async function ausPvs(req: IncomingMessage, w: Wer, patient: string, planNr: str
   const fehlen = unbekannte(r.daten.plan, bekannteListen(), (await katalogLesen(mandant))?.katalog)
   if (fehlen.length) {
     const k = await katalogAbgleichen(c, mandant)
+    if (k.ok) praxisWissenMelden(w)
     const rest = k.ok ? unbekannte(r.daten.plan, bekannteListen(), k.ablage.katalog) : fehlen
     if (!k.ok) hinweise.push(`Unbekannte Positionen (${fehlen.join(', ')}); Abgleich der Leistungsverzeichnisse mit ${c.name} hat nicht geklappt: ${k.meldung}`)
     else if (rest.length) hinweise.push(`${rest.join(', ')} steht weder in den PlanR-Listen noch in den Leistungsverzeichnissen von ${c.name} – bitte im Plan prüfen.`)
@@ -911,6 +1010,16 @@ function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis>
   return p
 }
 
+/**
+ * Neuer Praxiskatalog -> Claras Wissensbasis im MAS sofort nachziehen (Analogpositionen, Eigenlabor, BEL, Ketten,
+ * ohne Preise). Je Praxis getrennt: die eigene und, im Verbund, die Register-Praxis. Nie blockierend.
+ */
+function praxisWissenMelden(w: Wer) {
+  for (const id of new Set([w.konto.clientId, w.register].filter(Boolean))) {
+    void masPlanr({ register: id } as Wer, '/praxis-wissen', { method: 'POST', ms: 180_000 }).catch(() => null)
+  }
+}
+
 const katalogInfo = (a: Ablage | null) => a && {
   pvs: a.katalog.pvs, stand: a.katalog.stand, wahl: a.wahl, listeName: a.katalog.listeName, belListeName: a.katalog.belListeName ?? '',
   listen: a.roh.listen, vorschlag: a.roh.vorschlag ?? null, vorschlagKasse: a.roh.vorschlagKasse ?? null, aenderungen: a.aenderungen ?? null,
@@ -945,6 +1054,7 @@ function praxiskatalog(req: IncomingMessage, res: ServerResponse, query: string,
       const c = await pvsConnector(req, w)
       if (!c.rufen) return wegFehler(res, c)
       const k = await katalogAbgleichen(c, mandant)
+      if (k.ok) praxisWissenMelden(w)
       return k.ok ? json(res, 200, { ok: true, info: katalogInfo(k.ablage) }) : json(res, k.status, { ok: false, meldung: k.meldung })
     }
     return exklusiv(async () => {
@@ -953,6 +1063,7 @@ function praxiskatalog(req: IncomingMessage, res: ServerResponse, query: string,
       const katalog = katalogBilden(alt.roh, wahlPruefen(b.wahl, alt.roh, alt.wahl), alt.katalog.stand)
       const ablage: Ablage = { roh: alt.roh, wahl: katalog.wahl, katalog, aenderungen: aenderungen(alt.katalog, katalog) }
       await jsonSchreiben(katalogDatei(mandant), ablage)
+      praxisWissenMelden(w)
       json(res, 200, { ok: true, info: katalogInfo(ablage) })
     })
   }).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Das hat gerade nicht geklappt.' }) })
@@ -1456,7 +1567,7 @@ async function kontoAnlegen(b: Buchung, passwort: string): Promise<NonNullable<B
       body: JSON.stringify({
         email: b.inhaber.email, passwort, titel: b.inhaber.titel, vorname: b.inhaber.vorname, nachname: b.inhaber.nachname,
         praxis: { name: b.praxis.name, strasse: b.praxis.strasse, plz: b.praxis.plz, ort: b.praxis.ort },
-        paket: b.paket, sprachsteuerung: PAKETE[b.paket].sprachsteuerung, buchung: b.id, mandatsreferenz: b.sepa.mandatsreferenz,
+        paket: b.paket, sprachsteuerung: PAKETE[b.paket].sprachsteuerung, doku: b.doku === true, buchung: b.id, mandatsreferenz: b.sepa.mandatsreferenz,
       }),
       signal: AbortSignal.timeout(20_000),
     })
@@ -1614,6 +1725,56 @@ async function claraEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
   json(res, 405, { ok: false })
 }
 
+/** Dieselbe Clara wie am Telefon, nur geschrieben. Die Praxis kommt aus der Anmeldung. */
+async function claraText(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
+  let daten: { text?: unknown; sitzung?: unknown; plan?: unknown }
+  try {
+    daten = JSON.parse(await lesenBody(req, 8000) || '{}')
+  } catch {
+    return json(res, 400, { ok: false })
+  }
+  const text = String(daten.text ?? '').trim().slice(0, 2000)
+  const sitzung = String(daten.sitzung ?? '')
+  if (!text || !/^[A-Za-z0-9_-]{6,40}$/.test(sitzung)) return json(res, 400, { ok: false })
+  const roh = daten.plan && typeof daten.plan === 'object' ? daten.plan as Record<string, unknown> : null
+  const plan = roh ? {
+    patient: String(roh.patient ?? '').slice(0, 80),
+    nummer: String(roh.nummer ?? '').slice(0, 40),
+    modul: String(roh.modul ?? '').slice(0, 20),
+  } : undefined
+  const ziel = process.env.CLARA_TEXT_URL?.trim() || 'http://127.0.0.1:8124/zug'
+  const schreiben = (zeile: string) => {
+    if (!res.headersSent) res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store' })
+    res.write(zeile.endsWith('\n') ? zeile : `${zeile}\n`)
+  }
+  try {
+    const antwort = await fetch(ziel, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: w.konto.clientId, sitzung, text, plan }),
+      signal: AbortSignal.timeout(120000),
+    })
+    if (!antwort.ok || !antwort.body) {
+      schreiben(JSON.stringify({ type: 'fehler', text: 'Clara ist gerade nicht erreichbar.' }))
+      res.end()
+      return
+    }
+    if (!res.headersSent) res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store' })
+    const reader = antwort.body.getReader()
+    const dec = new TextDecoder()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      res.write(dec.decode(value, { stream: true }))
+    }
+    res.end()
+  } catch {
+    schreiben(JSON.stringify({ type: 'fehler', text: 'Clara ist gerade nicht erreichbar.' }))
+    if (!res.writableEnded) res.end()
+  }
+}
+
 /**
  * Kostenvoranschlag per Mail: GET Versandweg (MAS-Praxis → Nadine, sonst Mailprogramm) · POST kontakt {vorname, name, geburtsdatum}
  * → E-Mail aus der Pickadoc-Kartei · POST senden {to, subject, text, pdf} → Nadine sendet. Immer das Postfach der eigenen Praxis.
@@ -1629,11 +1790,13 @@ async function versandEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     const nummer = String(b.nummer ?? '').slice(0, 80)
     const an = String(b.an ?? '').trim().slice(0, 200)
     const weg = b.weg === 'nadine' ? 'nadine' : 'mailprogramm'
+    const modul = String(b.modul ?? '')
     return exklusiv(async () => {
       const k = (await dateiLesen(w.mandant)).find((x) => MIT_VERSAND.has(x.modul) && x.nummer === nummer && sichtbar(w, x))
-      if (!k) return json(res, 404, { ok: false })
+      const ziel = k ? schluessel(k.modul, k.nummer) : modul === 'hkp' && nummer ? schluessel('hkp', nummer) : ''
+      if (!ziel) return json(res, 404, { ok: false })
       const vermerk: VersandVermerk = { am: new Date().toISOString(), an, weg }
-      await jsonSchreiben(ABLAGE(w.mandant, 'versendet'), { ...await versendetLesen(w.mandant), [schluessel(k.modul, k.nummer)]: vermerk })
+      await jsonSchreiben(ABLAGE(w.mandant, 'versendet'), { ...await versendetLesen(w.mandant), [ziel]: vermerk })
       json(res, 200, { ok: true })
     })
   }
@@ -1832,7 +1995,7 @@ async function abrechnungPflegen(clientId: string, jetzt = new Date()): Promise<
     const gesehen = await planeFuerZaehlwerk(m, eigenesRegister(zg, clientId))
     if (!gesehen) hinweise.push('Das HKP-Register war gerade nicht erreichbar – neue HKPs werden beim nächsten Abgleich gezählt.')
     let geaendert = gesehen ? zaehlwerkAktualisieren(z, gesehen, jetzt, neu) : false
-    geaendert = monatMerken(z, monatVon(jetzt.toISOString()), paket) || geaendert || neu
+    geaendert = monatMerken(z, monatVon(jetzt.toISOString()), paket, b.doku) || geaendert || neu
     if (geaendert && (gesehen || !neu)) await jsonSchreiben(ZAEHLWERK(m), z)
 
     const rechnungen = await jsonLesen<Rechnung[]>(RECHNUNGEN(m), [])
@@ -2282,6 +2445,90 @@ async function internPatienten(req: IncomingMessage, w: Wer, q: URLSearchParams,
   }
 }
 
+const ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+
+async function stammVonPlan(w: Wer, modul: string, nummer: string): Promise<Stamm | null> {
+  if (modul === 'hkp') {
+    const h = await hkpHolen(w, nummer)
+    if (!h) return null
+    let patient: unknown
+    try { patient = (JSON.parse(h.planJson || '{}') as { patient?: unknown }).patient } catch { patient = undefined }
+    return stammAus(patient)
+  }
+  const karte = (await dateiLesen(w.mandant)).find((k) => k.modul === modul && k.nummer === nummer && sichtbar(w, k))
+  if (!karte) return null
+  const inhalt = (await inhalteLesen(w.mandant))[schluessel(modul, nummer)]
+  return stammAus((inhalt?.plan as { patient?: unknown } | undefined)?.patient, karte.patient)
+}
+
+async function termineEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, query: string, w: Wer) {
+  const recht = await berechtigung(w.konto.clientId)
+  const frei = kalenderErlaubt(recht?.mas ? 'mas' : recht?.planr ? 'planr' : '', recht?.clara)
+  const q = new URLSearchParams(query)
+  const modulAus = (modul: string, nummer: string) => MODUL_RE.test(modul) && nummer.length > 0 && nummer.length <= 80
+  if (req.method === 'GET' && url === '/api/termine') {
+    const modul = q.get('modul') ?? ''
+    const nummer = q.get('nummer') ?? ''
+    if (!modulAus(modul, nummer)) return json(res, 400, { ok: false })
+    const stamm = await stammVonPlan(w, modul, nummer)
+    if (!stamm) return json(res, 404, { ok: false, meldung: 'Plan nicht gefunden.' })
+    if (!frei) return json(res, 200, { ok: true, kalender: false, stamm })
+    const stand = await kalenderStand(w.konto.clientId)
+    return json(res, 200, { ok: true, kalender: true, stamm, behandler: stand.behandler, motive: stand.motive })
+  }
+  const body = async () => JSON.parse(await lesenBody(req, 4000)) as Record<string, unknown>
+  if (!frei) return json(res, 403, { ok: false, kalender: false, meldung: 'Terminvergabe gibt es mit CalendR.' })
+  if (req.method === 'POST' && url === '/api/termine/slots') {
+    const b = await body()
+    const locationId = String(b.locationId ?? '')
+    const calendarId = String(b.calendarId ?? '')
+    const visitMotiveId = String(b.visitMotiveId ?? '')
+    if (![locationId, calendarId, visitMotiveId].every((id) => ID_RE.test(id))) return json(res, 400, { ok: false })
+    const stand = await kalenderStand(w.konto.clientId)
+    const motiv = stand.motive.find((m) => m.id === visitMotiveId && m.locationId === locationId)
+    if (!kalenderGehoert(stand, locationId, calendarId) || !motiv) return json(res, 404, { ok: false, meldung: 'Diesen Kalender gibt es nicht.' })
+    if (motiv.calendarIds.length && !motiv.calendarIds.includes(calendarId)) return json(res, 404, { ok: false, meldung: 'Diesen Besuchsgrund gibt es in dem Kalender nicht.' })
+    const slots = await freieSlots(w.konto.clientId, locationId, calendarId, visitMotiveId)
+    if (!slots) return json(res, 502, { ok: false, meldung: 'Die freien Termine lassen sich gerade nicht aus CalendR lesen.' })
+    return json(res, 200, { ok: true, minuten: motiv.dauer, slots })
+  }
+  if (req.method === 'POST' && url === '/api/termine/buchen') {
+    const b = await body()
+    const modul = String(b.modul ?? '')
+    const nummer = String(b.nummer ?? '')
+    const locationId = String(b.locationId ?? '')
+    const calendarId = String(b.calendarId ?? '')
+    const visitMotiveId = String(b.visitMotiveId ?? '')
+    const iso = String(b.iso ?? '')
+    if (!modulAus(modul, nummer) || ![locationId, calendarId, visitMotiveId].every((id) => ID_RE.test(id)) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso)) {
+      return json(res, 400, { ok: false, meldung: 'Der Termin ist unvollständig.' })
+    }
+    const stamm = await stammVonPlan(w, modul, nummer)
+    const stand = await kalenderStand(w.konto.clientId)
+    const kalender = kalenderGehoert(stand, locationId, calendarId)
+    const motiv = stand.motive.find((m) => m.id === visitMotiveId && m.locationId === locationId)
+    if (!stamm || !kalender || !motiv || (motiv.calendarIds.length && !motiv.calendarIds.includes(calendarId))) {
+      return json(res, 404, { ok: false, meldung: 'Plan oder Kalender nicht gefunden.' })
+    }
+    const gender = geschlecht(stamm.anrede)
+    if (!stamm.vorname || !stamm.nachname) return json(res, 409, { ok: false, meldung: 'In den Stammdaten fehlen Vor- und Nachname.' })
+    if (stamm.telefon.replace(/\D/g, '').length < 6) return json(res, 409, { ok: false, meldung: 'In den Stammdaten fehlt die Telefonnummer.' })
+    if (!gender) return json(res, 409, { ok: false, meldung: 'In den Stammdaten fehlt die Anrede.' })
+    const gebucht = await terminEintragen({
+      clientId: w.konto.clientId, locationId, calendarId, visitMotiveId, appointmentStartDate: iso,
+      patientGender: gender, patientFirstName: stamm.vorname, patientLastName: stamm.nachname, patientMobilePhoneNumber: stamm.telefon,
+    })
+    if (!gebucht.ok) return json(res, 502, { ok: false, meldung: 'Der Termin ließ sich in CalendR nicht eintragen.' })
+    await exklusiv(async () => {
+      const alle = await termineLesen(w.mandant)
+      alle[schluessel(modul, nummer)] = { iso, behandler: kalender.name, grund: motiv.grund, minuten: motiv.dauer, am: new Date().toISOString() }
+      await jsonSchreiben(ABLAGE(w.mandant, 'termine'), alle)
+    })
+    return json(res, 200, { ok: true, termin: iso })
+  }
+  return json(res, 405, { ok: false })
+}
+
 const fehler500 = (res: ServerResponse) => (e: unknown) => {
   console.error('[planr]', e instanceof Error ? e.stack : e)
   if (!res.headersSent) json(res, 500, { ok: false, meldung: 'Das hat gerade nicht geklappt.' })
@@ -2320,6 +2567,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
 
 function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, query: string, w: Wer, next: () => void) {
   const m = w.mandant
+  if (url === '/api/profil/foto') return void profilFoto(req, res, w).catch(fehler500(res))
   if (url === '/api/einstellungen') return einstellungen(req, res, w)
   if (url === '/api/bridge-schluessel') return void bridgeSchluessel(req, res, w).catch(fehler500(res))
   if (url === '/api/bridge-paket') return void bridgePaket(req, res, w).catch(fehler500(res))
@@ -2327,8 +2575,10 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/praxisdaten' && req.method === 'GET') return void praxisdaten(res, w).catch(fehler500(res))
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
+  if (url === '/api/clara/text') return void claraText(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden' || url === '/api/versand/vermerk') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))
+  if (url === '/api/termine' || url === '/api/termine/slots' || url === '/api/termine/buchen') return void termineEndpunkt(req, res, url, query, w).catch(fehler500(res))
   if (url === '/api/verbund' || url === '/api/verbund/code' || url === '/api/verbund/beitreten') return void verbundEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/rechnungen' || /^\/api\/rechnungen\/PR-\d{4}-\d{4}$/.test(url)) return void rechnungenEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
@@ -2425,12 +2675,15 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
       for (const k of liste) if (!k.behandler && namen[k.modul]) k.behandler = namen[k.modul]
       const vermerke = await vermerkeLesen()
       const versendet = await versendetLesen(m)
+      const termine = await termineLesen(m)
       const inhalte = await inhalteLesen(m)
       for (const k of liste) {
         const v = vermerke[schluessel(k.modul, k.nummer)]
         if (v) k.imPvs = vermerkText(v, pvsVon(v.pvs)?.name ?? v.pvs)
         const vs = versendet[schluessel(k.modul, k.nummer)]
         if (vs) k.versendet = versandText(vs)
+        const termin = termine[schluessel(k.modul, k.nummer)]
+        if (termin?.iso) k.termin = termin.iso
         if (!k.kennung) {
           const kennung = kennungVon((inhalte[schluessel(k.modul, k.nummer)]?.plan as { patient?: unknown } | undefined)?.patient)
           if (kennung) k.kennung = kennung

@@ -25,6 +25,8 @@ export interface Anschreiben {
   betrag: number
   /** wofür, z. B. „Schienentherapie“ (steht in Betreff und Text) */
   thema: string
+  /** Planart für den Versandstatus der Übersicht, z. B. „hkp“ */
+  modul?: string
 }
 
 export function mailEntwurf(a: Anschreiben): { betreff: string; text: string } {

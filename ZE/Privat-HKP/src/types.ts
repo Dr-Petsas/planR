@@ -87,6 +87,10 @@ export interface Plan {
   entfernt: string[]
   regler: Regler
   bemerkung: string
+  ankerGesagt?: string
+  haltung?: string
+  kronenArt?: string
+  abutmentWort?: string
 }
 
 export interface Einstellungen {

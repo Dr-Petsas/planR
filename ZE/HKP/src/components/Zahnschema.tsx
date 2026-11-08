@@ -1,6 +1,6 @@
 import type { ZahnZeilen } from '../types'
 import { BEFUND_KUERZEL, OBERKIEFER, THERAPIE_KUERZEL, UNTERKIEFER, imVerblendbereich } from '../engine/zahnschema'
-import { brueckenBereiche, markeAnzeigen, markeLesen } from '../engine/bruecken'
+import { befundOhneStrich, brueckenLagen, markeLesen, planungText } from '../engine/bruecken'
 
 type Zeile = 'B' | 'R' | 'TP'
 
@@ -16,32 +16,30 @@ function gueltig(zeile: Zeile, kuerzel: string) {
   return zeile === 'B' ? kuerzel.trim().toLowerCase() in BEFUND_KUERZEL : kuerzel.trim().toUpperCase() in THERAPIE_KUERZEL
 }
 
-/** Lage eines Zahnes in einer Brücke – für die Klammer im Zahnschema */
+/** Lage eines Zahnes in einer Brücke – für die Klammer im Zahnschema. Der Strich gehört nur in die Planung. */
 type Lage = { anfang: boolean; ende: boolean; explizit: boolean }
 
-function brueckenLagen(zaehne: Record<string, ZahnZeilen>, zeile: 'TP' | 'R'): Record<string, Lage> {
+function lagenDerPlanung(zaehne: Record<string, ZahnZeilen>, zeile: 'TP' | 'R'): Record<string, Lage> {
   const lagen: Record<string, Lage> = {}
   for (const reihe of [OBERKIEFER, UNTERKIEFER]) {
-    const kuerzel = (z: string) => (zaehne[z]?.[zeile] ?? '').trim().toUpperCase()
-    const bereiche = brueckenBereiche(reihe, kuerzel, (z) => (zeile === 'TP' ? zaehne[z] : undefined))
-    for (const b of bereiche) {
-      if (b.zaehne.length < 2) continue
-      b.zaehne.forEach((z, i) => {
-        const alt = lagen[z]
-        lagen[z] = {
-          anfang: (alt?.anfang ?? false) || i === 0,
-          ende: (alt?.ende ?? false) || i === b.zaehne.length - 1,
-          explizit: (alt?.explizit ?? false) || b.explizit,
-        }
-      })
-    }
+    const gelesen = (z: string) => markeLesen((zaehne[z]?.[zeile] ?? '').toUpperCase())
+    Object.assign(lagen, brueckenLagen(
+      reihe,
+      (z) => gelesen(z).kuerzel,
+      (z) => {
+        const m = gelesen(z)
+        const flags = zeile === 'TP' ? zaehne[z] : undefined
+        return { bAnfang: m.bAnfang || flags?.bAnfang, bEnde: m.bEnde || flags?.bEnde }
+      },
+    ))
   }
   return lagen
 }
 
 function Zelle({ zahn, zeile, daten, lage, onChange }: { zahn: string; zeile: Zeile; daten: ZahnZeilen | undefined; lage?: Lage; onChange: Props['onChange'] }) {
-  const kuerzel = daten?.[zeile] ?? ''
-  const wert = zeile === 'TP' ? markeAnzeigen(kuerzel, daten) : kuerzel
+  const roh = daten?.[zeile] ?? ''
+  const kuerzel = zeile === 'B' ? befundOhneStrich(roh) : markeLesen(roh.toUpperCase()).kuerzel
+  const wert = zeile === 'B' ? kuerzel : planungText(kuerzel, lage)
   const ok = gueltig(zeile, kuerzel)
   const beschreibung = zeile === 'B' ? BEFUND_KUERZEL[kuerzel.trim().toLowerCase()] : THERAPIE_KUERZEL[kuerzel.trim().toUpperCase()]
   const brueckenTitel = lage ? ` – Brücke${lage.anfang ? 'nanfang' : lage.ende ? 'nende' : ''}${lage.explizit ? '' : ' (automatisch erkannt; mit „-K … K-“ festlegen)'}` : ''
@@ -64,8 +62,8 @@ function Zelle({ zahn, zeile, daten, lage, onChange }: { zahn: string; zeile: Ze
         className={ok ? '' : 'ungueltig'}
         onChange={(e) => {
           const v = e.target.value
-          if (zeile === 'B') return onChange(zahn, { B: v.toLowerCase() })
-          if (zeile === 'R') return onChange(zahn, { R: v.toUpperCase() })
+          if (zeile === 'B') return onChange(zahn, { B: befundOhneStrich(v) })
+          if (zeile === 'R') return onChange(zahn, { R: v.toUpperCase().replace(/^-+|-+$/g, '') })
           const m = markeLesen(v.toUpperCase())
           onChange(zahn, { TP: m.kuerzel, bAnfang: m.bAnfang, bEnde: m.bEnde })
         }}
@@ -80,7 +78,7 @@ const LINKS_UK = UNTERKIEFER.slice(0, 8)
 const RECHTS_UK = UNTERKIEFER.slice(8)
 
 export function Zahnschema({ zaehne, onChange }: Props) {
-  const lagen = { TP: brueckenLagen(zaehne, 'TP'), R: brueckenLagen(zaehne, 'R'), B: {} as Record<string, Lage> }
+  const lagen = { TP: lagenDerPlanung(zaehne, 'TP'), R: lagenDerPlanung(zaehne, 'R'), B: {} as Record<string, Lage> }
   const zeile = (links: string[], rechts: string[], z: Zeile, erste = false) => (
     <tr key={z + links[0]}>
       {erste && <th className="zs-art" rowSpan={8}><span>Art der Versorgung</span></th>}

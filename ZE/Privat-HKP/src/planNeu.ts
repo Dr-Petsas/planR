@@ -1,4 +1,5 @@
 import type { Einstellungen, Plan, Regler } from './types'
+import { planNummer } from './ablage'
 import { STANDARD_IMPLANTAT } from './engine/planung'
 import { leererPatient, standardPraxis } from './stammdaten'
 
@@ -17,7 +18,7 @@ export const STANDARD_REGLER: Regler = { gozStufe: 0, gozFaktor: 0, laborStufe: 
 
 export function neuerPlan(nummer: number): Plan {
   return {
-    nummer: `KV-${new Date().getFullYear()}-${String(nummer).padStart(3, '0')}`,
+    nummer: planNummer('KV', nummer),
     datum: heute(),
     patient: leererPatient(),
     zaehne: {},

@@ -1,12 +1,13 @@
 /**
- * Monatsrechnung für PlanR-Kunden ohne MAS: Grundgebühr des Pakets + 1,59 € je Plan, der im Monat neu angelegt wurde.
+ * Monatsrechnung für PlanR-Kunden ohne MAS: Grundgebühr des Pakets + 2,49 € je Plan, der im Monat neu angelegt wurde.
+ * Auf der ersten Rechnung zusätzlich die einmalige Einrichtung.
  *
  * Zählwerk je Mandant: Jeder Plan (HKP aus dem MAS-Register, Pläne der anderen Planer) wird beim ersten Sehen mit
  * seinem Anlagedatum eingetragen und danach nie wieder gezählt. Was beim Anlegen des Zählwerks schon da war, ist
  * Altbestand und wird nie berechnet. Verworfene HKP-Entwürfe zählen nicht.
  * Rechnungen sind unveränderliche Schnappschüsse; die Ansicht (HTML zum Drucken/als PDF speichern) entsteht daraus.
  */
-import { PAKETE, PRO_PLAN, type Paket } from './src/paket.ts'
+import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, type Paket } from './src/paket.ts'
 
 export const UST_SATZ = 19
 /** Einzug frühestens einen Kalendertag nach der Rechnung (verkürzte Vorabankündigung); wir lassen Luft */
@@ -17,7 +18,7 @@ export interface Zaehlwerk {
   seit: string
   plaene: Record<string, ZaehlPlan>
   /** Monate (JJJJ-MM), in denen der Mandant als PlanR-Kunde ohne MAS gesehen wurde, mit dem Paket */
-  monate: Record<string, { paket: Paket }>
+  monate: Record<string, { paket: Paket; doku?: boolean }>
 }
 export interface Gesehen { modul: string; kuerzel: string; art: string; nummer: string; datum: string; verworfen?: boolean }
 
@@ -46,9 +47,10 @@ export function zaehlwerkAktualisieren(z: Zaehlwerk, gesehen: Gesehen[], jetzt: 
   return geaendert
 }
 
-export function monatMerken(z: Zaehlwerk, monat: string, paket: Paket): boolean {
-  if (z.monate[monat]?.paket === paket) return false
-  z.monate[monat] = { paket }
+export function monatMerken(z: Zaehlwerk, monat: string, paket: Paket, doku = false): boolean {
+  const alt = z.monate[monat]
+  if (alt?.paket === paket && !!alt.doku === doku) return false
+  z.monate[monat] = { paket, ...(doku ? { doku: true } : {}) }
   return true
 }
 
@@ -74,7 +76,18 @@ export function abrechnen(z: Zaehlwerk, monat: string, paket: Paket): Abrechnung
       ? { text: `${PAKETE[paket].name}, Grundgebühr anteilig (${genutzt} von ${tage} Tagen)`, menge: 1, einzelCent: Math.round((grund * genutzt) / tage), summeCent: Math.round((grund * genutzt) / tage) }
       : { text: `${PAKETE[paket].name}, Grundgebühr`, menge: 1, einzelCent: grund, summeCent: grund },
   ]
+  if (paket === 'planr_clara' && monatVon(z.seit) === monat) {
+    const ein = cent(EINRICHTUNG)
+    posten.push({ text: 'Einrichtung und KI-Training (ein bis zwei Wochen), einmalig', menge: 1, einzelCent: ein, summeCent: ein })
+  }
   if (plaene.length) posten.push({ text: 'Pläne (HKP und weitere Planer), im Monat neu angelegt', menge: plaene.length, einzelCent: cent(PRO_PLAN), summeCent: plaene.length * cent(PRO_PLAN) })
+  if (z.monate[monat]?.doku) {
+    const grundDoku = cent(DOKU_MONAT)
+    const anteil = Math.round((grundDoku * genutzt) / tage)
+    posten.push(genutzt < tage
+      ? { text: `Dokumentation per Sprache, Pauschale anteilig (${genutzt} von ${tage} Tagen), kein Preis je Eintrag`, menge: 1, einzelCent: anteil, summeCent: anteil }
+      : { text: 'Dokumentation per Sprache, Pauschale, kein Preis je Eintrag', menge: 1, einzelCent: grundDoku, summeCent: grundDoku })
+  }
   const nettoCent = posten.reduce((s, p) => s + p.summeCent, 0)
   const ustCent = Math.round((nettoCent * UST_SATZ) / 100)
   return { monat, paket, posten, plaene, nettoCent, ustCent, bruttoCent: nettoCent + ustCent }

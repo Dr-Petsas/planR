@@ -1,10 +1,11 @@
 body.hp-body {
+  height: auto; min-height: 100%;
   margin: 0;
   background: #071a1f;
   color: #e9f3f2;
 }
 /* Am Handy weder seitlich verschiebbar noch über den Rand federnd. Auf html statt body, sonst klebt die Navigation nicht. */
-html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
+html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; background: #071a1f; }
 
 .hp {
   --hp-tief: #071a1f;
@@ -39,7 +40,7 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 }
 .hp-marke { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; }
 .hp-marke small { font-weight: 500; color: var(--hp-grau); font-size: 13px; }
-.hp-logo { display: block; width: 36px; height: 36px; flex: none; filter: drop-shadow(0 6px 14px rgba(63, 216, 181, 0.35)); }
+.hp-logo { display: block; width: 36px; height: 36px; flex: none; }
 .pr-logo { display: block; width: 100%; height: 100%; }
 .pr-wort { font-weight: 850; font-size: 21px; letter-spacing: -0.03em; color: var(--hp-text); }
 .pr-wort b { background: linear-gradient(135deg, var(--hp-mint), var(--hp-gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -91,16 +92,16 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 }
 
 /* ---------- Dezente pinke Hintergrund-Pillen und Lichter ---------- */
-#funktionen, .hp-vergleich, #preise, #produkte, #kontakt { position: relative; isolation: isolate; }
-#funktionen::before, #preise::before, #produkte::before, #kontakt::before, .hp-vergleich::before,
-#funktionen::after, #preise::after, #produkte::after {
+#funktionen, .hp-vergleich, #doku, #anyconnect, #preise, #produkte, #kontakt { position: relative; isolation: isolate; }
+#funktionen::before, #doku::before, #anyconnect::before, #preise::before, #produkte::before, #kontakt::before, .hp-vergleich::before,
+#funktionen::after, #doku::after, #anyconnect::after, #preise::after, #produkte::after {
   content: ""; position: absolute; z-index: -1; pointer-events: none; border-radius: 999px;
 }
 #funktionen::before {
   right: -18%; top: -6%; width: 760px; height: 170px; transform: rotate(-32deg);
   background: linear-gradient(90deg, rgba(224, 64, 123, 0), rgba(224, 64, 123, 0.2) 60%, rgba(255, 122, 168, 0.3));
 }
-#funktionen .hp-eyebrow, #preise .hp-eyebrow, #produkte .hp-eyebrow { color: var(--hp-pink); }
+#funktionen .hp-eyebrow, #doku .hp-eyebrow, #anyconnect .hp-eyebrow, #kette .hp-eyebrow, #preise .hp-eyebrow, #produkte .hp-eyebrow { color: var(--hp-pink); }
 #funktionen::after {
   left: -10%; bottom: 6%; width: 420px; height: 420px; border-radius: 50%;
   background: radial-gradient(closest-side, rgba(255, 122, 168, 0.12), transparent);
@@ -108,6 +109,22 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 .hp-vergleich::before {
   right: 8%; top: 50%; width: 520px; height: 300px; margin-top: -150px; border-radius: 50%;
   background: radial-gradient(closest-side, rgba(255, 122, 168, 0.13), transparent);
+}
+#doku::before {
+  right: -14%; top: 8%; width: 760px; height: 170px; transform: rotate(-32deg);
+  background: linear-gradient(90deg, rgba(224, 64, 123, 0), rgba(224, 64, 123, 0.22) 55%, rgba(255, 122, 168, 0.36));
+}
+#doku::after {
+  left: -10%; bottom: 4%; width: 460px; height: 460px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 122, 168, 0.16), transparent);
+}
+#anyconnect::before {
+  left: -16%; top: 10%; width: 720px; height: 160px; transform: rotate(28deg);
+  background: linear-gradient(90deg, rgba(255, 122, 168, 0.34), rgba(224, 64, 123, 0.16) 55%, rgba(224, 64, 123, 0));
+}
+#anyconnect::after {
+  right: -8%; bottom: 0; width: 480px; height: 480px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 122, 168, 0.16), transparent);
 }
 #preise::before {
   left: 50%; top: 38%; width: 640px; height: 640px; margin-left: -320px; border-radius: 50%;
@@ -306,9 +323,62 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 .hp-karten-produkte small { display: block; margin-bottom: 6px; color: var(--hp-mint); font-size: 12px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
 .hp-mitte { text-align: center; margin-top: 34px; }
 
+/* ---------- Kette: zwei Spalten, in der Mitte ein kurzer Verlauf ---------- */
+.hp-kette h2 em { font-style: normal; background: linear-gradient(100deg, var(--hp-pink), #ffb3cc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hp-zwei {
+  display: grid; grid-template-columns: 1fr 1fr; border-radius: 28px; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: linear-gradient(90deg,
+    #0f3438 0%,
+    #0f3438 36%,
+    #143238 42%,
+    #183038 46%,
+    #1c2832 49%,
+    #221e2e 51%,
+    #26182c 54%,
+    #2a1630 58%,
+    #2a1630 100%);
+  box-shadow: 0 40px 90px -48px rgba(0, 0, 0, .85);
+}
+.hp-spalte { padding: clamp(26px, 3vw, 42px) clamp(22px, 2.6vw, 40px) 18px; }
+.hp-spalte header small { font-size: 12px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+.hp-spalte-planr header small { color: var(--hp-mint); }
+.hp-spalte-picka header small { color: var(--hp-pink); }
+.hp-spalte h3 { margin: 8px 0 18px; font-size: clamp(22px, 2vw, 28px); }
+.hp-spalte ol { list-style: none; margin: 0; padding: 0; }
+.hp-spalte li { padding: 16px 0 18px; border-top: 1px solid rgba(255, 255, 255, .08); }
+.hp-spalte li:first-child { border-top: 0; padding-top: 0; }
+.hp-spalte h4 { margin: 0 0 6px; font-size: 22px; font-weight: 850; letter-spacing: -.03em; }
+.hp-spalte-planr h4 { color: #e7fff8; }
+.hp-spalte-picka h4 { color: #ffe4ef; }
+.hp-spalte p { margin: 0; color: #c9dbd9; font-size: 15.5px; line-height: 1.6; }
+.hp-ziel {
+  margin-top: 10px; padding: 16px 16px 18px; border-radius: 16px; border-top: 0;
+  background: rgba(63, 216, 181, .07); box-shadow: inset 0 0 0 1px rgba(63, 216, 181, .32);
+}
+.hp-bogen { margin-top: 6px; }
+.hp-bogen svg { display: block; width: min(100%, 920px); height: 86px; margin: 0 auto; }
+.hp-bogen p { margin: -8px 0 0; text-align: center; color: #d7e7e5; font-size: 15.5px; }
+.hp-bogen b { color: var(--hp-mint); }
+@media (max-width: 800px) {
+  .hp-zwei {
+    grid-template-columns: 1fr;
+    background:
+      linear-gradient(180deg,
+        rgba(63, 216, 181, .14) 0%,
+        rgba(63, 216, 181, .04) 46%,
+        rgba(255, 122, 168, .04) 54%,
+        rgba(255, 122, 168, .16) 100%),
+      #0c242a;
+  }
+}
+
 /* ---------- Einblenden und Stromlinien ab „Was PlanR kann“ ---------- */
 .hp-fluss { overflow: hidden; }
-.hp-fluss > .hp-sektion-kopf, .hp-fluss > .hp-karten, .hp-fluss > .hp-vs, .hp-fluss > .hp-tiers, .hp-fluss > .hp-kontakt-wege, .hp-fluss > .hp-mitte { position: relative; z-index: 1; }
+.hp-fluss > .hp-sektion-kopf, .hp-fluss > .hp-karten, .hp-fluss > .hp-vs, .hp-fluss > .hp-doku-wahl, .hp-fluss > .hp-tiers, .hp-fluss > .hp-kontakt-wege, .hp-fluss > .hp-mitte { position: relative; z-index: 1; }
+.hp-doku-wahl { display: flex; gap: 12px; align-items: flex-start; margin: 18px auto 0; max-width: 760px; padding: 16px 18px; border-radius: 16px; border: 1px solid rgba(63, 216, 181, 0.35); background: rgba(63, 216, 181, 0.06); }
+.hp-doku-wahl input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--hp-mint); flex: none; }
+.hp-doku-wahl span { color: #d6e6e5; }
 .hp-stroeme { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .hp-stroeme span {
   position: absolute; left: -18%; width: 68%; height: 72px; border-radius: 999px;
@@ -353,18 +423,21 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 
 /* ---------- Preise ---------- */
 .hp-tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
-@media (max-width: 960px) { .hp-tiers { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .hp-tiers { grid-template-columns: 1fr; } }
 .hp-tier {
   position: relative; display: flex; flex-direction: column; gap: 14px;
   padding: 30px; border-radius: 24px; background: var(--hp-flaeche); border: 1px solid var(--hp-linie);
 }
 .hp-tier-top { background: linear-gradient(170deg, #15434c, #0e2b32); border-color: rgba(63, 216, 181, 0.5); box-shadow: 0 30px 80px -40px rgba(63, 216, 181, 0.6); }
 .hp-band-tag { position: absolute; top: -12px; right: 24px; background: linear-gradient(135deg, var(--hp-pink-tief), var(--hp-pink)); color: #fff; font-size: 12px; font-weight: 800; padding: 5px 12px; border-radius: 999px; }
+.hp-band-mint { background: linear-gradient(135deg, #1c8f86, var(--hp-mint)); color: #06221e; }
 .hp-tier h3 { font-size: 22px; }
 .hp-preis { margin: 0; color: var(--hp-grau); }
 .hp-preis b { font-size: 40px; color: var(--hp-text); letter-spacing: -0.02em; }
 .hp-volumen { margin: 4px 0 0; color: var(--hp-grau); }
 .hp-volumen b { color: var(--hp-mint); font-size: 18px; }
+.hp-einmal { margin: 6px 0 0; color: #ffd0e0; }
+.hp-einmal b { color: #fff; font-size: 18px; }
 .hp-tier ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; flex: 1; color: #c6dad9; }
 .hp-tier li { padding-left: 26px; position: relative; }
 .hp-tier li::before { content: "✓"; position: absolute; left: 0; color: var(--hp-mint); font-weight: 800; }
@@ -377,6 +450,7 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px;
   padding: 30px clamp(16px, 4vw, 48px); border-top: 1px solid var(--hp-linie); color: var(--hp-grau); font-size: 14px;
 }
+.hp-fuss > p { flex: 1 0 100%; margin: 0; }
 .hp-fuss address { font-style: normal; line-height: 1.7; }
 .hp-fuss nav { display: flex; flex-wrap: wrap; gap: 20px; }
 .hp-fuss a { text-decoration: none; }
@@ -426,8 +500,70 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 .hkp--mini .hkp-tab td { font-size: 10px; padding: 3.5px 4px; }
 .hkp--mini .hkp-fuss { margin-top: auto; justify-content: center; }
 
+.cp-top h4 small.hp-frei { display: block; margin-top: 2px; color: #ff7aa8; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
 /* ---------- HKP per Sprach-KI ---------- */
 .hp-sk { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 4vw, 56px); align-items: center; }
+.hp-doku-paar { position: relative; z-index: 1; width: min(100%, 640px); min-height: 640px; }
+.hp-doku-arzt {
+  position: absolute; left: 0; top: 0; z-index: 1;
+  width: 300px; height: 390px; object-fit: cover; object-position: 22% 42%;
+  border-radius: 26px; box-shadow: 0 40px 80px -36px rgba(0, 0, 0, 0.8);
+  transform: rotate(-3deg);
+}
+.hp-kartei {
+  position: relative; z-index: 2; width: min(100%, 360px);
+  margin: 250px 0 0 auto;
+  padding: 22px 22px 16px; border-radius: 22px; color: #2a1f24;
+  background: linear-gradient(180deg, #fff 0%, #fff8fb 100%);
+  box-shadow: 0 50px 100px -36px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 255, 255, 0.65);
+  transform: rotate(5deg);
+}
+.hp-kartei header { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 2px solid #f3c2d4; }
+.hp-kartei header small { display: block; color: #b8235a; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.hp-kartei header b { display: block; margin-top: 4px; font-size: 28px; letter-spacing: -0.03em; line-height: 1.1; }
+.hp-kartei header span { color: #6b5560; font-size: 14px; }
+.hp-kartei-eintrag { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: #fff5f8; }
+.hp-kartei-eintrag small { display: block; color: #b8235a; font-size: 12px; font-weight: 750; }
+.hp-kartei-eintrag p { margin: 6px 0 0; color: #2c2428; font-size: 16px; line-height: 1.45; }
+.hp-kartei-alt { background: #f6f3f4; }
+.hp-kartei-alt small { color: #7a6570; }
+.hp-kartei footer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.hp-kartei footer span { padding: 5px 10px; border-radius: 999px; background: #fde6ee; color: #7a1240; font-size: 12px; font-weight: 750; }
+.hp-any { position: relative; z-index: 1; width: min(100%, 540px); height: 520px; }
+.hp-any-kopf {
+  position: absolute; z-index: 4; left: 50%; top: 48%; transform: translate(-50%, -46%);
+  width: 250px; text-align: center;
+}
+.hp-any-kopf svg { width: 100%; height: auto; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.45)); }
+.hp-any-kopf span {
+  display: inline-block; margin-top: -8px; padding: 4px 12px; border-radius: 999px;
+  background: #fff; color: #7a1240; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.hp-any-schirm {
+  position: absolute; z-index: 1; width: 168px; padding: 10px 12px 12px; border-radius: 14px; color: #2a1f24;
+  background: linear-gradient(180deg, #fff 0%, #fff8fb 100%);
+  box-shadow: 0 24px 50px -28px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+.hp-any-schirm b { display: block; font-size: 13px; letter-spacing: -0.02em; }
+.hp-any-schirm small { display: block; margin-top: 2px; color: #7a6570; font-size: 11px; }
+.hp-any-schirm i { display: block; height: 6px; margin-top: 6px; border-radius: 4px; background: #f3c2d4; }
+.hp-any-schirm i + i { width: 68%; background: #efe6ea; }
+.hp-any .s1 { left: 0; top: 18px; transform: rotate(-8deg); }
+.hp-any .s2 { right: 0; top: 8px; transform: rotate(7deg); }
+.hp-any .s3 { left: -12px; top: 196px; transform: rotate(-4deg); }
+.hp-any .s4 { right: -8px; top: 188px; transform: rotate(5deg); }
+.hp-any .s5 { left: 18px; bottom: 18px; transform: rotate(-6deg); }
+.hp-any .s6 { right: 12px; bottom: 8px; transform: rotate(8deg); }
+@media (max-width: 900px) {
+  .hp-any { height: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 8px; }
+  .hp-any-kopf { position: relative; left: auto; top: auto; transform: none; grid-column: 1 / -1; width: min(100%, 220px); margin: 0 auto; }
+  .hp-any .hp-any-schirm { position: relative; left: auto; right: auto; top: auto; bottom: auto; width: auto; transform: none; }
+}
+@media (max-width: 900px) {
+  .hp-doku-paar { min-height: 0; display: grid; gap: 18px; }
+  .hp-doku-arzt { position: relative; left: auto; top: auto; width: 220px; height: 280px; transform: none; object-position: 22% 42%; }
+  .hp-kartei { transform: none; margin: 0; width: min(100%, 440px); }
+}
 @media (max-width: 900px) { .hp-sk { grid-template-columns: 1fr; } }
 .hp-schritte { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .hp-schritte li {
@@ -488,7 +624,7 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 .hp-haken li { position: relative; padding-left: 30px; color: #d6e6e5; }
 .hp-haken li::before { content: "✓"; position: absolute; left: 0; color: var(--hp-mint); font-weight: 800; }
 
-.hp-buehne-bild { --winkel: -24deg; position: relative; min-height: clamp(420px, 46vw, 620px); display: grid; place-items: center; }
+.hp-buehne-bild { --winkel: -8deg; position: relative; min-height: clamp(420px, 46vw, 620px); display: grid; place-items: center; }
 /* Pillen wie im Vorbild: ein satter Balken mit rundem Ende unter dem Gerät, darüber helle Glas-Pillen mit Schatten.
    Ein 1600-px-Feld um die Bildmitte, gedreht; die Sektion schneidet ab. */
 .hp-buehne-bild {
@@ -536,12 +672,12 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
   position: relative; z-index: 1; width: min(92%, 600px);
   padding: 13px; border-radius: 30px; background: linear-gradient(165deg, #2b3a40, #0c1417);
   box-shadow: 0 60px 120px -30px rgba(0, 0, 0, 0.75), inset 0 0 0 2px rgba(255, 255, 255, 0.07);
-  transform: perspective(1800px) rotateX(8deg) rotateY(10deg) rotate(var(--winkel));
+  transform: perspective(2400px) rotateX(2deg) rotateY(4deg) rotate(var(--winkel));
 }
 .hp-tablet-schirm { border-radius: 19px; overflow: hidden; background: #fff; }
 
 .hp-schwebe {
-  position: absolute; z-index: 2; right: -3%; bottom: -1%; width: 220px;
+  position: absolute; z-index: 2; right: -2%; bottom: -12%; width: 220px;
   padding: 16px 18px; border-radius: 20px; color: #1f2a30;
   background: rgba(255, 255, 255, 0.96); box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.6);
   transform: rotate(calc(var(--winkel) / 3)); animation: hp-schweben 6s ease-in-out infinite;
@@ -569,10 +705,11 @@ html.hp-html { overflow-x: hidden; overscroll-behavior: none; }
 .hkp-titel em { margin-top: 6px; font-style: normal; font-weight: 750; font-size: 10px; padding: 2px 8px; border-radius: 999px; background: #fff1d6; color: #9a6400; }
 .hkp-abschnitt { margin: 6px 0 4px; padding: 3px 6px; border-radius: 4px; background: var(--hk-hell); color: var(--hk); font-weight: 750; font-size: 9.5px; }
 .hkp table { width: 100%; border-collapse: collapse; }
-.hkp-gebiss th, .hkp-gebiss td { border: 1px solid var(--hl); text-align: center; height: 15px; padding: 0; font-size: 8.5px; }
+.hkp-gebiss { table-layout: fixed; }
+.hkp-gebiss th, .hkp-gebiss td { border: 1px solid var(--hl); text-align: center; height: 15px; padding: 0; font-size: 8.5px; white-space: nowrap; }
 .hkp-gebiss th { width: 22px; color: var(--hk); background: var(--hk-zart); font-size: 8px; }
 .hkp-gebiss td:nth-child(9) { border-right: 2px solid var(--hk); }
-.hkp-nr td { font-weight: 750; color: #44535a; background: var(--hk-zart); }
+.hkp-nr td { font-weight: 750; font-size: 11px; line-height: 16px; height: 16px; letter-spacing: -0.02em; color: #44535a; background: var(--hk-zart); }
 .hkp-gebiss td.hkp-plan { background: var(--hk-plan); color: #8a1342; font-weight: 800; }
 .hkp-trenner td { border: 0; height: 4px; }
 .hkp-unten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

@@ -27,7 +27,9 @@ import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useLinkAbgleich, useRegisterAbgleich, type LinkEintrag } from './store/registerAbgleich'
 import { katalogeAnMas, MasVerbindung } from './components/MasVerbindung'
 import { MandantKarte, MandantName } from './components/Mandant'
-import { PlanrZurueck } from './PlanrZurueck'
+import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
+import { VersandKnopf } from './components/Versenden'
+import { hkpAnmelden } from './arbeitPlan'
 import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
 import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, useAktiv, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
 import { LIVE_TITEL, PHASE_TEXT, liveAbonnieren, liveModus, liveSchritte, type LiveStand } from './store/live'
@@ -93,6 +95,7 @@ export default function App() {
   const register = useRegisterAbgleich(plan, ergebnis, setPlan)
   const linkAbgleich = useLinkAbgleich(plan, linkEintrag, setLinkEintrag)
   const [linkHinweis, setLinkHinweis] = useState('')
+  const [reglerOffen, setReglerOffen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 840px)').matches)
 
   // Leerer Plan; ein offener freier Plan wird nur nach Rückfrage verworfen
   function neuAnfangen(patient?: Partial<HkpPlan['patient']>) {
@@ -173,6 +176,13 @@ export default function App() {
     planRef.current = plan
     registerRef.current = register
   })
+  useEffect(() => hkpAnmelden(
+    () => planRef.current,
+    (neu, alt) => {
+      setPlan(() => neu)
+      geloescht('Plan angepasst', () => setPlan(() => alt))
+    },
+  ), [setPlan])
   useEffect(() => {
     if (!liveAn) return
     document.title = LIVE_TITEL
@@ -266,16 +276,27 @@ export default function App() {
     const el = hauptRef.current
     if (!el) return
     const anpassen = () => {
-      const zoom = Math.min(1.28, Math.max(0.6, (el.clientWidth - 48) / BLATT_BREITE_PX))
+      const schmal = window.matchMedia('(max-width: 840px)').matches
+      const innen = Math.min(el.clientWidth, window.innerWidth)
+      const roh = (innen - (schmal ? 8 : 48)) / BLATT_BREITE_PX
+      const zoom = schmal ? Math.min(1, Math.max(0.32, roh)) : Math.min(1.28, Math.max(0.6, roh))
       el.style.setProperty('--blatt-zoom', zoom.toFixed(3))
     }
+    anpassen()
+    window.addEventListener('resize', anpassen)
     const ro = new ResizeObserver(anpassen)
     ro.observe(el)
-    return () => ro.disconnect()
+    return () => { ro.disconnect(); window.removeEventListener('resize', anpassen) }
   }, [])
 
   return (
     <div className="app">
+      <PlanrLeiste
+        punkte={([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([id, text]) => ({ id, text }))}
+        aktiv={tab}
+        onWahl={(id) => setTab(id as Tab)}
+        versand
+      />
       <header className="kopfleiste">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <PlanrZurueck />
@@ -285,9 +306,12 @@ export default function App() {
           {([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([t, n]) => (
             <button key={t} className={tab === t ? 'aktiv' : ''} onClick={() => setTab(t)}>{n}</button>
           ))}
-          {hkpAnsicht && <button className="drucken" onClick={() => window.print()} title="HKP drucken oder als PDF speichern">🖶 Drucken</button>}
         </nav>
       </header>
+      <VersandKnopf
+        anschreiben={{ patient: plan.patient, praxis: getPraxis(), nummer: new URLSearchParams(window.location.search).get('hkp') || '', betrag: ergebnis.summen.eigenanteil, thema: 'Heil- und Kostenplan', modul: 'hkp' }}
+        seiten={() => [...document.querySelectorAll<HTMLElement>('.hkp-blatt')]}
+      />
 
       {liveAn && (
         <div className={`register-leiste live-leiste${live.an ? ' verbunden' : ''}${live.spielt ? ' spielt' : ''}`}>
@@ -325,6 +349,11 @@ export default function App() {
 
       <div className={hkpAnsicht ? 'arbeitsflaeche' : ''}>
       {hkpAnsicht && (
+        <button type="button" className="regler-knopf" onClick={() => setReglerOffen((an) => !an)}>
+          {reglerOffen ? 'Regler schließen' : 'Regler'}
+        </button>
+      )}
+      {hkpAnsicht && reglerOffen && (
         <PreisRegler plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen} setEinstellung={setEinstellung} onMeldungen={setEngineHinweise} onBerechnen={berechnenKlick} onNeuRechnen={regelengine} />
       )}
 

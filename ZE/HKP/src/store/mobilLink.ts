@@ -8,11 +8,18 @@ export function linkZugang(search: string): LinkZugang | null {
   return { id, t, f: q.get('f') ?? undefined, c: q.get('c') ?? undefined }
 }
 
-/** Handy-Ansicht: ansicht=mobil (Karte in der Clara-App) oder Link auf schmalem Bildschirm */
-export function mobilGewuenscht(search: string, schmal: boolean) {
+/**
+ * Handy-Karte: ansicht=mobil (Clara) oder ein SMS-Link im schmalen Browser.
+ * In der PlanR-Übersicht (iframe) bleibt der Planer, sonst lädt der HKP über
+ * /mas/planr, das es dort nicht gibt.
+ */
+export function mobilGewuenscht(search: string, schmal: boolean, eingebettet = false) {
   if (!linkZugang(search)) return false
   const ansicht = new URLSearchParams(search).get('ansicht')
-  return ansicht === 'mobil' || (ansicht !== 'voll' && schmal)
+  if (ansicht === 'voll') return false
+  if (ansicht === 'mobil') return true
+  if (eingebettet) return false
+  return schmal
 }
 
 /** Derselbe HKP in der Desktop-Ansicht – ohne Freigabe-Schlüssel */

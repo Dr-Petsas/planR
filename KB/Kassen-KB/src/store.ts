@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Angaben, Einstellungen, Plan } from './types'
-import { useAblage } from './ablage'
+import { planNummer, nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 
@@ -23,7 +23,7 @@ export const leereAngaben = (): Angaben => ({
   stationaer: false, krankenhaus: '', von: '', bis: '', schlafmedizin: false, genehmigungsverzicht: false, antragsnummer: '',
 })
 
-export const nummerFormat = (n: number) => `KB-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => planNummer('KB', n)
 
 export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {
@@ -59,6 +59,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     abformung: p.abformung === 'scan' ? 'scan' : 'abdruck',
     fremdlabor: { ...basis.fremdlabor, ...p.fremdlabor },
     bemerkung: p.bemerkung ?? '',
+    nummer: nummerMitReihe(p.nummer || basis.nummer),
   }
 }
 

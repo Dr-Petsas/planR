@@ -11,6 +11,13 @@ const T3 = '2026-10-15T10:00:00.000Z'
 const gelesen = (zaehne: Record<string, string>) => ({ patient: '4711', label: 'Muster, Max', geburt: '1960-01-01', pvs: 'DS-Win', zaehne, datum: '2026-09-01' })
 
 describe('aktueller 01-Befund', () => {
+  it('ein einzelner Brückenstrich ist kein Befund', () => {
+    const ausPvs = nachLesen(undefined, gelesen({ '14': 'K-', '15': '-b-' }), T1)
+    expect(befundAnsicht(ausPvs).zaehne).toMatchObject({ '14': 'K', '15': 'b' })
+    const gesagt = nachAenderung(ausPvs, { '16': 'K-' }, 'Eva', T2)
+    expect(befundAnsicht(gesagt).zaehne['16']).toBe('k')
+  })
+
   it('erstes Lesen übernimmt das Praxisprogramm', () => {
     const b = nachLesen(undefined, gelesen({ '16': 'k', '26': 'f' }), T1)
     expect(befundAnsicht(b).zaehne).toMatchObject({ '16': 'k', '26': 'f' })

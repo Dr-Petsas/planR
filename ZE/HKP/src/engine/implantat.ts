@@ -4,7 +4,7 @@ import { ALLE_ZAEHNE, kieferVon } from './zahnschema'
 import { bereich } from './zusatzleistungen'
 
 /** Kürzel (TP, sonst R) einer implantatgetragenen Krone, eines Implantat-Teleskops oder -Verbindungselements (Steg, Locator) */
-export const IMPLANTAT_TP = /^S[KTO]/
+export const IMPLANTAT_TP = /^S[KTO]|^ZAS$/
 
 const kuerzelVon = (v: ZahnZeilen | undefined) => (v?.TP.trim() || v?.R || '').toUpperCase()
 

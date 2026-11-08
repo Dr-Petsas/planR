@@ -24,6 +24,7 @@ export function HkpMobil({ zugang }: { zugang: LinkZugang }) {
     let weg = false
     hkpPerLink(zugang).then((d) => {
       if (weg) return
+      if (!d?.hkp) throw new Error('Der HKP-Link hat keinen Plan geliefert.')
       const entwurf = planNormalisieren(JSON.parse(d.hkp.planJson || '{}'))
       setLaden({ art: 'da', hkp: d.hkp, entwurf, listen: d.listen ?? listenFuer(entwurf), freigabe: d.freigabe })
       setPlan(entwurf)

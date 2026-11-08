@@ -135,7 +135,7 @@ export const zaehneAktuell = (b: Befund01) => ({ ...b.pvsZaehne, ...b.offen })
 /** Gesprochene Kürzel klein (eHKP), Kürzel aus dem Praxisprogramm unverändert */
 const nurZaehne = (z: Record<string, unknown>, klein = true) =>
   Object.fromEntries(Object.entries(z).filter(([k, v]) => ALLE.has(k) && String(v ?? '').trim().length <= 6).map(([k, v]) => {
-    const c = String(v ?? '').trim()
+    const c = String(v ?? '').trim().replace(/^-+|-+$/g, '')
     return [k, klein ? c.toLowerCase() : c]
   }))
 

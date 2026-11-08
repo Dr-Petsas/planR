@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { brueckenBereiche, markeAnzeigen, markeLesen } from './bruecken'
+import { befundOhneStrich, brueckenBereiche, brueckenLagen, markeAnzeigen, markeLesen, planungText } from './bruecken'
 import { OBERKIEFER } from './zahnschema'
 
 const reihe = (tp: Record<string, string>) => {
@@ -31,5 +31,19 @@ describe('Brückenmarkierung -K … K-', () => {
   it('gemeinsamer Pfeiler -K-', () => {
     const b = reihe({ 16: '-K', 15: 'B', 14: '-K-', 13: 'B', 12: 'K-' })
     expect(b.map((x) => x.zaehne)).toEqual([['16', '15', '14'], ['14', '13', '12']])
+  })
+
+  it('Befund behält keinen Brückenstrich, die Planung zeigt ihn nur um die ganze Brücke', () => {
+    expect(befundOhneStrich('K-')).toBe('k')
+    expect(befundOhneStrich('-k-')).toBe('k')
+    expect(befundOhneStrich('kw')).toBe('kw')
+    const zeigen = (tp: Record<string, string>) => {
+      const daten = Object.fromEntries(Object.entries(tp).map(([z, v]) => [z, markeLesen(v)]))
+      const lagen = brueckenLagen(OBERKIEFER, (z) => daten[z]?.kuerzel ?? '', (z) => daten[z])
+      return Object.fromEntries(Object.keys(tp).map((z) => [z, planungText(daten[z].kuerzel, lagen[z])]))
+    }
+    expect(zeigen({ 16: 'K-' })).toEqual({ 16: 'K' })
+    expect(zeigen({ 16: 'KM', 15: 'BM', 14: 'KM' })).toEqual({ 16: '-KM', 15: 'BM', 14: 'KM-' })
+    expect(zeigen({ 16: 'K', 15: 'B', 14: 'K' })).toEqual({ 16: '-K', 15: 'B', 14: 'K-' })
   })
 })

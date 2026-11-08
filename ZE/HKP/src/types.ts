@@ -291,4 +291,14 @@ export interface Einstellungen {
   kzv: string
   /** Totalprothese nach Intraoralscan: 'voll' (Standard) = digitaler Laborablauf, 'abformung' = nur die Erstabformung digital */
   protheseDigital?: 'voll' | 'abformung'
+  /** Gesprochene Verblendart: Teilverblendung, vestibulär, Vollverblendung oder unverblendet */
+  verblendung?: 'teil' | 'vestibulaer' | 'voll' | 'keine'
+  /** Wie Clara die Versorgung nennt: All-on-4, Druckknopfanker, Implantatsteg, Zirkon-Primärteleskope */
+  ankerGesagt?: string
+  /** „verschraubte“, „zementierte“, „vollanatomische“ */
+  haltung?: string
+  /** Inlays, Tabletops, vollanatomische Zirkonkronen */
+  kronenArt?: string
+  /** „mit Keramikabutment“, nur wenn es gesagt wurde */
+  abutmentWort?: string
 }

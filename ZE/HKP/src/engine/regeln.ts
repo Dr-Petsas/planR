@@ -40,7 +40,8 @@ const kuerzel = (z: ZahnZeilen | undefined) => (z?.B ?? '').trim().toLowerCase()
 function kieferAnalyse(reihe: string[], zaehne: Record<string, ZahnZeilen>) {
   const sitz = reihe.filter((z) => kuerzel(zaehne[z]) !== ')(')
   const fehlt = (z: string) => FEHLEND.has(kuerzel(zaehne[z]))
-  const vorhanden = sitz.filter((z) => !fehlt(z))
+  // i = Implantat, kein natürlicher Restzahn. Zahnlos mit Implantaten bleibt Befund 4.2/4.4.
+  const vorhanden = sitz.filter((z) => !fehlt(z) && kuerzel(zaehne[z]) !== 'i' && kuerzel(zaehne[z]) !== 'ix')
   const fehlendOhne8 = sitz.filter((z) => fehlt(z) && !istWeisheitszahn(z))
 
   // Zahnbegrenzte Lücken zwischen vorhandenen Zähnen
@@ -96,6 +97,8 @@ export interface RegelOptionen {
   /** endgültige Versorgung nicht sofort möglich – Interimsprothese (Befundklasse 5) */
   interimOK?: boolean
   interimUK?: boolean
+  /** Nur diese Kiefer rechnen. Der andere Kiefer bleibt Befund, ohne Regelversorgung und ohne Positionen. */
+  nurKiefer?: ('OK' | 'UK')[]
   klinisch?: Partial<KlinischeAngaben>
   reparaturen?: Reparatur[]
 }
@@ -200,7 +203,9 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
     if (imVerblendbereich(z)) positionen.push(pos('BEL', '1620', z))
   }
 
+  const dran = (k: 'OK' | 'UK') => !optionen.nurKiefer?.length || optionen.nurKiefer.includes(k)
   for (const [kiefer, reihe] of [['OK', OBERKIEFER], ['UK', UNTERKIEFER]] as const) {
+    if (!dran(kiefer)) continue
     const a = kieferAnalyse(reihe, zaehne)
     const kieferName = kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'
     const versorgungsLuecken = a.luecken.filter((l) => l.zaehne.some((z) => VERSORGUNG_NOETIG.has(kuerzel(zaehne[z]))))
@@ -214,8 +219,10 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
       else if (n > 0) befunde.push(befund(n <= 4 ? '5.1' : n <= 8 ? '5.2' : '5.3', kiefer))
       if (a.vorhanden.length === 0) positionen.push(pos('BEMA', kiefer === 'OK' ? '97a' : '97b', kiefer))
       else if (n > 0) positionen.push(pos('BEMA', n <= 4 ? '96a' : n <= 8 ? '96b' : '96c', kiefer))
+      for (const z of a.fehlendOhne8) if (!istImplantat(kuerzel(zaehne[z]))) R[z] = 'E'
       if (n > 0) hinweise.push(`${kieferName}: Interimsprothese (Befund 5.x) – zahntechnische Leistungen bitte ergänzen.`)
       else hinweise.push(`${kieferName}: Interimsversorgung angekreuzt, aber kein fehlender Zahn im Befund.`)
+      continue
     }
 
     // ---- Befund 6.10: erneuerungsbedürftiges Sekundärteleskop (t2w), Einarbeitung in die vorhandene Prothese ----
@@ -337,6 +344,7 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
 
   // ---- Befundklasse 7: erneuerungsbedürftige Suprakonstruktionen ----
   for (const [kiefer, reihe] of [['OK', OBERKIEFER], ['UK', UNTERKIEFER]] as const) {
+    if (!dran(kiefer)) continue
     const natuerlich = (z: string | undefined) => {
       if (!z) return false
       const k = kuerzel(zaehne[z])

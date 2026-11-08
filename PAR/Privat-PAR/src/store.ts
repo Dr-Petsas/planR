@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan } from './types'
-import { useAblage } from './ablage'
+import { planNummer, nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 
@@ -16,7 +16,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   naechsteNummer: 1,
 }
 
-export const nummerFormat = (n: number) => `PPAR-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => planNummer('PPAR', n)
 
 export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {
@@ -54,6 +54,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     faktoren: p.faktoren ?? {},
     zusatz: Array.isArray(p.zusatz) ? p.zusatz : [],
     bemerkung: p.bemerkung ?? '',
+    nummer: nummerMitReihe(p.nummer || basis.nummer),
   }
 }
 

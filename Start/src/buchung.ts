@@ -1,8 +1,8 @@
-/** Buchung von PlanR bzw. PlanR + Sprach-KI: Stammdaten, KZV, Praxissystem, SEPA-Mandat – danach Anleitung zur Einrichtung. */
+/** Buchung von PlanR: Stammdaten, KZV, Praxissystem, SEPA-Mandat – danach Anleitung zur Einrichtung. */
 import './buchung.css'
 import { KZVEN } from './data/kzv'
 import { PVS_LISTE, pvsVon } from './einstellungen'
-import { PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './paket'
+import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './paket'
 import { anleitungHtml, anleitungVon, bridgeSetupLaden, codeLesbar } from './einrichtung'
 import { logo } from './logo'
 
@@ -35,16 +35,16 @@ function haken(w: Werte, f: Record<string, string>, name: string, text: string):
 }
 
 /** Seite #buchen bzw. #buchen-clara */
-export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
+export function buchungSeite(app: HTMLElement, dokuAn = false) {
   let schritt = 0
   let erreicht = 0
   let fehler: Record<string, string> = {}
   let meldung = ''
   let sendet = false
-  const w: Werte = { paket: start, 'praxis.rechtsform': 'Einzelpraxis', 'kzv.praxen': '1', 'kzv.zahnaerzte': '1', 'pvs.server': 'server' }
+  const w: Werte = { paket: 'planr_clara', doku: dokuAn, 'praxis.rechtsform': 'Einzelpraxis', 'kzv.praxen': '1', 'kzv.zahnaerzte': '1', 'pvs.server': 'server' }
   document.title = 'PlanR buchen'
 
-  const paket = () => (w.paket === 'planr_clara' ? 'planr_clara' : 'planr') as Paket
+  const paket = (): Paket => 'planr_clara'
 
   function mandatVorschau(): string {
     const anschrift = String(w['sepa.anschrift'] || `${w['praxis.strasse'] ?? ''}, ${w['praxis.plz'] ?? ''} ${w['praxis.ort'] ?? ''}`)
@@ -59,20 +59,17 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
     </div>`
   }
 
+  const monatsbeitrag = () => PAKETE.planr_clara.monat + (w.doku === true ? DOKU_MONAT : 0)
+
   function inhalt(): string {
     const f = fehler
+    const monat = monatsbeitrag()
     switch (schritt) {
       case 0: return `
-        <h2>Welches Paket möchten Sie?</h2>
-        <div class="bu-pakete">${(Object.keys(PAKETE) as Paket[]).map((p) => `
-          <label class="bu-paket${paket() === p ? ' an' : ''}">
-            <input type="radio" name="paket" value="${p}"${paket() === p ? ' checked' : ''}>
-            <b>${esc(PAKETE[p].name)}</b>
-            <span class="bu-preis">${PAKETE[p].monat} € <small>/ Monat</small></span>
-            <span class="bu-volumen">+ ${cent(PRO_PLAN)} je Plan</span>
-            <small>${p === 'planr' ? 'Alle Planer, Umsatz-Regler, eigene Preislisten, PVS-Anbindung über die Bridge, Freigabe am Handy.' : 'Alles aus PlanR plus Clara als Sprach-App am Handy: HKP per Sprache anlegen und ändern.'}</small>
-          </label>`).join('')}</div>
-        <p class="bu-klein">Alle Preise netto zzgl. USt., monatlich kündbar. Pickadoc-MAS-Praxen haben PlanR schon inklusive – unbegrenzt Pläne.</p>`
+        <h2>PlanR</h2>
+        <p class="bu-text">${monat} € im Monat${w.doku === true ? ` (${PAKETE.planr_clara.monat} € PlanR und ${DOKU_MONAT} € Sprachdokumentation)` : ''}, plus ${cent(PRO_PLAN)} je erstelltem Plan. Einmalig ${EINRICHTUNG.toLocaleString('de-DE')} € für Einrichtung und KI-Training, ein bis zwei Wochen. Alle Pläne, alle gängigen PVS.</p>
+        ${haken(w, {}, 'doku', `<b>KI-Sprachdokumentation</b> dazubuchen: ${DOKU_MONAT} € im Monat, kein Preis je Eintrag. Das Diktat geht in die Karteikarte. Bei Pickadoc MAS ist das enthalten.`)}
+        <p class="bu-klein">Alle Preise netto zzgl. USt. Der Monatsbeitrag ist jederzeit zum Monatsende kündbar, die Einrichtung einmalig. PlanR ist ein Produkt der Pickadoc GmbH. Pickadoc-MAS-Praxen haben PlanR und die Sprachdokumentation schon inklusive.</p>`
       case 1: return `
         <h2>Ihre Praxis</h2>
         <div class="bu-raster">
@@ -137,7 +134,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
         return `
         <h2>Prüfen und kostenpflichtig buchen</h2>
         <dl class="bu-zusammen">
-          <dt>Paket</dt><dd>${esc(PAKETE[paket()].name)} · ${PAKETE[paket()].monat} € / Monat + ${cent(PRO_PLAN)} je Plan</dd>
+          <dt>Paket</dt><dd>${esc(PAKETE[paket()].name)} · ${monatsbeitrag()} € / Monat + ${cent(PRO_PLAN)} je Plan · einmalig ${EINRICHTUNG.toLocaleString('de-DE')} € Einrichtung${w.doku === true ? ` · davon ${DOKU_MONAT} € Sprachdokumentation, kein Preis je Eintrag` : ''}</dd>
           <dt>Praxis</dt><dd>${esc(String(w['praxis.name'] ?? ''))}, ${esc(String(w['praxis.strasse'] ?? ''))}, ${esc(String(w['praxis.plz'] ?? ''))} ${esc(String(w['praxis.ort'] ?? ''))}</dd>
           <dt>Inhaber/in</dt><dd>${esc([w['inhaber.titel'], w['inhaber.vorname'], w['inhaber.nachname']].filter(Boolean).join(' '))} · Anmeldung mit ${esc(String(w['inhaber.email'] ?? ''))}</dd>
           <dt>KZV</dt><dd>${esc(kzv ? `${kzv.kurz}` : '')} · Abrechnungsnummer ${esc(String(w['kzv.abrechnungsnr'] ?? ''))}</dd>
@@ -154,18 +151,21 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
 
   function seitenleiste(): string {
     const p = PAKETE[paket()]
+    const monat = monatsbeitrag()
     return `<aside class="bu-leiste">
       <b>${esc(p.name)}</b>
-      <span class="bu-preis">${p.monat} € <small>/ Monat</small></span>
+      <span class="bu-preis">${monat} € <small>/ Monat</small></span>
+      ${w.doku === true ? `<span class="bu-volumen">${p.monat} € PlanR + ${DOKU_MONAT} € Sprachdokumentation</span>` : ''}
       <span class="bu-volumen">+ ${cent(PRO_PLAN)} je Plan</span>
-      <p>Bei 20 Plänen im Monat: ${cent(p.monat + 20 * PRO_PLAN)}</p>
-      <ul><li>Monatlich kündbar</li><li>Hosting in Deutschland</li><li>Einrichtung meist am selben Tag</li></ul>
+      <p>Einmalig ${EINRICHTUNG.toLocaleString('de-DE')} € Einrichtung und KI-Training.</p>
+      <p>Bei 20 Plänen im Monat: ${cent(monat + 20 * PRO_PLAN)}</p>
+      <ul><li>Alle Pläne, alle gängigen PVS</li><li>Jederzeit zum Monatsende kündbar</li><li>Einrichtung und KI-Training: ein bis zwei Wochen</li></ul>
       <p class="bu-klein">Fragen? <a href="tel:+4921130293035">0211 3029 3035</a></p>
     </aside>`
   }
 
   function schrittLeiste(): string {
-    const p = PAKETE[paket()]
+    const monat = monatsbeitrag()
     const punkte = SCHRITTE.map((s, i) => {
       const klasse = i === schritt ? 'aktiv' : i <= erreicht ? 'erledigt' : ''
       const an = i <= erreicht || i === schritt + 1
@@ -177,7 +177,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
         <button type="button" class="bu-pfeil" data-sprung="${schritt + 1}" aria-label="Weiter"${schritt >= SCHRITTE.length - 1 ? ' disabled' : ''}>→</button>
       </nav>
       <p class="bu-schritt-name">${schritt + 1} von ${SCHRITTE.length} · ${SCHRITTE[schritt]}</p>
-      ${schritt > 0 ? `<p class="bu-preiszeile">${p.monat} € plus ${cent(PRO_PLAN)} je Plan</p>` : ''}`
+      ${schritt > 0 ? `<p class="bu-preiszeile">${monat} € plus ${cent(PRO_PLAN)} je Plan · einmalig ${EINRICHTUNG.toLocaleString('de-DE')} €${w.doku === true ? ` · davon ${DOKU_MONAT} € Sprachdokumentation` : ''}</p>` : ''}`
   }
 
   function zeichnen() {
@@ -205,11 +205,11 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
       const el = e.target as HTMLInputElement
       if (!el.name) return
       w[el.name] = el.type === 'checkbox' ? el.checked : el.value
-      if (el.name === 'paket') zeichnen()
+      if (el.name === 'paket' || el.name === 'doku') zeichnen()
     })
     form.addEventListener('change', (e) => {
       const el = e.target as HTMLInputElement
-      if (el.type === 'radio' || el.type === 'checkbox') { w[el.name] = el.type === 'checkbox' ? el.checked : el.value; if (el.name === 'paket') zeichnen() }
+      if (el.type === 'radio' || el.type === 'checkbox') { w[el.name] = el.type === 'checkbox' ? el.checked : el.value; if (el.name === 'paket' || el.name === 'doku') zeichnen() }
     })
     app.querySelector('[data-zurueck]')?.addEventListener('click', () => springen(schritt - 1))
     for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-sprung]')) {
@@ -259,7 +259,7 @@ export function buchungSeite(app: HTMLElement, start: Paket = 'planr') {
       paket: paket(), praxis: teil('praxis'), inhaber: teil('inhaber'),
       kzv: { ...teil('kzv'), zahnaerzte: Number(g('kzv.zahnaerzte')), praxen: Number(g('kzv.praxen') || 1), eigenlabor: w['kzv.eigenlabor'] === true },
       pvs: teil('pvs'), hinweis: g('hinweis'), passwort: String(w.passwort ?? ''),
-      sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'),
+      sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'), doku: w.doku === true,
       firma2: (app.querySelector<HTMLInputElement>('[name=firma2]')?.value ?? ''),
     }
   }

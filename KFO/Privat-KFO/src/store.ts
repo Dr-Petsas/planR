@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan, Regler } from './types'
-import { useAblage } from './ablage'
+import { planNummer, nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { leereAufgabe } from './data/katalog'
 import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
@@ -25,7 +25,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
 
 export const reglerAus = (e: Einstellungen): Regler => ({ kfoFaktor: e.kfoFaktor, faktor: e.faktor, roeFaktor: e.roeFaktor, laborKlasse: 1 })
 
-export const nummerFormat = (n: number) => `PKFO-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => planNummer('PKFO', n)
 
 export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {
@@ -57,6 +57,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     diagnose: p.diagnose ?? '',
     therapie: p.therapie ?? '',
     bemerkung: p.bemerkung ?? '',
+    nummer: nummerMitReihe(p.nummer || basis.nummer),
   }
 }
 

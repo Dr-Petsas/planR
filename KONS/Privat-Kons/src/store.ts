@@ -1,6 +1,6 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import type { Einstellungen, Plan } from './types'
-import { useAblage } from './ablage'
+import { nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { neuerPlan, nummerFormat, STANDARD_EINSTELLUNGEN } from './planNeu'
 import { patientMigrieren, praxisMigrieren } from './stammdaten'
@@ -23,6 +23,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     zaehne: p.zaehne ?? {},
     frei: p.frei ?? [],
     bemerkung: p.bemerkung ?? '',
+    nummer: nummerMitReihe(p.nummer || basis.nummer),
   }
 }
 

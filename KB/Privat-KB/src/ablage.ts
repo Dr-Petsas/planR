@@ -7,6 +7,24 @@ import { arztUebernehmen } from './arzt'
  * Die Form der Einträge entspricht dem späteren MAS-Register, damit die Ablage
  * für die Clara-Anbindung umziehen kann, ohne dass sich die Oberfläche ändert.
  */
+/** Lauf 1 ist A001, 934 ist A934, 1000 ist B001. Clara-Nummern wie C002 bleiben unverändert. */
+export function planNummer(praefix: string, lauf: number, jahr = new Date().getFullYear()): string {
+  const n = Math.max(1, Math.floor(lauf) || 1)
+  const reihe = Math.floor((n - 1) / 999)
+  const ziffer = String(((n - 1) % 999) + 1).padStart(3, '0')
+  return `${praefix}-${jahr}-${String.fromCharCode(65 + (reihe % 26))}${ziffer}`
+}
+
+const NUMMER_REIHE = /^[A-Za-z]{2,8}-\d{4}-[A-Z]\d{3}$/
+const NUMMER_ALT = /^([A-Za-z]{2,8})-(\d{4})-(\d{3})$/
+
+/** IMPL-2026-001 wird IMPL-2026-A001. Eine Nummer mit Buchstabe bleibt. */
+export function nummerMitReihe(nummer: string): string {
+  if (NUMMER_REIHE.test(nummer)) return nummer
+  const alt = String(nummer || '').match(NUMMER_ALT)
+  return alt ? `${alt[1]}-${alt[2]}-A${alt[3]}` : nummer
+}
+
 export type AblageStatus = 'entwurf' | 'freigegeben'
 
 export interface AblageEintrag<P> {
@@ -205,7 +223,14 @@ function lesen<P>(key: string): AblageEintrag<P>[] {
   try {
     const roh = localStorage.getItem(key)
     const liste = roh ? JSON.parse(roh) : []
-    return Array.isArray(liste) ? liste.map((e) => ({ status: 'entwurf', geaendert: e.datum ?? '', ...e })) : []
+    return Array.isArray(liste) ? liste.map((e) => {
+      const eintrag = { status: 'entwurf' as const, geaendert: e.datum ?? '', ...e }
+      const nummer = nummerMitReihe(String(eintrag.nummer ?? ''))
+      const plan = eintrag.plan && typeof eintrag.plan === 'object'
+        ? { ...eintrag.plan, nummer: nummerMitReihe(String((eintrag.plan as { nummer?: string }).nummer || nummer)) }
+        : eintrag.plan
+      return { ...eintrag, nummer, plan }
+    }) : []
   } catch {
     return []
   }

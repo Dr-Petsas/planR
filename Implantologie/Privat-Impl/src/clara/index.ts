@@ -67,6 +67,8 @@ export interface ImplAuftrag {
   regionen: RegionOptionen
   /** Sinuslift genannt, aber nicht ob intern oder extern */
   sinusOffen: boolean
+  /** Gesetzt, wenn rechts und links verschieden genannt sind. Sonst gilt `regionen` für alle Seiten. */
+  sinusJe: Partial<Record<'OK-R' | 'OK-L', RegionOptionen>> | null
   materialAngenommen: boolean
   membranAngenommen: boolean
   global: Partial<GlobalOptionen>
@@ -92,14 +94,39 @@ function zaehneFinden(t: string): string[] {
   return out
 }
 
+type SinusArt = 'intern' | 'extern'
+const SINUS_ADJ = /extern\w*|intern\w*|lateral\w*|geschlossen\w*|krestal\w*|crestal\w*|osteotom\w*|summers\w*|fenster\w*/gi
+const sinusArtWort = (wort: string): SinusArt | null =>
+  /^intern|^geschlossen|^krestal|^crestal|^osteotom|^summers/.test(wort) ? 'intern'
+    : /^extern|^lateral|^fenster/.test(wort) ? 'extern' : null
+
+/** "externer Sinuslift rechts, interner links": je Kieferhälfte, nicht für beide Seiten dieselbe Art. */
+function sinusJeSeite(k: string): Partial<Record<'OK-R' | 'OK-L', RegionOptionen>> | null {
+  if (!/rechts|links/.test(k) || !/sinus|kieferh(?:ö|oe)hle|extern|intern|lateral|fenster/.test(k)) return null
+  const bei = (seite: 'rechts' | 'links'): SinusArt | null => {
+    const i = k.indexOf(seite)
+    if (i < 0) return null
+    const davor = [...k.slice(Math.max(0, i - 80), i).matchAll(SINUS_ADJ)].at(-1)?.[0] ?? ''
+    const danach = k.slice(i, i + 48).match(SINUS_ADJ)?.[0] ?? ''
+    return sinusArtWort(davor) ?? sinusArtWort(danach)
+  }
+  const rechts = bei('rechts')
+  const links = bei('links')
+  if (!rechts && !links) return null
+  const block = (art: SinusArt | null): RegionOptionen =>
+    art === 'extern' ? { sinusExtern: true } : art === 'intern' ? { sinusIntern: true } : {}
+  return { 'OK-R': block(rechts), 'OK-L': block(links) }
+}
+
 /** Erkennt Implantat-Positionen, Zeitpunkt, chirurgische Zusatzmaßnahmen und globale Angaben. */
 export function implAuftragVerstehen(roh: string): ImplAuftrag {
   const t = roh.replace(/\s+/g, ' ').replace(/\b(\d\d),(?=\d\d\b)/g, '$1, ')
   const k = t.toLowerCase()
   const o: RegionOptionen = {}
   const sinus = /sinus|kieferh(?:ö|oe)hle/.test(k)
+  const sinusJe = sinusJeSeite(k)
   let sinusOffen = false
-  if (sinus) {
+  if (!sinusJe && sinus) {
     if (/intern|geschlossen|osteotom|krestal|crestal|summers/.test(k)) o.sinusIntern = true
     else if (/extern|lateral|fenster/.test(k)) o.sinusExtern = true
     else sinusOffen = true
@@ -114,16 +141,18 @@ export function implAuftragVerstehen(roh: string): ImplAuftrag {
   else if (/allogen|spender|maxgraft/.test(k)) o.material = 'allogen'
   else if (/xenogen|bio-? ?oss|rind|bovin|cerabone/.test(k)) o.material = 'xenogen'
   else if (/synthetisch|alloplast|\btcp\b|hydroxyl/.test(k)) o.material = 'synthetisch'
-  const aufbau = !!(o.augmentation || o.sinusIntern || o.sinusExtern || sinusOffen || o.boneSplitting)
+  const jeExtern = !!sinusJe && Object.values(sinusJe).some((x) => x?.sinusExtern)
+  const jeIntern = !!sinusJe && Object.values(sinusJe).some((x) => x?.sinusIntern)
+  const aufbau = !!(o.augmentation || o.sinusIntern || o.sinusExtern || jeExtern || jeIntern || sinusOffen || o.boneSplitting)
   const materialAngenommen = aufbau && !o.material && !o.blockEntnahme && !o.ringEntnahme
-  if (materialAngenommen) o.material = 'xenogen'
+  if (materialAngenommen && !sinusJe) o.material = 'xenogen'
   if (/ohne membran|keine membran/.test(k)) o.membran = 'keine'
   else if (/titan/.test(k)) o.membran = 'titan'
   else if (/nicht[\s-]?resorb|ptfe/.test(k)) o.membran = 'nicht-resorbierbar'
   else if (/vlies|kollagenvlies/.test(k)) o.membran = 'vlies'
   else if (/membran/.test(k)) o.membran = 'resorbierbar'
-  const membranAngenommen = !o.membran && !!(o.augmentation || o.sinusExtern || sinusOffen)
-  if (membranAngenommen) o.membran = 'resorbierbar'
+  const membranAngenommen = !o.membran && !!(o.augmentation || o.sinusExtern || jeExtern || sinusOffen)
+  if (membranAngenommen && !sinusJe) o.membran = 'resorbierbar'
   if (/bindegewebe|\bbgt\b|\bctg\b/.test(k)) o.weichgewebe = 'btt'
   else if (/schleimhauttransplant|\bfst\b|freies schleimhaut/.test(k)) o.weichgewebe = 'fst'
   else if (/vestibulumplastik/.test(k)) o.weichgewebe = 'vestibulumplastik'
@@ -148,7 +177,7 @@ export function implAuftragVerstehen(roh: string): ImplAuftrag {
   const deckung: ImplantatDetail['deckung'] = /einzeitig|offen einheil|transgingival|gingivaformer gleich/.test(k) ? 'offen' : 'gedeckt'
   const system = SYSTEM_WORT.find(([re]) => re.test(t))?.[1] ?? 'durchschnitt'
   return {
-    zaehne: zaehneFinden(t), sofort: SOFORT.test(t), spaet: SPAET.test(t), regionen: o, sinusOffen,
+    zaehne: zaehneFinden(t), sofort: SOFORT.test(t), spaet: SPAET.test(t), regionen: o, sinusOffen, sinusJe,
     materialAngenommen, membranAngenommen, global: g, deckung, system,
     prothetik: /krone|br(?:ü|ue)cke|prothese|teleskop|\bsteg\b|suprakonstruktion/.test(k),
   }
@@ -225,10 +254,20 @@ export function implEntwurf(auftragText: string, befund: Record<string, string> 
   const planRegionen: Plan['regionen'] = {}
   for (const r of regionen) {
     const ro: RegionOptionen = { ...rest }
-    if (IST_OK_SEITE(r)) Object.assign(ro, sinusIntern ? { sinusIntern } : {}, sinusExtern ? { sinusExtern } : {})
+    if (a.sinusJe && IST_OK_SEITE(r)) Object.assign(ro, a.sinusJe[r] ?? {})
+    else if (IST_OK_SEITE(r)) Object.assign(ro, sinusIntern ? { sinusIntern } : {}, sinusExtern ? { sinusExtern } : {})
+    if (a.sinusJe) {
+      if ((ro.sinusIntern || ro.sinusExtern || ro.augmentation) && a.materialAngenommen && !ro.material) ro.material = 'xenogen'
+      if ((ro.augmentation || ro.sinusExtern) && a.membranAngenommen && !ro.membran) ro.membran = 'resorbierbar'
+    }
     planRegionen[r] = ro
   }
-  if ((sinusIntern || sinusExtern || a.sinusOffen) && !sinusRegionen.length) {
+  const rechts = a.sinusJe?.['OK-R']
+  const links = a.sinusJe?.['OK-L']
+  if (rechts?.sinusExtern && links?.sinusIntern) hinweise.push('Den externen Sinuslift habe ich rechts angesetzt, den internen links.')
+  if (rechts?.sinusIntern && links?.sinusExtern) hinweise.push('Den internen Sinuslift habe ich rechts angesetzt, den externen links.')
+  const sinusGenannt = sinusIntern || sinusExtern || a.sinusOffen || rechts?.sinusExtern || rechts?.sinusIntern || links?.sinusExtern || links?.sinusIntern
+  if (sinusGenannt && !sinusRegionen.length) {
     hinweise.push('Ein Sinuslift geht nur im Oberkiefer-Seitenzahnbereich, den habe ich nicht angesetzt.')
   }
   const plan: Plan = {

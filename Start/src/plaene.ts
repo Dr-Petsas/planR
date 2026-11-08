@@ -20,12 +20,34 @@ export interface PlanKarte {
   imPvs?: string
   /** Kostenvoranschlag per E-Mail an den Patienten (Text für die Liste) */
   versendet?: string
+  /** Eingetragener CalendR-Termin, ISO-Zeit */
+  termin?: string
   /** DS-Win-Praxis (1–9) in einer Praxisgemeinschaft; fehlt = Hauptpraxis des Mandanten */
   praxis?: number
   /** Noch kein Plan, sondern der laufende Weg vom Befund zum Plan (Start/befund01.ts) */
   vorgang?: VorgangZeile
   /** Wie PlanR den Patienten im Praxisprogramm findet (Befund der Zeile) */
   kennung?: PatientKennung
+  /** Sichtbare Plan-Nummer, wenn `nummer` die interne Kennung bleibt (HKP) */
+  schein?: string
+}
+
+/** Lauf 1 ist A001, 934 ist A934, 1000 ist B001. Clara-Nummern wie C002 bleiben unverändert. */
+export function planNummer(praefix: string, lauf: number, jahr = new Date().getFullYear()): string {
+  const n = Math.max(1, Math.floor(lauf) || 1)
+  const reihe = Math.floor((n - 1) / 999)
+  const ziffer = String(((n - 1) % 999) + 1).padStart(3, '0')
+  return `${praefix}-${jahr}-${String.fromCharCode(65 + (reihe % 26))}${ziffer}`
+}
+
+const NUMMER_REIHE = /^[A-Za-z]{2,8}-\d{4}-[A-Z]\d{3}$/
+const NUMMER_ALT = /^([A-Za-z]{2,8})-(\d{4})-(\d{3})$/
+
+/** IMPL-2026-001 wird IMPL-2026-A001. IMPL-2026-C001 bleibt. */
+export function nummerMitReihe(nummer: string): string {
+  if (NUMMER_REIHE.test(nummer)) return nummer
+  const alt = nummer.match(NUMMER_ALT)
+  return alt ? `${alt[1]}-${alt[2]}-A${alt[3]}` : nummer
 }
 
 /** Patient im Praxisprogramm: Patientennummer oder Name mit Geburtsdatum */

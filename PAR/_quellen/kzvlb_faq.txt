@@ -1,0 +1,188 @@
+
+===== Seite 1 =====
+1. Vom Antrag bis zur Genehmigung einschließlich Begutachtung (u.A. Aus￾füllhinweise)
+Wie sieht es aus mit Zähnen, die nach Kassenrichtlinie eigentlich nicht zu erhalten sind und auf 
+GOZ-Basis erhalten werden sollen? Muss das irgendwo vermerkt werden?
+Diese Zähne werden im Zahnschema (Parodontalstatus Blatt 2) befundet und in der Zeile Be￾merkungen aufgeführt mit dem Hinweis, dass sie aufgrund der ungünstigen Prognose nach GOZ 
+berechnet werden.
+Wie werden vorhandene Implantate im PAR-Status gekennzeichnet?
+Im Zahnbefund ist eine Eintragung als fehlend notwendig; nutzen Sie ergänzend das Feld Be￾merkung z. B. mit der Notiz „Zahn 16 Implantat über GOZ“.
+Laut der neuen PAR-Richtlinie soll die Beantragung in elektronischer Form erfolgen. Wie wird die 
+PAR-Therapie beantragt?
+§ 5 der PAR-Richtlinie sieht vor, dass die Zahnärztin/der Zahnarzt den Antrag zur Durchführung
+einer systematischen Parodontitistherapie nach festgestellter Diagnose mittels eines Datensat￾zes an die Krankenkasse zu übermitteln hat. Der Datensatz wird zwischen den Bundesmantel￾vertragspartnern vereinbart.
+Dieses Verfahren wird erst im Laufe des Jahres 2022 zur Verfügung stehen. Anträge sind bis 
+dahin in ausgedruckter Form der Krankenkasse zur Genehmigung vorzulegen. Die entsprechen￾den Papiervordrucke können in der KZV, wie üblich angefordert werden.
+Auf dem Antragsformular sind die Positionen 108 (Einschleifen) und 111 (Nachbehandlung) 
+nicht aufgeführt.
+Diese Positionen werden nicht mehr beantragt. Sie werden in der Anzahl, wie sie auch erbracht 
+wurden mit dem jeweiligen Behandlungsdatum abgerechnet.
+Cave: Eine Wirtschaftlichkeitsprüfung ist damit nicht ausgeschlossen.
+Auf welchem Formular hat die Dokumentation der BEV, UPTd und UPTg zu erfolgen?
+Für die Dokumentation ist kein gesondertes Formular vorgesehen. Die geforderten Befunde 
+sind in geeigneter Form in der Patientenkartei zu hinterlegen. Viele Praxissoftwareprogramme 
+bieten entsprechende Erfassungsformulare für die Dokumentation der verschiedenen Indizes 
+und die Erfassung der Sondierungstiefen und Sondierungsbluten. Für die Dokumentation der 
+Sondierungstiefen und des Sondierungsblutens kann sonst auch das Formblatt PAR-Status ver￾wendet werden. 
+Empfehlung: Die Befundevaluation erfordert eine umfangreiche Dokumentation der erhobenen 
+Befunde und Gesprächsinhalte. Dokumentationsvorlagen, die fallbezogen individualisiert wer- 2
+===== Seite 2 =====
+den, und entsprechende Formulare können helfen, den Arbeitsaufwand gering zu halten und 
+dienen gleichzeitig als Gedächtnisstütze, damit nichts vergessen wird. Sollte ein chirurgisches 
+Vorgehen notwendig werden, sollte hier ein besonderes Augenmerk auf eine lückenlose Doku￾mentation gelegt werden, denn durch den Wegfall der Genehmigungspflicht ist hier zu erwar￾ten, dass die Krankenkassen in Zukunft die medizinische Notwendigkeit und die Einhaltung des 
+Wirtschaftlichkeitsgebots im Rahmen von nachgelagerten Prüfungen kontrollieren. 
+Sofern der PVS-Anbieter keine Dokumentationshilfe anbietet, kann auf die auf der Homepage 
+der KZVLB zugegriffen werden (Aktuelles\PAR ab 01.07.2021\ Dokumentations- und Planungs￾hilfen)
+Die Anamnesefragen auf dem PAR-Antrag schließen auch „hochsensible“ Informationen ein. 
+Verstößt die Zahnärztin/der Zahnarzt gegen seine Schweige-pflicht, wenn diese Daten „öffent￾lich“ an die Krankenkasse und deren verschiedene Sachbearbeiter übermittelt werden?
+NEIN! Nach Aussage der KZBV handelt es sich hier um ein offizielles Formular, so dass die 
+Schweigepflicht gewahrt bleibt.
+Formulare Abrechnung
+1. Zum Oktober 2021 haben die PVS-Anbieter ein Update für die Datenübermittlung zur
+Monatsabrechnung PA den Praxen bereitgestellt.
+2. Erfolgt die Abrechnung der PAR-Therapie dennoch über das Abrechnungsformular, so
+muss bezogen auf die Systematische PAR-Therapie das Blatt 2 des PAR-Status und – bei
+Abrechnung CPT – die Mitteilung CPT in Kopie beigefügt werden.
+3. Hinsichtlich der Abrechnung der PAR-Behandlung bei Versicherten nach § 22a SGB V über
+das Abrechnungsformular ist die Anzeige einer Behandlung von Parodontitis bei Versi￾cherten nach § 22a SGB V in Kopie beizufügen.
+Siehe auch Rubrik „Vulnerable Patientengruppe“.
+Bitte fügen Sie dem Beleg „Abrechnung PAR-Therapie“ keinesfalls Originalunterlagen bei! (Aus￾nahmen: Bezogen auf die „Sonstigen Kostenträger“ erfolgt derzeit eine Anpassung der Abrech￾nungs-Einreichmodalitäten. Zum gegebenen Zeitpunkt werden wir Sie über die diesbezüglichen 
+Entscheidungen informieren.)
+Wird den Patienten das PSI-Formular im Original oder in Kopie ausgehändigt?
+Der PSI-Code steht als präventives Screening-Instrument zur Verfügung, stellt jedoch keine 
+Eingangsvoraussetzung für eine systematische PAR-Behandlung dar. Die Versicherten 
+erhalten dazu eine schriftliche Information unabhängig von der Notwendigkeit der PAR￾Behandlung. 
+Wenn Ihr PVS die Möglichkeit anbietet, die Daten über den PC zu erfassen und zu speichern, 
+sowie das Formular auszudrucken, reicht in der Patientenakte der Vermerk über die 
+Aushändigung des Formulars.
+Wenn das Formular händisch ausgefüllt wird, dann erhalten die Patienten eine Kopie und das 
+Original wird der Patientenakte beigefügt.
+Stand Februar 2022
+3
+===== Seite 3 =====
+Kann keine PAR-Behandlung beantragt werden, wenn der Messwert bei 3,5 Millimetern liegt?
+Die neue Richtlinie sieht vor, dass ganze Millimeterangaben einzutragen sind. Die bisherigen 
+0,5 mm-Schritte werden im PAR-Status deshalb nicht mehr eingetragen. Messwerte, die unter 
+0,5 mm liegen, sind abzurunden, Messwerte von 0,5 mm oder darüber sind aufzurunden 
+(kaufmännische Rundung). Bei einem Messwert von 3,5 Millimetern ergibt sich dadurch der 
+Wert 4 und es besteht bei gleichzeitigem Vorliegen einer Diagnose gemäß § 4 der PAR-RL 
+somit die Behandlungsbedürftigkeit.
+Was ist der Unterschied zwischen Staging und Grading?
+Die Stadien-Einteilung (Staging) bezieht sich auf die Schwere und Komplexität der 
+Erkrankung bei der Erstvorstellung. Die Angaben zum marginalen Knochenabbau (KA) anhand 
+von Röntgen-bildern und zum Zahnverlust aufgrund von Parodontitis liefern erste Hinweise 
+auf die Schwere der Erkrankung und die Einordnung in ein bestimmtes Stadium. 
+Komplexitätsfaktoren können eine Höherstufung des Stadiums bewirken. Die Grad￾Einteilung (Grading) beinhaltet die Ab-schätzung des zukünftigen Risikos für ein 
+Voranschreiten (Progressionsrate) der Parodontitis und das voraussichtliche Ansprechen auf 
+Therapie. Der Grad muss bei Vorhandensein von Risi-kofaktoren Diabetes und Rauchverhalten 
+nach oben modifiziert werden.
+CAVE: Entscheidend für die Frequenz der UPT ist der jeweils festgestellte Grad der 
+Parodontaler-krankung. Eine Änderung im Rahmen der späteren Befundevaluation hinsichtlich 
+des Gradings führt nicht zu einem veränderten Leistungsanspruch der UPT-Frequenz.
+Muss über die Therapiealternativen aufgeklärt werden? Welche Therapiealternativen gibt 
+es außer der Extraktion?
+Nach den Vorgaben des Patientenrechtegesetzes sind GKV-Patienten über alle 
+zahnmedizinisch sinnvollen Therapiealternativen aufzuklären. Dies beinhaltet je nach 
+Indikation die Aufklärung über die unterschiedlichen GKV-Leistungen inklusive gegebenenfalls 
+notwendiger Extraktionen bis hin zu außervertraglichen Maßnahmen wie Knochenaufbau mit 
+Membrantechnik und so wei-ter. Eine nicht vollständige Aufklärung kann dazu führen, dass die 
+Einwilligung des Patienten in die Behandlung unwirksam ist. Zum Beispiel können 
+Lappenoperationen zu Gingivaretraktionen und insofern zu ästhetischen Beeinträchtigungen 
+führen. Hierüber muss aufgeklärt werden. Die Entscheidung, ob ein offenes Vorgehen 
+durchgeführt werden soll, trifft die Vertragszahnärztin/der Vertragszahnarzt nach 
+gemeinsamer Erörterung mit der Patientin/dem Patienten. Im Front-zahnbereich besteht aus 
+ästhetischen Gründen eine strenge Indikation zum offenen Vorgehen. Eine Dokumentation der 
+Inhalte der Aufklärung sowie der Einwilligung/Ablehnung des Patienten ist erforderlich. 
+siehe auch Rubrik „Außervertragliche Leistungen“ i.V. mit PAR-Therarpie
+Kann die BEMA 4 (Befunderhebung und Erstellung eines Parodontalstatus) in einer Sitzung 
+mit weiteren PAR-Leistungen abgerechnet werden? 
+Erst wenn im Rahmen der systematischen PAR-Therapie der PAR-Status nach der BEMA Nr.4 
+von der Krankenkasse genehmigt wurde, dürfen weitere Leistungen erbracht und abgerechnet 
+wer-den. Somit ist eine sitzungsgleiche Abrechnung der BEMA Nr. 4 mit den BEMA Nrn. ATG, 
+MHU, 4
+===== Seite 4 =====
+AIT und 108 ausgeschlossen. (Ausnahme siehe unten vulnerable Patientengruppe)
+Ist die Erhebung des PSI-Codes (Nr. 04 BEMA) durch OCH-/MKG-Praxen bei Überweisungspatien￾ten regelmäßig abrechenbar?
+Die Erhebung des PSI-Codes ist bei Überweisungsfällen regelhaft nicht erforderlich. In Ausnah￾mefällen, z. B. bei Durchführung parodontalchirurgischer Maßnahmen durch die überweisungs￾annehmende Praxis, ist die Abrechnung der Nr. 04 BEMA jedoch möglich. Dies gilt auch, wenn 
+der parodontale Zustand für die chirurgische Auftragsleistung therapeutisch relevant ist. Der 
+Hauszahnarzt soll über die Erhebung des PSI-Code (Datum und Ergebnis) informiert werden, um 
+Doppeluntersuchungen zu vermeiden.
+Röntgenaufnahmen bei Antragstellung
+Gemäß § 3 Abs. 4 der PAR-Richtlinie erfordert der Röntgenbefund aktuelle in der Regel nicht 
+älter als zwölf Monate auswertbare Röntgenaufnahmen. Die Aufnahmen müssen alle zahntra￾genden Kieferbereiche erfassen, also auch diejenigen, die nicht behandelt werden sollen. Jeder 
+Zahn muss deutlich dargestellt sein, ebenso die interdentalen Bereiche. Panoramaaufnahmen 
+oder Orthopantomogramme waren bislang häufig nicht zur Röntgendiagnostik der parodonta￾len Erkrankungen als ausreichend angesehen worden. Dies mag sich im Einzelfall aufgrund des 
+technischen Fortschritts mittlerweile auch anders darstellen. Im Ergebnis dürfte es daher auf 
+den jeweiligen Einzelfall ankommen.
+Ist für eine Befundevaluation (BEV), die UPTd und UPTg zwingend wieder eine Röntgenunter￾suchung erforderlich?
+Nach Auffassung des Vorstandes der KZVLB ist dies nicht erforderlich. Als Vergleich dient der 
+ursprüngliche Röntgenbefund. Dieser wird für die Evaluation zu Grunde gelegt. Sind weiter 
+röntgenologische Untersuchungen erforderlich, sind diese selbstverständlich möglich. Dabei 
+sind allerdings die Vorgaben der Strahlenschutzverordnung hinsichtlich der rechtfertigenden In￾dikation unbedingt zu beachten. Dies kann im Ergebnis dazu führen, dass in manchen Behand￾lungsfällen bei der BEV evtl. auch nur ein OPG, welches schon 1,5 Jahre alt ist, also 12 Monate 
+alt bei Antragstellung und jetzt 6 Monate nach der AIT, vorliegt. Es heißt in § 11 der PAR-Richt￾linie, dass drei bis sechs Monate nach Beendigung der antiinfektiösen Therapie vom Zahnarzt 
+die erste Evaluation der parodontalen Befunde erfolgen soll. Die BEV zur Verlaufskontrolle dient 
+damit der Qualitätssicherung. Es können der Verlauf und die Progression mittels des Grading￾Ansatzes unter § 4 Nr. 1 der Erkrankung dargestellt werden; sie bieten wichtige Informationen 
+für den Zahnarzt und auch für den Patienten für die patientenindividuelle Therapieentschei￾dung. Die Erhebung und Dokumentation der parodontalen Befunddaten erfolgen dabei analog 
+zur Ersterhebung.
+Die Erstfassung der PAR-Richtlinie zieht Folgeanpassungen der Behandlungsrichtlinien nach 
+sich. Welche Auswirkungen haben diese Änderungen?
+„Für Röntgenuntersuchungen finden die Vorgaben des Strahlenschutzgesetzes und der Strah￾5
+===== Seite 5 =====
+lenschutzverordnung Anwendung.“ (Abschnitt B.II, Nr. 5, Satz 1). Für die Diagnose einer Paro￾dontalerkrankung ist die Durchführung einer Röntgendiagnostik unverzichtbar, da nur durch sie 
+sowohl Zahnwurzeln und Knochen detailliert dargestellt werden. Damit kann auch das Ausmaß 
+eines eventuellen Knochenverlustes beurteilt und die therapeutische Notwendigkeit, die Wahl 
+der besten Behandlungsoption bis hin zur Frage der Erhaltungswürdigkeit eines Zahnes geklärt 
+werden.
+Wie ist der röntgenologische Knochenabbau (KA) zu ermitteln?
+Auf dem Röntgenbild wird der Bereich der Dentition bestimmt, der den stärksten Knochenabbau 
+(horizontaler/vertikaler Abbau) aufweist. Dieser Befund wird als prozentualer Knochenabbau 
+in Bezug zur Wurzellänge in der Zeile „Röntg. Knochenabbau (KA)“ dokumentiert. Dieser Wert 
+kann geschätzt werden.
+CAVE: Innerhalb der PAR-Versorgungsstrecke ist der röntgenologische Knochenabbau sowie der 
+Wert für den Knochenabbau (%/Alter) zu erheben bei:
+• Anamnese und Befund nach BEMA-Nr. 4
+• Befundevaluation nach BEMA-Nrn. BEVa/BEVb
+• Unterstützende Parodontitistherapie nach BEMA-Nr. UPTg
+Ist der Zusammenhang zwischen Knochenabbau in Prozent und Alter der Patientin / des Patien￾ten eine zahnbezogene Größe oder insgesamt zu betrachten?
+Grundlage für diesen Wert bildet die Beurteilung des am stärksten parodontal beschädigten 
+Zahnes.
+Wie wird der Knochenabbauindex bei PA berechnet?
+Für die Zuordnung zu einem Erkrankungsgrad wird an dem Zahn mit dem stärksten Knochen￾abbau der Knochenabbau (% der Wurzellänge/Alter) herangezogen. Die Prozentwerte beziehen 
+sich auf den approximalen Knochenabbau in Relation zur Wurzellänge (Distanz Schmelz-Ze￾ment-Grenze zum Limbus alveolaris/Wurzellänge x 100) und können abgeschätzt werden (15% 
+= 1/6 der Wurzellänge; 33% = 1/3 der Wurzellänge). Der Verlust von parodontalem Stützgewe￾be wird in Relation zum Patientenalter als Quotient aus prozentualem Knochenabbau und dem 
+Patientenalter (%/Alter) angegeben.
+Ist die Aufnahme des HbA-Wertes verpflichtend?
+Im Rahmen der Anamnese muss nach einer Diabeteserkrankung und in diesem Zusammenhang 
+auch nach dem HbA-Wert gefragt werden. Der HbA-Wert ist zur Einschätzung des Risikos für die 
+zukünftige Progression der Parodontitis relevant. Er trägt als „Modifikator“ zur Einstufung des 
+Krankheitsgrades bei.
+6
+===== Seite 6 =====
+Wie erfahre ich den HbA1c-Wert bzw. muss ich den HbA1c-Wert beim Hausarzt erfragen?
+Die meisten Diabetes-Patienten befinden sich in regelmäßiger ärztlicher Kontrolle. Da es sich 
+bei dem HbA1c-Wert um einen Langzeitwert handelt, muss kein tagesaktueller Wert bekannt 
+sein. Die Werte nach der Blutabnahme werden mit dem Patienten besprochen. Dieser letzte 
+HbA1c-Wert kann dann herangezogen werden. Befindet sich die Patientin/der Patient nicht in 
+regelmäßiger ärztlicher Kontrolle, sollte an den Hausarzt verwiesen werden. Ggf. kann im Rah￾men eines Konsiliums ein Gespräch mit dem Hausarzt behilflich sein.
+Wie ist zu verfahren, wenn die Patientin / der Patient die Auskunft des HbA1c-Wertes verweigert?
+Der HbA1c-Wert ist u. a. ein Parameter, der für die Frequenz der UPT ausschlaggebend ist. Die 
+Patienten können jedoch nicht zu einer Angabe gezwungen werden und sie sind auch nicht dazu 
+verpflichtet, beim Hausarzt den Wert zu erfragen. Die Patientin/der Patient muss allerdings über 
+die Bedeutung des HbA1c-Wertes zur Einschätzung des Risikos für die zukünftige Progression 
+der Parodontitis und die damit verbundene ggf. höhere Frequenz der UPT aufgeklärt werden 
+(Dokumentation in der Patientenakte!). Wir empfehlen Ihnen, in der entsprechenden Zeile kein 
+Kreuzchen zu setzen und hinter das Wort „Diabetes“ „keine Angabe des HbA1c-Wertes“ einzu￾tragen.
+Ist ein tagesaktueller HbA1c-Wert zu erfassen und wie kann dies abgerechnet werden?
+Da es sich bei dem HbA1c-Wert um einen Langzeitwert handelt, muss kein tagesaktueller Wert 
+bekannt sein. Die meisten Diabetes-Patienten befinden sich in regelmäßiger ärztlicher Kontrol￾le. Insofern kann der letzte HbA1c-Wert herangezogen werden.
+Die Vereinbarung über das Antrags- bzw. Genehmigungsverfahren sowie das Gutachterwesen 
+bei systematischen Behandlungen von Parodontopathien (Anlage zum BMV-Z) hat weiterhin 
+Bestand.
+Kann eine bei der Krankenkasse angezeigte CPT begutachtet werden?
+Nach dem derzeitigen Verfahrensstand ist keine Begutachtung der angezeigten parodontalchi￾rurgischen Therapie vorgesehen. 
+Cave: Eine Wirtschaftlichkeitsprüfung ist dadurch nicht ausgeschlossen.
+siehe auch Rubrik „Rund um die CPT“
+Muss die Gutachterin/der Gutachter die Frequenz der UPT, also das Grading nachprüfen?
+Ja, da die Frequenz der UPT auf dem Grading basiert. Die Gradeinstufung, weist auf die Progre￾dienz der Erkrankung hin. 
+Stand Oktober 2021
+7

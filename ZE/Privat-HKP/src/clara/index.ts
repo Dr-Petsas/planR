@@ -29,6 +29,12 @@ export interface PrivatZusammenfassung {
   ersetzt: string[]
   teleskope: string[]
   implantatkronen: string[]
+  verbindung?: string[]
+  steg?: string[]
+  ankerGesagt?: string
+  haltung?: string
+  kronenArt?: string
+  abutmentWort?: string
   honorar: number
   /** Laborkosten mit MwSt. */
   labor: number
@@ -45,7 +51,7 @@ export interface PrivatEntwurf {
 }
 
 // Vom HKP gelten nur die Annahmen zu Auftrag und Befund; Regel-Hinweise (Richtlinie, BEMA) und Preise sind Kasse
-const AUS_DEM_AUFTRAG = /angenommen|cover-denture|passt nicht/i
+const AUS_DEM_AUFTRAG = /angenommen|cover-denture|passt nicht|all-on|druckknopf|kugelkopf|implantatsteg|galvano|tabletop|inlay|onlay|abutment|verschraub|zementier/i
 const NUR_KASSE = /bonus|festzuschuss|härtefall|kasse|bema|richtlinie|hkp/i
 
 const sortiert = (zs: string[]) => [...zs].sort((a, b) => ALLE_ZAEHNE.indexOf(a) - ALLE_ZAEHNE.indexOf(b))
@@ -66,11 +72,17 @@ function zaehneAus(hkp: HkpPlan['zaehne']): Record<string, Zahn> {
 export function zusammenfassen(plan: Plan, k: Kalkulation): PrivatZusammenfassung {
   const mit = (re: RegExp) => sortiert(Object.entries(plan.zaehne).filter(([, z]) => re.test(z.TP)).map(([n]) => n))
   return {
-    kronen: mit(/^(K|KV|KH|KVH|KM|KMH|PK|PKM|PKV)$/),
-    glieder: mit(/^(B|BV|BM)$/),
+    kronen: mit(/^(K|KV|KH|KVH|KM|KMH|PK|PKM|PKV|ZA|VE|VEK|I[1-4]|C[1-4]|ONK?)$/),
+    glieder: mit(/^(B|BV|BM|SB|SBV|SBM|ZAB)$/),
     ersetzt: mit(/^(E|B|BV|BM)$/),
-    teleskope: mit(/^T2?[VM]?$/),
-    implantatkronen: mit(/^SK/),
+    teleskope: mit(/^S?T(?:2|Z)?[VM]?$/),
+    implantatkronen: mit(/^(SK|ZAS)/),
+    verbindung: mit(/^SO$/),
+    steg: mit(/^SEO$/),
+    ...(plan.ankerGesagt ? { ankerGesagt: plan.ankerGesagt } : {}),
+    ...(plan.haltung ? { haltung: plan.haltung } : {}),
+    ...(plan.kronenArt ? { kronenArt: plan.kronenArt } : {}),
+    ...(plan.abutmentWort ? { abutmentWort: plan.abutmentWort } : {}),
     honorar: k.summeHonorar,
     labor: Math.round((k.summeLaborNetto + k.mwst) * 100) / 100,
     material: k.summeMaterial,
@@ -91,7 +103,19 @@ export function privatZeEntwurf(auftragText: string, befund: Befund, optionen: P
     abformungProthese: r.plan.abformungProthese,
     werkstoffe: { ...r.plan.werkstoffe },
   }
-  if (r.plan.implantat?.system) plan.implantat = { ...plan.implantat, system: r.plan.implantat.system }
+  if (r.plan.implantat) {
+    plan.implantat = {
+      ...plan.implantat,
+      ...(r.plan.implantat.system ? { system: r.plan.implantat.system } : {}),
+      ...(r.plan.implantat.abutment ? { abutment: r.plan.implantat.abutment } : {}),
+      ...(r.plan.implantat.abformung === 'offen' || r.plan.implantat.abformung === 'geschlossen'
+        ? { loeffel: r.plan.implantat.abformung } : {}),
+    }
+  }
+  if (r.plan.einstellungen.ankerGesagt) plan.ankerGesagt = r.plan.einstellungen.ankerGesagt
+  if (r.plan.einstellungen.haltung) plan.haltung = r.plan.einstellungen.haltung
+  if (r.plan.einstellungen.kronenArt) plan.kronenArt = r.plan.einstellungen.kronenArt
+  if (r.plan.einstellungen.abutmentWort) plan.abutmentWort = r.plan.einstellungen.abutmentWort
   const kalkulation = kalkulieren(plan, { ...STANDARD_EINSTELLUNGEN, ...optionen.einstellungen })
   const hinweise = r.hinweise.filter((h) => AUS_DEM_AUFTRAG.test(h) && !NUR_KASSE.test(h))
   return { status: 'ok', plan, kalkulation, zusammenfassung: zusammenfassen(plan, kalkulation), hinweise: [...hinweise, ...kalkulation.hinweise] }

@@ -30,6 +30,21 @@ describe('privater Zahnersatz per Sprache', () => {
     expect(e.kalkulation.labor.map((z) => z.nr)).toContain('2281')
   })
 
+  it('verschraubte Implantatkrone übernimmt das individuelle Abutment', () => {
+    const e = ok(privatZeEntwurf('verschraubte Implantatkrone auf 36', { 36: 'f' }))
+    expect(e.plan.implantat.abutment).toBe('individuell')
+    expect(goz(e)).toEqual(expect.arrayContaining(['2200/36', '9050/36']))
+    expect(goz(e).some((z) => z.startsWith('5080'))).toBe(false)
+    expect(e.kalkulation.labor.map((z) => z.nr)).toContain('2033')
+  })
+
+  it('vollanatomische Zirkonkrone ohne Verblendschicht', () => {
+    const e = ok(privatZeEntwurf('vollanatomische Zirkonkrone 16', { 16: 'ww' }))
+    expect(tp(e)['16']).toBe('ZA')
+    expect(e.kalkulation.labor.map((z) => z.nr)).toContain('2251')
+    expect(e.kalkulation.labor.map((z) => z.nr)).not.toContain('2612')
+  })
+
   it('Implantatkrone: Suprakonstruktion ohne Kassen-Hinweise, Chirurgie nur einmal erwähnt', () => {
     const e = ok(privatZeEntwurf('Implantatkrone auf 36', { 36: 'f' }))
     expect(tp(e)).toEqual({ 36: 'SK' })

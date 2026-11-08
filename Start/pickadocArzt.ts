@@ -42,6 +42,26 @@ async function lesen<T>(url: string, init?: RequestInit): Promise<T | null> {
   return r.ok ? await r.json() as T : null
 }
 
+const BILD_HOST = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com'])
+
+/** Porträt aus dem Pickadoc-Mitarbeiterprofil, nur die eigene Datei, nie eine fremde Adresse. */
+export async function avatarHolen(clientId: string, uid: string): Promise<{ art: string; daten: Buffer } | null> {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(clientId) || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) return null
+  const dok = await lesen<Dok>(`${BASIS}/clients/${clientId}/users/${uid}?mask.fieldPaths=avatarUrl`)
+  const url = s(dok ?? {}, 'avatarUrl')
+  let ziel: URL
+  try { ziel = new URL(url) } catch { return null }
+  if (ziel.protocol !== 'https:' || !BILD_HOST.has(ziel.host)) return null
+  if (!decodeURIComponent(ziel.pathname).includes(`/clients/${clientId}/users/${uid}`)) return null
+  const r = await fetch(url, { signal: AbortSignal.timeout(6000) })
+  if (!r.ok) return null
+  const art = (r.headers.get('content-type') ?? '').split(';')[0].trim()
+  if (!/^image\/(jpeg|png|webp)$/.test(art)) return null
+  const daten = Buffer.from(await r.arrayBuffer())
+  if (daten.length < 32 || daten.length > 2_000_000) return null
+  return { art, daten }
+}
+
 const zwischen = new Map<string, { arzt: Arzt | null; zeit: number }>()
 
 export async function arztAusPickadoc(clientId: string, uid: string, zahnarzt = ''): Promise<Arzt | null> {

@@ -19,7 +19,7 @@ import Dokument from './components/Dokument'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
-import { PlanrZurueck } from './PlanrZurueck'
+import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -98,6 +98,7 @@ export default function App() {
 
   return (
     <>
+      <PlanrLeiste punkte={REITER.map((r) => ({ id: r.id, text: r.label }))} aktiv={reiter} onWahl={(id) => setReiter(id as Reiter)} versand />
       <div className="kopfbereich">
         <header className="kopfleiste">
             <PlanrZurueck />

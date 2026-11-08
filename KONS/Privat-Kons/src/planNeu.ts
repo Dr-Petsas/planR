@@ -1,4 +1,5 @@
 import type { Einstellungen, Plan } from './types'
+import { planNummer } from './ablage'
 import { STANDARD_LABOR, STANDARD_MATERIAL } from './data/katalog'
 import { leererPatient, standardPraxis } from './stammdaten'
 
@@ -12,7 +13,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   materialPreise: STANDARD_MATERIAL.map((m) => ({ ...m })),
 }
 
-export const nummerFormat = (n: number) => `PK-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => planNummer('PK', n)
 
 export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {

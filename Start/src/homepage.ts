@@ -1,14 +1,15 @@
 import './homepage.css'
 import './clara-handy.css'
 import { logo, wortmarke } from './logo'
+import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN } from './paket'
 
 /** Öffentliche Startseite von PlanR für Besucher ohne Anmeldung. */
 
 const CLARA_SCHRITTE = ['Befund', 'Regelversorgung', 'Festzuschuss', 'BEMA', 'GOZ', 'BEL II', 'Begründung']
 const CLARA_ZUSTAENDE = [
   { id: 'listening', zustand: 'Ich höre zu', unter: 'Patient und Befund sagen', hinweis: '„HKP für Frau Berger …“' },
-  { id: 'thinking', zustand: 'Clara rechnet …', unter: 'Befund · Zuschüsse · Regler', hinweis: '' },
-  { id: 'speaking', zustand: 'Clara spricht', unter: 'Plan steht · 4.380 €', hinweis: '„Soll ich ihn ins PVS geben?“' },
+  { id: 'thinking', zustand: 'Sie rechnet …', unter: 'Befund · Zuschüsse · Regler', hinweis: '' },
+  { id: 'speaking', zustand: 'Sie spricht', unter: 'Plan steht · 4.380 €', hinweis: '„Soll ich ihn ins PVS geben?“' },
 ]
 
 const PVS = ['Dampsoft DS-Win', 'CGM Z1.PRO', 'DENSoffice', 'solutio charly', 'evident', 'ivoris', 'VISIdent', 'Linudent', 'jedes PVS mit VDDS-Schnittstelle']
@@ -31,7 +32,7 @@ const PRIVAT = [
 /** Beispiel: Brücke 14–16 und Krone 26, Kasse, Eigenlabor */
 const BEMA = 740
 const BEL_HOECHST = 1180
-const PLANR = 69
+const PLANR = PAKETE.planr_clara.monat
 
 const symbol = (pfade: string) =>
   `<span class="hp-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${pfade}</svg></span>`
@@ -109,7 +110,7 @@ const HKP_FORMULAR = `
         </table>
       </div>
     </div>
-    <div class="hkp-fuss"><span>Zahnarztpraxis Dr. Demo · Musterstraße 1 · 40235 Düsseldorf</span><span class="hkp-stempel">${logo('PlanR-Stempel')} von Clara erstellt</span></div>
+    <div class="hkp-fuss"><span>Zahnarztpraxis Dr. Demo · Musterstraße 1 · 40235 Düsseldorf</span><span class="hkp-stempel">${logo('PlanR-Stempel')} von deiner KI-Assistentin</span></div>
   </div>`
 
 const HKP_MINI = `
@@ -128,7 +129,7 @@ const HKP_MINI = `
       <tr><td>Festzuschüsse</td><td>−1.656,23</td></tr>
       <tr class="hkp-eigen"><td>Eigenanteil</td><td>2.723,77</td></tr>
     </table>
-    <div class="hkp-fuss"><span class="hkp-stempel">${logo('PlanR-Stempel')} von Clara erstellt</span></div>
+    <div class="hkp-fuss"><span class="hkp-stempel">${logo('PlanR-Stempel')} von deiner KI-Assistentin</span></div>
   </div>`
 
 const PLAENE = [
@@ -170,8 +171,28 @@ const FORMEN = '<div class="hp-formen" aria-hidden="true"><i class="f1"></i><i c
 const euro = (n: number) => `${Math.round(n).toLocaleString('de-DE')} €`
 const komma = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
-const PRO_PLAN = 1.59
-const kosten = (plaene: number) => PLANR + plaene * PRO_PLAN
+const kosten = (plaene: number, doku = false) => PLANR + plaene * PRO_PLAN + (doku ? DOKU_MONAT : 0)
+
+/** Vergleich „Gestern / Heute“. Mit Sprachdokumentation steigen der Monatsbeitrag und die Gegenüberstellung mit. */
+function vergleich(doku: boolean): { titel: string; alt: string[]; neu: string[]; monat: number } {
+  const monat = doku ? PLANR + DOKU_MONAT : PLANR
+  const preis = `${monat} € im Monat, ${EINRICHTUNG.toLocaleString('de-DE')} € einmalig, ${cent(PRO_PLAN)} je Plan`
+  if (!doku) {
+    return {
+      titel: 'HKP outsourcen',
+      monat,
+      alt: ['Abgabe an einen Abrechnungsdienst', 'Tage warten, Rückfragen per Mail', 'Fremde Preislogik, verschenkter Umsatz', 'Patientendaten verlassen die Praxis'],
+      neu: [preis, 'Fertig, während der Patient noch im Stuhl sitzt', 'Deine Regler, dein Umsatz', 'Hosting in Deutschland, DSGVO-konform'],
+    }
+  }
+  return {
+    titel: 'HKP und Dokumentation outsourcen',
+    monat,
+    alt: ['HKP und Dokumentation gehen an einen Dienst', 'Bezahlung je Plan und je Eintrag', 'Tage warten, Rückfragen per Mail', 'Fremde Preislogik, verschenkter Umsatz', 'Patientendaten verlassen die Praxis'],
+    neu: [preis, 'Dokumentation pauschal, kein Preis je Eintrag', 'Fertig, während der Patient noch im Stuhl sitzt', 'Deine Regler, dein Umsatz', 'Hosting in Deutschland, Diktat in der Karteikarte'],
+  }
+}
+const punkte = (zeilen: string[]) => zeilen.map((z) => `<li>${z}</li>`).join('')
 
 const HTML = `
 <div class="hp">
@@ -181,10 +202,13 @@ const HTML = `
     <nav id="hp-menue">
       <a href="#hkp">HKP</a>
       <a href="#plaene">Alle Pläne</a>
-      <a href="#pvs">Ins PVS</a>
       <a href="#sprach-ki">Sprach-KI</a>
       <a href="#spielwiese">Regler</a>
-      <a href="#connect">Connect</a>
+      <a href="#pvs">Ins PVS</a>
+      <a href="#doku">Doku</a>
+      <a href="#kette">Kette</a>
+      <a href="#anyconnect">AnyConnect</a>
+      <a href="#connect">Brücke</a>
       <a href="#preise">Preise</a>
       <a href="#produkte">Pickadoc</a>
       <a class="hp-nav-anmelden" href="#anmelden">Anmelden</a>
@@ -196,11 +220,11 @@ const HTML = `
     <div class="hp-hero-text">
       <p class="hp-eyebrow">PlanR · Heil- und Kostenpläne mit Sprach-KI</p>
       <h1>Ab sofort macht <span class="hp-verlauf">HKP erstellen</span> Spaß.</h1>
-      <p class="hp-lead">Per Sprach-KI: <b>Patient nennen, Befund sagen</b> – Clara erstellt den HKP und errechnet den <b>maximalen Umsatz</b> deiner Praxis.
+      <p class="hp-lead">Per Sprach-KI: <b>Patient nennen, Befund sagen</b> – deine KI-Assistentin Clara (Name frei wählbar) erstellt den HKP und errechnet den <b>maximalen Umsatz</b> deiner Praxis.
         Praxisindividuell und vorbereitet für Dampsoft, Z1.PRO, DENSoffice und solutio.</p>
       <p class="hp-gestern"><s>HKP outsourcen für teuer Geld</s> war gestern.</p>
       <div class="hp-ctas">
-        <a class="hp-knopf hp-knopf-voll" href="#connect">Heute connecten</a>
+        <a class="hp-knopf hp-knopf-voll" href="#connect">Heute verbinden</a>
         <a class="hp-knopf" href="#sprach-ki">So geht's per Sprache</a>
       </div>
       <p class="hp-klein">Schon Kunde? <a href="#anmelden">Mit dem Pickadoc-Konto anmelden</a></p>
@@ -215,7 +239,7 @@ const HTML = `
                 <div class="cc-screen cc-screen--voice clara-phone__screen" data-clara="schirm" data-state="listening">
                   <div class="cp-top">
                     <small data-clara="unter">Patient und Befund sagen</small>
-                    <h4>Clara</h4>
+                    <h4>Clara<small class="hp-frei">Name frei wählbar</small></h4>
                   </div>
                   <div class="cp-mid">
                     <div class="cp-orb-wrap">
@@ -278,14 +302,13 @@ const HTML = `
           <li>Drucken oder fertig zurück ins PVS</li>
         </ul>
         <div class="hp-ctas">
-          <a class="hp-knopf hp-knopf-voll" href="#buchen">PlanR buchen</a>
+          <a class="hp-knopf hp-knopf-voll" href="#buchen-clara" data-planr-buchen>PlanR buchen</a>
           <a class="hp-knopf" href="#spielwiese">Umsatz-Regler ausprobieren</a>
         </div>
         <p class="hp-klein">Beispiel mit Demo-Patientin.</p>
       </div>
     </div>
   </section>
-
   <section class="hp-buehne hp-buehne--plaene hp-pink" id="plaene">
    <div class="hp-sektion">
     <div class="hp-sektion-kopf">
@@ -319,7 +342,86 @@ const HTML = `
     </div>
    </div>
   </section>
-
+  <section class="hp-buehne hp-buehne--sk" id="sprach-ki">
+   <div class="hp-sektion hp-sprachki">
+    <div class="hp-sektion-kopf">
+      <p class="hp-eyebrow">HKP per Sprach-KI</p>
+      <h2>Sag es deiner KI-Assistentin Clara (Name frei wählbar). Der Plan steht.</h2>
+      <p>Kein Tippen, kein Nachschlagen, kein Abrechnungsdienst. Du sprichst – sie erstellt den Heil- und Kostenplan und holt das Maximum für deine Praxis heraus.</p>
+    </div>
+    <div class="hp-sk">
+      <ol class="hp-schritte">
+        <li><span>1</span><div><h3>Patient nennen</h3><p>„Clara, HKP für Frau Berger.“ Deine KI-Assistentin Clara (Name frei wählbar) holt die Patientin aus deinem Praxissystem – Kasse, Bonus und Vorgeschichte inklusive.</p></div></li>
+        <li><span>2</span><div><h3>Befund sagen</h3><p>„14 bis 16 Brücke, 26 Krone, Vollkeramik.“ Befund, Regelversorgung, Festzuschüsse und alle Positionen nach BEMA, GOZ und BEL II stehen in Sekunden.</p></div></li>
+        <li><span>3</span><div><h3>Maximalen Umsatz errechnen lassen</h3><p>Deine KI-Assistentin Clara (Name frei wählbar) schlägt Zusatzleistungen, Faktor, Eigenlabor und Privatanteil vor – mit Begründungen und Mehrkostenvereinbarung. Du entscheidest per Regler.</p></div></li>
+      </ol>
+      <div class="hp-buehne-bild hp-buehne-bild--rechts" aria-hidden="true">
+        ${FORMEN}
+        <div class="hp-schraeg-handy">
+          <div class="cc-phone">
+            <div class="cc-phone__notch"></div>
+            <div class="cc-screen hp-chat">
+              <div class="hp-chat-kopf"><span class="hp-chat-orb"></span><div><b>Clara</b><small>Name frei wählbar</small></div></div>
+              <div class="hp-sprache">
+                <span class="hp-mic"><i></i><i></i><i></i><i></i><i></i></span>
+                <p data-diktat></p>
+              </div>
+              <div class="hp-plan" data-plan>
+                <div class="hp-plan-kopf"><b>HKP · Berger, Anna</b><span class="hp-pille">fertig</span></div>
+                <div class="hp-plan-zeile"><span>14–16</span><span>Brücke, Vollkeramik</span></div>
+                <div class="hp-plan-zeile"><span>26</span><span>Vollkeramikkrone</span></div>
+                <div class="hp-plan-zeile"><span>Festzuschüsse</span><span>1.656,23 €</span></div>
+                <div class="hp-plan-zeile"><span>BEMA · GOZ · BEL II</span><span>24 Positionen</span></div>
+                <div class="hp-plan-summe"><span>Praxisumsatz</span><b data-demo-summe>0 €</b></div>
+                <div class="hp-plan-balken"><i data-demo-balken></i></div>
+                <p class="hp-chat-antwort">„Plan steht. Soll ich ihn ins PVS geben?“</p>
+              </div>
+              <div class="cp-mode"><i class="is-on">🎙 Sprache</i><i>💬 Chat</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+   </div>
+  </section>
+  <section class="hp-sektion hp-spielwiese" id="spielwiese">
+    <div class="hp-sektion-kopf">
+      <p class="hp-eyebrow">Spielwiese</p>
+      <h2>Treib den Preis nach oben.</h2>
+      <p>Dieselben Regler wie im PlanR-Planer. Beispiel: Brücke 14–16 und Krone 26, Kassenpatient, Eigenlabor.</p>
+    </div>
+    <div class="hp-spiel">
+      <div class="hp-regler">
+        <label><span>Zusätzliche GOZ-Leistungen <b data-wert="zusatz"></b></span>
+          <input type="range" min="0" max="${ZUSATZ.length - 1}" step="1" data-regler="zusatz"></label>
+        <label><span>GOZ-Faktor <b data-wert="faktor"></b></span>
+          <input type="range" min="2.3" max="3.5" step="0.1" data-regler="faktor"></label>
+        <label><span>Kasse · BEL II Eigenlabor <b data-wert="bel"></b></span>
+          <input type="range" min="50" max="100" step="1" data-regler="bel"></label>
+        <label><span>Kasse → Privat <b data-wert="privat"></b></span>
+          <input type="range" min="0" max="${PRIVAT.length - 1}" step="1" data-regler="privat"></label>
+        <label><span>Privat · BEB-Aufschlag <b data-wert="beb"></b></span>
+          <input type="range" min="0" max="100" step="5" data-regler="beb"></label>
+        <p class="hp-regler-hinweis" data-hinweis></p>
+      </div>
+      <div class="hp-ergebnis">
+        <p class="hp-ergebnis-titel">Praxisumsatz für diesen Plan</p>
+        <p class="hp-ergebnis-zahl" data-umsatz>0 €</p>
+        <p class="hp-ergebnis-plus" data-plus></p>
+        <div class="hp-meter"><i data-meter></i></div>
+        <label class="hp-plaene"><span>Pläne pro Monat <b data-wert="plaene"></b></span>
+          <input type="range" min="5" max="80" step="1" data-regler="plaene"></label>
+        <div class="hp-monat">
+          <div><small>Mehrumsatz im Monat</small><b data-monat>0 €</b></div>
+          <div><small>PlanR kostet</small><b data-kosten>${cent(kosten(20))}</b></div>
+        </div>
+        <p class="hp-roi" data-roi></p>
+        <button class="hp-link" type="button" data-zurueck>Regler zurücksetzen</button>
+      </div>
+    </div>
+    <p class="hp-fussnote">Vereinfachte Beispielrechnung. Im Planer rechnet PlanR mit deinen Preislisten, den Punktwerten deiner KZV und deinem Labor.
+      Faktoren über 2,3 brauchen eine Begründung je Position (§ 10 GOZ) – die schlägt PlanR gleich mit vor.</p>
+  </section>
   <section class="hp-sektion hp-rueck hp-pink" id="pvs">
     <div class="hp-sektion-kopf">
       <p class="hp-eyebrow">Zurück ins Praxisprogramm</p>
@@ -365,94 +467,157 @@ const HTML = `
       <li><b>Steht im PVS</b><span>Mit allen Positionen in der Patientenakte – ${PVS_RUECK.map((p) => p.name).join(', ')} und weitere.</span></li>
     </ol>
   </section>
-
-  <section class="hp-buehne hp-buehne--sk" id="sprach-ki">
-   <div class="hp-sektion hp-sprachki">
-    <div class="hp-sektion-kopf">
-      <p class="hp-eyebrow">HKP per Sprach-KI</p>
-      <h2>Sag es Clara. Der Plan steht.</h2>
-      <p>Kein Tippen, kein Nachschlagen, kein Abrechnungsdienst. Du sprichst – Clara erstellt den Heil- und Kostenplan und holt das Maximum für deine Praxis heraus.</p>
-    </div>
-    <div class="hp-sk">
-      <ol class="hp-schritte">
-        <li><span>1</span><div><h3>Patient nennen</h3><p>„Clara, HKP für Frau Berger.“ Clara holt die Patientin aus deinem Praxissystem – Kasse, Bonus und Vorgeschichte inklusive.</p></div></li>
-        <li><span>2</span><div><h3>Befund sagen</h3><p>„14 bis 16 Brücke, 26 Krone, Vollkeramik.“ Befund, Regelversorgung, Festzuschüsse und alle Positionen nach BEMA, GOZ und BEL II stehen in Sekunden.</p></div></li>
-        <li><span>3</span><div><h3>Maximalen Umsatz errechnen lassen</h3><p>Clara schlägt Zusatzleistungen, Faktor, Eigenlabor und Privatanteil vor – mit Begründungen und Mehrkostenvereinbarung. Du entscheidest per Regler.</p></div></li>
-      </ol>
-      <div class="hp-buehne-bild hp-buehne-bild--rechts" aria-hidden="true">
+  <section class="hp-buehne hp-pink" id="doku">
+    <div class="hp-buehne-innen">
+      <div class="hp-buehne-text">
+        <p class="hp-eyebrow">Dokumentation per Sprache</p>
+        <h2>KI-Dokumentation per Headset.</h2>
+        <p>Deine KI-Assistentin Clara (Name frei wählbar) sucht den Patienten, gleicht ihn ab und schreibt dein Diktat als Prosa in die Akte. Direkt in Dampsoft, Z1.PRO, Charly und DENS Office – ohne Kopieren und ohne Einfügen.</p>
+        <ol class="hp-schritte">
+          <li><span>1</span><div><h3>Akte nennen</h3><p>„Clara, ich möchte etwas dokumentieren in die Akte von Frau Berger.“ Der Name ist frei wählbar.</p></div></li>
+          <li><span>2</span><div><h3>Patient abgleichen</h3><p>Deine KI-Assistentin findet die Kartei und nennt Name und Geburtsdatum. Bei zwei Treffern fragt sie, wer gemeint ist.</p></div></li>
+          <li><span>3</span><div><h3>Diktat eintragen</h3><p>„Was soll ich eintragen?“ Du sprichst den Text. Er steht in der Karteikarte, wortgetreu.</p></div></li>
+        </ol>
+      </div>
+      <div class="hp-buehne-bild hp-buehne-bild--pink hp-buehne-bild--rechts" aria-hidden="true">
         ${FORMEN}
-        <div class="hp-schraeg-handy">
-          <div class="cc-phone">
-            <div class="cc-phone__notch"></div>
-            <div class="cc-screen hp-chat">
-              <div class="hp-chat-kopf"><span class="hp-chat-orb"></span><div><b>Clara</b><small>HKP PER SPRACHE</small></div></div>
-              <div class="hp-sprache">
-                <span class="hp-mic"><i></i><i></i><i></i><i></i><i></i></span>
-                <p data-diktat></p>
-              </div>
-              <div class="hp-plan" data-plan>
-                <div class="hp-plan-kopf"><b>HKP · Berger, Anna</b><span class="hp-pille">fertig</span></div>
-                <div class="hp-plan-zeile"><span>14–16</span><span>Brücke, Vollkeramik</span></div>
-                <div class="hp-plan-zeile"><span>26</span><span>Vollkeramikkrone</span></div>
-                <div class="hp-plan-zeile"><span>Festzuschüsse</span><span>1.656,23 €</span></div>
-                <div class="hp-plan-zeile"><span>BEMA · GOZ · BEL II</span><span>24 Positionen</span></div>
-                <div class="hp-plan-summe"><span>Praxisumsatz</span><b data-demo-summe>0 €</b></div>
-                <div class="hp-plan-balken"><i data-demo-balken></i></div>
-                <p class="hp-chat-antwort">„Plan steht. Soll ich ihn ins PVS geben?“</p>
-              </div>
-              <div class="cp-mode"><i class="is-on">🎙 Sprache</i><i>💬 Chat</i></div>
-            </div>
+        <div class="hp-doku-paar">
+        <img class="hp-doku-arzt" src="/bilder/doku-arzt.jpg" alt="">
+        <article class="hp-kartei">
+          <header>
+            <small>Karteikarte</small>
+            <b>Berger, Anna</b>
+            <span>geb. 14.03.1968 · gesetzlich</span>
+          </header>
+          <div class="hp-kartei-eintrag">
+            <small>Heute, 10:14 · KI-Assistentin</small>
+            <p>Kontrolle 26. Beschwerdefrei, Krone sitzt, keine Perkussion. Nächster Recall in sechs Monaten.</p>
           </div>
+          <div class="hp-kartei-eintrag hp-kartei-alt">
+            <small>12.05.2026 · Kontrolle</small>
+            <p>PZR. Gingiva reizlos, Mundhygiene gut.</p>
+          </div>
+          <footer>
+            <span>Dampsoft</span><span>Z1.PRO</span><span>Charly</span><span>DENS Office</span>
+          </footer>
+        </article>
         </div>
       </div>
     </div>
-   </div>
   </section>
-
-  <section class="hp-sektion hp-spielwiese" id="spielwiese">
-    <div class="hp-sektion-kopf">
-      <p class="hp-eyebrow">Spielwiese</p>
-      <h2>Treib den Preis nach oben.</h2>
-      <p>Dieselben Regler wie im PlanR-Planer. Beispiel: Brücke 14–16 und Krone 26, Kassenpatient, Eigenlabor.</p>
+  <section class="hp-sektion hp-kette hp-fluss hp-pink" id="kette">
+    <div class="hp-sektion-kopf hp-ein">
+      <p class="hp-eyebrow">Pickadoc-Ökosystem</p>
+      <h2>Es gibt mehr zu entdecken <em>im Pickadoc-Ökosystem.</em></h2>
+      <p>PlanR schreibt den Plan. Rundherum vergibt Pickadoc den Termin, klärt auf, holt die Unterschrift und bringt den Patienten wieder. Am Ende steht alles in der Abrechnung.</p>
     </div>
-    <div class="hp-spiel">
-      <div class="hp-regler">
-        <label><span>Zusätzliche GOZ-Leistungen <b data-wert="zusatz"></b></span>
-          <input type="range" min="0" max="${ZUSATZ.length - 1}" step="1" data-regler="zusatz"></label>
-        <label><span>GOZ-Faktor <b data-wert="faktor"></b></span>
-          <input type="range" min="2.3" max="3.5" step="0.1" data-regler="faktor"></label>
-        <label><span>Kasse · BEL II Eigenlabor <b data-wert="bel"></b></span>
-          <input type="range" min="50" max="100" step="1" data-regler="bel"></label>
-        <label><span>Kasse → Privat <b data-wert="privat"></b></span>
-          <input type="range" min="0" max="${PRIVAT.length - 1}" step="1" data-regler="privat"></label>
-        <label><span>Privat · BEB-Aufschlag <b data-wert="beb"></b></span>
-          <input type="range" min="0" max="100" step="5" data-regler="beb"></label>
-        <p class="hp-regler-hinweis" data-hinweis></p>
+    <div class="hp-zwei hp-ein">
+      <article class="hp-spalte hp-spalte-planr">
+        <header>
+          <small>PlanR-Abo</small>
+          <h3>Das hast du mit PlanR.</h3>
+        </header>
+        <ol>
+          <li>
+            <h4>PlanR</h4>
+            <p>Du nennst den Patienten und sagst den Befund. PlanR schreibt den Heil- und Kostenplan: Festzuschüsse, BEMA, GOZ, BEL II und dein Eigenlabor. Praxisindividuell, während der Patient noch im Stuhl sitzt.</p>
+          </li>
+          <li>
+            <h4>Genehmigung</h4>
+            <p>Der Patient sieht den Plan und gibt ihn frei. Ohne dieses Ja passiert nichts weiter. Mit dem Ja ist der Plan die Grundlage für Termin, Aufklärung und Abrechnung.</p>
+          </li>
+          <li class="hp-ziel" id="abrechnung">
+            <h4>PVS-Abrechnung</h4>
+            <p>Der umgesetzte Plan steht mit allen Positionen in der Akte. Abgerechnet wird in Dampsoft, Z1.PRO, Charly oder DENS Office – dort, wo du immer abrechnest. Hierhin kehrt am Ende alles zurück.</p>
+          </li>
+        </ol>
+      </article>
+      <article class="hp-spalte hp-spalte-picka">
+        <header>
+          <small>Pickadoc-Abo</small>
+          <h3>Das kommt mit Pickadoc dazu.</h3>
+        </header>
+        <ol>
+          <li>
+            <h4>CalendR</h4>
+            <p>Der freigegebene Plan wird zum Termin. CalendR sucht den Slot automatisch, schickt die SMS-Bestätigung und erinnert vor dem Besuch. Erscheint der Patient nicht, liegt die Rückmeldung im System – der Termin gilt nicht als erledigt.</p>
+          </li>
+          <li>
+            <h4>SignR</h4>
+            <p>Rechtssicherheit in jedem Behandlungsschritt. SignR legt die passenden Dokumente vor und holt die Unterschrift, bevor der Termin beginnt. Eine Ampel zeigt jederzeit, was schon unterschrieben ist und was noch fehlt.</p>
+          </li>
+          <li>
+            <h4>ClonR</h4>
+            <p>Neben der Unterschrift erklärt ClonR den Eingriff als Video, mit deinem Gesicht und deiner Stimme. Der Patient versteht die Behandlung, bevor er unterschreibt, und kehrt damit zu SignR zurück.</p>
+          </li>
+          <li>
+            <h4>CampaignR</h4>
+            <p>Aus dem Plan wird eine Ansprache. CampaignR erreicht die Patienten, die zu dieser Behandlung gehören, und zeigt dir, wer das Video gesehen hat und bei wem Aufklärung oder Unterschrift noch offen sind.</p>
+          </li>
+          <li>
+            <h4>RecallR</h4>
+            <p>Nach der Behandlung bestellt RecallR automatisch wieder ein. Der Kontrolltermin wird vorgeschlagen, per SMS bestätigt und im Kalender gehalten. Wer nicht kommt, bleibt sichtbar – niemand telefoniert eine Liste ab.</p>
+          </li>
+        </ol>
+      </article>
+    </div>
+    <div class="hp-bogen hp-ein" aria-hidden="true">
+      <svg viewBox="0 0 1000 128" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="hp-bogen-farbe" x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0" stop-color="#ff7aa8"/>
+            <stop offset="1" stop-color="#3fd8b5"/>
+          </linearGradient>
+        </defs>
+        <path d="M860 10 C 860 108, 250 112, 168 18" fill="none" stroke="url(#hp-bogen-farbe)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M154 36 L168 12 L188 32" fill="none" stroke="#3fd8b5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p>Zurück in die <b>Abrechnung</b>. Termin, Unterschrift, Video, Kampagne und Recall schreiben sich als Leistung ins PVS.</p>
+    </div>
+  </section>
+  <section class="hp-buehne hp-pink" id="anyconnect">
+    <div class="hp-buehne-innen">
+      <div class="hp-buehne-text">
+        <p class="hp-eyebrow">AnyConnect</p>
+        <h2>Eine Schnittstelle. Jedes PVS. Beide Richtungen.</h2>
+        <p>AnyConnect ist die universelle Schnittstelle von PlanR. Sie spricht jedes Praxisverwaltungssystem an und kommuniziert mit ihm in beide Richtungen. Du sprichst per Headset mit deiner KI-Assistentin Clara (Name frei wählbar). AnyConnect holt Patient, Befund und Preise aus dem PVS und schreibt den fertigen Plan zurück in die Akte – in Dampsoft, Z1.PRO, Charly, DENS Office und jedem weiteren Programm.</p>
+        <p>Im Rahmen der Einrichtung wird die KI mit den Abrechnungen deiner Praxis trainiert. So tritt sie möglichst nahe an die Rechnungsstrukturen heran, die du schon kennst. <b>Analogpositionen und eigene Laborpositionen werden gescannt.</b> PlanR lernt, damit zu arbeiten, und setzt sie in den nächsten Plänen so ein, wie deine Praxis sie abrechnet.</p>
+        <ul class="hp-haken">
+          <li>Hin: Patient, Befund, Preise und deine eigenen Positionen</li>
+          <li>Zurück: der freigegebene Plan, mit allen Positionen in der Akte</li>
+          <li>Analog- und Laborpositionen werden mitgelernt, nicht nachgetragen</li>
+        </ul>
       </div>
-      <div class="hp-ergebnis">
-        <p class="hp-ergebnis-titel">Praxisumsatz für diesen Plan</p>
-        <p class="hp-ergebnis-zahl" data-umsatz>0 €</p>
-        <p class="hp-ergebnis-plus" data-plus></p>
-        <div class="hp-meter"><i data-meter></i></div>
-        <label class="hp-plaene"><span>Pläne pro Monat <b data-wert="plaene"></b></span>
-          <input type="range" min="5" max="80" step="1" data-regler="plaene"></label>
-        <div class="hp-monat">
-          <div><small>Mehrumsatz im Monat</small><b data-monat>0 €</b></div>
-          <div><small>PlanR kostet</small><b data-kosten>${cent(kosten(20))}</b></div>
+      <div class="hp-buehne-bild hp-buehne-bild--pink" aria-hidden="true">
+        ${FORMEN}
+        <div class="hp-any">
+          <div class="hp-any-kopf">
+            <svg viewBox="0 0 220 220" aria-hidden="true">
+              <path d="M48 108c0-38 28-66 62-66s62 28 62 66" fill="none" stroke="#ffd0e2" stroke-width="16" stroke-linecap="round"/>
+              <rect x="28" y="96" width="36" height="58" rx="16" fill="#fff"/>
+              <rect x="156" y="96" width="36" height="58" rx="16" fill="#fff"/>
+              <rect x="34" y="104" width="24" height="42" rx="12" fill="#071a1f"/>
+              <rect x="162" y="104" width="24" height="42" rx="12" fill="#071a1f"/>
+              <path d="M174 154c18 8 28 24 24 42" fill="none" stroke="#3fd8b5" stroke-width="8" stroke-linecap="round"/>
+              <circle cx="190" cy="198" r="10" fill="#ff7aa8"/>
+            </svg>
+            <span>Sprache</span>
+          </div>
+          <article class="hp-any-schirm s1"><b>Dampsoft DS-Win</b><small>Berger, Anna · Akte</small><i></i><i></i></article>
+          <article class="hp-any-schirm s2"><b>CGM Z1.PRO</b><small>HKP 14–16 · zurück</small><i></i><i></i></article>
+          <article class="hp-any-schirm s3"><b>solutio charly</b><small>Eigenes Labor · BEB</small><i></i><i></i></article>
+          <article class="hp-any-schirm s4"><b>DENSoffice</b><small>Analogposition · GOZ</small><i></i><i></i></article>
+          <article class="hp-any-schirm s5"><b>evident</b><small>Befund · 01</small><i></i><i></i></article>
+          <article class="hp-any-schirm s6"><b>ivoris</b><small>Preisliste · gescannt</small><i></i><i></i></article>
         </div>
-        <p class="hp-roi" data-roi></p>
-        <button class="hp-link" type="button" data-zurueck>Regler zurücksetzen</button>
       </div>
     </div>
-    <p class="hp-fussnote">Vereinfachte Beispielrechnung. Im Planer rechnet PlanR mit deinen Preislisten, den Punktwerten deiner KZV und deinem Labor.
-      Faktoren über 2,3 brauchen eine Begründung je Position (§ 10 GOZ) – die schlägt PlanR gleich mit vor.</p>
   </section>
-
   <section class="hp-sektion hp-connect" id="connect">
     <div class="hp-connect-box">
       <div class="hp-connect-text">
-        <p class="hp-eyebrow">Easy Connect</p>
-        <h2>Heute connecten. Morgen mehr Umsatz.</h2>
+        <p class="hp-eyebrow">Die Brücke</p>
+        <h2>Heute verbinden. Morgen mehr Umsatz.</h2>
         <p>PlanR verbindet sich mit deinem Praxissystem – in wenigen Minuten, ohne offenen Port, ohne IT-Projekt.
           Exportiere deine ersten HKP und sieh schwarz auf weiß, <b>wie viel mehr Umsatz PlanR aus denselben Befunden holt.</b></p>
         <ol class="hp-connect-schritte">
@@ -461,7 +626,7 @@ const HTML = `
           <li><b>Mehrumsatz sehen</b><span>Regler ziehen, Differenz ablesen – und den besseren Plan zurück ins PVS geben.</span></li>
         </ol>
         <div class="hp-ctas">
-          <a class="hp-knopf hp-knopf-voll" href="#buchen">Jetzt buchen &amp; connecten</a>
+          <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Jetzt buchen und verbinden</a>
           <a class="hp-knopf" href="#spielwiese">Erst mal mit den Reglern spielen</a>
         </div>
       </div>
@@ -476,7 +641,6 @@ const HTML = `
       </div>
     </div>
   </section>
-
   <section class="hp-sektion hp-fluss" id="funktionen">
     <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span></span><span class="mobil"></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-sektion-kopf hp-ein">
@@ -485,7 +649,7 @@ const HTML = `
     </div>
     <div class="hp-karten">
       <article class="hp-ein"><h3>${IKONEN.mikro}<span>Diktieren statt tippen</span></h3>
-        <p>„Clara, HKP für Frau Berger: 14 bis 16 Brücke, 26 Krone.“ Befund, Regelversorgung, Festzuschüsse und Positionen stehen in Sekunden.</p></article>
+        <p>„Clara, HKP für Frau Berger: 14 bis 16 Brücke, 26 Krone.“ Der Name ist frei wählbar. Befund, Regelversorgung, Festzuschüsse und Positionen stehen in Sekunden.</p></article>
       <article class="hp-ein"><h3>${IKONEN.regler}<span>Regler für maximalen Umsatz</span></h3>
         <p>Zusatzleistungen, GOZ-Faktor, Eigenlabor und Privatanteil per Schieberegler – mit Begründungen und Mehrkostenvereinbarung.</p></article>
       <article class="hp-ein"><h3>${IKONEN.zahn}<span>Alle Pläne deiner Praxis</span></h3>
@@ -498,54 +662,58 @@ const HTML = `
         <p>Plan per Link prüfen, Regler nachziehen, freigeben. Praxisgemeinschaften sehen jeweils nur ihre eigenen Pläne.</p></article>
     </div>
   </section>
-
   <section class="hp-sektion hp-vergleich hp-fluss">
     <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-vs">
       <div class="hp-vs-alt hp-ein">
-        <h3>Gestern: HKP outsourcen</h3>
-        <ul><li>Bezahlung pro Plan</li><li>Tage warten, Rückfragen per Mail</li><li>Fremde Preislogik, verschenkter Umsatz</li><li>Patientendaten verlassen die Praxis</li></ul>
+        <h3>Gestern: <span data-vs-titel>${vergleich(false).titel}</span></h3>
+        <ul data-vs-alt>${punkte(vergleich(false).alt)}</ul>
       </div>
       <div class="hp-vs-neu hp-ein">
         <h3>Heute: PlanR</h3>
-        <ul><li>${PLANR} € im Monat und ${cent(PRO_PLAN)} je Plan</li><li>Fertig, während der Patient noch im Stuhl sitzt</li><li>Deine Regler, dein Umsatz</li><li>Hosting in Deutschland, DSGVO-konform</li></ul>
+        <ul data-vs-neu>${punkte(vergleich(false).neu)}</ul>
       </div>
     </div>
+    <label class="hp-doku-wahl">
+      <input type="checkbox" data-doku-dazu>
+      <span><b>KI-Sprachdokumentation dazubuchen</b> – ${DOKU_MONAT} € im Monat, kein Preis je Eintrag. Der Monatsbeitrag wird dann ${PLANR + DOKU_MONAT} €.</span>
+    </label>
   </section>
-
   <section class="hp-sektion hp-fluss" id="preise">
     <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-sektion-kopf hp-ein">
       <p class="hp-eyebrow">Preise</p>
       <h2>Ein Plan, der sich ab dem ersten HKP rechnet.</h2>
-      <p>Alle Preise netto zzgl. USt., monatlich kündbar.</p>
+      <p>Alle Preise netto zzgl. USt. Der Monatsbeitrag ist jederzeit zum Monatsende kündbar. Einrichtung und KI-Training sind einmalig.</p>
     </div>
     <div class="hp-tiers">
-      <article class="hp-tier hp-ein">
-        <h3>PlanR</h3>
-        <p class="hp-preis"><b>${PLANR} €</b> / Monat</p>
-        <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
-        <ul><li>Alle Planer: ZE, Implantologie, PAR, KB, KFO, Kons</li><li>Umsatz-Regler und Begründungen</li><li>Eigene Preislisten und Eigenlabor</li><li>PVS-Anbindung über die PlanR-Bridge</li><li>Freigabe am Handy</li></ul>
-        <a class="hp-knopf" href="#buchen">PlanR buchen</a>
-      </article>
       <article class="hp-tier hp-tier-top hp-ein">
-        <span class="hp-band-tag">Beliebt</span>
-        <h3>PlanR + Sprach-KI</h3>
-        <p class="hp-preis"><b>${PLANR + 49} €</b> / Monat</p>
-        <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je Plan</p>
-        <ul><li>Alles aus PlanR</li><li>Clara als Sprach-App am Handy</li><li>Pläne per Sprache anlegen und ändern</li><li>Kopplung per QR-Code, ohne Installation am PC</li><li>Eigener Name für deine Assistentin</li></ul>
-        <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Mit Sprach-KI buchen</a>
+        <span class="hp-band-tag">PlanR</span>
+        <h3>PlanR</h3>
+        <p class="hp-preis"><b data-planr-monat>${PLANR} €</b> / Monat</p>
+        <p class="hp-volumen" data-planr-hinweis hidden></p>
+        <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je erstelltem Plan</p>
+        <p class="hp-einmal"><b>${EINRICHTUNG.toLocaleString('de-DE')} €</b> einmalig</p>
+        <ul><li>Alle Pläne erstellen</li><li>Alle gängigen PVS</li><li>Einrichtung und KI-Training, ein bis zwei Wochen</li><li>Deine KI-Assistentin Clara (Name frei wählbar) legt die Pläne per Sprache an</li></ul>
+        <a class="hp-knopf hp-knopf-voll" href="#buchen-clara" data-planr-buchen>PlanR buchen</a>
+      </article>
+      <article class="hp-tier hp-ein">
+        <span class="hp-band-tag hp-band-mint">Upgrade</span>
+        <h3>KI-Sprachdokumentation</h3>
+        <p class="hp-preis"><b>89 €</b> / Monat</p>
+        <p class="hp-volumen"><b>Kein</b> Preis je Eintrag</p>
+        <ul><li>Diktat per Headset in die Karteikarte</li><li>Direkt in Dampsoft, Z1.PRO, Charly und DENS Office</li><li>Zusätzlich zu PlanR</li><li>Bei Pickadoc MAS schon enthalten</li></ul>
+        <button class="hp-knopf" type="button" data-doku-knopf aria-pressed="false">Als Upgrade dazubuchen</button>
       </article>
       <article class="hp-tier hp-ein">
         <h3>Pickadoc MAS</h3>
         <p class="hp-preis"><b>PlanR inklusive</b></p>
         <p class="hp-volumen"><b>Unbegrenzt</b> Pläne erstellen</p>
-        <ul><li>Volle Clara als Leitstelle deiner Praxis</li><li>Acht KI-Spezialistinnen: Telefon, Recall, Post, QM, Doku, Abrechnung</li><li>PlanR direkt in Sophie, ohne zweite Anmeldung</li><li>Unbegrenzt Pläne, ohne Preis je Plan</li></ul>
+        <ul><li>Deine KI-Assistentin Clara (Name frei wählbar) als Leitstelle deiner Praxis</li><li>Acht KI-Spezialistinnen: Telefon, Recall, Post, QM, Doku, Abrechnung</li><li>Dokumentation per Sprache ist enthalten</li><li>PlanR direkt in Sophie, ohne zweite Anmeldung</li><li>Unbegrenzt Pläne, ohne Preis je Plan</li></ul>
         <a class="hp-knopf" href="https://pickadoc.ai" target="_blank" rel="noopener">Auf pickadoc.ai ansehen</a>
       </article>
     </div>
   </section>
-
   <section class="hp-sektion hp-produkte hp-fluss" id="produkte">
     <div class="hp-stroeme" aria-hidden="true"><span></span><span></span><span class="mobil"></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-sektion-kopf hp-ein">
@@ -561,7 +729,7 @@ const HTML = `
       <article class="hp-ein"><small>CallR · Telefon-KI ausgehend</small><h3>Lisa</h3><p>Ruft für dich heraus: Recall, Terminerinnerungen und Rückrufe.</p></article>
       <article class="hp-ein"><small>Post-KI</small><h3>Nadine</h3><p>Liest Briefe, E-Mails und Faxe, sortiert sie zu und bereitet Antworten vor.</p></article>
       <article class="hp-ein"><small>Abrechnungs-KI</small><h3>Sophie</h3><p>Prüft die Abrechnung und findet vergessene Leistungen. PlanR läuft direkt in Sophie.</p></article>
-      <article class="hp-ein"><small>Ersthelferin am Handy</small><h3>Clara</h3><p>Deine Leitstelle per Sprache – sie kennt die Praxis und ruft die richtige Kollegin.</p></article>
+      <article class="hp-ein"><small>KI-Assistentin · Name frei wählbar</small><h3>Clara</h3><p>Deine KI-Assistentin Clara (Name frei wählbar). Sie kennt die Praxis und ruft die richtige Kollegin.</p></article>
       <article class="hp-ein"><small>QM-KI</small><h3>Julia</h3><p>Qualitätsmanagement, Hygiene und Begehungen – Dokumente immer aktuell.</p></article>
       <article class="hp-ein"><small>Arbeitszeit-KI</small><h3>Marie</h3><p>Erfasst Arbeitszeiten und behält Urlaub und Dienstplan im Blick.</p></article>
       <article class="hp-ein"><small>Sprechzimmer-KI</small><h3>Lena</h3><p>Hört bei der Behandlung mit und schreibt die Dokumentation für dich.</p></article>
@@ -569,7 +737,6 @@ const HTML = `
     </div>
     <p class="hp-mitte"><a class="hp-knopf" href="https://pickadoc.ai" target="_blank" rel="noopener">Alle Produkte auf pickadoc.ai</a></p>
   </section>
-
   <section class="hp-sektion hp-kontakt hp-fluss" id="kontakt">
     <div class="hp-stroeme" aria-hidden="true"><span></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-sektion-kopf hp-ein">
@@ -577,7 +744,7 @@ const HTML = `
       <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat, Passwort. Danach sofort anmelden: Der Einrichtungsassistent führt dich bis zum ersten HKP aus deinem PVS.</p>
     </div>
     <div class="hp-kontakt-wege hp-ein">
-      <a class="hp-knopf hp-knopf-voll" href="#buchen">Jetzt online buchen</a>
+      <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Jetzt online buchen</a>
       <a class="hp-knopf" href="mailto:info@pickadoc.de?subject=PlanR%20buchen">E-Mail schreiben</a>
       <a class="hp-knopf" href="tel:+4921130293035">0211 3029 3035</a>
       <a class="hp-knopf" href="https://wa.me/491776004600" target="_blank" rel="noopener">WhatsApp</a>
@@ -585,6 +752,7 @@ const HTML = `
   </section>
 
   <footer class="hp-fuss">
+    <p>PlanR ist ein Produkt der Pickadoc GmbH. Der Monatsbeitrag ist jederzeit zum Monatsende kündbar.</p>
     <address><b>Pickadoc GmbH</b><br>Medical Center · c/o Dr. Petsas<br>Luise-Rainer-Str. 6–10, 40235 Düsseldorf<br><a href="tel:+4921130293035">0211 3029 3035</a> · <a href="mailto:info@pickadoc.de">info@pickadoc.de</a></address>
     <nav>
       <a href="https://pickadoc.ai/impressum.html" target="_blank" rel="noopener">Impressum</a>
@@ -958,7 +1126,7 @@ function spielwieseStarten(wurzel: HTMLElement) {
     feld('[data-meter]').style.width = `${Math.round(((u - basis) / (max - basis)) * 100)}%`
     const monat = plus * r.plaene
     feld('[data-monat]').textContent = euro(monat)
-    const preis = kosten(r.plaene)
+    const preis = kosten(r.plaene, !!wurzel.querySelector<HTMLInputElement>('[data-doku-dazu]')?.checked)
     feld('[data-kosten]').textContent = cent(preis)
     feld('[data-roi]').textContent = monat > preis
       ? `PlanR hat sich ${Math.floor(monat / preis).toLocaleString('de-DE')}-fach bezahlt gemacht.`
@@ -984,6 +1152,36 @@ function spielwieseStarten(wurzel: HTMLElement) {
   zeigen()
 }
 
+function dokuWahlStarten(wurzel: HTMLElement) {
+  const box = wurzel.querySelector<HTMLInputElement>('[data-doku-dazu]')
+  const knopf = wurzel.querySelector<HTMLButtonElement>('[data-doku-knopf]')
+  if (!box || !knopf) return
+  const setzen = (an: boolean) => {
+    box.checked = an
+    const v = vergleich(an)
+    const titel = wurzel.querySelector('[data-vs-titel]')
+    const alt = wurzel.querySelector('[data-vs-alt]')
+    const neu = wurzel.querySelector('[data-vs-neu]')
+    const betrag = wurzel.querySelector('[data-planr-monat]')
+    const hinweis = wurzel.querySelector<HTMLElement>('[data-planr-hinweis]')
+    if (titel) titel.textContent = v.titel
+    if (alt) alt.innerHTML = punkte(v.alt)
+    if (neu) neu.innerHTML = punkte(v.neu)
+    if (betrag) betrag.textContent = `${v.monat} €`
+    if (hinweis) {
+      hinweis.hidden = !an
+      hinweis.textContent = an ? `${PLANR} € PlanR und ${DOKU_MONAT} € Sprachdokumentation` : ''
+    }
+    for (const a of wurzel.querySelectorAll<HTMLAnchorElement>('[data-planr-buchen]')) a.hash = an ? '#buchen-doku' : '#buchen-clara'
+    knopf.textContent = an ? 'Dazugebucht' : 'Als Upgrade dazubuchen'
+    knopf.classList.toggle('hp-knopf-voll', an)
+    knopf.setAttribute('aria-pressed', String(an))
+    wurzel.querySelector<HTMLInputElement>('[data-regler="plaene"]')?.dispatchEvent(new Event('input'))
+  }
+  box.addEventListener('change', () => setzen(box.checked))
+  knopf.addEventListener('click', () => setzen(!box.checked))
+}
+
 export function homepage(app: HTMLElement) {
   document.body.classList.add('hp-body')
   document.documentElement.classList.add('hp-html')
@@ -998,6 +1196,7 @@ export function homepage(app: HTMLElement) {
   galerieStarten(wurzel)
   rueckStarten(wurzel)
   spielwieseStarten(wurzel)
+  dokuWahlStarten(wurzel)
   const ziel = /^#[a-z-]+$/.test(location.hash) && location.hash !== '#top' ? wurzel.querySelector(location.hash) : null
   ziel?.scrollIntoView()
 }

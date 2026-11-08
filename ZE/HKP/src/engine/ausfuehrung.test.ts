@@ -21,7 +21,21 @@ describe('Ausführung verstehen (Anruf 06.10.2026 20:15: „Zirkon statt NEM“)
     expect(ausfuehrungIn('e.max CAD').werkstoff).toBe('lithiumdisilikat')
     expect(ausfuehrungIn('Vollkeramik').werkstoff).toBe('zirkon')
     expect(ausfuehrungIn('NEM mit Keramikverblendung').werkstoff).toBe('nem')
+    expect(ausfuehrungIn('NEM mit Keramikverblendung').verblendung).toBeUndefined()
     expect(ausfuehrungIn(BRUECKE).werkstoff).toBeUndefined()
+  })
+
+  it('Verblendung: letzte Nennung, Teil und vestibulär sind nicht die Privatstufe', () => {
+    const live = 'die Teleskopkrone sollen voll verblendet sein, die sind momentan teilverblendet'
+    expect(ausfuehrungIn(live)).toMatchObject({ verblendung: 'voll' })
+    expect(ausfuehrungIn(live).werkstoff).toBeUndefined()
+    expect(ausfuehrungIn(live).privatStufe).toBeUndefined()
+    expect(ausfuehrungIn('Teilverblendung').verblendung).toBe('teil')
+    expect(ausfuehrungIn('Teilverblendung').privatStufe).toBeUndefined()
+    expect(ausfuehrungIn('vestibuläre Verblendung').verblendung).toBe('vestibulaer')
+    expect(ausfuehrungIn('nicht vollverblendet, sondern teilverblendet').verblendung).toBe('teil')
+    expect(ausfuehrungIn('unverblendet').verblendung).toBe('keine')
+    expect(ausfuehrungIn('Vollkeramik').verblendung).toBeUndefined()
   })
 
   it('Abformung', () => {
@@ -157,6 +171,47 @@ describe('Ausführung eines bestehenden Plans ändern', () => {
     expect(r.ok && r.plan.implantat.system).toBe('straumann-bl')
     const k = ausfuehrungAendern(basis(), { implantatSystem: 'camlog' })
     expect(k).toMatchObject({ ok: false, meldung: 'In diesem HKP sind keine Implantate geplant.' })
+  })
+
+  it('Teleskope von Teilverblendung auf Vollverblendung (Anruf 05.11.2026)', () => {
+    const ok = ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28']
+    const befund = Object.fromEntries(ok.map((z) => [z, z === '13' || z === '23' ? '' : 'f']))
+    const satz = 'Teleskopprothese im Oberkiefer auf 13 und 23, Hochgold, Intraoralscan, Eigenlabor'
+    const vorher = hkpEntwurf(satz, befund)
+    expect(vorher.status).toBe('ok')
+    if (vorher.status !== 'ok') return
+    expect(vorher.plan.zaehne['13'].TP === 'TV' || vorher.plan.zaehne['13'].R === 'TV').toBe(true)
+    const live = `${satz}. Die Teleskopkronen sollen voll verblendet sein, die sind momentan teilverblendet.`
+    const r = hkpEntwurf(live, befund)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.plan.zaehne['13'].TP).toBe('TM')
+    expect(r.plan.zaehne['23'].TP).toBe('TM')
+    expect(r.plan.werkstoffe?.['13']).toBe('hochgold')
+    expect(hat(r.plan, 'BEB', '2602')).toBe(true)
+    expect(hat(r.plan, 'BEB', '2612')).toBe(false)
+    expect(r.plan.positionen.some((p) => p.zahn === '13' && p.ebene === 'BEL' && p.nr === '1620')).toBe(false)
+    expect(ausfuehrungSatz(ausfuehrungVon(r.plan))).toContain('Vollverblendung')
+    expect(ausfuehrungSatz(ausfuehrungVon(r.plan))).toContain('Hochgold')
+    const a = ausfuehrungAendern(vorher.plan, ausfuehrungIn(live))
+    expect(a.ok).toBe(true)
+    if (!a.ok) return
+    expect(a.beschreibung).toContain('Vollverblendung statt Teilverblendung')
+    expect(a.plan.zaehne['13'].TP).toBe('TM')
+  })
+
+  it('Teilverblendung auch außerhalb, vestibulär nur im Verblendbereich', () => {
+    const teil = ausfuehrungAendern(basis(), ausfuehrungIn('Teilverblendung'))
+    expect(teil.ok).toBe(true)
+    if (!teil.ok) return
+    expect(teil.plan.zaehne['16'].TP).toBe('BV')
+    expect(teil.plan.zaehne['17'].TP).toBe('KV')
+    const vestibulaer = ausfuehrungAendern(teil.plan, ausfuehrungIn('doch lieber vestibulär verblendet'))
+    expect(vestibulaer.ok).toBe(true)
+    if (!vestibulaer.ok) return
+    expect(vestibulaer.plan.zaehne['16'].TP).toBe('')
+    expect(vestibulaer.plan.zaehne['17'].TP).toBe('')
+    expect(vestibulaer.beschreibung).toContain('vestibuläre Verblendung statt Teilverblendung')
   })
 
   it('nichts verstanden bzw. schon so', () => {

@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlanR · Mockup KI-Zeile</title>
+  <style>
+    :root {
+      --akzent: #2f7f8f;
+      --akzent-dunkel: #266a78;
+      --akzent-hell: #e4f0f1;
+      --text: #1f2a30;
+      --grau: #6b767d;
+      --linie: #e3eaec;
+      --grund: #f7fbfb;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      display: grid; grid-template-rows: auto minmax(0, 1fr) 58px;
+      background: var(--grund); color: var(--text);
+    }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+
+    .kopf {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px 6px; background: var(--grund);
+    }
+    .logo { width: 38px; height: 38px; }
+    .kopf h1 { margin: 0; font-size: 20px; font-weight: 650; }
+    .kopf p { margin: 1px 0 0; color: var(--grau); font-size: 13px; }
+    .entwurf-pill {
+      margin-left: auto; font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--akzent-dunkel); background: #e7f3f4; border-radius: 999px; padding: 5px 10px;
+    }
+
+    .buehne {
+      display: grid; grid-template-columns: min(360px, 42vw) minmax(0, 1fr);
+      min-height: 0; background: var(--grund);
+    }
+    .rechts {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; min-width: 0; height: 100%; min-height: 0;
+      margin-left: -28px; padding-top: 8px;
+    }
+
+    .links {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; min-width: 0; height: 100%;
+      padding: 8px 44px 12px 16px; background: var(--grund);
+    }
+    .picker { flex: 0 0 auto; padding-bottom: 10px; }
+    .feld { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; color: var(--grau); }
+    .monat { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px; font-size: 14px; }
+    .wt, .tage { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .wt span { text-align: center; font-size: 10px; color: var(--grau); }
+    .tage i { height: 26px; border-radius: 7px; background: #e7f0f1; }
+    .tage i.an { background: var(--akzent); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip { border: 0; background: #e7f0f1; border-radius: 8px; padding: 4px 8px; font-size: 12px; color: var(--grau); }
+    .chip.an { background: var(--akzent); color: #fff; }
+
+    .gespraech {
+      flex: 1 1 auto; min-height: 0; overflow: auto;
+      display: flex; flex-direction: column; gap: 8px; padding: 4px 4px 8px 0;
+    }
+    .gespraech > :first-child { margin-top: auto; }
+    .blase { max-width: 100%; padding: 8px 11px; border-radius: 12px; font-size: 13.5px; line-height: 1.4; }
+    .blase.user { align-self: flex-end; background: var(--akzent); color: #fff; border-bottom-right-radius: 4px; }
+    .blase.ki { align-self: flex-start; background: #e7f1f2; border-bottom-left-radius: 4px; }
+    .kapsel { align-self: stretch; padding: 10px; border-radius: 12px; background: #fff; box-shadow: 0 8px 18px rgba(20, 50, 60, .08); }
+    .kapsel b { display: block; }
+    .kapsel p { margin: 4px 0 8px; color: var(--grau); font-size: 12.5px; }
+
+    .agenten { flex: 0 0 auto; }
+    .agenten:empty { display: none; }
+    .agent {
+      flex: 0 0 auto; display: flex; gap: 12px; align-items: center;
+      margin-top: 8px; padding: 12px; border-radius: 16px; background: #fff;
+      box-shadow: 0 0 0 1px rgba(47, 127, 143, .28), 0 16px 36px rgba(26, 168, 142, .22);
+      animation: atem 1.7s ease-in-out infinite;
+    }
+    .agent.bereit { animation: none; box-shadow: 0 8px 22px rgba(20, 40, 50, .12); }
+    .agent.annimmt { background: #e5f8f2; box-shadow: 0 0 0 2px #1aa88e, 0 16px 36px rgba(26, 168, 142, .28); }
+    .agent.annimmt .led { background: #14c08a; box-shadow: 0 0 12px #14c08a; animation: led-blink .22s steps(2) 5; }
+    .agent.laeuft .led, .agent.fertig .led { background: #14c08a; box-shadow: 0 0 8px #14c08a; }
+    .agent .meta { margin: 2px 0 8px; color: var(--akzent-dunkel); font-size: 12.5px; font-weight: 700; line-height: 1.35; }
+    .agent b { display: block; font-size: 14px; }
+    .led { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 50%; background: #c5ced1; }
+    @keyframes led-blink { 50% { opacity: .12; } }
+    .agent-ring {
+      width: 58px; height: 58px; flex: 0 0 auto; border-radius: 50%;
+      background: conic-gradient(#1aa88e var(--p, 0%), #e4eef0 0);
+      display: grid; place-items: center;
+    }
+    .agent-ring span { width: 42px; height: 42px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px #e4eef0; }
+    .stufen { margin: 0 0 8px; padding: 0; list-style: none; }
+    .stufen li { position: relative; padding: 1px 0 1px 16px; color: #b7c2c6; font-size: 12px; }
+    .stufen li::before { content: ''; position: absolute; left: 0; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: #d5e0e3; }
+    .stufen li.dran { color: var(--text); font-weight: 700; }
+    .stufen li.dran::before { background: var(--akzent); box-shadow: 0 0 0 3px rgba(47, 127, 143, .18); }
+    .stufen li.fertig { color: #1a7f37; }
+    .stufen li.fertig::before { background: #1aa88e; }
+    .balken { height: 8px; border-radius: 99px; background: #e3ecee; overflow: hidden; }
+    .balken span {
+      display: block; height: 100%; width: 0;
+      background: linear-gradient(90deg, #1a6d7c, #1aa88e, #b8fff0, #1aa88e);
+      background-size: 220% 100%; animation: schimmer 1.1s linear infinite;
+    }
+    @keyframes atem {
+      50% { box-shadow: 0 0 0 3px rgba(26, 168, 142, .22), 0 20px 44px rgba(26, 168, 142, .34); }
+    }
+    @keyframes schimmer { to { background-position: -220% 0; } }
+
+    .liste {
+      position: relative; flex: 1 1 0; height: 0; min-height: 0;
+      background: #fff; border-radius: 22px 0 0 22px; border-right: 0;
+      box-shadow: -22px 0 36px rgba(22, 48, 58, .1), 0 18px 28px rgba(22, 48, 58, .12);
+      overflow: auto;
+    }
+    .zeile, .kopfzeile {
+      display: grid; grid-template-columns: 72px minmax(0, 1.5fr) 92px minmax(0, .8fr) 110px;
+      gap: 10px; align-items: center; width: 100%; padding: 12px 22px; border: 0; border-top: 1px solid var(--linie);
+      background: #fff; text-align: left;
+    }
+    .kopfzeile {
+      position: sticky; top: 0; z-index: 1; border-top: 0; background: #f7f8f9; color: var(--grau);
+      font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .liste > .zeile:nth-child(even) { background: #e7eef0; }
+    .liste > .zeile:hover { background: #e5f2f4; }
+    .zeile.neu { position: relative; overflow: hidden; animation: zeile-land .85s cubic-bezier(.16, .84, .2, 1); }
+    .zeile.neu::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(100deg, transparent, rgba(26, 168, 142, .45), transparent);
+      transform: translateX(-120%); animation: kehr .9s ease;
+    }
+    @keyframes zeile-land { from { transform: translateX(36px); } }
+    @keyframes kehr { to { transform: translateX(120%); } }
+    .kuerzel {
+      display: inline-block; min-width: 52px; text-align: center; padding: 4px 8px; border-radius: 8px;
+      background: var(--akzent-hell); color: var(--akzent-dunkel); font-weight: 750; font-size: 12px;
+    }
+    .name { font-weight: 650; }
+    .gedaempft { color: var(--grau); font-size: 13px; }
+    .betrag { text-align: right; font-variant-numeric: tabular-nums; }
+    .planfenster { position: absolute; inset: 0; background: #fff; border-radius: 22px 0 0 22px; overflow: hidden; }
+    .planfenster[hidden] { display: none; }
+    .planfenster iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+    #zurueck {
+      flex: 0 0 auto; border: 0; background: var(--akzent-hell); color: var(--akzent-dunkel);
+      border-radius: 8px; padding: 8px 10px; font-weight: 700;
+    }
+    #zurueck[hidden] { display: none; }
+
+    .chat {
+      position: relative; height: 58px;
+      display: flex; align-items: center; padding: 0 18px 0 16px; background: var(--grund);
+    }
+    .wahl {
+      position: absolute; left: 22px; bottom: calc(100% + 8px); z-index: 3;
+      display: flex; flex-wrap: wrap; gap: 8px; width: auto; min-height: 0;
+    }
+    .wahl:empty { display: none; }
+    .wahl button {
+      border: 0; background: #e7f3f4; color: var(--akzent-dunkel); border-radius: 999px; padding: 6px 12px; font-weight: 700;
+    }
+    .zeile-eingabe { display: flex; gap: 8px; align-items: center; width: 100%; }
+    .ablauf { flex: 0 0 auto; margin: 0; padding: 0; border: 0; background: none; color: var(--akzent-dunkel); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .orb { width: 32px; height: 32px; flex: 0 0 auto; }
+    .zeile-eingabe input {
+      flex: 1; min-width: 0; border: 0; border-radius: 12px; padding: 11px 12px; background: #fff;
+      box-shadow: inset 0 0 0 1px #e3eaec; font-size: 14px;
+    }
+    .zeile-eingabe input:focus { outline: 2px solid var(--akzent); }
+    .senden, .schreiben {
+      border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 750; background: var(--akzent); color: #fff;
+    }
+    .flug { position: fixed; z-index: 30; margin: 0; pointer-events: none; box-shadow: 0 18px 36px rgba(26, 168, 142, .28); }
+
+    @media (max-width: 860px) {
+      .buehne { grid-template-columns: 1fr; overflow: auto; }
+      .links { height: auto; padding-right: 16px; }
+      .rechts { margin-left: 0; }
+      .liste { min-height: 280px; border-radius: 18px; margin: 0 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="kopf">
+    <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="13" fill="#0c3f3a"/>
+      <circle cx="24" cy="24" r="9.2" fill="#1aa88e"/>
+      <rect x="19.3" y="21.6" width="2.1" height="4.8" rx="1" fill="#fff"/>
+      <rect x="22.95" y="18.9" width="2.1" height="10.2" rx="1" fill="#fff"/>
+      <rect x="26.6" y="21.6" width="2.1" height="4.8" rx="1" fill="#fff"/>
+    </svg>
+    <div>
+      <h1>PlanR</h1>
+      <p>Alle gespeicherten Pläne</p>
+    </div>
+    <span class="entwurf-pill">Layout-Entwurf</span>
+  </header>
+
+  <div class="buehne">
+    <aside class="links">
+      <div class="picker">
+        <div class="monat"><span>‹</span><strong>November 2026</strong><span>›</span></div>
+        <div class="wt"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+        <div class="tage" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i class="an"></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="chips"><span class="chip an">Alle</span><span class="chip">HKP</span><span class="chip">MKV</span><span class="chip">Privat</span></div>
+      </div>
+      <div class="gespraech" id="verlauf"></div>
+      <div class="agenten" id="agenten"></div>
+    </aside>
+
+    <div class="rechts">
+    <main class="liste" id="liste">
+      <div class="kopfzeile"><span>Plan</span><span>Patient</span><span>Nummer</span><span>Status</span><span class="betrag">Betrag</span></div>
+      <button type="button" class="zeile" data-titel="Berger, Anna" data-text="HKP · genehmigt · 4.380,00 €"><span class="kuerzel">HKP</span><span class="name">Berger, Anna</span><span class="gedaempft">2026-114</span><span class="gedaempft">genehmigt</span><span class="betrag">4.380,00 €</span></button>
+      <button type="button" class="zeile" data-titel="Müller, Peter" data-text="PAR · eingereicht · 860,00 €"><span class="kuerzel">PAR</span><span class="name">Müller, Peter</span><span class="gedaempft">2026-098</span><span class="gedaempft">eingereicht</span><span class="betrag">860,00 €</span></button>
+      <button type="button" class="zeile" data-titel="Krüger, Lena" data-text="MKV · Entwurf · 420,00 €"><span class="kuerzel">MKV</span><span class="name">Krüger, Lena</span><span class="gedaempft">2026-121</span><span class="gedaempft">Entwurf</span><span class="betrag">420,00 €</span></button>
+      <button type="button" class="zeile" data-titel="Nowak, Tomasz" data-text="IMPL · freigegeben · 2.140,00 €"><span class="kuerzel">IMPL</span><span class="name">Nowak, Tomasz</span><span class="gedaempft">2026-088</span><span class="gedaempft">freigegeben</span><span class="betrag">2.140,00 €</span></button>
+    </main>
+    <div class="planfenster" id="planfenster" hidden>
+      <iframe id="plan" title="Plan"></iframe>
+    </div>
+    </div>
+  </div>
+
+  <form class="chat" id="dock">
+    <div class="wahl" id="wahl"></div>
+    <div class="zeile-eingabe">
+      <button type="button" id="zurueck" hidden>Zur Liste</button>
+      <svg class="orb" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#e7f3f4"/><circle cx="24" cy="24" r="8" fill="#2f7f8f"/></svg>
+      <input id="eingabe" autocomplete="off" placeholder="KVA in Prosa …">
+      <button class="ablauf" type="button" id="ablauf">Beispiel abspielen</button>
+      <button class="senden" type="submit">Senden</button>
+    </div>
+  </form>
+
+  <template id="kapsel-muster">
+    <div class="kapsel">
+      <b>Zaharia, Georgia</b>
+      <p></p>
+      <button class="schreiben" type="button">Plan schreiben</button>
+    </div>
+  </template>
+
+  <script>
+    const verlauf = document.getElementById('verlauf')
+    const wahl = document.getElementById('wahl')
+    const eingabe = document.getElementById('eingabe')
+    const agenten = document.getElementById('agenten')
+    const liste = document.getElementById('liste')
+    const plan = document.getElementById('plan')
+    const planfenster = document.getElementById('planfenster')
+    const zurueck = document.getElementById('zurueck')
+
+    const PLANER = { HKP: 5181, PAR: 5202, MKV: 5204, IMPL: 5196 }
+    let schritt = 0
+    let befund = 'Befund 01 bleibt unverändert'
+    let spiel = false
+
+    function blase(rolle, text) {
+      const el = document.createElement('div')
+      el.className = 'blase ' + rolle
+      el.textContent = text
+      verlauf.append(el)
+      verlauf.scrollTop = verlauf.scrollHeight
+      return el
+    }
+
+    function chips(namen, klick) {
+      wahl.replaceChildren()
+      for (const text of namen) {
+        const b = document.createElement('button')
+        b.type = 'button'
+        b.textContent = text
+        b.addEventListener('click', () => klick(text))
+        wahl.append(b)
+      }
+    }
+
+    function kapselZeigen() {
+      wahl.replaceChildren()
+      const el = document.getElementById('kapsel-muster').content.firstElementChild.cloneNode(true)
+      el.querySelector('p').textContent = 'Kasse-HKP · Interimsprothese nur Unterkiefer · Eigenlabor · ' + befund
+      el.querySelector('button').addEventListener('click', () => abkapseln(el))
+      verlauf.append(el)
+      verlauf.scrollTop = verlauf.scrollHeight
+    }
+
+    function patientZeile(text) {
+      const t = text.toLowerCase()
+      const zeilen = [...liste.querySelectorAll('.zeile')]
+      const treffer = zeilen.find((z) => {
+        const name = (z.dataset.titel || '').toLowerCase()
+        const nach = name.split(',')[0].trim()
+        return nach && t.includes(nach)
+      })
+      if (treffer) return treffer
+      if (/plan|dieser|den |die /.test(t)) return zeilen[0] || null
+      return null
+    }
+
+    function istFrage(text) {
+      return /\?|was steht|wie hoch|wie viel|welche|warum|eigenanteil|position|zuschuss|\b97b\b|neben|wie oft|bestimmung/.test(text.toLowerCase())
+    }
+
+    function istAenderung(text) {
+      return /änder|aender|umstell|mach |fremdlabor|eigenlabor|zirkon|vollverblend|abform|abdruck/.test(text.toLowerCase())
+    }
+
+    function eingang(text) {
+      eingabe.value = ''
+      if (schritt === 2 || schritt === 3) { weiter(text); return }
+      const zeile = patientZeile(text)
+      if (zeile && istAenderung(text)) { blase('user', text); aendern(zeile, text); return }
+      if ((zeile && istFrage(text)) || /bestimmung|wie oft|neben|\b97b\b|\bgoz\b|\bbema\b/.test(text.toLowerCase())) {
+        blase('user', text)
+        lesen(zeile, text)
+        return
+      }
+      weiter(text)
+    }
+
+    function weiter(text) {
+      eingabe.value = ''
+      if (schritt === 2) { befundWahl(text); return }
+      blase('user', text)
+      if (schritt === 0) {
+        schritt = 1
+        blase('ki', 'Georgia Zaharia, Kasse. Interims-Vollprothese nur im Unterkiefer, Eigenlabor, entfernt werden 33, 34, 36, 43, 44 und 46. Passt das so?')
+        chips(['Ja, so ist es', 'Anderer Patient'], (wahlText) => {
+          if (wahlText.startsWith('Anderer')) {
+            blase('user', wahlText)
+            blase('ki', 'Dann nenn mir den Patienten noch einmal mit dem Plan.')
+            schritt = 0
+            wahl.replaceChildren()
+            return
+          }
+          schritt = 2
+          blase('user', wahlText)
+          blase('ki', 'Der Befund 01 bleibt, wie er in der Kartei steht. Oder soll daran noch etwas geändert werden?')
+          chips(['Befund bleibt', 'Befund ändern'], befundWahl)
+        })
+        return
+      }
+      if (schritt === 3) {
+        befund = 'Befund 01 geändert: ' + text
+        schritt = 4
+        blase('ki', 'Notiert. Der Plan benutzt diesen Befund.')
+        kapselZeigen()
+      }
+    }
+
+    function befundWahl(text) {
+      blase('user', text)
+      wahl.replaceChildren()
+      if (text.toLowerCase().includes('änder')) {
+        schritt = 3
+        blase('ki', 'Was soll am Befund 01 anders sein?')
+        return
+      }
+      befund = 'Befund 01 bleibt unverändert'
+      schritt = 4
+      kapselZeigen()
+    }
+
+    function abkapseln(quelle) {
+      const karte = document.createElement('article')
+      karte.className = 'agent'
+      karte.innerHTML = '<div class="agent-ring" aria-hidden="true"><span></span></div><div><b>Zaharia, Georgia</b><div class="meta"></div><ol class="stufen"><li>hkp_befund</li><li>hkp_plan_rechnen</li><li>hkp_plan_ablegen</li></ol><div class="balken"><span></span></div></div>'
+      karte.querySelector('.meta').textContent = 'Anlegen · Interimsprothese UK · ' + befund
+      agenten.prepend(karte)
+      const ziel = karte.getBoundingClientRect()
+      const von = quelle.getBoundingClientRect()
+      const flug = quelle.cloneNode(true)
+      flug.classList.add('flug')
+      flug.querySelector('button')?.remove()
+      Object.assign(flug.style, { left: von.left + 'px', top: von.top + 'px', width: von.width + 'px' })
+      document.body.append(flug)
+      quelle.remove()
+      karte.style.visibility = 'hidden'
+      const fertig = () => { flug.remove(); karte.style.visibility = ''; laufen(karte, 7000, () => eintragen(karte)) }
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) fertig()
+      else flug.animate([
+        { left: von.left + 'px', top: von.top + 'px', width: von.width + 'px', transform: 'scale(1)', offset: 0 },
+        { transform: 'scale(1.08) rotate(-1.5deg)', boxShadow: '0 24px 48px rgba(26,168,142,.4)', offset: .28 },
+        { left: ziel.left + 'px', top: ziel.top + 'px', width: ziel.width + 'px', transform: 'scale(1) rotate(0deg)' },
+      ], { duration: 820, easing: 'cubic-bezier(.16,.84,.24,1)' }).finished.then(fertig)
+      schritt = 0
+      befund = 'Befund 01 bleibt unverändert'
+      blase('ki', 'Der Plan läuft links. Danach kannst du ihn lesen, etwas fragen oder ändern.')
+    }
+
+    function laufen(karte, dauer, danach) {
+      const balken = karte.querySelector('.balken span')
+      const stufen = [...karte.querySelectorAll('.stufen li')]
+      const start = performance.now()
+      const tick = (jetzt) => {
+        const anteil = Math.min(1, (jetzt - start) / dauer)
+        balken.style.width = (anteil * 100) + '%'
+        karte.style.setProperty('--p', (anteil * 100) + '%')
+        const index = Math.min(stufen.length - 1, Math.floor(anteil * stufen.length))
+        stufen.forEach((li, i) => {
+          li.classList.toggle('fertig', i < index || anteil === 1)
+          li.classList.toggle('dran', i === index && anteil < 1)
+        })
+        if (anteil < 1) requestAnimationFrame(tick)
+        else danach()
+      }
+      requestAnimationFrame(tick)
+    }
+
+    function agent(name, meta, stufen, dauer, danach) {
+      const karte = document.createElement('article')
+      karte.className = 'agent'
+      karte.innerHTML = '<div class="agent-ring" aria-hidden="true"><span></span></div><div><b></b><div class="meta"></div><ol class="stufen"></ol><div class="balken"><span></span></div></div>'
+      karte.querySelector('b').textContent = name
+      karte.querySelector('.meta').textContent = meta
+      const ol = karte.querySelector('.stufen')
+      for (const stufe of stufen) {
+        const li = document.createElement('li')
+        li.textContent = stufe
+        ol.append(li)
+      }
+      agenten.prepend(karte)
+      laufen(karte, dauer, () => danach(karte))
+      return karte
+    }
+
+    function lesen(zeile, text) {
+      const abrechnung = /bestimmung|wie oft|neben|\b97b\b|\bgoz\b|\bbema\b|zuschuss/.test(text.toLowerCase())
+      const name = zeile ? zeile.dataset.titel : 'Abrechnung'
+      const stufen = zeile ? ['hkp_details'] : []
+      if (abrechnung) stufen.push('abrechnung_frage')
+      if (!stufen.length) stufen.push('hkp_overview')
+      agent(name, 'Plan lesen', stufen, 3200, (karte) => {
+        karte.remove()
+        if (!zeile) {
+          blase('ki', 'abrechnung_frage schlägt die Bestimmung nach und liest sie vor. Beträge und Ziffern kommen nur aus dem Werkzeug.')
+          return
+        }
+        const nummer = zeile.querySelectorAll('.gedaempft')[0].textContent
+        const status = zeile.querySelectorAll('.gedaempft')[1].textContent
+        const betrag = zeile.querySelector('.betrag').textContent
+        const sache = zeile.dataset.text || (zeile.querySelector('.kuerzel').textContent + ' ' + status)
+        blase('ki', 'hkp_details: ' + sache + '. Nummer ' + nummer + ', ' + betrag + '.' + (abrechnung ? ' Die Bestimmung dazu kommt aus abrechnung_frage.' : ''))
+      })
+    }
+
+    function aendern(zeile, text) {
+      const fremd = /fremd/.test(text.toLowerCase())
+      const name = zeile.dataset.titel
+      agent(name, 'Plan ändern', ['hkp_details', 'hkp_ausfuehrung_aendern'], 4800, (karte) => {
+        const status = zeile.querySelectorAll('.gedaempft')[1]
+        const betrag = zeile.querySelector('.betrag')
+        status.textContent = fremd ? 'Fremdlabor' : 'geändert'
+        if (fremd) betrag.textContent = '2.640,00 €'
+        zeile.dataset.text = (zeile.dataset.text || name) + ' · ' + status.textContent
+        landen(karte, zeile, () => {
+          blase('ki', 'hkp_ausfuehrung_aendern: ' + name + ', jetzt ' + status.textContent + ', ' + betrag.textContent + '.')
+        })
+      })
+    }
+
+    function eintragen(karte) {
+      const zeile = document.createElement('button')
+      zeile.type = 'button'
+      zeile.className = 'zeile'
+      zeile.dataset.titel = 'Zaharia, Georgia'
+      zeile.dataset.text = 'Kasse-HKP · Interimsprothese Unterkiefer · Entwurf · 2.277,63 €'
+      zeile.innerHTML = '<span class="kuerzel">HKP</span><span class="name">Zaharia, Georgia</span><span class="gedaempft">2026-130</span><span class="gedaempft">Entwurf</span><span class="betrag">2.277,63 €</span>'
+      liste.querySelector('.kopfzeile').after(zeile)
+      zeile.style.visibility = 'hidden'
+      landen(karte, zeile, () => { zeile.style.visibility = '' })
+    }
+
+    function landen(karte, zeile, danach) {
+      const zeigen = () => {
+        if (danach) danach()
+        zeile.classList.remove('neu')
+        void zeile.offsetWidth
+        zeile.classList.add('neu')
+        karte.remove()
+      }
+      const ziel = zeile.getBoundingClientRect()
+      const von = karte.getBoundingClientRect()
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches || !von.width) { zeigen(); return }
+      const flug = karte.cloneNode(true)
+      flug.classList.add('flug')
+      flug.style.animation = 'none'
+      Object.assign(flug.style, { left: von.left + 'px', top: von.top + 'px', width: von.width + 'px', height: von.height + 'px' })
+      document.body.append(flug)
+      karte.style.visibility = 'hidden'
+      flug.animate([
+        { left: von.left + 'px', top: von.top + 'px', width: von.width + 'px', height: von.height + 'px', opacity: 1, borderRadius: '16px' },
+        { left: ziel.left + 'px', top: ziel.top + 'px', width: ziel.width + 'px', height: ziel.height + 'px', opacity: .15, borderRadius: '10px' },
+      ], { duration: 720, easing: 'cubic-bezier(.2,.8,.2,1)' }).finished.then(() => { flug.remove(); zeigen() })
+    }
+
+    function planAgent() {
+      let karte = agenten.querySelector('[data-plan-agent]')
+      if (karte) return karte
+      karte = document.createElement('article')
+      karte.className = 'agent bereit'
+      karte.dataset.planAgent = '1'
+      karte.innerHTML = '<i class="led"></i><div><b></b><div class="meta"></div><div class="balken"><span></span></div></div>'
+      agenten.prepend(karte)
+      return karte
+    }
+
+    function oeffnen(zeile) {
+      const art = zeile.querySelector('.kuerzel').textContent.trim()
+      const port = PLANER[art] || 5181
+      plan.src = 'http://127.0.0.1:' + port + '/'
+      plan.dataset.titel = zeile.dataset.titel || 'Plan'
+      liste.hidden = true
+      planfenster.hidden = false
+      zurueck.hidden = false
+      eingabe.placeholder = 'Änderung am Plan …'
+      const karte = planAgent()
+      karte.className = 'agent bereit'
+      karte.querySelector('b').textContent = plan.dataset.titel
+      karte.querySelector('.meta').textContent = 'Bereit. Änderung oder Frage tippen.'
+      karte.querySelector('.balken span').style.width = '0'
+    }
+
+    function schliessen() {
+      planfenster.hidden = true
+      liste.hidden = false
+      plan.src = 'about:blank'
+      zurueck.hidden = true
+      eingabe.placeholder = 'KVA in Prosa …'
+      agenten.querySelector('[data-plan-agent]')?.remove()
+    }
+
+    liste.addEventListener('click', (ev) => {
+      const zeile = ev.target.closest('.zeile')
+      if (zeile) oeffnen(zeile)
+    })
+    zurueck.addEventListener('click', schliessen)
+
+    let laufend = false
+
+    function planAuftrag(text) {
+      if (laufend) return
+      laufend = true
+      blase('user', text)
+      const voll = /verblend/.test(text.toLowerCase())
+      const karte = planAgent()
+      karte.className = 'agent annimmt'
+      karte.querySelector('b').textContent = plan.dataset.titel || 'Plan'
+      karte.querySelector('.balken span').style.width = '0'
+      karte.querySelector('.meta').textContent = 'Angenommen. ' + text
+      window.setTimeout(() => {
+        karte.classList.remove('annimmt')
+        karte.classList.add('laeuft')
+        karte.querySelector('.meta').textContent = voll
+          ? 'hkp_ausfuehrung_aendern: Vollverblendung wird in den Plan geschrieben.'
+          : 'Auftrag läuft. ' + text
+        laufen(karte, 4200, () => {
+          karte.classList.remove('laeuft')
+          karte.classList.add('fertig')
+          const sagt = voll
+            ? 'Umgesetzt. Die Kronen sind vollverblendet. Der Plan bleibt offen.'
+            : 'Umgesetzt. ' + text
+          karte.querySelector('.meta').textContent = sagt
+          blase('ki', sagt)
+          laufend = false
+        })
+      }, 1400)
+    }
+
+    document.getElementById('dock').addEventListener('submit', (ev) => {
+      ev.preventDefault()
+      const text = eingabe.value.trim()
+      if (!text || schritt === 4) return
+      if (!planfenster.hidden) {
+        eingabe.value = ''
+        planAuftrag(text)
+        return
+      }
+      eingang(text)
+    })
+
+    document.getElementById('ablauf').addEventListener('click', async () => {
+      if (spiel) return
+      spiel = true
+      verlauf.replaceChildren()
+      wahl.replaceChildren()
+      schritt = 0
+      const sagen = async (text, warten) => {
+        eingabe.value = text
+        await new Promise((r) => setTimeout(r, warten))
+        eingang(text)
+      }
+      const wartenAuf = (fertig) => new Promise((resolve) => {
+        const timer = setInterval(() => { if (fertig()) { clearInterval(timer); resolve() } }, 200)
+      })
+      await sagen('Für Frau Zaharia eine Interimsvollprothese im Unterkiefer, Eigenlabor. 33, 34, 36, 43, 44 und 46 entfernen.', 400)
+      await new Promise((r) => setTimeout(r, 900))
+      wahl.querySelector('button')?.click()
+      await new Promise((r) => setTimeout(r, 900))
+      wahl.querySelector('button')?.click()
+      await new Promise((r) => setTimeout(r, 700))
+      verlauf.querySelector('.schreiben')?.click()
+      await wartenAuf(() => !document.querySelector('.agent') && [...liste.querySelectorAll('.name')].some((n) => n.textContent.includes('Zaharia')))
+      await sagen('Was steht im Plan von Frau Zaharia?', 500)
+      await wartenAuf(() => !document.querySelector('.agent'))
+      await sagen('Stell das Labor auf Fremdlabor um.', 500)
+      await wartenAuf(() => !document.querySelector('.agent'))
+      spiel = false
+    })
+  </script>
+</body>
+</html>

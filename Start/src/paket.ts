@@ -1,10 +1,14 @@
 /** Pakete und Auswahllisten der Buchung – gemeinsam für Formular und Server */
 export const PAKETE = {
   planr: { name: 'PlanR', monat: 69, sprachsteuerung: false },
-  planr_clara: { name: 'PlanR + Sprach-KI', monat: 118, sprachsteuerung: true },
+  planr_clara: { name: 'PlanR', monat: 229, sprachsteuerung: true },
 } as const
 export type Paket = keyof typeof PAKETE
-export const PRO_PLAN = 1.59
+export const PRO_PLAN = 2.49
+/** Einrichtung und KI-Training (ein bis zwei Wochen), einmalig auf der ersten Rechnung */
+export const EINRICHTUNG = 1299
+/** KI-Sprachdokumentation: Pauschale, kein Preis je Eintrag */
+export const DOKU_MONAT = 89
 export const RECHTSFORMEN = ['Einzelpraxis', 'Berufsausübungsgemeinschaft', 'Praxisgemeinschaft', 'MVZ', 'Sonstige'] as const
 export const SERVER = { server: 'Eigener Praxisserver', arbeitsplatz: 'Arbeitsplatz-PC, der dauerhaft läuft', unbekannt: 'Weiß ich nicht' } as const
 

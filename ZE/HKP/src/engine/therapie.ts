@@ -1,7 +1,7 @@
 import type { Ebene, Position, ZahnZeilen } from '../types'
 import type { RegelErgebnis } from './regeln'
-import { brueckenBereiche, pfeilerIm } from './bruecken'
-import { FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerblendbereich, istWeisheitszahn, kieferVon } from './zahnschema'
+import { befundOhneStrich, brueckenBereiche, pfeilerIm } from './bruecken'
+import { FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerblendbereich, istFrontzahn, istWeisheitszahn, kieferVon } from './zahnschema'
 
 /**
  * Zuordnung Therapiekürzel (Zeile TP) zu GOZ- und BEB-Leistungen für gleich-/andersartige Versorgung.
@@ -17,24 +17,42 @@ export const TP_ZUORDNUNG: Record<string, { goz: string; gozAnker?: string; beb:
   PK: { goz: '2220', beb: ['2104'] },
   PKV: { goz: '2220', beb: ['2126', '2611'] },
   PKM: { goz: '2220', beb: ['2534'] },
+  VE: { goz: '2220', beb: ['0833', '2653', '2951'] },
+  ZA: { goz: '2210', gozAnker: '5010', beb: ['2251'] },
+  ZAB: { goz: '', beb: ['2351'] },
+  I1: { goz: '2150', beb: ['2301'] },
+  I2: { goz: '2160', beb: ['2302'] },
+  I3: { goz: '2170', beb: ['2303'] },
+  I4: { goz: '2170', beb: ['2304'] },
+  C1: { goz: '2150', beb: ['2551'] },
+  C2: { goz: '2160', beb: ['2552'] },
+  C3: { goz: '2170', beb: ['2553'] },
+  C4: { goz: '2170', beb: ['2554'] },
+  ON: { goz: '2170', beb: ['2304'] },
+  ONK: { goz: '2170', beb: ['2554'] },
   T: { goz: '5040', beb: ['3001'] },
+  TZ: { goz: '5040', beb: ['3001', '6905'] },
+  TZV: { goz: '5040', beb: ['3001', '6905', '2602'] },
   TV: { goz: '5040', beb: ['3001', '2611'] },
-  TM: { goz: '5040', beb: ['3001', '2612'] },
+  TM: { goz: '5040', beb: ['3001', '2602'] },
   KO: { goz: '2210', gozAnker: '5010', beb: ['2101', '3023'] },
   KVO: { goz: '2210', gozAnker: '5010', beb: ['2121', '2611', '3023'] },
   KMO: { goz: '2210', gozAnker: '5010', beb: ['2281', '2612', '3023'] },
   T2: { goz: '5100', beb: ['3001'] },
   T2V: { goz: '5100', beb: ['3001', '2611'] },
-  T2M: { goz: '5100', beb: ['3001', '2612'] },
+  T2M: { goz: '5100', beb: ['3001', '2602'] },
+  ZAS: { goz: '2200', gozAnker: '5000', beb: ['2251'] },
   SK: { goz: '2200', gozAnker: '5000', beb: ['2101'] },
   SKV: { goz: '2200', gozAnker: '5000', beb: ['2121', '2611'] },
   SKM: { goz: '2200', gozAnker: '5000', beb: ['2281', '2612'] },
   SKO: { goz: '2200', gozAnker: '5000', beb: ['2101', '3023'] },
   SKVO: { goz: '2200', gozAnker: '5000', beb: ['2121', '2611', '3023'] },
   SKMO: { goz: '2200', gozAnker: '5000', beb: ['2281', '2612', '3023'] },
+  STZ: { goz: '5040', beb: ['3001', '6905'] },
+  STZV: { goz: '5040', beb: ['3001', '6905', '2602'] },
   ST: { goz: '5040', beb: ['3001'] },
   STV: { goz: '5040', beb: ['3001', '2611'] },
-  STM: { goz: '5040', beb: ['3001', '2612'] },
+  STM: { goz: '5040', beb: ['3001', '2602'] },
   A: { goz: '', beb: ['2155'] },
   ABV: { goz: '', beb: ['2362', '2611'] },
   ABM: { goz: '', beb: ['2351', '2612'] },
@@ -47,7 +65,7 @@ export const TP_ZUORDNUNG: Record<string, { goz: string; gozAnker?: string; beb:
 }
 
 /** Brückenglied, auch implantatgetragen oder adhäsiv */
-const GLIED = /^(S?B|AB)[VM]?$/
+const GLIED = /^(S?B|AB)[VM]?$|^ZAB$/
 /** ersetzter Zahn einer Prothese, auch über einem Steg oder auf einem Implantat-Verbindungselement */
 const PROTHESENZAHN = /^(S?EO?|SO)$/
 /** ersetzter Zahn über einem Steg */
@@ -55,8 +73,8 @@ const STEGZAHN = /^S?EO$/
 /** Krone mit Geschiebe */
 const GESCHIEBE = /^S?K[VM]?O$/
 /** Pfeiler mit Krone, Teilkrone oder Teleskop (natürlich oder implantatgetragen) */
-const PFEILERKRONE = /^(S?K|PK|S?T)/
-const IMPLANTAT_PROTHESE = /^(SE|SEO|SO|ST[VM]?)$/
+const PFEILERKRONE = /^(S?K|PK|ZA$|ZAS$|S?T)/
+const IMPLANTAT_PROTHESE = /^(SE|SEO|SO|ST[VM]?|STZ|STZV)$/
 /** Kürzel, die eine Prothese im Kiefer voraussetzen (ersetzte Zähne, Teleskope, Geschiebe, Halteelemente) */
 const PROTHESEN_TP = /^(S?EO?|SO|S?T|S?K[VM]?O|K[VM]?H|H)$/
 
@@ -72,9 +90,17 @@ function pos(ebene: Ebene, nr: string, zahn: string, anzahl = 1): Position {
   return { id: `auto-tp-${Date.now().toString(36)}-${(zaehler++).toString(36)}`, ebene, nr, zahn, anzahl, auto: true }
 }
 
-const befundKuerzel = (z: ZahnZeilen | undefined) => (z?.B ?? '').trim().toLowerCase()
+const befundKuerzel = (z: ZahnZeilen | undefined) => befundOhneStrich(z?.B ?? '')
 const zahnListe = (zahn: string) => zahn.split(/[,\s]+/).filter(Boolean)
 const spanne = (zaehne: string[]) => (zaehne.length === 1 ? zaehne[0] : `${zaehne[0]}-${zaehne[zaehne.length - 1]}`)
+
+/** Vollanatomische Seitenzahnkrone 2251, Front 2252; Brückenglied 2351 bzw. 2352 */
+function bebFuer(k: string, b: string, z: string) {
+  if (!istFrontzahn(z)) return b
+  if ((k === 'ZA' || k === 'ZAS') && b === '2251') return '2252'
+  if (k === 'ZAB' && b === '2351') return '2352'
+  return b
+}
 
 export type KuerzelArt = '' | 'implantat' | 'prothese' | 'kombi' | 'bruecke' | 'krone'
 
@@ -82,10 +108,10 @@ export type KuerzelArt = '' | 'implantat' | 'prothese' | 'kombi' | 'bruecke' | '
 export function kuerzelArt(k: string): KuerzelArt {
   k = k.trim().toUpperCase()
   if (!k) return ''
-  if (k.startsWith('S')) return 'implantat'
+  if (k === 'ZAS' || k.startsWith('S')) return 'implantat'
   if (/^(E|EO|H)$/.test(k)) return 'prothese'
   if (/^(T|R)/.test(k) || GESCHIEBE.test(k)) return 'kombi'
-  if (/^(B|A)/.test(k)) return 'bruecke'
+  if (/^(B|A)/.test(k) || k === 'ZAB') return 'bruecke'
   return 'krone'
 }
 
@@ -292,7 +318,7 @@ export function therapieplanAnwenden(regel: RegelErgebnis, zaehne: Record<string
           if (s.nr === '18b') neu.push({ ...pos('BEB', '2001', z), ...n })
         }
       }
-      if (!k || PROTHESENZAHN.test(k) || k === 'H' || k === 'R') continue
+      if (!k || PROTHESENZAHN.test(k) || k === 'H' || k === 'R' || k === ')(') continue
       if (k === 'A') hinweis('Adhäsivbrücke: GOZ 5150 (erste Spanne) bzw. 5160 (jede weitere) je Spanne ansetzen.')
       const zuo = TP_ZUORDNUNG[k]
       if (!zuo) {
@@ -302,7 +328,9 @@ export function therapieplanAnwenden(regel: RegelErgebnis, zaehne: Record<string
       const anker = brueckenAnker.has(z) || GESCHIEBE.test(k) || stegAnker.has(z)
       const goz = anker && zuo.gozAnker ? zuo.gozAnker : zuo.goz
       if (goz) neu.push(pos('GOZ', goz, z))
-      for (const b of zuo.beb) neu.push(pos('BEB', b, z))
+      for (const b of zuo.beb) neu.push(pos('BEB', bebFuer(k, b, z), z))
+      if (/^(TM|STM|T2M|TZV|STZV)$/.test(k)) hinweis('Vollverblendete Teleskope: Verblendung aus Kunststoff (Komposite, BEB 2602). Keramik platzt beim Aufsetzen durch die Spannung ab.')
+      if (/^VEK?$/.test(k)) neu.push(pos('GOZ', '2197', z))
       if (GESCHIEBE.test(k)) neu.push(pos('GOZ', '5080', z))
       if (PFEILERKRONE.test(k) && (andersZ || !hatte19)) neu.push(pos('GOZ', andersZ && brueckenAnker.has(z) ? '5120' : '2270', z))
     }
@@ -336,8 +364,8 @@ export function therapieplanAnwenden(regel: RegelErgebnis, zaehne: Record<string
       } else if (!PFEILERKRONE.test(k)) hinweis(`Steg: Zahn ${x} ist kein Steganker (Krone, Wurzelkappe oder Implantat mit SO) – Planung bitte prüfen.`)
     }
     const einzelanker = sitz.filter((z) => plan(z) === 'SO' && !stegAnker.has(z))
-    for (const z of einzelanker) neu.push(pos('GOZ', '5080', z), pos('BEB', '3027', z))
-    if (einzelanker.length) hinweis(`Implantat-Einzelanker (Locator/Kugelkopf) ${einzelanker.join(', ')}: GOZ 5080 je Verbindungselement – ob zusätzlich GOZ 5030 je Implantat anfällt, bitte prüfen.`)
+    for (const z of einzelanker) neu.push(pos('GOZ', '5030', z), pos('GOZ', '5080', z), pos('BEB', '3027', z))
+    if (einzelanker.length) hinweis(`Locator, Druckknopf oder Kugelkopf ${einzelanker.join(', ')}: GOZ 5030 je Implantat und GOZ 5080 je Verbindungselement. Matrize und Patrize sind ein Element, die Verschraubung der Kappe steckt in 5030.`)
 
     // ---- andersartige Prothese nach GOZ/BEB ----
     if (prothese === 'andersartig' && prothesenZaehne.length) {

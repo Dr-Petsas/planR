@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan } from './types'
-import { useAblage } from './ablage'
+import { nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { patientMigrieren, praxisMigrieren } from './stammdaten'
 import { heute, neuerPlan, STANDARD_EINSTELLUNGEN, STANDARD_GLOBAL, STANDARD_REGLER } from './planNeu'
@@ -32,6 +32,7 @@ export function planMigrieren(p: Plan): Plan {
     regler: { ...STANDARD_REGLER, ...(p.regler ?? {}) },
     regionen: p.regionen ?? {},
     implantate: p.implantate ?? {},
+    nummer: nummerMitReihe(p.nummer),
   }
 }
 

@@ -1,4 +1,5 @@
 import type { Einstellungen, GlobalOptionen, Plan, Regler } from './types'
+import { planNummer } from './ablage'
 import { leererPatient, standardPraxis } from './stammdaten'
 
 export const heute = () => new Date().toISOString().slice(0, 10)
@@ -38,7 +39,7 @@ export const STANDARD_GLOBAL: GlobalOptionen = {
   eigenesBlutlabor: true,
 }
 
-export const nummerFormat = (n: number) => `IMPL-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => planNummer('IMPL', n)
 
 export function neuerPlan(nummer: number): Plan {
   return {

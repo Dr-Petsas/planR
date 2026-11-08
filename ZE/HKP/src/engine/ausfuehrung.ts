@@ -8,6 +8,7 @@ import { IMPLANTATSYSTEME } from '../data/implantatsysteme'
 import { PRIVAT_STUFEN, PRIVAT_STUFE_MAX, privatStufeAnwenden } from './aufwertung'
 import { IMPLANTAT_TP } from './implantat'
 import { WERKSTOFFE_FUER, kronenEinheiten, werkstoffVon, type Werkstoff } from './material'
+import { imVerblendbereich } from './zahnschema'
 
 export interface Ausfuehrung {
   werkstoff?: Werkstoff
@@ -17,16 +18,20 @@ export interface Ausfuehrung {
   implantatSystem?: string
   /** Eigenlabor-Stufe „Kasse → Privat“ (0 … PRIVAT_STUFE_MAX) */
   privatStufe?: number
+  /** Teilverblendung, vestibuläre Verblendung, Vollverblendung oder unverblendet */
+  verblendung?: Verblendung
 }
+
+export type Verblendung = 'teil' | 'vestibulaer' | 'voll' | 'keine'
 
 type Muster<T> = readonly (readonly [T, RegExp])[]
 
 const WERKSTOFF_MUSTER: Muster<Werkstoff> = [
-  ['hochgold', /hochgold|\bgold(?! ?reduz)/],
+  ['hochgold', /hochgold|\bgold(?! ?reduz)|galvano/],
   ['goldreduziert', /gold ?reduziert|reduzierte?[snm]? gold|edelmetallreduziert/],
   ['nem', /\bn\.? ?e\.? ?m\b|nichtedel|kobalt|chrom|edelmetallfrei/],
   // „Keramik“ allein meint Vollkeramik (Standard Zirkon) – nicht die Verblendung auf Metall
-  ['zirkon', /zirkon|\b(?:voll ?)?keramik(?! ?verblend)|\bvollkeramisch/],
+  ['zirkon', /zirkon|vollanatom|monolith|vollzirkon|\b(?:voll ?)?keramik(?! ?verblend)|\bvollkeramisch/],
   ['presskeramik', /press ?keramik|e\.? ?max press|\bpress\b/],
   ['lithiumdisilikat', /lithium|e\.? ?max(?! press)|cad ?block/],
 ]
@@ -80,12 +85,22 @@ const STUFE_MUSTER: Muster<number> = [
   [PRIVAT_STUFE_MAX, /premium|maximal teuer|m(?:ö|oe)glichst teuer|so teuer wie m(?:ö|oe)glich|h(?:ö|oe)chste[nr]? stufe|maximale[nr]? stufe|stufe maximal|alles privat|voll privat|komplett privat|stufe (?:vier|4)\b/],
   [3, /(?:ä|ae)sthetik|stufe (?:drei|3)\b/],
   [2, /stufe vollkeramik|vollkeramik ?stufe|stufe (?:zwei|2)\b/],
-  [1, /teilverblend|stufe (?:eins|1)\b/],
+  [1, /stufe (?:eins|1)\b/],
   [0, /stufe kasse|kassenstufe|nur kasse|zur(?:ü|ue)ck auf kasse|ohne privat|keine privat|stufe (?:null|0)\b/],
+]
+
+/** Letzte nicht verneinte Nennung. „momentan teilverblendet … voll verblendet“ bleibt Vollverblendung. */
+const VERBLENDUNG_MUSTER: Muster<Verblendung> = [
+  ['voll', /voll\s*verblend|vollverblend|voll\s*verbelnd|vollverbelnd|mehrfl(?:ä|ae|a)chig\w* verblend|rundum verblend|ringsum verblend|komplett verblend/],
+  ['vestibulaer', /vestibul(?:ä|ae|a)?r/],
+  ['teil', /teil\s*verblend|teilverblend|ger(?:ü|ue)st\w*.{0,30}verblend|verblendger(?:ü|ue)st/],
+  ['keine', /unverblendet|ohne verblendung|nicht verblendet|vollmetall|nur metall|aus metall ohne/],
 ]
 
 const VERNEINT_DAVOR = /(?:\bstatt|\banstatt|\banstelle|\bnicht|\bkein\w*|\bohne|\bweg von)\s+(?:(?:dem|der|den|das|des|mit|im|in|von|vom|einem|einer|einen|eine)\s+)?$/
 const VERNEINT_DANACH = /^\s+(?:bitte\s+|doch\s+|lieber\s+)?(?:nicht\b|war falsch|ist falsch|stimmt nicht)/
+/** „momentan teilverblendet“ beschreibt den Ist-Stand, nicht den Wunsch */
+const IST_ZUSTAND = /(?:\bmomentan|\baktuell|\bderzeit|\bbisher|\bim moment|\bzurzeit|\bgegenw(?:ä|ae)rtig|\bjetzt noch)\s+(?:(?:die|der|das|den|dem|des|ein|eine|einer|einem)\s+)?$/
 
 /**
  * Letzte nicht verneinte Nennung gewinnt („Zirkon statt NEM“, „NEM – nein, doch Zirkon“).
@@ -100,7 +115,7 @@ function letzteNennung<T>(t: string, muster: Muster<T>): T | undefined {
     }
   const gueltig = treffer
     .filter((x) => !treffer.some((y) => y.wert !== x.wert && y.von <= x.von && y.bis >= x.bis && y.bis - y.von > x.bis - x.von))
-    .filter((x) => !VERNEINT_DAVOR.test(t.slice(Math.max(0, x.von - 30), x.von)) && !VERNEINT_DANACH.test(t.slice(x.bis, x.bis + 30)))
+    .filter((x) => !VERNEINT_DAVOR.test(t.slice(Math.max(0, x.von - 30), x.von)) && !VERNEINT_DANACH.test(t.slice(x.bis, x.bis + 30)) && !IST_ZUSTAND.test(t.slice(Math.max(0, x.von - 40), x.von)))
   return gueltig.sort((a, b) => b.von - a.von)[0]?.wert
 }
 
@@ -118,6 +133,8 @@ export function ausfuehrungIn(text: string): Ausfuehrung {
   if (system) a.implantatSystem = system
   const stufe = letzteNennung(t, STUFE_MUSTER)
   if (stufe !== undefined) a.privatStufe = stufe
+  const verblendung = letzteNennung(t, VERBLENDUNG_MUSTER)
+  if (verblendung) a.verblendung = verblendung
   return a
 }
 
@@ -127,6 +144,76 @@ const KERAMIK_TP: Record<string, string> = {
 }
 const METALL_TP: Record<string, string> = { KM: 'K', KMH: 'KH', BM: 'B', PKM: 'PK', SKM: 'SK', SBM: 'SB' }
 const KERAMIK = new Set(WERKSTOFFE_FUER.keramik)
+
+/** Vollkeramik-Gerüst (nicht die metallische Vollverblendung TM/T2M/STM) */
+const KERAMIK_GERUEST = new Set(['KM', 'KMH', 'KMO', 'BM', 'PKM', 'SKM', 'SKMO', 'SBM', 'ABM'])
+
+const VERBLEND_V: Record<string, string> = {
+  K: 'KV', KH: 'KVH', B: 'BV', PK: 'PKV', SK: 'SKV', SB: 'SBV', ST: 'STV', T: 'TV', T2: 'T2V', A: 'ABV',
+  KM: 'KV', KMH: 'KVH', BM: 'BV', PKM: 'PKV', SKM: 'SKV', SBM: 'SBV', STM: 'STV', TM: 'TV', T2M: 'T2V', ABM: 'ABV',
+  KV: 'KV', KVH: 'KVH', BV: 'BV', PKV: 'PKV', SKV: 'SKV', SBV: 'SBV', STV: 'STV', TV: 'TV', T2V: 'T2V', ABV: 'ABV',
+}
+const VERBLEND_M: Record<string, string> = {
+  K: 'KM', KV: 'KM', KM: 'KM', KH: 'KMH', KVH: 'KMH', KMH: 'KMH',
+  B: 'BM', BV: 'BM', BM: 'BM', PK: 'PKM', PKV: 'PKM', PKM: 'PKM',
+  SK: 'SKM', SKV: 'SKM', SKM: 'SKM', SB: 'SBM', SBV: 'SBM', SBM: 'SBM',
+  ST: 'STM', STV: 'STM', STM: 'STM', T: 'TM', TV: 'TM', TM: 'TM',
+  T2: 'T2M', T2V: 'T2M', T2M: 'T2M', A: 'ABM', ABV: 'ABM', ABM: 'ABM',
+}
+const VERBLEND_OHNE: Record<string, string> = {
+  KV: 'K', KM: 'K', KVH: 'KH', KMH: 'KH', BV: 'B', BM: 'B', PKV: 'PK', PKM: 'PK',
+  SKV: 'SK', SKM: 'SK', SBV: 'SB', SBM: 'SB', STV: 'ST', STM: 'ST',
+  TV: 'T', TM: 'T', T2V: 'T2', T2M: 'T2', ABV: 'A', ABM: 'A',
+}
+
+function codeFuerVerblendung(code: string, zahn: string, art: Verblendung): string | undefined {
+  const c = code.trim().toUpperCase()
+  if (!c) return undefined
+  if (art === 'voll') return VERBLEND_M[c]
+  if (art === 'keine') return VERBLEND_OHNE[c] ?? (VERBLEND_V[c] || VERBLEND_M[c] ? c : undefined)
+  if (art === 'vestibulaer' && !imVerblendbereich(zahn)) return VERBLEND_OHNE[c] ?? (VERBLEND_V[c] ? c : undefined)
+  return VERBLEND_V[c]
+}
+
+/** Therapiekürzel auf die gesprochene Verblendart. Vollkeramik (Zirkon und Co.) bleibt unangetastet. */
+export function zaehneFuerVerblendung(plan: HkpPlan, art: Verblendung, werkstoff?: Werkstoff): HkpPlan['zaehne'] {
+  const keramikAuftrag = !!werkstoff && KERAMIK.has(werkstoff)
+  return Object.fromEntries(Object.entries(plan.zaehne).map(([z, v]) => {
+    const wirk = (v.TP.trim() || v.R.trim()).toUpperCase()
+    const gewaehlt = plan.werkstoffe?.[z]
+    if ((gewaehlt && KERAMIK.has(gewaehlt)) || (keramikAuftrag && KERAMIK_GERUEST.has(wirk))) return [z, v]
+    const neu = codeFuerVerblendung(wirk, z, art)
+    if (!neu) return [z, v]
+    const r = v.R.trim().toUpperCase()
+    if (neu === r) return [z, v.TP ? { ...v, TP: '' } : v]
+    if (neu === v.TP.trim().toUpperCase()) return [z, v]
+    return [z, { ...v, TP: neu }]
+  }))
+}
+
+/**
+ * Was der Plan jetzt ist, wenn niemand die Verblendung genannt hat.
+ * Die vestibuläre Kassenverblendung (TV/KV im Verblendbereich) heißt hier Teilverblendung:
+ * so hat der Chef die Teleskope am 05.11.2026 genannt.
+ */
+export function verblendungLage(plan: HkpPlan): Verblendung | undefined {
+  let voll = false
+  let aussen = false
+  let irgend = false
+  for (const [z, v] of Object.entries(plan.zaehne)) {
+    const c = (v.TP.trim() || v.R.trim()).toUpperCase()
+    if (!VERBLEND_V[c] && !VERBLEND_M[c] && !VERBLEND_OHNE[c]) continue
+    const keramik = !!(plan.werkstoffe?.[z] && KERAMIK.has(plan.werkstoffe[z]))
+    if (/M$/.test(c) && !keramik && VERBLEND_M[c]) { voll = true; continue }
+    if (/V$/.test(c) || c === 'KVH' || c === 'ABV') {
+      irgend = true
+      if (!imVerblendbereich(z)) aussen = true
+    }
+  }
+  if (voll) return 'voll'
+  if (aussen || irgend) return 'teil'
+  return undefined
+}
 
 /** Therapiezeile passend zum Werkstoff: Keramik → KM/BM/SKM …, Metall → zurück zur Regel bzw. K/B/SK */
 function zaehneFuerWerkstoff(plan: HkpPlan, w: Werkstoff): { zaehne: HkpPlan['zaehne']; teleskope: string[] } {
@@ -158,6 +245,10 @@ export function ausfuehrungAnwenden(plan: HkpPlan, a: Ausfuehrung): { plan: HkpP
     const r = zaehneFuerWerkstoff(p, a.werkstoff)
     p.zaehne = r.zaehne
     if (r.teleskope.length) hinweise.push(`Teleskope ${r.teleskope.join(', ')} bleiben aus Metall.`)
+  }
+  if (a.verblendung) {
+    p.zaehne = zaehneFuerVerblendung(p, a.verblendung, a.werkstoff)
+    p.einstellungen = { ...p.einstellungen, verblendung: a.verblendung }
   }
   if (a.abformung) {
     p.abformung = a.abformung
@@ -200,16 +291,24 @@ export interface AusfuehrungStand {
   /** nur wenn Implantate geplant sind */
   implantatSystem?: string
   privatStufe: number
+  /** gesetzte oder aus dem Plan gelesene Verblendart */
+  verblendung?: Verblendung
+  /** true, wenn sie gesprochen wurde – nur dann sagt Clara sie in der Ausführung mit */
+  verblendungGesagt?: boolean
 }
 
 export function ausfuehrungVon(plan: HkpPlan): AusfuehrungStand {
   const werkstoffe = [...new Set(kronenEinheiten(plan.positionen).map((e) => werkstoffVon(e, plan.werkstoffe ?? {}).werkstoff))]
+  const gesagt = plan.einstellungen.verblendung
+  const lage = verblendungLage(plan)
   return {
     werkstoffe,
     abformung: plan.abformung,
     labor: plan.einstellungen.labor,
     ...(implantateIn(plan) ? { implantatSystem: plan.implantat.system } : {}),
     privatStufe: plan.einstellungen.eigenPrivatStufe ?? 0,
+    ...((gesagt || lage) ? { verblendung: gesagt || lage } : {}),
+    verblendungGesagt: !!gesagt,
   }
 }
 
@@ -220,6 +319,9 @@ export const WERKSTOFF_SPRECH: Record<Werkstoff, string> = {
 const ABFORMUNG_SPRECH: Record<Abformung, string> = { scan: 'Intraoralscan', abdruck: 'konventioneller Abdruck', '': 'Abformung offen' }
 const ABFORMUNG_KURZ: Record<Abformung, string> = { scan: 'Intraoralscan', abdruck: 'Abdruck', '': 'offen' }
 export const LABOR_SPRECH: Record<HkpPlan['einstellungen']['labor'], string> = { praxis: 'Eigenlabor', gewerbe: 'Fremdlabor' }
+export const VERBLENDUNG_SPRECH: Record<Verblendung, string> = {
+  teil: 'Teilverblendung', vestibulaer: 'vestibuläre Verblendung', voll: 'Vollverblendung', keine: 'unverblendet',
+}
 
 export const systemSprech = (id: string) => SYSTEM_SPRECH[id] ?? IMPLANTATSYSTEME.find((s) => s.id === id)?.hersteller ?? id
 
@@ -229,6 +331,7 @@ const und = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1)
 export function ausfuehrungSatz(s: AusfuehrungStand): string {
   const teile = [
     ...(s.werkstoffe.length ? [und(s.werkstoffe.map((w) => WERKSTOFF_SPRECH[w]))] : []),
+    ...(s.verblendungGesagt && s.verblendung ? [VERBLENDUNG_SPRECH[s.verblendung]] : []),
     ABFORMUNG_SPRECH[s.abformung],
     LABOR_SPRECH[s.labor],
     ...(s.implantatSystem ? [`Implantatsystem ${systemSprech(s.implantatSystem)}`] : []),
@@ -245,6 +348,10 @@ export function ausfuehrungUnterschied(vorher: AusfuehrungStand, nachher: Ausfue
   if (wn && wv !== wn) teile.push(wv ? `${wn} statt ${wv}` : wn)
   if (vorher.abformung !== nachher.abformung) teile.push(`${ABFORMUNG_KURZ[nachher.abformung]} statt ${ABFORMUNG_KURZ[vorher.abformung]}`)
   if (vorher.labor !== nachher.labor) teile.push(`${LABOR_SPRECH[nachher.labor]} statt ${LABOR_SPRECH[vorher.labor]}`)
+  if ((vorher.verblendungGesagt || nachher.verblendungGesagt) && vorher.verblendung !== nachher.verblendung && nachher.verblendung) {
+    const neu = VERBLENDUNG_SPRECH[nachher.verblendung]
+    teile.push(vorher.verblendung ? `${neu} statt ${VERBLENDUNG_SPRECH[vorher.verblendung]}` : neu)
+  }
   if (nachher.implantatSystem && vorher.implantatSystem !== nachher.implantatSystem)
     teile.push(`Implantatsystem ${systemSprech(nachher.implantatSystem)}${vorher.implantatSystem ? ` statt ${systemSprech(vorher.implantatSystem)}` : ''}`)
   if (vorher.privatStufe !== nachher.privatStufe)

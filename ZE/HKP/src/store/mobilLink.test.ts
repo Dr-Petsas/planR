@@ -11,6 +11,8 @@ describe('Handy-Ansicht aus dem Clara-Link', () => {
   it('Karte in der App immer mobil, SMS-Link nur auf schmalem Bildschirm, Vollansicht erzwingbar', () => {
     expect(mobilGewuenscht('?hkp=abc&t=1.x&ansicht=mobil', false)).toBe(true)
     expect(mobilGewuenscht('?hkp=abc&t=1.x', true)).toBe(true)
+    expect(mobilGewuenscht('?hkp=abc&t=1.x', true, true)).toBe(false)
+    expect(mobilGewuenscht('?hkp=abc&t=1.x&ansicht=mobil', false, true)).toBe(true)
     expect(mobilGewuenscht('?hkp=abc&t=1.x', false)).toBe(false)
     expect(mobilGewuenscht('?hkp=abc&t=1.x&ansicht=voll', true)).toBe(false)
     expect(mobilGewuenscht('?ansicht=mobil', true)).toBe(false)

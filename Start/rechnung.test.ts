@@ -37,20 +37,37 @@ describe('Zählwerk', () => {
 })
 
 describe('Abrechnung', () => {
-  it('voller Monat: Grundgebühr + 1,59 € je Plan + 19 % USt', () => {
+  it('voller Monat: Grundgebühr + 2,49 € je Plan + 19 % USt', () => {
     const z = leeresZaehlwerk(new Date('2026-09-15T00:00:00Z'))
     zaehlwerkAktualisieren(z, Array.from({ length: 12 }, (_, i) => g(`p${i}`, `2026-10-${String(i + 1).padStart(2, '0')}`)), new Date('2026-10-31T00:00:00Z'))
     const a = abrechnen(z, '2026-10', 'planr')
-    expect(a.posten.map((p) => p.summeCent)).toEqual([6900, 1908])
-    expect([a.nettoCent, a.ustCent, a.bruttoCent]).toEqual([8808, 1674, 10482])
+    expect(a.posten.map((p) => p.summeCent)).toEqual([6900, 2988])
+    expect([a.nettoCent, a.ustCent, a.bruttoCent]).toEqual([9888, 1879, 11767])
   })
 
-  it('erster Monat anteilig, ohne Pläne nur die Grundgebühr', () => {
+  it('erster Monat anteilig plus einmalige Einrichtung', () => {
     const z = leeresZaehlwerk(new Date('2026-10-12T10:00:00Z'))
     const a = abrechnen(z, '2026-10', 'planr_clara')
-    expect(a.posten).toHaveLength(1)
     expect(a.posten[0].text).toContain('20 von 31 Tagen')
-    expect(a.nettoCent).toBe(Math.round((11800 * 20) / 31))
+    expect(a.posten[1].text).toContain('einmalig')
+    expect(a.posten[1].summeCent).toBe(129900)
+    expect(a.nettoCent).toBe(Math.round((22900 * 20) / 31) + 129900)
+  })
+
+  it('die Einrichtung steht nur auf der ersten Rechnung', () => {
+    const z = leeresZaehlwerk(new Date('2026-10-12T10:00:00Z'))
+    const zweiter = abrechnen(z, '2026-11', 'planr_clara')
+    expect(zweiter.posten.map((p) => p.summeCent)).toEqual([22900])
+  })
+
+  it('Dokumentation ist eine Pauschale, ohne Preis je Eintrag', () => {
+    const z = leeresZaehlwerk(new Date('2026-09-15T00:00:00Z'))
+    monatMerken(z, '2026-10', 'planr', true)
+    zaehlwerkAktualisieren(z, [g('n1', '2026-10-04')], new Date('2026-10-31T00:00:00Z'))
+    const a = abrechnen(z, '2026-10', 'planr')
+    expect(a.posten.map((p) => p.summeCent)).toEqual([6900, 249, 8900])
+    expect(a.posten[2].text).toContain('kein Preis je Eintrag')
+    expect(a.posten[2].menge).toBe(1)
   })
 
   it('Monat und Paket merken', () => {

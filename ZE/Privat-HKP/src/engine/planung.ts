@@ -42,22 +42,39 @@ export const ZUORDNUNG: Record<string, { goz: string; anker?: string; beb: strin
   PKV: { goz: '2220', beb: ['2126', '2611'] },
   PKM: { goz: '2220', beb: ['2534'] },
   VE: { goz: '2220', beb: ['0833', '2653', '2951'] },
+  ZA: { goz: '2210', anker: '5010', beb: ['2251'] },
+  ZAB: { goz: '', beb: ['2351'] },
+  I1: { goz: '2150', beb: ['2301'] },
+  I2: { goz: '2160', beb: ['2302'] },
+  I3: { goz: '2170', beb: ['2303'] },
+  I4: { goz: '2170', beb: ['2304'] },
+  C1: { goz: '2150', beb: ['2551'] },
+  C2: { goz: '2160', beb: ['2552'] },
+  C3: { goz: '2170', beb: ['2553'] },
+  C4: { goz: '2170', beb: ['2554'] },
+  ON: { goz: '2170', beb: ['2304'] },
+  ONK: { goz: '2170', beb: ['2554'] },
   VEK: { goz: '2220', beb: ['0833', '2663', '2945'] },
   T: { goz: '5040', beb: ['3001'] },
+  TZ: { goz: '5040', beb: ['3001', '6905'] },
+  TZV: { goz: '5040', beb: ['3001', '6905', '2602'] },
   TV: { goz: '5040', beb: ['3001', '2611'] },
-  TM: { goz: '5040', beb: ['3001', '2612'] },
+  TM: { goz: '5040', beb: ['3001', '2602'] },
   T2: { goz: '5100', beb: ['3001'] },
   T2V: { goz: '5100', beb: ['3001', '2611'] },
-  T2M: { goz: '5100', beb: ['3001', '2612'] },
+  T2M: { goz: '5100', beb: ['3001', '2602'] },
+  ZAS: { goz: '2200', anker: '5000', beb: ['2251'] },
   SK: { goz: '2200', anker: '5000', beb: ['2101'] },
   SKV: { goz: '2200', anker: '5000', beb: ['2121', '2611'] },
   SKM: { goz: '2200', anker: '5000', beb: ['2281', '2612'] },
   SKO: { goz: '2200', anker: '5000', beb: ['2101', '3023'] },
   SKVO: { goz: '2200', anker: '5000', beb: ['2121', '2611', '3023'] },
   SKMO: { goz: '2200', anker: '5000', beb: ['2281', '2612', '3023'] },
+  STZ: { goz: '5040', beb: ['3001', '6905'] },
+  STZV: { goz: '5040', beb: ['3001', '6905', '2602'] },
   ST: { goz: '5040', beb: ['3001'] },
   STV: { goz: '5040', beb: ['3001', '2611'] },
-  STM: { goz: '5040', beb: ['3001', '2612'] },
+  STM: { goz: '5040', beb: ['3001', '2602'] },
   A: { goz: '', beb: ['2155'] },
   ABV: { goz: '', beb: ['2361', '2611'] },
   ABM: { goz: '', beb: ['2351', '2612'] },
@@ -69,13 +86,13 @@ export const ZUORDNUNG: Record<string, { goz: string; anker?: string; beb: strin
   SBM: { goz: '', beb: ['2351', '2612'] },
 }
 
-const GLIED = /^(S?B|AB)[VM]?$/
+const GLIED = /^(S?B|AB)[VM]?$|^ZAB$/
 const PROTHESENZAHN = /^(S?EO?|SO)$/
 const STEGZAHN = /^S?EO$/
 const GESCHIEBE = /^S?K[VM]?O$/
-const PFEILERKRONE = /^(S?K|PK|S?T)/
-const IMPLANTAT = /^S(K|T|O)/
-const FESTSITZEND = /^(S?K|PK|VE|S?B|AB|A$|R$)/
+const PFEILERKRONE = /^(S?K|PK|ZA$|ZAS$|S?T)/
+const IMPLANTAT = /^S(K|T|O)|^ZAS$/
+const FESTSITZEND = /^(S?K|PK|VE|ZA$|ZAS$|ZAB$|I\d|C\d|ONK?|S?B|AB|A$|R$)/
 const VENEER = /^VEK?$/
 
 export interface PlanungsErgebnis {
@@ -84,6 +101,13 @@ export interface PlanungsErgebnis {
 }
 
 const spanne = (z: string[]) => (z.length === 1 ? z[0] : `${z[0]}-${z[z.length - 1]}`)
+
+function bebFuer(k: string, b: string, z: string) {
+  if (!istFrontzahn(z)) return b
+  if ((k === 'ZA' || k === 'ZAS') && b === '2251') return '2252'
+  if (k === 'ZAB' && b === '2351') return '2352'
+  return b
+}
 
 /** Kieferhälften und Frontzahnbereiche für die optisch-elektronische Abformung (GOZ 0065) */
 function scanBereich(zahn: string) {
@@ -188,7 +212,7 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
     // ---- je Zahn ----
     for (const z of sitz) {
       const k = P(z)
-      if (!k) continue
+      if (!k || k === ')(') continue
       if (FESTSITZEND.test(k) && !GLIED.test(k)) festsitzendKiefer.add(kiefer)
       if (abformung === 'scan' && ((FESTSITZEND.test(k) && !GLIED.test(k)) || /^S?T/.test(k))) {
         scanBereiche.add(scanBereich(z))
@@ -209,7 +233,9 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
       const anker = brueckenAnker.has(z) || GESCHIEBE.test(k) || stegAnker.has(z) || (prothesenZaehne.length > 0 && /^S?T/.test(k))
       const goz = anker && zuo.anker ? zuo.anker : zuo.goz
       if (goz) pos('GOZ', goz, z)
-      for (const b of zuo.beb) pos('BEB', b, z)
+      for (const b of zuo.beb) pos('BEB', bebFuer(k, b, z), z)
+      if (/^(TM|STM|T2M|TZV|STZV)$/.test(k) && !hinweise.some((h) => h.startsWith('Vollverblendete Teleskope')))
+        hinweise.push('Vollverblendete Teleskope: Verblendung aus Kunststoff (Komposite, BEB 2602). Keramik platzt beim Aufsetzen durch die Spannung ab.')
       if (VENEER.test(k)) pos('GOZ', '2197', z)
       if (GESCHIEBE.test(k)) pos('GOZ', '5080', z)
       if (PFEILERKRONE.test(k)) pos('GOZ', brueckenAnker.has(z) ? '5120' : '2270', z)
@@ -231,9 +257,13 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
       pos('BEB', '3031', zahn)
       pos('BEB', '3032', zahn, s.zaehne.length)
     }
-    for (const x of stegAnker) if (P(x) === 'SO') pos('BEB', '2035', x)
+    for (const x of stegAnker) if (P(x) === 'SO') {
+      pos('GOZ', '5030', x)
+      pos('BEB', '2035', x)
+    }
     const einzelanker = sitz.filter((z) => P(z) === 'SO' && !stegAnker.has(z))
     for (const z of einzelanker) {
+      pos('GOZ', '5030', z)
       pos('GOZ', '5080', z)
       pos('BEB', '3027', z)
     }

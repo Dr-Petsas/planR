@@ -11,7 +11,7 @@ import { fallMigrieren, neuerFall, useEinstellungen, useFall, useParAblage } fro
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
-import { PlanrZurueck } from './PlanrZurueck'
+import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
 import AntragReiter from './components/AntragReiter'
 import StreckeReiter from './components/StreckeReiter'
 import FormulareReiter from './components/FormulareReiter'
@@ -96,6 +96,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <PlanrLeiste punkte={REITER.map((r) => ({ id: r.id, text: r.label }))} aktiv={reiter} onWahl={(id) => setReiter(id as ReiterId)} />
       <header className="kopf keindruck">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <PlanrZurueck />

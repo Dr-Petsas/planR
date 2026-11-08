@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ALLE_ZAEHNE } from './engine/zahnschema'
-import { useAblage } from './ablage'
+import { planNummer, nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 import type {
@@ -85,10 +85,7 @@ export function leererBefund(
   return { id: id(), phase, datum, bezeichnung, zaehne }
 }
 
-export function nummerFormat(n: number): string {
-  const jahr = new Date().getFullYear()
-  return `PAR-${jahr}-${String(n).padStart(3, '0')}`
-}
+export const nummerFormat = (n: number) => planNummer('PAR', n)
 
 export function neuerFall(nummer: number): ParFall {
   return {
@@ -249,6 +246,7 @@ export function fallMigrieren(roh: unknown): ParFall {
     termine: Array.isArray(p.termine) ? p.termine.map(fixTermin) : [],
     planung: { ...v.planung, ...p.planung },
     modus: p.modus ?? v.modus,
+    nummer: nummerMitReihe(p.nummer || v.nummer),
     zielGesamt: p.zielGesamt ?? 0,
     zusatz: {
       ...v.zusatz, ...p.zusatz,

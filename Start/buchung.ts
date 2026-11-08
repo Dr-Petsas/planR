@@ -1,14 +1,14 @@
 /**
- * Buchung von PlanR (Paket 1) bzw. PlanR + Sprach-KI (Paket 2) über planr.pickadoc.de:
+ * Buchung von PlanR über planr.pickadoc.de:
  * Stammdaten, KZV, Praxissystem, Zugänge und SEPA-Lastschriftmandat. Die Freischaltung macht Pickadoc
  * nach der Info-Mail an info@pickadoc.de (Praxis in Pickadoc anlegen, Abo planr setzen).
  */
 import { randomBytes } from 'node:crypto'
 import { KZVEN } from './src/data/kzv.ts'
 import { pvsVon } from './src/einstellungen.ts'
-import { PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './src/paket.ts'
+import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './src/paket.ts'
 
-export { PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket }
+export { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket }
 
 export const GLAEUBIGER = { name: 'Pickadoc GmbH', anschrift: 'Medical Center · c/o Dr. Petsas · Luise-Rainer-Str. 6–10 · 40235 Düsseldorf' }
 
@@ -24,6 +24,8 @@ export interface Buchung {
   benutzer: string[]
   sepa: { inhaber: string; anschrift: string; iban: string; bic: string; bank: string; mandatsreferenz: string; unterschrift: string }
   hinweis: string
+  /** Upgrade Dokumentation per Sprache, 89 € im Monat, kein Preis je Eintrag */
+  doku: boolean
   /** Pickadoc-Konto: sofort angelegt, schon vorhanden (Freischaltung von Hand) oder Anlage fehlgeschlagen */
   konto?: { status: 'angelegt' | 'vorhanden' | 'manuell'; clientId?: string }
 }
@@ -120,7 +122,7 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
     passwort,
     buchung: {
       id: `B-${jetzt.toISOString().slice(0, 10).replace(/-/g, '')}-${randomBytes(3).toString('hex').toUpperCase()}`,
-      eingang: jetzt.toISOString(), paket, praxis, inhaber, kzv, pvs, pickadocKonto, benutzer, sepa, hinweis: text(r.hinweis, 1000),
+      eingang: jetzt.toISOString(), paket, doku: r.doku === true, praxis, inhaber, kzv, pvs, pickadocKonto, benutzer, sepa, hinweis: text(r.hinweis, 1000),
     },
   }
 }
@@ -128,7 +130,7 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
 const euro = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
 const kzvName = (nr: string) => { const k = KZVEN.find((x) => x.nr === nr); return k ? `${k.kurz} (${k.name}, Nr. ${k.nr})` : nr }
 const wer = (b: Buchung) => [b.inhaber.titel, b.inhaber.vorname, b.inhaber.nachname].filter(Boolean).join(' ')
-export const preisText = (p: Paket) => `${PAKETE[p].name}: ${euro(PAKETE[p].monat)} im Monat + ${euro(PRO_PLAN)} je Plan, netto zzgl. USt., monatlich kündbar`
+export const preisText = (p: Paket) => `${PAKETE[p].name}: ${euro(PAKETE[p].monat)} im Monat + ${euro(PRO_PLAN)} je Plan${p === 'planr_clara' ? `, einmalig ${euro(EINRICHTUNG)} Einrichtung und KI-Training (ein bis zwei Wochen)` : ''}, netto zzgl. USt., jederzeit zum Monatsende kündbar. PlanR ist ein Produkt der Pickadoc GmbH`
 
 /** Wortlaut des Mandats; dieselbe Fassung zeigt das Formular und bekommt die Praxis per Mail. */
 export function mandatText(b: Pick<Buchung, 'praxis' | 'sepa'>, glaeubigerId: string, ibanAnzeige = ibanGruppiert(b.sepa.iban)): string {
@@ -190,12 +192,12 @@ export function infoMail(b: Buchung, glaeubigerId: string): { betreff: string; t
     ...(b.konto?.status === 'angelegt' ? [
       'FREISCHALTUNG: automatisch erledigt',
       `  Praxis in Pickadoc angelegt (clientId ${b.konto.clientId}), Admin-Konto ${b.inhaber.email} mit selbst gewähltem Passwort,`,
-      `  subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung} }. Die Praxis kann sich sofort anmelden.`,
+      `  subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung}, doku: ${b.doku === true} }. Die Praxis kann sich sofort anmelden.`,
       `  Bitte nur prüfen: Buchung plausibel? SEPA-Mandat ${b.sepa.mandatsreferenz} ins Lastschriftverfahren übernehmen.`,
     ] : [
       `ZU TUN FÜR DIE FREISCHALTUNG (${b.konto?.status === 'vorhanden' ? 'für diese E-Mail gibt es schon ein Pickadoc-Konto' : 'automatische Anlage hat nicht geklappt'})`,
       `  1. Praxis in Pickadoc finden bzw. anlegen; Konto ${b.inhaber.email} als Admin.`,
-      `  2. Billing: subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung} }, SEPA-Mandat ${b.sepa.mandatsreferenz} hinterlegen.`,
+      `  2. Billing: subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung}, doku: ${b.doku === true} }, SEPA-Mandat ${b.sepa.mandatsreferenz} hinterlegen.`,
       `  3. ${b.konto?.status === 'vorhanden' ? 'Der Praxis Bescheid geben: Anmeldung mit dem bestehenden Pickadoc-Passwort.' : 'Passwort-Mail an die Praxis auslösen (PlanR-Anmeldung → „Passwort vergessen“).'}`,
     ]),
   ]
@@ -214,6 +216,7 @@ export function kundenMail(b: Buchung, glaeubigerId: string, basis = 'https://pl
       '',
       `vielen Dank für Ihre Buchung von ${PAKETE[b.paket].name} für ${b.praxis.name}.`,
       `Paket: ${preisText(b.paket)}.`,
+      ...(b.doku ? [`Dazu die KI-Sprachdokumentation: ${euro(DOKU_MONAT)} im Monat, kein Preis je Eintrag.`] : []),
       '',
       'So geht es weiter:',
       ...(b.konto?.status === 'angelegt' ? [

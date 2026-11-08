@@ -35,6 +35,18 @@ describe('Auftrag verstehen', () => {
     expect(auftragVerstehen('Teleskope auf 13 und 23, die Front bleibt').erhalten).toEqual(['13', '12', '11', '21', '22', '23'])
   })
 
+  it('Aufzählung beim Entfernen zählt ganz (Anruf 06.11.2026 08:38)', () => {
+    const live = auftragVerstehen('All-on-6 im Oberkiefer auf den Implantaten 16, 13, 14, 23, 24 und 26, nach Entfernung der Zähne 15, 12, 11, 21, 22 und 25, festsitzende Prothese, Kasse.')
+    expect(live.entfernen).toEqual(['15', '12', '11', '21', '22', '25'])
+    expect(live.pfeiler).toEqual(['16', '13', '14', '23', '24', '26'])
+    expect(auftragVerstehen('Teleskope auf 13 und 23, die Zähne 12, 11, 21 und 22 werden entfernt').entfernen).toEqual(['12', '11', '21', '22'])
+    expect(auftragVerstehen('Teleskope auf 13 und 23, die Zähne 15, 16 und 17 bleiben').erhalten).toEqual(['15', '16', '17'])
+    // Einzahl hinten gilt nur dem eigenen Zahn, ein vorn stehendes Verb endet am nächsten Satzteil ohne Zähne
+    const einzeln = auftragVerstehen('Krone auf 16, 17, 15 wird entfernt')
+    expect(einzeln.entfernen).toEqual(['15'])
+    expect(auftragVerstehen('Entfernung 15, Kasse, 13 und 23').entfernen).toEqual(['15'])
+  })
+
   it('gesprochener Befund', () => {
     expect(befundVerstehen('es fehlen 15 bis 17 und 25 bis 27, 14 überkronungsbedürftig')).toMatchObject({ 15: 'f', 17: 'f', 25: 'f', 27: 'f', 14: 'ww' })
     const b = befundVerstehen('14 und 24 sind vorhanden, alle anderen fehlen', 'OK')
@@ -45,7 +57,7 @@ describe('Auftrag verstehen', () => {
 
   it('„Alle Zähne sind gesund“ beantwortet die Befundfrage (Anruf 07.10.2026 16:26)', () => {
     const b = befundVerstehen('Alle Zähne sind gesund', 'OK')
-    expect(Object.keys(b).sort()).toEqual(['11', '12', '13', '14', '15', '16', '17', '21', '22', '23', '24', '25', '26', '27'])
+    expect(Object.keys(b).sort()).toEqual(['11', '12', '13', '14', '15', '16', '17', '18', '21', '22', '23', '24', '25', '26', '27', '28'])
     expect(Object.values(b).every((c) => c === '')).toBe(true)
     expect(befundVerstehen('es fehlt keiner', 'UK')[36]).toBe('')
     const c = befundVerstehen('16 fehlt, alle anderen Zähne sind vorhanden', 'OK')
@@ -104,6 +116,11 @@ describe('Auftrag verstehen', () => {
     expect(befundVerstehen('37 zerstört. 47 Implantat')).toEqual({ 37: 'x', 47: 'i' })
     expect(befundVerstehen('14 Brückenglied, 15 und 13 Kronen')).toEqual({ 14: 'b', 15: 'k', 13: 'k' })
     expect(befundVerstehen('16 fehlt, 17, 18')).toEqual({ 16: 'f', 17: 'f', 18: 'f' })
+    const live = befundVerstehen('Im Oberkiefer fehlen die Zähne 18 bis 14, 12, 11, 21 und 22 sowie 24 bis 28. Es sind nur die Zähne 13 und 23 vorhanden.')
+    expect(live[13]).toBe('')
+    expect(live[23]).toBe('')
+    for (const z of ['18', '17', '16', '15', '14', '12', '11', '21', '22', '24', '25', '26', '27', '28']) expect(live[z], z).toBe('f')
+    expect(live[33]).toBeUndefined()
     expect(befundAusAuftrag('Brücke von 34 auf 36, 37 Krone')).not.toMatch(/37/)
   })
 
@@ -163,6 +180,35 @@ describe('Auftrag verstehen', () => {
     expect(a.teile).toBeUndefined()
     expect(a.kiefer).toBe('UK')
     expect(a.versorgung).toBe('teleskopprothese')
+  })
+
+  it('Interims-Vollprothese nur Unterkiefer plant den Oberkiefer nicht (Zaharia 06.11.2026)', () => {
+    const befund: Befund = {
+      11: 'e', 12: 'e', 13: 'e', 14: 'e', 15: 'e', 16: 'e', 17: 'f', 18: 'f',
+      21: 'e', 22: 'e', 23: 'e', 24: 'e', 25: 'e', 26: 'j', 27: 'f', 28: 'f',
+      48: 'f', 47: 'e', 46: 'x', 45: 'b', 44: 'x', 43: 'x', 42: 'b', 41: 'b',
+      31: 'b', 32: 'b', 33: 'x', 34: 'x', 35: 'b', 36: 'x', 37: 'e', 38: 'f',
+    }
+    const a = auftragVerstehen('Interimsvollprothese Unterkiefer, Eigenlabor')
+    a.entfernen = ['46', '44', '43', '33', '34', '36']
+    expect(a).toMatchObject({ versorgung: 'totalprothese', kiefer: 'UK', interim: true })
+    const r = planAusAuftrag(a, befund)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.plan.weitere.interimUK).toBe(true)
+    expect(r.plan.weitere.interimOK).toBe(false)
+    expect(r.plan.befunde.map((b) => b.nr)).toContain('5.4')
+    expect(r.plan.befunde.some((b) => b.zahnGebiet === 'OK' || b.zahnGebiet === '26')).toBe(false)
+    expect(r.plan.positionen.some((p) => p.zahn === 'OK' || p.zahn === '26')).toBe(false)
+    expect(r.plan.positionen.some((p) => p.nr === '97b' && p.zahn === 'UK')).toBe(true)
+    expect(r.plan.positionen.some((p) => p.nr === '98c' || p.nr === '98b')).toBe(false)
+    expect(r.plan.zaehne['16'].TP).toBe('')
+    expect(r.plan.zaehne['36'].TP).toBe('E')
+    const definitiv = planAusAuftrag({ ...a, interim: false }, befund)
+    expect(definitiv.status).toBe('ok')
+    if (definitiv.status !== 'ok') return
+    expect(definitiv.plan.befunde.map((b) => b.nr)).toContain('4.4')
+    expect(definitiv.plan.befunde.some((b) => b.zahnGebiet === 'OK')).toBe(false)
   })
 
   it('Vollprothese in beiden Kiefern ohne Befund: zahnlos angenommen', () => {
@@ -249,6 +295,67 @@ describe('Plan aus Auftrag', () => {
     expect(planAusAuftrag(auftragVerstehen(SATZ), { ...fehlend(...OK_OHNE_4, '14'), 24: '' })).toMatchObject({ status: 'rueckfrage', grund: 'pfeiler_fehlt', zaehne: ['14'] })
     expect(planAusAuftrag(auftragVerstehen(SATZ), {})).toMatchObject({ status: 'rueckfrage', grund: 'befund_fehlt' })
     expect(planAusAuftrag(auftragVerstehen('Teleskopprothese auf den Vierern'), { 14: '' })).toMatchObject({ status: 'rueckfrage', grund: 'kiefer' })
+  })
+
+  it('Zahnlos, Implantate Region 3, 4 und 6 je Quadrant, Brücken von 4 auf 6 und von 3 auf 3', () => {
+    const befund = befundVerstehen('ändere den Befund bei Fanelas Prodromos auf zahnlos mit Implantaten in deek Regione 3 4 und 6 in jedem Quadranten')
+    expect(befundVerstehen('zahnlos, Implantate in der Region drei, vier und sechs in jedem Quadranten')['36']).toBe('i')
+    const implantate = ['13', '14', '16', '23', '24', '26', '33', '34', '36', '43', '44', '46']
+    expect(implantate.every((z) => befund[z] === 'i')).toBe(true)
+    expect(befund[15]).toBe('f')
+    expect(befund[11]).toBe('f')
+    expect(befund[17]).toBe('f')
+    expect(befund[18]).toBe('f')
+    expect(Object.values(befund).filter((c) => c === 'i')).toHaveLength(12)
+
+    const a = auftragVerstehen('Brücken aus vollanatomischem Zirkon mit Vollverbelndung jeweils von 4 auf 6 und von 3 auf 3, mit Intraoralscan')
+    expect(a.versorgung).toBe('bruecke')
+    expect(a.abformung).toBe('scan')
+    expect(a.verblendung).toBe('voll')
+    expect(a.form).toBe('vollanatomisch')
+    expect(a.teile?.map((t) => t.kiefer).sort()).toEqual(['OK', 'UK'])
+    const okTeil = a.teile?.find((t) => t.kiefer === 'OK')
+    expect(okTeil?.pfeiler.sort()).toEqual(['13', '14', '16', '23', '24', '26'])
+    expect(okTeil?.glieder?.sort()).toEqual(['11', '12', '15', '21', '22', '25'])
+    const ukTeil = a.teile?.find((t) => t.kiefer === 'UK')
+    expect(ukTeil?.pfeiler.sort()).toEqual(['33', '34', '36', '43', '44', '46'])
+    expect(ukTeil?.glieder?.sort()).toEqual(['31', '32', '35', '41', '42', '45'])
+
+    const r = planAusAuftrag(a, befund)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.plan.abformung).toBe('scan')
+    expect(r.plan.zaehne['14'].TP).toBe('SKM')
+    expect(r.plan.zaehne['15'].TP).toBe('SBM')
+    expect(r.plan.zaehne['13'].TP).toBe('SKM')
+    expect(r.plan.zaehne['11'].TP).toBe('SBM')
+    expect(r.plan.zaehne['44'].TP).toBe('SKM')
+    expect(r.plan.zaehne['45'].TP).toBe('SBM')
+    expect(r.plan.zaehne['17'].TP).toBe('')
+    expect(r.plan.befunde.map((b) => b.nr)).toEqual(expect.arrayContaining(['4.2', '4.4']))
+    const e = berechnen(r.plan, LISTEN)
+    const pos = e.positionen.map((p) => `${p.ebene} ${p.nr} ${p.zahn}`)
+    expect(pos).toContain('GOZ 5000 14')
+    expect(pos).toContain('BEB 2612 14')
+    expect(pos.some((p) => p.startsWith('BEB 2251'))).toBe(false)
+    expect(pos.some((p) => p.startsWith('GOZ 5070'))).toBe(true)
+    expect(pos.some((p) => p.startsWith('GOZ 0065'))).toBe(true)
+    expect(auftragVerstehen('Brücke von 14 auf 16').pfeiler).toEqual(['14', '16'])
+  })
+
+  it('aufgelöste Zahnnummern: Implantate sind i, Unterkiefer-Brücken behalten die Glieder', () => {
+    const befund = befundVerstehen('zahnlos. 13, 14, 16, 23, 24, 26, 33, 34, 36, 43, 44 und 46 sind Implantate.')
+    for (const z of ['13', '14', '16', '23', '24', '26', '33', '34', '36', '43', '44', '46']) expect(befund[z]).toBe('i')
+    expect(befund[15]).toBe('f')
+    const a = auftragVerstehen('Implantatbrücken aus vollanatomischem Zirkon mit Vollverblendung, Intraoralscan. Oberkiefer von 14 auf 16, von 24 auf 26 und von 13 auf 23. Unterkiefer von 44 auf 46, von 34 auf 36 und von 43 auf 33.')
+    const uk = a.teile?.find((t) => t.kiefer === 'UK')
+    expect(uk?.glieder?.sort()).toEqual(['31', '32', '35', '41', '42', '45'])
+    const r = planAusAuftrag(a, befund)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.plan.zaehne['33'].TP).toBe('SKM')
+    expect(r.plan.zaehne['31'].TP).toBe('SBM')
+    expect(r.plan.abformung).toBe('scan')
   })
 
   it('Brücke per Sprache: Anker, Glieder, Lücke als Befund (Gespräch 06.10.2026)', () => {

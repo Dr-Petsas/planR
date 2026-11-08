@@ -277,6 +277,8 @@ describe('Regelengine – Befundklassen 3 bis 7', () => {
     const r = regelversorgungErmitteln(planMit(fehlend('36', '37', '38')).zaehne, { interimUK: true })
     expect(zuschlag(r.befunde, '5.1')).toEqual(['UK'])
     expect(r.positionen.some((p) => p.nr === '96a' && p.zahn === 'UK')).toBe(true)
+    expect(nrs(r.befunde)).not.toContain('3.1')
+    expect(nrs(r.befunde)).not.toContain('4.3')
   })
 
   it('7.1: implantatgetragene Krone in zahnbegrenzter Einzelzahnlücke', () => {

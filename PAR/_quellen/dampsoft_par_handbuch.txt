@@ -1,0 +1,1635 @@
+
+===== Seite 1 =====
+1
+Pionier der Zahnarzt-Software.
+Seit 1986.
+HANDBUCH
+DS-WIN-PAR 
+Version: 3.0
+===== Seite 2 =====
+2
+1. Einleitung 1
+2. PAR-Erweiterung voreinstellen 2
+2.1. PAR-Erweiterung öffnen 2
+2.2. Voreinstellungen 4
+2.2.1. Allgemeine Voreinstellungen 5
+2.2.2. BEMA-Prüfung einstellen 7
+2.2.3. Externe Anbindungen 8
+2.2.4. Voreinstellung für optische Hervorhebung UPTe/f 9
+3. PAR-Behandlungen verwalten 10
+3.1. Zusätzliche Daten und allgemeine Informationen aufrufen 10
+3.2. PAR-Befunde nach Kassenrichtlinie erstellen 12
+3.3. Informationen zur Erfassung der UPT aufrufen 12
+3.3.1. Initialbefund antiinfektiöse Therapie (AIT) 14
+3.3.2. Abrechnung/Kassenrechnung erstellen 16
+3.3.3. Automatische Kassenrechnungsmarkierung 19
+3.3.4. Übernahmefälle anlegen 19
+3.3.5. Befundevaluation (BEVa) 21
+3.3.6. Chirurgische Therapie (CPT) 23
+3.3.7. Befundevaluation (BEVb) 25
+3.3.8. Patienten mit Pflegegrad nach § 22 SGB V 26
+3.3.9. Erklärung Parodontalstatus Blatt 1 27
+3.3.10. PAR-Status Blatt 1: Auswahlliste für „Sonstiges“ anlegen 29
+3.3.11. Erklärung Parodontalstatus Blatt 2 31
+3.4. Kontrollpläne aufstellen 33
+3.5. UPT-Rechner 36
+3.5.1. Termine über den UPT-Rechner vergeben 38
+3.5.2. Leistung „nur für Statistik“ ausblenden 39
+3.5.3. Anpassung des UPT-Rechners bei Übernahmefällen 40
+3.5.4. UPT-Termine drucken 42
+3.6. UPT-Verlängerung beantragen 43
+3.7. Komplexe in Behandlungsplanung übernehmen 44
+3.8. Privatbefunde erstellen 47
+3.8.1. Private Gebührenrechnung 48
+3.9. PAR-Befunde drucken 49
+3.9.1. Befunde mit Messwerten drucken 51
+3.10. Bearbeitung von Leistungen (ändern und löschen) 52
+3.10.1. Leistungen auf „nur für Statistik“ setzen 53
+3.10.2. Leistungen nachträglich ändern 55
+3.10.3. Gelöschte Leistungen zurückholen 56
+3.11. Behandlungsende angeben 57
+4. PAR-Werte aufnehmen 59
+4.1. Befund ändern 59
+4.2. Taschentiefe messen 60
+Inhaltsverzeichnis
+===== Seite 3 =====
+3
+4.2.1. Taschentiefe an Implantaten messen 61
+4.2.2. TT-Verlauf statistisch auswerten 61
+4.3. Leistungsänderung nach Vorbereitung der Monatsabrechnung 63
+4.3.1. Darstellung der PAR-Monatsabrechnung für zukünftige Leistungen 64
+4.3.2. Darstellung der PAR-Monatsabrechnung bei Versicherungswechsel 65
+4.4. Rezessionen aufnehmen 65
+4.5. Vitalität anpassen 66
+4.6. Lockerungsgrade aufnehmen 66
+4.7. Furkationsbefall aufnehmen 67
+4.8. BOP-Werte aufnehmen 68
+4.9. Knochenverlauf aufnehmen 68
+5. PAR-Kontrollbuch 69
+5.1. PAR-Befunde nach neuen Richtlinien verwalten 69
+5.2. Leistungsansicht PAR-Kasse und PAR-Privat 70
+6. Schnittstelle ParoStatusDE 72
+6.1. Schnittstelle ParoStatusDE aktivieren 72
+Feld nicht löschen!
+===== Seite 4 =====
+DAMPSOFT
+Version: 3.0
+Seite 1/77
+1. Einleitung
+Sehr geehrtes Praxis-Team,
+von der Antragsstellung bis zur Abrechnung bietet Ihnen die PAR-Erweiterung alle Funktionen, die für eine 
+erfolgreiche Behandlung im Kassen- und Privatbereich benötigt werden. Im Privatbereich haben Sie darüber 
+hinaus die Möglichkeit, einen Kostenvoranschlag über die voraussichtlich notwendigen Behandlungen anzufertigen. 
+Über das integrierte Kontrollbuch können Sie Ihre PAR-Behandlungen komfortabel einsehen und verwalten sowie
+nach verschiedenen Kriterien filtern.
+Am 01.07.2021 ist die neue PAR-Richtlinie in Kraft getreten. Die Richtlinie optimiert die Behandlungsstrecke für 
+den Versicherten und bringt Änderungen in der Antragsstellung und Abrechnung mit sich.
+Die PAR-Erweiterung ist kostenpflichtig. Sie haben die Möglichkeit, erste Funktionen der Erweiterung in Ihrem DS￾Win zu testen.
+Wir wünschen Ihnen viel Spaß und Erfolg mit dieser Produkterweiterung!
+Ihr Dampsoft-Team
+1. Einleitung
+===== Seite 5 =====
+DAMPSOFT
+Version: 3.0
+Seite 2/77
+2. PAR-Erweiterung voreinstellen
+2.1. PAR-Erweiterung öffnen
+Um die PAR-Erweiterung aufzurufen, haben Sie verschiedene Möglichkeiten. 
+Möglichkeit eins:
+Folgen Sie im DS-Win dem Pfad „Erweiterungen/PAR“.
+Wählen Sie Ihren gewünschten Patienten aus der Patientenauswahl, z. B. .
+Bestätigen Sie die Auswahl mit >>OK<< .
+Die PAR-Erweiterung öffnet sich in einem neuen Fenster.
+1
+2
+2. PAR-Erweiterung voreinstellen
+1
+2
+===== Seite 6 =====
+DAMPSOFT
+Version: 3.0
+Seite 3/77
+2. PAR-Erweiterung voreinstellen
+Möglichkeit zwei: 
+Folgen Sie im DS-Win dem Pfad „Patient/Patientenauswahl“.
+Wählen Sie Ihren gewünschten Patienten aus der Patientenauswahl, z. B. .
+Wechseln Sie in den Reiter „PAR“ .
+Die PAR-Erweiterung öffnet sich.
+3
+4
+4
+3
+===== Seite 7 =====
+DAMPSOFT
+Version: 3.0
+Seite 4/77
+2. PAR-Erweiterung voreinstellen
+2.2. Voreinstellungen
+Aufgrund der neuen PAR-Richtlinie sind einzelne Voreinstellungen abweichend zu der veralteten Richtlinie vor 
+dem 01.07.2021 einzustellen.
+Im Folgenden erklären wir Ihnen die für die neue Richtlinie relevanten Einstellungen.
+Öffnen Sie die PAR-Erweiterung wie in Abschnitt 2.1 beschrieben.
+Klicken Sie auf das Einstellungssymbol . Die Voreinstellungen öffnen sich in einem neuen Fenster und sind in 
+zwei Reiter aufgeteilt.
+Im Reiter „Allgemeine Voreinstellungen“ werden die Einstellungen für die verschiedenen Planarten getrennt 
+voneinander dargestellt.
+Im Reiter „Externe Anbindungen“ stehen Ihnen die Einstellungen für die externen Messsonden zur Verfügung.
+1
+2
+3
+2 3
+1
+===== Seite 8 =====
+DAMPSOFT
+Version: 3.0
+Seite 5/77
+2. PAR-Erweiterung voreinstellen
+2.2.1. Allgemeine Voreinstellungen
+Im Reiter „Allgemeine Voreinstellungen“ werden die Einstellungen für die verschiedenen Planarten (Alle Planar￾ten/Kassenpläne vor 01.07.2021) getrennt voneinander dargestellt.
+Legen Sie bei „Erster Messpunkt“ die Messreihenfolge fest, indem Sie den Messpunkt, an dem die Messung zu￾erst durchgeführt werden soll, für jeden Quadranten festlegen.
+Definieren Sie die Befundanzeige, indem Sie im Bereich Ihre gewünschte Auswahl setzen.
+Legen Sie im Bereich fest, ob und in welcher Form eine automatische BEMA-Prüfung durchgeführt werden soll.
+Weitere Informationen erhalten Sie in Abschnitt 2.2.2.
+Die PAR-Richtlinien ab dem 01.07.2021 sehen die Messung von Sondierungsblutungen vor.
+Um eine Messreihenfolge festzulegen, klicken Sie auf >>selbstdefinierte Messreihenfolge<< .
+Es öffnet sich ein neuer Dialog:
+1
+2
+3
+4
+4
+1
+2
+3
+===== Seite 9 =====
+DAMPSOFT
+Version: 3.0
+Seite 6/77
+2. PAR-Erweiterung voreinstellen
+Klicken Sie in der gewünschten Reihenfolge auf die Messpunkte, die durch Quadrate markiert sind.
+Die gewählte Reihenfolge wird durch Pfeile angezeigt:
+Bei neu erstellten PAR-Befunden werden die Sondierstellen in der von Ihnen festgelegten Reihenfolge eingegeben.
+5
+5
+===== Seite 10 =====
+DAMPSOFT
+Version: 3.0
+Seite 7/77
+2. PAR-Erweiterung voreinstellen
+2.2.2. BEMA-Prüfung einstellen
+Um eine automatische BEMA-Prüfung einzustellen, öffnen Sie die Voreinstellungen.
+Setzen Sie im Bereich die Auswahl bei der gewünschten BEMA-Prüfung.
+Wenn Sie die BEMA-Prüfung aktivieren, öffnet sich der Fehlerassistent, sobald Sie eine falsche Leistung eingeben 
+und diese speichern, oder wenn Sie den PAR-Reiter schließen.
+Ein Tipp für Sie: Wenn Sie „keine Prüfung“ einstellen, werden die fehlerhaften Fälle wie gewohnt in Ihrer PAR￾Monatsabrechnung auf der rechten Seite angezeigt.
+Beispiel Fehlerassistent, wenn Sie die Option „BEMA-Prüfung am Ende der Eingaben“ gewählt haben:
+1
+1
+===== Seite 11 =====
+DAMPSOFT
+Version: 3.0
+Seite 8/77
+2. PAR-Erweiterung voreinstellen
+2.2.3. Externe Anbindungen
+Im Reiter „Externe Anbindungen“ stehen Ihnen die Einstellungen für die externen Messsonden zur Verfügung.
+1 2
+===== Seite 12 =====
+DAMPSOFT
+Version: 3.0
+Seite 9/77
+2. PAR-Erweiterung voreinstellen
+Die externen Anbindungen PeriProbeComp, Peri Control, und Florida Probe-Sonde werden getrennt voneinander 
+dargestellt. Geben Sie bei der von Ihnen verwendeten Anbindung den Port, an dem die Sonde angeschlossen ist, 
+ein, z. B. für PeriProbeComp .
+Ein Tipp für Sie: Weitere Anleitungen zur Anbindung erhalten Sie auf unserer Website unter
+https://www.dampsoft.de/service/infos-fuer-systembetreuer/#toggle-id-5 im Bereich „DS-Win Hardwareanbin￾dung“.
+Für Peri Control II besteht zusätzlich die Möglichkeit, weitere Einstellungen vorzunehmen, z. B. zur Lautstärke, 
+indem Sie bei den gewünschten Auswahlmöglichkeiten ein Häkchen setzen.
+2.2.4. Voreinstellung für optische Hervorhebung UPTe/f
+Es besteht die Möglichkeit, die optische Hervorhebung für die UPTe/f individuell einzustellen.
+Öffnen Sie einen Patienten in der Patientenauswahl. Wechseln Sie in den Reiter „PAR“ .
+Öffnen Sie die Voreinstellungen .
+Die Auswahl bei „Alle Zähne prüfen“ im Bereich ist voreingestellt. Es werden alle Zähne mit Sondierungstiefen 
+von 4 mm mit Sondierungsblutungen oder bei Taschentiefen mit mehr als 4 mm optisch hervorgehoben. 
+Wenn Sie die Auswahl bei „Nur beantragte Zähne prüfen“ setzen, werden ausschließlich die beantragten Zähne 
+hervorgehoben. 
+1
+2
+1
+2
+3
+1
+3
+2
+===== Seite 13 =====
+DAMPSOFT
+Version: 3.0
+Seite 10/77
+3. PAR-Behandlungen verwalten
+3.1. Zusätzliche Daten und allgemeine Informationen aufrufen
+Im Reiter „PAR“ werden zusätzliche Daten zu den PAR-Leistungen angezeigt. Zusätzlich haben Sie die Möglichkeit, 
+in der PAR-Monatsabrechnung wie bei vorherigen PAR-Abrechnungen mittels gedrückter rechter Maustaste die 
+allgemeinen Informationen aufzurufen.
+Um die Daten zu PAR-Leistungen aufzurufen, folgen Sie im DS-Win dem Pfad „Patient/Patientenauswahl“.
+Wählen Sie den gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+Wechseln Sie in den Reiter „Abrechnung“ .
+Klicken Sie mit der rechten Maustaste auf den gewünschten Eintrag, z. B. . Das Kontextmenü öffnet sich.
+Klicken Sie auf „Daten zur PAR-Leistung" .
+Es öffnet sich folgender Dialog:
+1
+2
+3
+4
+3. PAR-Behandlungen verwalten
+1
+2
+3 4
+===== Seite 14 =====
+DAMPSOFT
+Version: 3.0
+Seite 11/77
+3. PAR-Behandlungen verwalten
+Der Dialog enthält die gewohnten zusätzlichen Daten, die Ihnen aus der PatInfo „zusätzliche Daten“ bekannt sind.
+Um die allgemeinen Informationen und zahnärztlichen Leistungen in der PAR-Monatsabrechnung aufzurufen, fol￾gen Sie im DS-Win dem Pfad „Abrechnung/Abrechnung PA“. 
+Klicken Sie mittels gedrückter rechter Maustaste auf den gewünschten Eintrag, z. B. 
+5 .
+5
+6
+7
+===== Seite 15 =====
+DAMPSOFT
+Version: 3.0
+Seite 12/77
+3. PAR-Behandlungen verwalten
+Es öffnet sich ein neuer Dialog mit folgenden Daten: 
+• Allgemeine Informationen : Gesamtpunkte, Honorar, Porto/Tel. und Gesamtkosten. 
+• Zahnärztliche Leistungen : Datum, Leistung, Anzahl, Punkte, Punktwert. 
+Ein Tipp für Sie: Die Punkte entsprechen der Einzelleistung. Sie finden den Betrag zur Ordnungsnummer 602 unter 
+„Allgemeine Informationen“ in der Zeile „Porto/Tel.:“. 
+3.2. PAR-Befunde nach Kassenrichtlinie erstellen 
+Die Reihenfolge in der Versorgungsstrecke der PAR-Richtlinien ist ab dem 01.07.2021 vorgegeben:
+• Antiinfektiöse Therapie (AIT),
+siehe Abschnitt 3.3.1
+• Befundevaluation nach AIT (BEVa) ca. 3 bis 6 Monate nach Abschluss der AIT,
+siehe Abschnitt 3.3.5
+• Chirurgische Therapie (CPT) bei Taschentiefen ab 6 mm,
+siehe Abschnitt 3.3.6
+• Befundevaluation nach CPT (BEVb) ca. 3 bis 6 Monate nach Abschluss der CPT,
+siehe Abschnitt 3.3.7
+• Unterstützende Parodontaltherapie (UPT) ca. 3 bis 6 Monate nach Abschluss der AIT bzw. CPT,
+siehe Abschnitt 3.3.7
+Ein Tipp für Sie: Entsprechend des Progressionsgrades (A, B oder C) hat der Versicherte einen Anspruch auf 2, 4 
+bzw. 6 UPT-Behandlungen innerhalb von zwei Jahren. Wenn notwendig, kann ein Antrag auf UPT-Verlängerung 
+gestellt werden.
+In den folgenden Abschnitten 3.3.1 bis 3.3.8 erklären wir Ihnen die Abläufe der Versorgungsstrecke.
+3.3. Informationen zur Erfassung der UPT aufrufen
+Im DS-Win steht Ihnen eine Abrechnungsübersicht als Hilfestellung für die Abrechnung der unterstützenden Paro￾dontitistherapie (UPT) zur Verfügung.
+Um die Abrechnungsübersicht einzusehen, stehen Ihnen zwei Möglichkeiten zur Verfügung.
+Möglichkeit eins:
+Folgen Sie im DS-Win dem Pfad „Patient/Patientenauswahl“.
+Wählen Sie den gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+6
+7
+6
+1
+===== Seite 16 =====
+DAMPSOFT
+Version: 3.0
+Seite 13/77
+3. PAR-Behandlungen verwalten
+Klicken Sie auf >>PAR-Info<< .
+Es öffnet sich ein neuer Dialog.
+Klicken Sie auf >>UPT-Abrechnung<< .
+Es öffnet sich das Dokument „Übersicht abrechnungsfähiger Leistungen während der UPT-Phase“.
+Möglichkeit zwei:
+Folgen Sie im DS-Win dem Pfad „Patient/Patientenauswahl“.
+Wählen Sie den gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+2
+3
+1
+1
+3
+2
+===== Seite 17 =====
+DAMPSOFT
+Version: 3.0
+Seite 14/77
+3. PAR-Behandlungen verwalten
+Klicken Sie auf >>Neu<< .
+Es öffnet sich ein weiterer Dialog.
+Klicken Sie auf >>UPT-Abrechnungsinformation<< .
+Es öffnet sich das Dokument „Übersicht abrechnungsfähiger Leistungen während der UPT-Phase“.
+3.3.1. Initialbefund antiinfektiöse Therapie (AIT)
+Um einen Initialbefund für eine Parodontitistherapie nach Kassenrichtlinien zu erstellen, folgen Sie dem Pfad „Er￾weiterungen/PAR“.
+Wählen Sie Ihren gewünschten Patienten in der Patientenauswahl aus.
+Wechseln Sie in den Reiter „PAR“. Die PAR-Erweiterung öffnet sich.
+2
+3
+1
+2
+3
+===== Seite 18 =====
+DAMPSOFT
+Version: 3.0
+Seite 15/77
+3. PAR-Behandlungen verwalten
+Klicken Sie auf >>Neu<< .
+Hinweis!
+Beginnen Sie jeden neuen Therapieschritt, indem Sie erneut auf >>Neu<< klicken.
+Sie haben die Möglichkeit, die Leistungen 108 und 111 zu einem späteren Zeitpunkt einzutragen. Diese Leistungen 
+werden erneut in die Abrechnung übertragen. In diesen Fällen ist kein neuer Teilschritt notwendig.
+Geben Sie das Datum der Aufstellung über die Pfeiltasten oder das Eingabefeld ein.
+Wählen Sie den Behandler aus der Auswahlliste .
+Setzen Sie ein Häkchen bei „Kasse“ .
+Wählen Sie die Option „Initialbefund“ . Der Initialbefund wird in der Befundübersicht mit der Abkürzung „AIT“
+gekennzeichnet.
+Legen Sie die Taschentiefe fest, z. B. „2 Messpunkte (distal / mesial)“ .
+Legen Sie den BOP fest, z. B. „2 Messpunkte (distal / mesial)“ .
+Ein Tipp für Sie: Wenn Sie die Produkterweiterung Prophylaxe nutzen, haben Sie die Möglichkeit, 4 oder 6 Mess￾punkte zu wählen. Nach Richtlinien sind 2 Messpunkte vorgesehen. Dies ist ohne die Produkterweiterung möglich. 
+Bestätigen Sie die Eingaben mit >>OK<< .
+In der Liste werden Ihnen die Befunde angezeigt. Im Beispiel wird der Initialbefund angezeigt.
+1
+1
+2
+3
+4
+5 9
+6
+7
+8
+9
+1
+6
+4
+3
+2
+5
+7
+8
+9
+===== Seite 19 =====
+DAMPSOFT
+Version: 3.0
+Seite 16/77
+3. PAR-Behandlungen verwalten
+Ein Tipp für Sie: Sie haben die Möglichkeit, das Datum der Befundaufnahme nachträglich anzupassen, indem Sie 
+per Doppelklick auf den gewünschten AIT-Plan in der Liste klicken und im neuen Fenster das Datum ändern.
+Um Befunde zu erstellen, nehmen Sie die PAR-Werte wie in Kapitel 4 beschrieben auf.
+Ein Tipp für Sie: Die Formulare, die Sie für die Genehmigung bei der Krankenkasse benötigen, erläutern wir Ihnen 
+in den Abschnitten 3.3.8 bis 3.3.11. Informationen zum Erfassen der Messwerte erhalten Sie in Kapitel 4.
+3.3.2. Abrechnung/Kassenrechnung erstellen
+Hinweis!
+Um Leistungen in die Abrechnung zu übernehmen, ist es notwendig, zunächst die Leistung im Reiter „Abrechnung” 
+auszuwählen, im Anschluss das Datum einzugeben und den Eintrag zu speichern. Andernfalls wird das Datum der 
+zuletzt eingegebenen Leistung übernommen. Folgen Sie dazu den Schritten in der folgenden Anweisung.
+Wählen Sie den laufenden PAR-Plan aus der Liste aus.
+Wechseln Sie in den Reiter „Abrechnung“ .
+Markieren Sie in der Liste die gewünschte Leistung, z. B. „4PA“. 
+Geben Sie das Datum über die Pfeiltasten oder das Eingabefeld ein. 
+Speichern Sie Ihre Angaben über das Disketten-Symbol .
+9
+1
+2
+3
+4
+5
+3
+4
+5 6
+7
+8
+1
+2
+===== Seite 20 =====
+DAMPSOFT
+Version: 3.0
+Seite 17/77
+3. PAR-Behandlungen verwalten
+Die Leistung wird Ihnen in der Liste angezeigt. 
+Das Datum für den Behandlungsbeginn wird ausschließlich mit Erfassung der Leistung „4PA“ automatisch ge￾setzt.
+Sie haben die Möglichkeit, weitere Leistungen wie zuvor beschrieben zu übernehmen.
+Um eine Leistung zu löschen, markieren Sie die gewünschte Leistung und klicken Sie auf das Papierkorb-Symbol .
+Tragen Sie nach erfolgter AIT das Abschlussdatum unter „Abschluss AIT“ ein.
+Die PAR-Behandlung wird automatisch in die Abrechnung übertragen.
+Die Leistungen 108 und 111 können nach dem Abschluss der AIT zu einem späteren Zeitpunkt mit dem Datum der 
+Durchführung im Reiter „Abrechnung“ eingetragen werden. Diese Leistungen erscheinen einzeln in der PAR￾Monatsabrechnung. 
+Kassenrechnung erstellen
+Um die Kassenrechnung im PAR-Reiter zu erstellen, öffnen Sie den gewünschten Patienten und wechseln Sie in den 
+Reiter „PAR“ .
+Wechseln Sie in den Reiter „Abrechnung“ .
+Markieren Sie die Leistungen, die für die Kassenrechnung vorgesehen sind, z. B. .
+Setzen Sie das Häkchen bei „Kassenrechnung“ .
+6
+7
+8
+1
+2
+3
+4
+1
+2
+5
+4
+3
+===== Seite 21 =====
+DAMPSOFT
+Version: 3.0
+Seite 18/77
+3. PAR-Behandlungen verwalten
+Um die Eingaben zu speichern, klicken Sie auf das Disketten-Symbol .
+Nach dem Speichern werden die Leistungen kursiv dargestellt und Sie erhalten den Zusatz „K“ (Abkürzung für Kas￾senrechnung) .
+Ein Tipp für Sie: Wenn alle Leistungen erfasst sind, können Sie die Kassenrechnung wie gewohnt im Reiter „Formu￾lar“ über die Schaltfläche >>Kassen-Rechnung<< erstellen.
+5
+6
+6
+===== Seite 22 =====
+DAMPSOFT
+Version: 3.0
+Seite 19/77
+3. PAR-Behandlungen verwalten
+3.3.3. Automatische Kassenrechnungsmarkierung
+Im PAR-Reiter werden Leistungen für Kassenrechnungen automatisch erfasst. Zu diesem Zweck steht eine Vorein￾stellung zur Verfügung.
+Hinweis!
+Voraussetzung für die Anwendung ist, dass in der Patientenauswahl bei der Quartalsabrechnung „Nein“ 
+ausgewählt ist. Prüfen Sie, ob die Auswahl gesetzt ist, und passen Sie die Einstellung bei Bedarf an.
+Öffnen Sie den gewünschten Patienten und wechseln Sie in den Reiter „PAR“ .
+Öffnen Sie die Voreinstellungen .
+Wechseln Sie in den Reiter „Kasse“ .
+Die Voreinstellung ist bei „automatische Kassenrechnungsmarkierung setzen“ gesetzt.
+3.3.4. Übernahmefälle anlegen
+Wenn ein Patient bereits für einen Behandlungsschritt in einer anderen Praxis war oder bei Ihnen in der Praxis 
+ausschließlich die CPT durchgeführt wird, besteht die Möglichkeit, „Übernahmefälle“ anzulegen.
+Öffnen Sie den Patienten über die Patientenauswahl.
+Wechseln Sie in den Reiter „PAR“.
+1
+2
+3
+4
+1
+2
+3
+4
+===== Seite 23 =====
+DAMPSOFT
+Version: 3.0
+Seite 20/77
+3. PAR-Behandlungen verwalten
+Klicken Sie auf >>Neu<< .
+Setzen Sie die Auswahl bei „Übernahme aus anderer Praxis“ und geben Sie ggf. die Planart per Auswahl an.
+Setzen Sie die Auswahl für den entsprechenden Befund, z. B. CPT .
+Wenn es sich um einen UPT-Übernahmefall handelt, wählen Sie den Befund „UPTd“ oder „UPTg“ aus.
+Bestätigen Sie die Auswahl mit >>OK<< .
+Es öffnet sich der Dialog zum Anlegen des Übernahmefalls:
+1
+2
+3
+4
+5
+1
+2
+5
+4
+3
+===== Seite 24 =====
+DAMPSOFT
+Version: 3.0
+Seite 21/77
+3. PAR-Behandlungen verwalten
+Um eine korrekte PAR-Monatsabrechnung durchzuführen, tragen Sie die Ihnen bekannten Daten ein. Geben Sie bei 
+UPT-Übernahmefällen den UPT-Beginn ein. Bestätigen Sie die Angaben mit >>OK<< .
+Ein Tipp für Sie: Liegen die benötigten Daten nicht vor, haben Sie über die Schaltfläche >>Übernahmefall<< die 
+Möglichkeit, die Daten nachzupflegen. Die Schaltfläche wird rot dargestellt, bis alle für die Monatsabrechnung rele￾vanten Daten eingetragen wurden.
+3.3.5. Befundevaluation (BEVa)
+Wenn für die AIT ein Abschlussdatum eingetragen ist, haben Sie die Möglichkeit über >>Neu<< in den Auf￾nahmeparametern die Befundevaluation auszuwählen und die aktuellen Sondierungstiefen wie gewohnt zu 
+erfassen.
+6
+3 1
+2
+6
+===== Seite 25 =====
+DAMPSOFT
+Version: 3.0
+Seite 22/77
+3. PAR-Behandlungen verwalten
+Wenn ein AIT-Befund vorliegt, bei dem z. B. Progressionsgrad, Behandlungsbeginn und/oder das AIT￾Abschlussdatum fehlen, erhalten Sie eine Meldung. Sie können die BEVa-Leistung erfassen, wenn Sie die fehlenden 
+Angaben nachtragen.
+Wenn bei der Erfassung der BEVa-Leistung noch kein BEVa-Befund vorhanden ist, erhalten Sie eine Meldung. 
+Wenn Sie die Meldung mit >>Ja<< bestätigen, wird die Leistung erfasst und es wird automatisch ein BEVa-Befund 
+angelegt. Wenn Sie die Meldung mit >>Nein<< bestätigen, wird die Leistung erfasst, es wird jedoch kein BEVa￾Befund angelegt.
+2
+1
+3
+===== Seite 26 =====
+DAMPSOFT
+Version: 3.0
+Seite 23/77
+3. PAR-Behandlungen verwalten
+3.3.6. Chirurgische Therapie (CPT)
+Wenn in der BEVa Sondierungstiefen von 6 oder mehr mm vorhanden sind, kann eine chirurgische Therapie (CPT) 
+durchgeführt werden.
+Klicken Sie auf >>Neu<< .
+Wählen Sie in den Aufnahmeparametern „CPT“ aus.
+Bestätigen Sie den Dialog mit >>OK<< .
+Die Sondierungstiefen für die CPT werden automatisch aus der BEVa übernommen und die Leistungen werden für 
+die zu behandelnden Zähne geplant.
+1
+2
+3
+2
+3
+1
+===== Seite 27 =====
+DAMPSOFT
+Version: 3.0
+Seite 24/77
+3. PAR-Behandlungen verwalten
+Um weitere Zähne für eine CPT zuzufügen, setzen Sie das Kreuz in der Zeile für die CPT.
+Klicken Sie auf die Schaltfläche zur Aktualisierung .
+Die ausgewählten Zähne werden Ihnen unter „CPTa“ und „CPTb“ angezeigt .
+Drucken Sie die Mitteilung der chirurgischen Therapie für die Krankenkasse über die Schaltfläche >>Drucken<< .
+Ein Tipp für Sie: Um eine interne Kennzeichnung zu vergeben, wenn ein Patient an einen Chirurgen überwiesen 
+wird, setzen Sie ein Häkchen bei „Patient wird überwiesen“ .
+4
+5
+6
+7
+8
+4
+6 5
+7
+8
+===== Seite 28 =====
+DAMPSOFT
+Version: 3.0
+Seite 25/77
+3. PAR-Behandlungen verwalten
+3.3.7. Befundevaluation (BEVb)
+Nach dem Setzen des Abschlussdatums der chirurgischen Therapie (CPT) haben Sie die Möglichkeit, eine Befun￾devaluation (BEVb) aufzunehmen.
+Wenn Sie die BEVb-Leistung erfassen und kein CPT-Befund vorhanden ist oder ein CPT-Befund ohne CPT￾Abschlussdatum vorliegt, erhalten Sie eine entsprechende Meldung. Setzen Sie in diesem Fall zunächst das CPT￾Abschlussdatum oder legen Sie einen CPT-Befund an.
+Weitere Informationen zum CPT-Befund finden Sie in Abschnitt 3.3.6.
+Klicken Sie auf >>Neu<< .
+Wählen Sie in den Aufnahmeparametern „BEVb“ aus.
+Bestätigen Sie den Dialog mit >>OK<< .
+Ein Tipp für Sie: Wenn nach der Befundevaluation weitere Behandlungen wie UPTd oder UPTg erfolgen, können Sie 
+diese ebenfalls über die Aufnahmeparameter erfassen.
+4
+1
+2
+3
+3
+2
+4
+1
+===== Seite 29 =====
+DAMPSOFT
+Version: 3.0
+Seite 26/77
+3. PAR-Behandlungen verwalten
+3.3.8. Patienten mit Pflegegrad nach § 22 SGB V
+Der Gemeinsame Bundesausschuss (G-BA) hat für Versicherte, die einem Pflegegrad nach § 15 SGB XI zugeordnet 
+sind und für Versicherte mit Behinderungen, die Eingliederungshilfe nach § 99 SGB IX beziehen, Leistungen in ei￾nem bedarfsgerecht modifizierten Umfang zur Behandlung einer Parodontitis festgelegt. Die Behandlung ist nicht 
+genehmigungspflichtig, muss jedoch der Krankenkasse angezeigt werden.
+Ein Tipp für Sie: Im Krankenkassenverzeichnis besteht die Möglichkeit, für PAR-Patienten mit einem Pflegegrad 
+nach § 22 SGB V einen separaten Punktwert zu hinterlegen. Wenn kein separater Punktwert eingegeben wird, wird 
+wie gewohnt der Punktwert aus der Spalte „PA“ zur Berechnung herangezogen.
+Das Vorgehen zum Hinterlegen des Punktwertes ist identisch zu den Punktwertänderungen für die Bereiche Kons, 
+PA, IP/FU und KFO.
+Entnehmen Sie bei Bedarf das Vorgehen aus der folgenden Anleitung:
+https://www.dampsoft.de/wp-content/uploads/2018/08/Anleitung_Punktwert%C3%A4nderung-im-DS-Win.pdf
+Wenn bei Ihrem Patienten ein Pflegegrad nach § 22 SGB V besteht, setzen Sie ein Häkchen bei „§ 22 SGB V“ .
+Die geplanten Leistungen und die Kreuze für die AIT/CPT werden in der Darstellung angepasst. 
+Ein Tipp für Sie: Ab einer Taschentiefe von 6 mm oder mehr ist bei den Patienten auch im ersten Behandlungs￾schritt eine CPT möglich.
+1
+2
+1
+2
+===== Seite 30 =====
+DAMPSOFT
+Version: 3.0
+Seite 27/77
+3. PAR-Behandlungen verwalten
+3.3.9. Erklärung Parodontalstatus Blatt 1
+Um das „Parodontalstatus Blatt 1“ auszufüllen, klicken Sie auf >>Neu<< .
+Geben Sie die Auswahlparameter ein.
+Bestätigen Sie die Eingabe mit >>OK<< .
+Geben Sie die PAR-Werte zur Vorbereitung auf das Parodontalstatus Blatt 1 wie in Kapitel 4 beschrieben ein.
+Klicken Sie auf >>Übernehmen<< .
+Öffnen Sie das Parodontalstatus Blatt 1, indem Sie auf >>PAR-Status Blatt 1<< klicken.
+1
+2
+3
+4
+3
+2
+4
+1
+===== Seite 31 =====
+DAMPSOFT
+Version: 3.0
+Seite 28/77
+3. PAR-Behandlungen verwalten
+Der Formularkopf wird automatisch ausgefüllt.
+Füllen Sie das Parodontalstatus Blatt 1 aus, indem Sie ein Häkchen bei den zutreffenden Feldern setzen und die 
+Textfelder ausfüllen.
+Hinweis!
+Wenn Sie einen PAR-Plan erstellen, ist es zwingend notwendig, den Progressionsgrad auf Blatt 1 anzugeben. 
+Andernfalls erhalten Sie eine Meldung, wenn Sie im Reiter „PAR“ das „Abschlussdatum AIT“ eintragen.
+Ein Tipp für Sie: Wenn Sie den Progressionsgrad A, B oder C ausfüllen, hat die Angabe Auswirkungen auf die Pla￾nung der UPT-Frequenz, auf die der Versicherte einen Anspruch innerhalb von zwei Jahren nach Abschluss AIt 
+bzw. CPT hat. 
+A = 2
+B = 4 
+C = 6
+Speichern Sie Ihre Angaben mit >>OK<< .
+Wenn Sie den Progressionsgrad zu einem späteren Zeitpunkt verändern und Ihre Angaben mit >>OK<< spei￾chern, erhalten Sie folgende Meldung:
+4
+5
+5
+4
+5
+===== Seite 32 =====
+DAMPSOFT
+Version: 3.0
+Seite 29/77
+3. PAR-Behandlungen verwalten
+3.3.10. PAR-Status Blatt 1: Auswahlliste für „Sonstiges“ anlegen
+Im PAR-Status Blatt 1 wurde im Bereich „Allgemeine und parodontitisspezifische Anamnese“ die Möglichkeit ge￾schaffen, für die Angabe von „Sonstiges“ eine Auswahlliste anzulegen.
+Öffnen Sie im DS-Win über die Patientenauswahl den gewünschten Patienten. Wechseln Sie in den Reiter „PAR“.
+Klicken Sie auf >>PAR-Status Blatt 1<<.
+Klicken Sie bei „Sonstiges“ in den Bereich .
+Ein Tipp für Sie: Die Zeichenanzahl im Textfeld für die allgemeine und parodontitisspezifische Anamnese ist auf 
+maximal 83 Zeichen begrenzt.
+Die Auswahlliste öffnet sich.
+Zur Aufnahme von Erkrankungen in die Auswahlliste geben Sie in der Zeile Inhalt ein, z. B. „Bluthochdruck“.
+Um einen Eintrag zu übernehmen, klicken Sie auf die Schaltfläche .
+Bearbeiten Sie einen Eintrag nachträglich, indem Sie den Eintrag markieren und auf die Schaltfläche klicken.
+Entfernen Sie einen Eintrag bei Bedarf aus der Auswahlliste, indem Sie die Erkrankung markieren und auf kli￾cken.
+1
+2
+3
+4
+5
+1
+2
+5
+3 4
+===== Seite 33 =====
+DAMPSOFT
+Version: 3.0
+Seite 30/77
+3. PAR-Behandlungen verwalten
+Zur Übernahme von Einträgen aus der Auswahlliste klicken Sie auf den gewünschten Eintrag, z. B. „Bluthochdruck“ 
+.
+Der Eintrag wird in das Feld übernommen.
+Wenn Sie im Feld „Spezielle Vorgeschichte“ das Jahr zu einer früheren PAR-Therapie angeben, ist es notwendig, 
+die vierstellige Schreibweise zu verwenden, z. B. „2022“. Andernfalls erhalten Sie beim Verlassen des Dialogs eine 
+Hinweismeldung.
+6
+7
+8
+7
+8
+6
+===== Seite 34 =====
+DAMPSOFT
+Version: 3.0
+Seite 31/77
+3. PAR-Behandlungen verwalten
+3.3.11. Erklärung Parodontalstatus Blatt 2 
+Nachfolgend erläutern wir Ihnen die Ansicht des Parodontalstatus Blatt 2 für die Befundung.
+Unter „Rezessionen“ werden die Rezessionswerte und Befunde dargestellt. Durch ein Kreuz wird gekennzeich￾net, ob eine AIT bzw. CPT an dem Zahn geplant ist. Implantate und fehlende Zähne werden mit einem Kreuz ge￾kennzeichnet.
+Ein Tipp für Sie: Das Erfassen von Werten an zerstörten Zähnen ist nach neuer PAR-Richtlinie nicht mehr vorgese￾hen.
+Im Bereich wird die Ansicht der Zähne mit folgenden Informationen zu den Messwerten angezeigt:
+• Taschentiefen (TT)
+• Lockerungsgrade (LG)
+• Furkationen (F)
+• Knochenverlauf = pinke Linie
+• Taschentiefenverlauf = blaue Linie
+Im Reiter „Planung“ werden Ihnen die zur Genehmigung vorgesehenen Leistungen angezeigt und automatisch
+durch Eingabe der Messwerte bzw. pauschal geplant. Sie haben die Möglichkeit, die Werte anzupassen.
+Sie haben die Möglichkeit, zu jeder Befundung Bemerkungen einzugeben. Die Bemerkungen werden auf das 
+Antragsformular des Parodontalstatus Blatt 2 gedruckt. Um häufig verwendete Bemerkungen als Vorlage zu spei￾chern, geben Sie die gewünschte Bemerkung ein und klicken Sie auf den Pfeil .
+1
+2
+3
+4
+5
+5
+1
+3
+7
+4 10 11
+12
+2
+8
+6
+13
+9
+14
+===== Seite 35 =====
+DAMPSOFT
+Version: 3.0
+Seite 32/77
+3. PAR-Behandlungen verwalten
+Wenn eine vorgesehene Behandlung von einem Gutachter geprüft wurde, setzen Sie ein Häkchen bei und geben 
+Sie das Datum der Befürwortung unter ein.
+Wenn ein Versicherter dem § 22 SGB V zuzuordnen ist, setzen Sie ein Häkchen bei . Die Schaltfläche „§ 22 SGB 
+V“ wird aktiv und beinhaltet das Formular „Anzeige einer Behandlung von Parodontitis bei anspruchsberechtig￾ten Versicherten nach § 22a SGB V gemäß Abschnitt B V. Ziffer 2 der Behandlungsrichtlinie“.
+Die erfassten Befunde werden in der Liste in chronologischer Reihenfolge aufgelistet. Um das Erstellungsdatum 
+für Befunde, die ab dem 01.07.2021 aufgestellt wurden, zu verändern, klicken Sie doppelt auf den gewünschten 
+Eintrag.
+Um den Parodontalstatus Blatt 1 zu erfassen, klicken Sie auf , siehe auch Abschnitt 3.3.9.
+Zu jeder Befundung ist es möglich, eine Dokumentation zu hinterlegen. Um die Dokumentation zu erfassen oder zu
+öffnen, klicken Sie auf das gelbe Ordner-Symbol . Die Dokumentation wird ausschließlich in der Patientenkartei 
+gespeichert und nicht in den Antrag oder zur Abrechnung übergeben.
+Ändern Sie den Behandler bei Bedarf über die Auswahlliste . Leistungen zu Parodontalbefunden, die nach dem 
+01.07.2021 erfasst wurden, werden leistungsbezogen abgerechnet. Die Leistungen können einzeln mit dem tat￾sächlich durchführenden Behandler erfasst werden, sodass eine statistische Auswertung leistungsbezogen pro 
+Behandler möglich ist.
+Wenn eine Behandlung durch die Krankenkasse genehmigt wurde, erfassen Sie im Feld „Genehmigung“ das Da￾tum der Genehmigung. Der Behandlungsbeginn ergibt sich automatisch durch die Erfassung der Leistung „4PA“ im 
+Reiter „Abrechnung“.
+Ein Tipp für Sie: Wenn Sie das Abschlussdatum der AIT setzen, wird im Aufnahmeparameter über Neu die BEVa 
+aktiv und kann nach den empfohlenen Richtlinien durchgeführt werden.
+6
+7
+8
+9
+10 11 12 13 14
+===== Seite 36 =====
+DAMPSOFT
+Version: 3.0
+Seite 33/77
+3. PAR-Behandlungen verwalten
+3.4. Kontrollpläne aufstellen
+Erstellen und drucken Sie bei Bedarf einen Kontrollplan. Für die Erstellung von Kontrollplänen sind die Angaben 
+auf dem Parodontalstatus Blatt 2 sowie dem Parodontalstatus Blatt 1 vorgesehen. Alle weiteren Felder sind inak￾tiv.
+Der Kontrollplan wird keiner PAR-Behandlung zugeordnet und Sie können den Kontrollplan auch während einer 
+laufenden PAR-Behandlung erstellen.
+Erstellte Kontrollpläne werden ebenfalls im PAR‘21-Kontrollbuch unter der Planart „KTB“ aufgeführt und Sie kön￾nen wie gewohnt nach den Kontrollplänen filtern.
+Öffnen Sie den gewünschten Patienten und wechseln Sie in den Reiter „PAR“ .
+Klicken Sie auf >>Neu<< .
+1
+2
+2
+1
+===== Seite 37 =====
+DAMPSOFT
+Version: 3.0
+Seite 34/77
+3. PAR-Behandlungen verwalten
+Setzen Sie die Auswahl bei „Kontrollplan“ .
+Klicken Sie auf >>OK<< .
+Es öffnet sich ein neuer Plan. Geben Sie die Daten ein und speichern Sie diese.
+In der PAR-Befundliste wird der Kontrollplan unter „KTB“ geführt und dunkelgrau hinterlegt.
+3
+4
+5
+3
+4
+6
+5
+===== Seite 38 =====
+DAMPSOFT
+Version: 3.0
+Seite 35/77
+3. PAR-Behandlungen verwalten
+Ein Tipp für Sie: Wenn Sie bereits einen Kontrollbefund aufgenommen haben und einen „Initialbefund“ (AIT) erstel￾len, können Sie nach Abfrage Ihre bereits erhobenen Daten aus dem KTB übernehmen.
+Die Taschentiefen eines erstellten Kontrollplanes werden ebenfalls im Taschentiefen-Verlauf angezeigt.
+Klicken Sie auf >>TT-Verlauf<< .
+Die Taschentiefen werden mit „KTB“ in der Farblegende gekennzeichnet.
+6
+7
+7
+===== Seite 39 =====
+DAMPSOFT
+Version: 3.0
+Seite 36/77
+3. PAR-Behandlungen verwalten
+3.5. UPT-Rechner
+Über den UPT-Rechner steht Ihnen eine detaillierte Übersicht der einzelnen UPT-Zeiträume zur Verfügung.
+Um den UPT-Rechner zu öffnen, wählen Sie in der Patientenauswahl den gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+Klicken Sie auf >>UPT-Rechner<< .
+1
+2
+2
+1
+===== Seite 40 =====
+DAMPSOFT
+Version: 3.0
+Seite 37/77
+3. PAR-Behandlungen verwalten
+Alternativ folgen Sie dem Pfad „Verwaltung/Kontrollbücher/PAR.
+Klicken Sie auf >>UPT-Rechner<< .
+Die UPT-Zeiträume werden anhand der angegebenen Abschlussdaten der AIT bzw. CPT und des jeweiligen Progres￾sionsgrades und dessen Abrechnungsbestimmungen berechnet.
+Im folgenden Beispiel liegt der Progressionsgrad C vor und es wurden eine AIT und eine CPT durchgeführt.
+Wird eine BEVa/BEVb-Leistung bei einem Patienten eingetragen, erscheint das Leistungsdatum unter „Erbracht“ .
+Daraufhin werden die UPT-Zeiträume anhand der geltenden Abrechnungsbestimmungen angepasst.
+3
+4
+5
+5
+9
+4
+7
+8
+3
+6
+10
+===== Seite 41 =====
+DAMPSOFT
+Version: 3.0
+Seite 38/77
+3. PAR-Behandlungen verwalten
+Zur Ermittlung der erbrachten UPT-Leistungen wird die Leistung UPTa herangezogen. Bei Patienten, die einem 
+Pflegegrad zugeordnet sind, wird die Leistung UPTc zur Ermittlung herangezogen.
+Sobald die Leistungen bei einem Patienten eingetragen sind, erscheint das Leistungsdatum bei „Erbracht“ und 
+der folgende UPT-Zeitraum wird anhand der geltenden Abrechnungsbestimmungen zum jeweiligen Progressions￾grad neu berechnet.
+Ein Tipp für Sie: Da die 1. UPT möglicherweise nicht in den empfohlenen 3 – 6 Monaten nach dem AIT-Abschluss 
+erfolgt, passt der UPT-Rechner die weiteren UPT-Zeiträume an das tatsächliche Leistungsdatum an.
+Liegt ein Termin außerhalb des errechneten UPT-Zeitraums, erscheint ein rotes Ausrufezeichen hinter der ent￾sprechenden UPT-Phase. Zusätzlich erhalten Sie einen Hinweis.
+Um Sonn- und Feiertage auszuschließen und alle Werktage anzuzeigen, können Sie im Bereich festlegen, welche 
+Tage als Werktage berücksichtigt werden sollen. Die Berechnung des Zeitraums wird hoch- oder heruntergestuft, 
+bis ein Werktag vorliegt. 
+Wenn Sie die Werktage angepasst haben, werden die Zeiträume und erbrachten Leistungen neu berechnet.
+Übernehmen Sie Ihre Einstellungen mit >>OK<< .
+Über die Schaltfläche >>UPT-Abrechnungsinformation<< erhalten Sie eine detaillierte Übersicht der abrech￾nungsfähigen Leistungen während der UPT-Phase.
+3.5.1. Termine über den UPT-Rechner vergeben
+Sie können Termine direkt über den UPT-Rechner vergeben.
+Hinweis!
+Sie können die Funktion ausschließlich nutzen, wenn Sie mit dem DS-Win-Termin arbeiten.
+Wenn Sie das Terminbuch nicht nutzen und einen Termin vergeben möchten, erhalten Sie eine Meldung.
+Diese Meldung erhalten Sie ebenfalls, wenn nicht alle Behandler ein eigenes Terminbuch nutzen.
+Öffnen Sie den UPT-Rechner.
+6
+7
+8
+9
+10
+===== Seite 42 =====
+DAMPSOFT
+Version: 3.0
+Seite 39/77
+3. PAR-Behandlungen verwalten
+Um einen neuen Termin für die anstehende UPT zu vereinbaren, klicken Sie auf einen Pfeil neben einem leeren 
+Terminfeld .
+Um einen bestehenden Termin einzusehen oder zu ändern, klicken Sie auf einen Pfeil neben einem ausgefüllten 
+Terminfeld .
+Es öffnet sich der Dialog zur Terminvergabe.
+Sie erhalten eine Behandlerabfrage, wenn mehr als ein Behandler definiert ist.
+Bei der Terminvergabe wird in der Behandlerauswahl der Behandler des AIT-Plans automatisch ausgewählt. Wenn 
+Sie mit einem Terminbuch für alle Behandler arbeiten, wählen Sie den im vorhandenen Terminbuch zugeordneten 
+Behandler aus.
+Im Dialog „Termin-Eingabe“ wird Ihnen der nächstmögliche Termin innerhalb der berechneten Frist angezeigt. Bei 
+der Terminvergabe wird automatisch als Behandlungsart die entsprechende UPT-Phase angegeben.
+Ein Tipp für Sie: Es ist möglich, im Terminbuch eine Behandlungsart mit der Frist „UPT“ zu definieren. Wenn sie 
+definiert ist, werden alle Parameter der vordefinierten Behandlungsart berücksichtigt.
+Vergeben Sie wie gewohnt den Termin und bestätigen Sie die Angaben.
+3.5.2. Leistung „nur für Statistik“ ausblenden
+Die UPT-Leistung „nur für Statistik“ kann im UPT-Rechner ausgeblendet werden.
+Folgen Sie dem Pfad „Patient/PAR“.
+Alternativ folgen Sie dem Pfad „Verwaltung/Kontrollbücher/PAR“.
+1
+2
+1
+2
+===== Seite 43 =====
+DAMPSOFT
+Version: 3.0
+Seite 40/77
+3. PAR-Behandlungen verwalten
+Klicken Sie auf >>UPT-Rechner<< .
+Klicken Sie auf das Einstellungssymbol .
+Wenn Sie das Häkchen bei „UPT-Leistungen nur für Statistik berücksichtigen“ entfernen, werden die UPT￾Leistungen, die Sie mit „nur für Statistik“ gekennzeichnet haben, nicht mehr im UPT-Rechner berücksichtigt.
+Wenn Sie das Häkchen setzen, werden die Statistik-Leistungen weiterhin im UPT-Rechner berücksichtigt.
+Übernehmen Sie die Einstellungen mit >>OK<< . 
+3.5.3. Anpassung des UPT-Rechners bei Übernahmefällen
+Bei Übernahmefällen können Sie die aktuelle UPT-Phase hinterlegen, sodass sich der UPT-Rechner auf die aktuelle 
+UPT-Phase aktualisiert.
+Bereits vorhandene Übernahmefälle werden ebenfalls angepasst.
+Wenn Sie in den Aufnahmeparametern angeben, dass es sich bei der Übernahme um eine UPTd oder UPTg handelt, 
+können Sie in der Abfrage zu dem PAR-Übernahmefall die UPT-Phase angeben.
+1
+2
+3
+4
+1
+2
+3
+4
+===== Seite 44 =====
+DAMPSOFT
+Version: 3.0
+Seite 41/77
+3. PAR-Behandlungen verwalten
+Geben Sie die aktuelle UPT-Phase an.
+Speichern Sie die Angabe mit >>OK<< . 
+Die Angaben werden in den UPT-Rechner übernommen.
+Beachten Sie, dass das Datum der ersten erbrachten UPT-Phase zur Information weiterhin sichtbar bleibt.
+Ein Tipp für Sie: Sie können die UPT-Phasen nachträglich über die Schaltfläche >>Übernahmefall<< im PAR-Dialog 
+anpassen.
+1
+2
+1
+2
+===== Seite 45 =====
+DAMPSOFT
+Version: 3.0
+Seite 42/77
+3. PAR-Behandlungen verwalten
+3.5.4. UPT-Termine drucken
+Sie können für Patienten eine Übersicht der Zeiträume des UPT-Rechners drucken.
+Öffnen Sie einen Patienten in der Patientenauswahl.
+Wechseln Sie in den Reiter „PAR“.
+Klicken Sie auf >>UPT-Rechner<< .
+Wechseln Sie in die Voreinstellungen .
+Die Voreinstellungen wurden durch die Druckoptionen im Bereich erweitert.
+Setzen Sie die gewünschte Auswahl.
+Speichern Sie die Angaben mit >>OK<< .
+1
+2
+3
+4
+1
+3
+4
+2
+===== Seite 46 =====
+DAMPSOFT
+Version: 3.0
+Seite 43/77
+3. PAR-Behandlungen verwalten
+3.6. UPT-Verlängerung beantragen
+Um eine UPT-Verlängerung zu beantragen, öffnen Sie im DS-Win den gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+Sofern der ausgewählte Befund einem regulären PAR21-Befund entspricht und ein Progressionsgrad vorliegt, steht 
+Ihnen der zusätzliche Reiter „UPT-Verlängerung“ zur Verfügung.
+Ein Tipp für Sie: Bei Kontrollplänen und Befunden nach § 22 SGB V wird dieser Reiter ausgeblendet.
+Wenn Sie den Reiter „UPT-Verlängerung“ aufrufen, erhalten Sie folgende Meldung:
+Klicken Sie auf >>OK<< .
+Sie gelangen zurück in den Hauptdialog.
+1
+2
+2
+3
+3
+1
+2
+===== Seite 47 =====
+DAMPSOFT
+Version: 3.0
+Seite 44/77
+3. PAR-Behandlungen verwalten
+Markieren Sie noch UPT-bedürftige Zähne über die Schaltfläche .
+Geben Sie den gewünschten Verlängerungszeitraum an, indem Sie eines der beiden Häkchen im Bereich setzen.
+Ein Tipp für Sie: Falls Sie die zweite Möglichkeit gewählt haben und der Regelzeitraum 6 Monate übersteigt, ist 
+eine Zeitangabe von 7 bis 99 Monaten möglich. Abweichende Eingaben sind unzulässig und Sie erhalten eine ent￾sprechende Hinweismeldung.
+Wenn 7 oder mehr Monate für die Verlängerung vorgesehen sind, wird das Begründungsfeld aktiv.
+Im Begründungsfeld können bis zu 600 Zeichen eingetragen werden.
+Um das Formular zu drucken, klicken Sie auf >>Drucken<< .
+In der PatInfo wird ein entsprechender Eintrag erzeugt.
+3.7. Komplexe in Behandlungsplanung übernehmen
+Für die Behandlungsplanung besteht die Möglichkeit, folgende Komplexe zu übernehmen:
+• AIT
+• CPT
+• UPT Grad A, UPT Grad B, UPT Grad C
+Öffnen Sie im DS-Win über die Patientenauswahl den gewünschten Patienten. 
+Wechseln Sie in den Reiter „Behandlungsplanung“ .
+4
+5
+6
+7
+1
+4
+5
+6
+7
+===== Seite 48 =====
+DAMPSOFT
+Version: 3.0
+Seite 45/77
+3. PAR-Behandlungen verwalten
+Um die neuen PA-Plan-Arten in die Behandlungsplanung zu übernehmen und daraus eine Behandlungsplanung mit 
+anschließender Terminvergabe zu erstellen, klicken Sie auf >>Neu<< .
+Klicken Sie auf >>PAR<< .
+Übernehmen Sie Ihren gewünschten Plan, indem Sie den Eintrag in der Liste markieren, z. B. . 
+2
+3
+4
+1
+2
+3
+4
+5
+===== Seite 49 =====
+DAMPSOFT
+Version: 3.0
+Seite 46/77
+3. PAR-Behandlungen verwalten
+Klicken Sie auf >>Übernahme<< .
+Ihr ausgewählter Plan wird in die Behandlungsplanung übernommen. Somit ist es möglich, wenn vorhanden, eine 
+Leistungsberechnung durchzuführen.
+Ein Tipp für Sie: Wir stellen Ihnen über die Voreinstellung die Komplexe mit den Schritten und ggf. Leistungen zur 
+Verfügung. Sie können die Komplexe individuell bearbeiten. Da die unterstützende Parodontitis-Therapie bei den 
+verschiedenen Progressionsgraden individuell ist, stellen wir Ihnen über die Voreinstellungen zu den UPT￾Komplexen keine Leistungen zur Verfügung. In diesem Fall besteht die Möglichkeit, Leistungen eigenständig zu 
+hinterlegen.
+5
+===== Seite 50 =====
+DAMPSOFT
+Version: 3.0
+Seite 47/77
+3. PAR-Behandlungen verwalten
+3.8. Privatbefunde erstellen
+Um einen neuen Privatbefund zu erstellen, folgen Sie dem Pfad „Erweiterungen/PAR“.
+Klicken Sie auf >>Neu<< .
+Geben Sie das Datum der Aufstellung über die Pfeiltasten oder das Eingabefeld ein.
+Wählen Sie den Behandler aus der Auswahlliste .
+Setzen Sie ein Häkchen bei „Privat“ .
+Wählen Sie bei einem erstmals angelegten Privatplan die Option „Initialplan“ .
+Legen Sie die Taschentiefe fest, z. B. „2 Messpunkte (distal / mesial)“ .
+Legen Sie den BOP fest, z. B. „2 Messpunkte (distal / mesial)“ .
+Bestätigen Sie die Eingaben mit >>OK<< .
+Um den Plan zu erstellen, nehmen Sie die PAR-Werte wie in Kapitel 4 beschrieben auf.
+1
+2
+3
+4
+5
+6
+7
+8
+3
+5
+1
+4
+2
+6
+7
+8
+===== Seite 51 =====
+DAMPSOFT
+Version: 3.0
+Seite 48/77
+3. PAR-Behandlungen verwalten
+3.8.1. Private Gebührenrechnung
+Wenn Sie einen privaten Plan erstellt haben, können Sie aus diesem Plan einen Kostenvoranschlag zu erzeugen.
+Um die „Privat-PAR Gebührenrechnung“ zu öffnen, klicken Sie auf >>KVA<< .
+Es öffnet sich ein neuer Dialog:
+1
+1
+2
+3
+4 5
+6
+===== Seite 52 =====
+DAMPSOFT
+Version: 3.0
+Seite 49/77
+3. PAR-Behandlungen verwalten
+In der Liste wird Ihnen die Gebührenaufstellung entsprechend der Anzahl der offenen oder geschlossenen Vor￾gehensweisen angezeigt.
+Sie haben die Möglichkeit, einzelne oder sämtliche Gebührenpositionen zu markieren oder zu demarkieren.
+Um einzelne Gebührenpositionen zu markieren oder demarkieren, klicken Sie auf den gewünschten Eintrag .
+Markierte Einträge werden gelb angezeigt. Um den Eintrag zu demarkieren, klicken Sie erneut auf den Eintrag. Der
+demarkierte Eintrag wird weiß angezeigt.
+Um alle Gebührenpositionen zu markieren oder demarkieren, klicken Sie auf oder .
+Um die Einstellungen final zu übernehmen, klicken Sie auf >>OK<< .
+Wenn Sie im GOZ-Leistungsverzeichnis zu den PAR-Leistungen (4075, 4070 etc.) Leistungen verknüpfen, werden 
+zusätzlich die verknüpften Leistungen abgefragt. Dies gilt ebenfalls für weitere Einstellungen, die Sie vorgenom￾men haben.
+3.9. PAR-Befunde drucken
+Um PAR-Befunde zu drucken, öffnen Sie das gewünschte Blatt.
+Ein Tipp für Sie: Sie haben die Möglichkeit, PAR-Befunde auf Blankopapier zu drucken.
+Klicken Sie auf >>Drucken<< .
+Die Druckauswahl öffnet sich.
+2
+3
+4 5
+6
+1
+1
+2
+3
+===== Seite 53 =====
+DAMPSOFT
+Version: 3.0
+Seite 50/77
+3. PAR-Behandlungen verwalten
+Setzen Sie ein Häkchen bei den gewünschten Angaben, z. B. „PA-Status Blatt 1“ und „PA-Status Blatt 2“ .
+Bestätigen Sie die Angaben mit >>OK<< .
+Die Einstellungen öffnen sich in einem neuen Fenster:
+Nehmen Sie die gewünschten Einstellungen vor.
+Um das PAR-Formular auf Blankopapier zu drucken, wählen Sie in der Auswahlliste unter „Formular einstellen“ die 
+Option „Blanko DIN A4“ .
+Ein Tipp für Sie: Wir empfehlen Ihnen, ein Häkchen bei „Originalbeleg erzeugen“ zu setzen. Wenn nach dem Druck 
+Änderungen am Plan vorgenommen werden, ist es jederzeit möglich, den Originalausdruck aus der PatInfo zu öff￾nen und zu drucken.
+Übernehmen Sie die Angaben mit >>OK<< .
+Klicken Sie auf >>Drucken<< .
+Die PAR-Befunde (Blatt 1 und Blatt 2) werden gedruckt.
+2
+3
+4
+5
+6
+6 5
+4
+===== Seite 54 =====
+DAMPSOFT
+Version: 3.0
+Seite 51/77
+3. PAR-Behandlungen verwalten
+3.9.1. Befunde mit Messwerten drucken
+Sie können PAR-Befunde mit den jeweiligen befundbezogenen Messwerten drucken.
+Tipp: Diese Auswahl steht für alle Befunde zur Verfügung. Im Reiter „UPT-Verlängerung“ ist die Auswahl inaktiv.
+Öffnen Sie einen Patienten und wechseln Sie in den Reiter „PAR“ . 
+Wählen Sie den gewünschten Befund aus. Klicken Sie auf >>Drucken<< . 
+Stellen Sie sicher, dass die Auswahl bei „PAR-Status Blatt 2 (Messwerte)“ gesetzt ist.
+Tipp: Wenn ein AIT- oder CPT-Befund ausgewählt ist, aber nur Messwerte gedruckt werden sollen, setzen Sie die 
+Auswahl. Bei anderen Folgebefunden (BEVa, BEVb, UPTd, UPTg) ist die Auswahl automatisch gesetzt.
+Die befundbezogenen Messwerte werden gedruckt.
+1
+2 3
+4
+1
+2
+3
+4
+===== Seite 55 =====
+DAMPSOFT
+Version: 3.0
+Seite 52/77
+3. PAR-Behandlungen verwalten
+3.10. Bearbeitung von Leistungen (ändern und löschen)
+Sie haben die Möglichkeit, Leistungen hinzuzufügen oder zu entfernen.
+Um Leistungen zu erfassen oder zu ändern, wechseln Sie in den Reiter „Abrechnung“ .
+Leistung erfassen:
+Um eine neue Leistung zu erfassen, klicken Sie auf die gewünschten Leistungen in der Liste .
+Ein Tipp für Sie: Um eine bessere Übersicht zu erhalten, werden Ihnen die PAR-Leistungen zusätzlich in den Rei￾tern „PatInfo“ und „Leistungserfassung“ angezeigt.
+Datum, Sitzung und Behandler werden automatisch gefüllt. Passen Sie die Angaben ggf. an.
+Speichern Sie Ihre Angaben über das Disketten-Symbol . Zusätzlich haben Sie die Möglichkeit, die Leistungen per 
+Doppelklick zu übernehmen. Geben Sie das Datum ein. Klicken Sie doppelt auf die gewünschte Leistung in der 
+Liste . Die Leistung wird in die Liste übernommen.
+Leistung ändern:
+Markieren Sie die gewünschte Leistung, z. B. .
+Um den Eintrag zu ändern, klicken Sie auf das Stift-Symbol .
+Der Änderungsdialog wird geöffnet. Geben Sie Ihre Änderung ein.
+Übernehmen Sie die Änderung mit >>OK<< .
+1
+2
+3 4
+5
+6
+2 7
+7
+8
+9
+1
+5
+10
+7
+9
+8
+2
+6
+3 4
+===== Seite 56 =====
+DAMPSOFT
+Version: 3.0
+Seite 53/77
+3. PAR-Behandlungen verwalten
+Leistung löschen:
+Um eine Leistung zu löschen, markieren Sie die zu löschende Leistung, z. B. .
+Klicken Sie auf das Papierkorb-Symbol . Sie erhalten folgende Abfrage:
+Um die ausgewählte Leistung final zu löschen, bestätigen Sie die Abfrage mit >>Ja<< .
+Um den Vorgang abzubrechen, klicken Sie auf >>Nein<< .
+Ein Tipp für Sie: PAR-Leistungen, die nach den neuen Richtlinien berechnet werden, können ausschließlich im Rei￾ter „PAR“ eingetragen werden.
+Das Löschen von Leistungen ist ausschließlich in der vorgegebenen Reihenfolge möglich.
+Wenn Sie versuchen, Befunde in inkorrekter Reihenfolge zu löschen, erhalten Sie einen Hinweis.
+Ein Beispiel: Wenn Sie eine AIT und einen Folgeplan erstellt haben und versuchen, die AIT zu löschen, ist dies auf￾grund der Reihenfolge nicht möglich. Beachten Sie den Hinweis:
+3.10.1. Leistungen auf „nur für Statistik“ setzen
+Es besteht die Möglichkeit, Leistungen mit der Option „Statistik“ zu kennzeichnen. Leistungen mit dieser Kenn￾zeichnung werden in der PAR-Monatsabrechnung nicht berücksichtigt und somit nicht an die KZV übermittelt. Sie 
+werden lediglich in der Statistik aufgeführt. Um evtl. bereits hinzugefügte Leistungen im Nachhinein zu kennzeich￾nen, steht Ihnen die nachträgliche Änderung über die Stift-Funktion zur Verfügung.
+Öffnen Sie im DS-Win über die Patientenauswahl einen gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+7
+10 11 12 1
+11 12
+===== Seite 57 =====
+DAMPSOFT
+Version: 3.0
+Seite 54/77
+3. PAR-Behandlungen verwalten
+Die Möglichkeit der Kennzeichnung steht Ihnen im Reiter „Abrechnung“ zur Verfügung.
+Um Leistungen mit der Funktion „Statistik“ zu kennzeichnen, markieren Sie die gewünschte Leistung, z. B. „ATG“ .
+Setzen Sie die Auswahl bei „Statistik“ .
+Speichern Sie die Leistung wie gewohnt über das Disketten-Symbol .
+Die markierte Leistung wird in Hellgrau hinterlegt und erhält die Zusatzinformation „nur Statistik“ .
+2
+3
+4
+5
+6
+1
+2
+3
+4
+5
+6
+===== Seite 58 =====
+DAMPSOFT
+Version: 3.0
+Seite 55/77
+3. PAR-Behandlungen verwalten
+3.10.2. Leistungen nachträglich ändern
+Es besteht ebenfalls die Möglichkeit, bereits eingetragene Leistungen nachträglich mit der Kennzeichnung „Statis￾tik“ zu versehen.
+Um eine Leistung nachträglich zu ändern, markieren Sie die gewünschte Leistung, z. B. .
+Klicken Sie auf das Stift-Symbol .
+Es öffnet sich ein neuer Dialog. Sie können die Leistung über den Dialog wie gewünscht bearbeiten.
+Setzen Sie die Auswahl bei „nur Statistik“ .
+Speichern Sie Ihre Änderungen mit >>OK<< .
+Die markierte Leistung wird farblich hinterlegt, z. B. in Hellgrau, und erhält die Zusatzinformation „nur Statistik“.
+1
+2
+3
+4
+1
+2
+4
+3
+===== Seite 59 =====
+DAMPSOFT
+Version: 3.0
+Seite 56/77
+3. PAR-Behandlungen verwalten
+3.10.3. Gelöschte Leistungen zurückholen
+Wenn Sie eine Leistung löschen, wird diese zunächst in den Papierkorb verschoben und kann mithilfe der folgen￾den Arbeitsschritte zurückgeholt werden.
+Folgen Sie dem Pfad „Verwaltung/Zurückholen“.
+Es öffnet sich eine Auswahlliste .
+Wählen Sie „PAR zurückholen“.
+Ein Tipp für Sie: Die Aufteilung findet sich auch in den Berechtigungsgruppen der Mitarbeiterverwaltung wieder.
+1
+1
+===== Seite 60 =====
+DAMPSOFT
+Version: 3.0
+Seite 57/77
+3. PAR-Behandlungen verwalten
+3.11. Behandlungsende angeben
+Wenn eine Behandlung abgeschlossen ist oder nicht weitergeführt wird, weil der Patient z. B. verzogen ist und die 
+Behandlung in einer anderen Praxis beendet wird, geben Sie das Behandlungsende einer PAR-Behandlung an.
+Wählen Sie in der Patientenauswahl den gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+Geben Sie das entsprechende Behandlungsende ein.
+Speichern Sie Ihre Angaben, indem Sie auf >>Übernehmen<< klicken.
+Sobald eine Behandlung abgeschlossen ist und ein Behandlungsende vermerkt wurde, verschwindet das Ausrufe￾zeichen im Reiter „PAR“ und neben den entsprechenden PAR-Befunden erscheint ein Schlosssymbol .
+1
+2
+3
+4 5
+1
+2
+3
+===== Seite 61 =====
+DAMPSOFT
+Version: 3.0
+Seite 58/77
+3. PAR-Behandlungen verwalten
+Ein Tipp für Sie: Sämtliche Änderungen des Behandlungsende-Datums werden in der PatInfo mit der Satzkennung 
+AT (Allgemeiner Text) gespeichert.
+4
+5
+===== Seite 62 =====
+DAMPSOFT
+Version: 3.0
+Seite 59/77
+4. PAR-Werte aufnehmen
+4.1. Befund ändern
+Um während der Eingabe der Werte den Befund zu verändern, klicken Sie über dem entsprechenden Zahn in die 
+Zeile zur Befundänderung, z. B. .
+Das Feld öffnet sich.
+Geben Sie die Befundänderung ein, indem Sie auf die passende Schaltfläche klicken, z. B. >>wr<< .
+Übernehmen Sie Ihre Änderung mit >>Übernehmen<< .
+1
+2
+3
+4
+4. PAR-Werte aufnehmen
+1
+3
+2
+4
+===== Seite 63 =====
+DAMPSOFT
+Version: 3.0
+Seite 60/77
+4. PAR-Werte aufnehmen
+4.2. Taschentiefe messen
+Wenn Sie mit dem Mauszeiger über das Zahnschema fahren, ohne zu klicken, werden Ihnen die verschiedenen 
+Eingabemöglichkeiten angezeigt, z. B. für Taschentiefen „TT“.
+Um Werte einzugeben, klicken Sie in den Bereich für Taschentiefen, z. B. .
+Geben Sie die Taschentiefe ein, indem Sie auf den Wert klicken, z. B. 1 .
+Zusätzlich ist die Eingabe per Nummernblock auf der Tastatur möglich.
+Um alle Messwerte zu übernehmen, klicken Sie auf >>Übernehmen<< .
+Ein Tipp für Sie: Zerstörte Zähne werden mit horizontalen Strichen gekennzeichnet . Nach neuen Richtlinien 
+besteht keine Möglichkeit mehr, an diesen Befunden Sondierungstiefen zu erfassen.
+Fehlende Zähne und vorhandene Implantate werden mit einem X gekennzeichnet.
+1
+2
+3
+4
+5
+1
+2
+3
+5 4
+===== Seite 64 =====
+DAMPSOFT
+Version: 3.0
+Seite 61/77
+4. PAR-Werte aufnehmen
+4.2.1. Taschentiefe an Implantaten messen
+Wenn bei einem gesetzlich versicherten Patienten an einem Implantat eine behandlungsbedürftige Taschentiefe 
+eingetragen wird, wird Ihnen beim Speichern von PAR-Befunden folgende Abfrage angezeigt:
+Um einen privaten Kostenvoranschlag zu erstellen, klicken Sie auf >>Ja<< .
+Wenn Sie keinen privaten Kostenvoranschlag erstellen möchten, klicken Sie auf >>Nein<< .
+Ein Tipp für Sie: Die Anzahl der AITa und AITb wird nicht hochgezählt.
+4.2.2. TT-Verlauf statistisch auswerten
+Vergleichen Sie statistisch Taschentiefen für Befunde nach der neuen PAR-Richtlinie.
+Ein Tipp für Sie: Sie können maximal 6 PAR-Befunde (AIT, BEVa, CPT, BEVb, UPTd, UPTg) gleichzeitig miteinander 
+vergleichen.
+Hinweis!
+Beachten Sie, dass Sie ausschließlich Pläne miteinander vergleichen können, die vor oder nach dem 01.07.2021 
+erstellt wurden. Eine gemischte Anzeige sowie Auswertung alter und neuer Pläne ist nicht möglich.
+Öffnen Sie im DS-Win über die Patientenauswahl einen gewünschten Patienten.
+Wechseln Sie in den Reiter „PAR“ .
+1
+2
+1
+1 2
+===== Seite 65 =====
+DAMPSOFT
+Version: 3.0
+Seite 62/77
+4. PAR-Werte aufnehmen
+Klicken Sie auf >>TT-Verlauf<< . Es öffnet sich folgender Dialog:
+Definieren Sie die Pläne, die Sie miteinander vergleichen möchten, indem Sie mit gedrückter Strg-Taste die Pläne 
+im Bereich markieren.
+Ein Tipp für Sie: Im TT-Verlauf wird bei der Anzeige der Pläne die jeweilige Planart nach den neuen Richtlinien 
+aufgeführt.
+2
+3
+3
+4 3
+2
+===== Seite 66 =====
+DAMPSOFT
+Version: 3.0
+Seite 63/77
+4. PAR-Werte aufnehmen
+Die Funktionalität „Attachement-Niveau“ steht Ihnen wie gewohnt zur Verfügung.
+4.3. Leistungsänderung nach Vorbereitung der Monatsabrechnung
+Um PAR-Befunde in die Abrechnung zu übernehmen, setzen Sie im Initialbefund Ihres Patienten ein Abschlussda￾tum bei „AIT/CPT“ .
+Wenn Sie die PAR-Abrechnung vorbereiten, erhalten die Leistungen eine Kennung der Monatsabrechnung . Bei
+Leistungen mit dieser Kennung können Sie den Behandler und Kommentare wie im Abschnitt 4.1 bearbeiten oder 
+die Leistung löschen.
+Wenn Sie in den Voreinstellungen für Karteikarte die Voreinstellung „abgerechnete Leistungen blass anzeigen“ 
+gesetzt haben, werden die Leistungen blass dargestellt, nachdem Sie die Datei der PAR-Abrechnung erzeugt haben.
+Um nach der Dateierzeugung abgerechnete Leistungen zu bearbeiten oder zu löschen, ist es notwendig, den Pati￾enten in der PAR-Monatsabrechnung aus den „Abzurechnenden“ Patienten zu den „außerdem abrechenbaren“ Pati￾enten zu verschieben.
+Folgen Sie im DS-Win dem Pfad „Abrechnung/PA Abrechnung“.
+4
+1
+2
+1
+2
+===== Seite 67 =====
+DAMPSOFT
+Version: 3.0
+Seite 64/77
+4. PAR-Werte aufnehmen
+Verschieben Sie Ihren Patienten, indem Sie ihn per Mausklick markieren .
+Klicken Sie auf den Pfeil .
+Ihr Patient wird in die Liste „PA-Nr. außerdem abrechenbar“ verschoben.
+Um die Patienten mit den bearbeiteten Leistungen erneut abzurechnen, bereiten Sie die vorhandene Abrechnung 
+erneut vor oder erstellen Sie eine neue Abrechnung.
+Ihr Patient wird erneut in der Liste der „Abzurechnenden“ Patienten angezeigt.
+4.3.1. Darstellung der PAR-Monatsabrechnung für zukünftige Leistungen
+Beim Vorbereiten einer PAR-Monatsabrechnung werden ausschließlich PAR-Leistungen abgerechnet bzw. berück￾sichtigt, die bis einschließlich des Abrechnungsmonats erfasst wurden.
+Alle Leistungen, die in der Zukunft liegen, werden nicht für den aktuellen Abrechnungsmonat berücksichtigt. Zu￾künftige Leistungen werden für den Folgemonat berücksichtigt.
+Hinweis!
+Die geänderte Monatsabrechnung gilt für die PAR-Monatsabrechnung.
+Die ZE- und KB-Monatsabrechnung bleiben unverändert.
+3
+4
+5
+6
+3
+4
+5
+6
+===== Seite 68 =====
+DAMPSOFT
+Version: 3.0
+Seite 65/77
+4. PAR-Werte aufnehmen
+Beispiel:
+PAR-Leistungen im Juli 2023 erbracht (Leistungsdatum):
+PAR-Monatsabrechnung für Juli vorbereitet = Leistungen werden berücksichtigt
+PAR-Leistungen im Juli 2023 erbracht (Leistungsdatum):
+PAR-Monatsabrechnung für August vorbereitet = Leistungen werden berücksichtigt
+PAR-Leistungen im August 2023 erbracht (Leistungsdatum):
+PAR-Monatsabrechnung für Juli vorbereitet = Leistungen werden nicht berücksichtigt bzw. erscheinen nicht
+Die Leistungen werden in der PAR-Monatsabrechnung für August berücksichtigt.
+4.3.2. Darstellung der PAR-Monatsabrechnung bei Versicherungswechsel
+Patienten, die während einer laufenden PAR-Behandlung ihre Kasse wechseln, werden doppelt in der PAR￾Monatsabrechnung aufgeführt.
+Beispiel: Ein Patient war im Januar 2025 bei der AOK versichert und ist seit Februar 2025 bei der Techniker Kran￾kenkasse versichert. Es wurden PAR-Leistungen für Januar und Februar erfasst und die PAR-Monatsabrechnung 
+für Februar vorbereitet. Dadurch wird der Patient einmal mit der AOK und einmal mit der Techniker Krankenkasse 
+in der Abrechnung aufgeführt.
+4.4. Rezessionen aufnehmen
+Um Rezessionen aufzunehmen, klicken Sie in der Zeile „Rezessionen“ in ein Feld, z. B. .
+Geben Sie die Werte mit der Tastatur ein oder klicken Sie auf die gewünschten Werte, z. B. „5“ .
+1
+2
+2
+1
+===== Seite 69 =====
+DAMPSOFT
+Version: 3.0
+Seite 66/77
+4. PAR-Werte aufnehmen
+4.5. Vitalität anpassen
+Die Vitalität der bleibenden Zähne wird automatisch aus dem aktuellen Befund übernommen und dem Zahn zuge￾ordnet, z. B. .
+Um die Vitalität zu ändern, klicken Sie im Bereich der Wurzelspitze auf das Plus- oder Minus-Symbol .
+4.6. Lockerungsgrade aufnehmen
+Wenn Sie mit dem Mauszeiger über das Zahnschema fahren (Okklusal- bzw. Inzisalfläche), ohne zu klicken, werden 
+Ihnen die verschiedenen Eingabemöglichkeiten angezeigt, z. B. für Lockerungsgrad „LG“.
+Wählen Sie den Lockerungsgrad aus . Das Eingabefeld wechselt im Uhrzeigersinn auf den nächsten Zahn. Feh￾lende und zerstörte Zähne werden übersprungen.
+Ein Tipp für Sie: Um Lockerungsgrade für vereinzelte Zähne einzugeben, klicken Sie auf die entsprechenden Zähne.
+1
+1
+1
+1
+1
+===== Seite 70 =====
+DAMPSOFT
+Version: 3.0
+Seite 67/77
+4. PAR-Werte aufnehmen
+4.7. Furkationsbefall aufnehmen
+Um die Eingabe des Furkationsbefalls zu aktivieren, klicken Sie auf den gewünschten Bereich der Wurzelteilung, z. 
+B. .
+Wählen Sie den Grad des Furkationsbefalls aus . Das Eingabefeld wechselt im Uhrzeigersinn auf den nächsten 
+Zahn. Fehlende und zerstörte Zähne werden übersprungen.
+Ein Tipp für Sie: Um Furkationsbefunde für vereinzelte Zähne einzugeben, klicken Sie auf die entsprechenden Zäh￾ne.
+1
+2
+1
+2
+===== Seite 71 =====
+DAMPSOFT
+Version: 3.0
+Seite 68/77
+4. PAR-Werte aufnehmen
+4.8. BOP-Werte aufnehmen
+Sie haben im PAR-Status die Möglichkeit, den Entzündungszustand der Gingiva mit Blutungen und Eiterungen zu 
+kennzeichnen.
+Um eine Fläche als blutend zu kennzeichnen, klicken Sie mit der rechten Maustaste auf die gewünschte Fläche
+(mesial oder distal). Die Farbe ändert sich wie folgt:
+1. Klick: hellrosa = Blutung
+2. Klick: hellgelb = Pus
+3. Klick: setzt den BOP-Wert auf „nicht aktiv“ zurück
+Im ausgedruckten Formular werden die gekennzeichneten Flächen mit einem Stern dargestellt.
+Ein Tipp für Sie: Die Sondierungsblutungen werden mittels rechter Maustaste in den Befund eingegeben. Wenn Sie 
+die Produkterweiterung „Prophylaxe“ nutzen, haben Sie die Möglichkeit, bis zu 6 Sondierungsblutungen erfassen.
+4.9. Knochenverlauf aufnehmen
+Um den Verlauf des Kieferknochens einzutragen, gehen Sie mit dem Mauszeiger in den Wurzelbereich eines Kie￾fers, halten Sie die rechte Maustaste gedrückt und ziehen Sie die Verlaufslinie. Die Linie wird in Rot dargestellt . 
+Sie können den Knochenverlauf jederzeit korrigieren, indem Sie an einer beliebigen Stelle neu ansetzen.
+1
+1
+===== Seite 72 =====
+DAMPSOFT
+Version: 3.0
+Seite 69/77
+5. PAR-Kontrollbuch
+5.1. PAR-Befunde nach neuen Richtlinien verwalten
+Die erstellten PAR-Befunde nach neuen Richtlinien verwalten Sie in einem eigenen Kontrollbuch.
+Um das Kontrollbuch aufzurufen, folgen Sie dem Pfad „Verwaltung/Kontrollbücher/PAR“.
+Wechseln Sie in den Reiter „PAR‘21“ .
+Filtern Sie in der Liste nach Behandlern oder Gruppen von Behandlern.
+Stellen Sie in den Voreinstellungen ein, für welche Kassen Sie die Befundtypen filtern.
+Stellen Sie ein, welche Befundtypen in der Liste angezeigt werden, indem Sie auf die gewünschten Befundtypen 
+klicken.
+Ein Tipp für Sie: In der Übersicht „Alle Befundtypen“ werden die aufgestellten PAR-Kontrollpläne (KTB-Pläne) 
+nicht pauschal aufgeführt. Um nach KTB-Plänen zu filtern, markieren Sie in der Liste „KTB“. Die Filterung greift 
+ausschließlich bei KTB-Plänen von gesetzlich versicherten Patienten. Private Pläne werden nicht berücksichtigt.
+Legen Sie den Filterzeitraum fest.
+Um nach allen Befundtypen zu filtern, setzen Sie ein Häkchen bei „Alles“ .
+Die Verbindung der Filter und ermöglicht es Ihnen, nach Befundtypen zu filtern, die z. B. vor 5 Monaten 
+aufgestellt wurden und weder begonnen noch abgerechnet wurden. Auf diese Wiese stellen Sie fest, welche Be￾fundtypen demnächst ablaufen.
+Um nach Befundtypen mit einem bestimmten Status zu filtern, setzen Sie ein Häkchen im Bereich „Status“ .
+1
+2
+3
+4
+4
+5
+6
+5 6
+7
+5. PAR-Kontrollbuch
+2
+3
+4
+5
+6
+11
+1
+12
+7
+10
+8
+9
+===== Seite 73 =====
+DAMPSOFT
+Version: 3.0
+Seite 70/77
+5. PAR-Kontrollbuch
+Setzen Sie die gewünschte Auswahl in den Bereichen „Planübernahme“ und „§22 SGB V“ .
+In der Kontrollbuch-Liste werden Ihnen die gefilterten Befundtypen angezeigt. Mit Doppelklick öffnen Sie den 
+Befundtyp des Patienten.
+Um nach Suchbegriffen zu filtern, geben Sie in der Suchleiste den gewünschten Begriff ein.
+Um das gefilterte Ergebnis zu drucken, wählen Sie den Befundtyp aus der Liste und klicken auf >>Drucken<< .
+5.2. Leistungsansicht PAR-Kasse und PAR-Privat
+Zusätzlich haben Sie die Möglichkeit, im PAR‘21-Kontrollbuch das Leistungskontrollbuch Kons/Chir für gesetzliche 
+und private Leistungen zu öffnen.
+Um das Leistungskontrollbuch Kons/Chir für gesetzliche Leistungen aufzurufen, klicken Sie auf >>Leistungsansicht 
+PAR-Kasse<< . Um das Leistungskontrollbuch Kons/Chir für private Leistungen aufzurufen, klicken Sie auf 
+>>Leistungsansicht PAR-Privat<< . 
+Es öffnet sich folgender Dialog:
+8 9
+10 11 12 1
+2
+1 2
+===== Seite 74 =====
+DAMPSOFT
+Version: 3.0
+Seite 71/77
+5. PAR-Kontrollbuch
+Im Leistungskontrollbuch Kons/Chir werden folgende Filter-Einstellungen übernommen:
+• Der Behandler der PAR-Filterung ist inkl. der inaktiven Behandler ausgewählt, wenn Sie das Häkchen 
+bei „mit inaktiven Behandlern“ gesetzt haben. 
+• Die Kassenarten für gesetzliche PAR-Leistungen „RVO“, „vdek“ und „sonstige“ sind ausgewählt.
+• Der Zeitraum der PAR-Filterung ist eingestellt. 
+• Bei gesetzlichen PAR-Leistungen: Die Abrechnungsart „LK“ ist ausgewählt.
+• Bei privaten PAR-Leistungen: Die Abrechnungsart „LG“ ist ausgewählt.
+• Der Leistungstyp „PA“ ist ausgewählt.
+• Die Option Zahnhonorar „ZahnHon“ ist ausgewählt. 
+1
+2
+3
+4
+5
+5
+6
+7
+6
+3
+7
+1
+2
+4
+5
+===== Seite 75 =====
+DAMPSOFT
+Version: 3.0
+Seite 72/77
+6. Schnittstelle ParoStatusDE
+6.1. Schnittstelle ParoStatusDE aktivieren
+Im DS-Win steht Ihnen die Schnittstelle zum ParoStatusDE der Charité für den Datenexport zur Verfügung. Wenn 
+Sie im ParoStatusDE Befundungen vornehmen und speichern, können Sie diese Daten exportieren.
+Um die Schnittstelle zu aktivieren, folgen Sie im DS-Win dem Pfad „Einstellungen/sonstige Einstellungen/VDDS“.
+Klicken Sie auf „ParoStatusDE“ .
+Klicken Sie auf >>OK<< .
+1
+2
+6. Schnittstelle ParoStatusDE
+1
+2
+===== Seite 76 =====
+DAMPSOFT
+Version: 3.0
+Seite 73/77
+6. Schnittstelle ParoStatusDE
+Die Schaltfläche wird in der PatInfo im Bereich angezeigt.
+Mit Klick auf >>ParoStatusDE<< werden Patientenname und Geburtsdatum übergeben.
+Ein Tipp für Sie: Im PAR-Plan steht Ihnen die Schaltfläche >>Import<< im Feld ParoStatusDE zur Verfügung. Impor￾tieren Sie Daten, indem Sie auf >>Import<< klicken. Es öffnet sich die Laufwerksauswahl, in welcher Sie die Datei 
+auswählen können. Aus dem ParoStatusDE werden Taschentiefen, Lockerungsgrade und Furkationsbefunde auto￾matisch übernommen. Sie können zusätzlich die BOP-Befunde übernehmen. Setzten Sie dafür in den Voreinstellun￾gen des PAR-Plans die Auswahl „BOP-Werte erfassen“.
+3
+3
+3
+===== Seite 77 =====
+1
+DAMPSOFT GmbH
+Vogelsang 1 / 24351 Damp
+T 04352 9171
+-16 / F 04352 9171
+-90
+info@dampsoft.de / www.dampsoft.de

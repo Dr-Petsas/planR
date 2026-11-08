@@ -12,7 +12,7 @@ import { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, ty
 import { ALLE_ZAEHNE, BEFUND_KUERZEL } from '../engine/zahnschema'
 import {
   ausfuehrungAnwenden, ausfuehrungIn, ausfuehrungSatz, ausfuehrungUnterschied, ausfuehrungVon, systemSprech,
-  LABOR_SPRECH, WERKSTOFF_SPRECH, type Ausfuehrung, type AusfuehrungStand,
+  LABOR_SPRECH, VERBLENDUNG_SPRECH, WERKSTOFF_SPRECH, type Ausfuehrung, type AusfuehrungStand,
 } from '../engine/ausfuehrung'
 
 export { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, planNormalisieren, berechnen, STANDARD_LISTEN, BEFUND_KUERZEL }
@@ -76,8 +76,16 @@ export interface Zusammenfassung {
   ersetzt: string[]
   /** Brückenglieder (Teil von `ersetzt`) */
   glieder: string[]
-  /** implantatgetragene Kronen (SK) */
+  /** implantatgetragene Kronen (SK, ZAS) */
   implantatkronen: string[]
+  /** Locator, Kugelkopf oder Steganker (SO) */
+  verbindung?: string[]
+  /** Zähne über dem Steg (SEO) */
+  steg?: string[]
+  ankerGesagt?: string
+  haltung?: string
+  kronenArt?: string
+  abutmentWort?: string
   befunde: string[]
   festzuschuss: number
   gesamt: number
@@ -96,11 +104,17 @@ export function zusammenfassen(plan: HkpPlan, e: Ergebnis): Zusammenfassung {
   const versorgung = (z: { TP?: string; R?: string }) => ((ohneTp ? z.R : z.TP) ?? '').trim().toUpperCase()
   const mit = (re: RegExp) => sortiert(Object.entries(plan.zaehne).filter(([, z]) => re.test(versorgung(z))).map(([n]) => n))
   return {
-    teleskope: mit(/^T2?V?$/),
-    kronen: mit(/^(K|KV|KH|KVH|KM|PK|PKM|PKV)$/),
+    teleskope: mit(/^S?T(?:2|Z)?[VM]?$/),
+    kronen: mit(/^(K|KV|KH|KVH|KM|KMH|PK|PKM|PKV|ZA|VE|VEK|I[1-4]|C[1-4]|ONK?)$/),
     ersetzt: mit(/^(E|B|BV|BM|BH|BVH)$/),
-    glieder: mit(/^(B|BV|BM|BH|BVH)$/),
-    implantatkronen: mit(/^SK/),
+    glieder: mit(/^(B|BV|BM|BH|BVH|SB|SBV|SBM|ZAB)$/),
+    implantatkronen: mit(/^(SK|ZAS)/),
+    verbindung: mit(/^SO$/),
+    steg: mit(/^SEO$/),
+    ...(plan.einstellungen.ankerGesagt ? { ankerGesagt: plan.einstellungen.ankerGesagt } : {}),
+    ...(plan.einstellungen.haltung ? { haltung: plan.einstellungen.haltung } : {}),
+    ...(plan.einstellungen.kronenArt ? { kronenArt: plan.einstellungen.kronenArt } : {}),
+    ...(plan.einstellungen.abutmentWort ? { abutmentWort: plan.einstellungen.abutmentWort } : {}),
     befunde: [...new Set(e.befunde.map((b) => b.nr))],
     festzuschuss: e.summen.festzuschuss,
     gesamt: e.summen.gesamt,
@@ -283,7 +297,7 @@ export type AusfuehrungsErgebnis =
 /** Ändert Kronenmaterial, Abformung, Labor, Implantatsystem bzw. Eigenlabor-Stufe eines Plans und rechnet neu. */
 export function ausfuehrungAendern(planRoh: HkpPlan, a: Ausfuehrung, praxis: PraxisListen = {}): AusfuehrungsErgebnis {
   if (!Object.keys(a).length)
-    return { ok: false, grund: 'nichts', meldung: 'Was soll ich an der Ausführung ändern – Material, Abformung, Labor oder Implantatsystem?' }
+    return { ok: false, grund: 'nichts', meldung: 'Was soll ich an der Ausführung ändern – Material, Verblendung, Abformung, Labor oder Implantatsystem?' }
   const plan = planNormalisieren(planRoh)
   const vorher = zusammenfassen(plan, rechnen(plan, praxis))
   const stand = ausfuehrungVon(plan)
@@ -291,7 +305,9 @@ export function ausfuehrungAendern(planRoh: HkpPlan, a: Ausfuehrung, praxis: Pra
   const ergebnis = rechnen(r.plan, praxis)
   const nachher = zusammenfassen(r.plan, ergebnis)
   const neu = ausfuehrungVon(r.plan)
+  const tp = (p: HkpPlan) => Object.entries(p.zaehne).map(([z, v]) => `${z}:${v.TP}`).join(',')
   const beschreibung = ausfuehrungUnterschied(stand, neu)
+    || (a.verblendung && tp(plan) !== tp(r.plan) ? VERBLENDUNG_SPRECH[a.verblendung] : '')
   if (!beschreibung)
     return { ok: false, grund: 'unveraendert', meldung: r.hinweise.length ? r.hinweise.join(' ') : `Das ist schon so geplant: ${ausfuehrungSatz(neu)}.` }
   const warnungen = [...r.hinweise, ...nachher.warnungen.filter((w) => !vorher.warnungen.includes(w))]

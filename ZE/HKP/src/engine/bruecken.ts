@@ -23,6 +23,36 @@ export function markeLesen(eingabe: string): { kuerzel: string } & Required<Brue
 export const markeAnzeigen = (kuerzel: string, m: BrueckenMarke | undefined) =>
   `${m?.bAnfang ? '-' : ''}${kuerzel}${m?.bEnde ? '-' : ''}`
 
+/** Befundkürzel tragen keinen Brückenstrich. „K-“ ist die Krone k. */
+export const befundOhneStrich = (code: string) => code.trim().toLowerCase().replace(/^-+|-+$/g, '')
+
+/** In Zeile R und TP: Strich nur, wenn der Zahn Anfang oder Ende einer Brücke ist. Eine einzelne Krone bleibt „K“. */
+export const planungText = (kuerzel: string, lage?: { anfang?: boolean; ende?: boolean }) =>
+  `${lage?.anfang ? '-' : ''}${kuerzel}${lage?.ende ? '-' : ''}`
+
+export interface BrueckenLage {
+  anfang: boolean
+  ende: boolean
+  explizit: boolean
+}
+
+/** Lage je Zahn. Ein einzelner Strich ohne Gegenstück ergibt keine Brücke und wird nicht angezeigt. */
+export function brueckenLagen(reihe: string[], kuerzel: (z: string) => string, marke: (z: string) => BrueckenMarke | undefined): Record<string, BrueckenLage> {
+  const lagen: Record<string, BrueckenLage> = {}
+  for (const b of brueckenBereiche(reihe, kuerzel, marke)) {
+    if (b.zaehne.length < 2) continue
+    b.zaehne.forEach((z, i) => {
+      const alt = lagen[z]
+      lagen[z] = {
+        anfang: (alt?.anfang ?? false) || i === 0,
+        ende: (alt?.ende ?? false) || i === b.zaehne.length - 1,
+        explizit: (alt?.explizit ?? false) || b.explizit,
+      }
+    })
+  }
+  return lagen
+}
+
 /**
  * Brücken eines Kiefers in Zahnreihenfolge (18…28 bzw. 48…38): zuerst die mit „-“ markierten Bereiche,
  * dann je Lauf von Brückengliedern außerhalb davon die angrenzenden Pfeiler.

@@ -286,6 +286,20 @@
    "abschnitt": "C Konservierende Leistungen"
   },
   {
+   "nr": "2230",
+   "text": "Teilleistung nach den Nummern 2200 bis 2220: Enden die Leistungen mit der Präparation eines Zahnes oder der Abdrucknahme beim Implantat, so ist die Hälfte der jeweiligen Gebühr berechnungsfähig.",
+   "hinweis": "Keine eigene Punktzahl. Berechnungsfähig ist die Hälfte der Gebühr der jeweiligen Nummer 2200, 2210 oder 2220. Quelle: GOZ Anlage 1.",
+   "punkte": 0,
+   "abschnitt": "C Konservierende Leistungen"
+  },
+  {
+   "nr": "2240",
+   "text": "Teilleistung nach den Nummern 2200 bis 2220: Sind darüber hinaus weitere Maßnahmen erfolgt, so sind drei Viertel der jeweiligen Gebühr berechnungsfähig.",
+   "hinweis": "Die Leistungen nach den Nummern 2230 oder 2240 sind nur berechnungsfähig, wenn es dem Zahnarzt objektiv auf Dauer unmöglich war, die Behandlung fortzusetzen oder eine Fortsetzung aus medizinischen Gründen nicht indiziert war. Keine eigene Punktzahl: drei Viertel der Gebühr der jeweiligen Nummer 2200, 2210 oder 2220. Quelle: GOZ Anlage 1.",
+   "punkte": 0,
+   "abschnitt": "C Konservierende Leistungen"
+  },
+  {
    "nr": "2250",
    "text": "Eingliederung einer konfektionierten Krone in der pädiatrischen Zahnheilkunde",
    "hinweis": "Die Kosten für konfektionierte Kronen sind gesondert berechnungsfähig.",
@@ -794,6 +808,20 @@
    "text": "Versorgung eines Lückengebisses durch eine Brücke oder Prothese: je Pfeilerzahn oder Implantat als Brücken- oder Prothesenanker mit einer Teleskopkrone, auch Konuskrone",
    "hinweis": "Die Leistung nach der Nummer 5040 ist neben der Leistung nach der Nummer 5080 nicht berechnungsfähig.Durch die Leistungen nach den Nummern 5000 bis 5040 sind folgende zahnärztliche Leistungen abgegolten: Präparieren des Zahnes oder Implantats, Relationsbestimmung, Abformungen, Einproben, provisorisches Eingliedern, festes Einfügen der Krone, der Einlagefüllung, der Teilkrone o. a., Nachkontrolle und KorrekturenDie Leistungen nach den Nummern 5000 und 5030 umfassen auch die Verschraubung und Abdeckung mit Füllungsmaterial.Zu den Leistungen nach den Nummern 5000 bis 5040 gehören Brücken- oder Prothesenanker mit Verbindungselementen jeder Ausführung.Die Leistungen nach den Nummern 5010 und 5020 sind im Zusammenhang mit Implantaten nicht berechnungsfähig.Zu den Kronen nach den Nummern 5000 bis 5040 gehören Kronen (Voll-, Teil- und Teleskopkronen, sowie Wurzelstiftkappen) jeder zahntechnischen Ausführung.",
    "punkte": 2605,
+   "abschnitt": "F Prothetik"
+  },
+  {
+   "nr": "5050",
+   "text": "Teilleistung nach den Nummern 5000 bis 5040: Enden die Leistungen mit der Präparation der Brückenpfeiler oder Prothesenanker mit Verbindungselementen oder der Abdrucknahme beim Implantat, so ist die Hälfte der jeweiligen Gebühr berechnungsfähig.",
+   "hinweis": "Keine eigene Punktzahl. Berechnungsfähig ist die Hälfte der Gebühr der jeweiligen Nummer 5000 bis 5040. Quelle: GOZ Anlage 1.",
+   "punkte": 0,
+   "abschnitt": "F Prothetik"
+  },
+  {
+   "nr": "5060",
+   "text": "Teilleistung nach den Nummern 5000 bis 5040: Sind darüber hinaus weitere Maßnahmen erfolgt, so sind drei Viertel der jeweiligen Gebühr berechnungsfähig.",
+   "hinweis": "Die Leistungen nach den Nummern 5050 oder 5060 sind nur berechnungsfähig, wenn es dem Zahnarzt objektiv auf Dauer unmöglich war, die Behandlung fortzusetzen, oder eine Fortsetzung aus medizinischen Gründen nicht indiziert war. Keine eigene Punktzahl: drei Viertel der Gebühr der jeweiligen Nummer 5000 bis 5040. Quelle: GOZ Anlage 1.",
+   "punkte": 0,
    "abschnitt": "F Prothetik"
   },
   {

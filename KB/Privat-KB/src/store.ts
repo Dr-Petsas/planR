@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Einstellungen, Plan, Regler } from './types'
-import { useAblage } from './ablage'
+import { planNummer, nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
 import { UKPS_BEMESSUNG_STANDARD } from './data/katalog'
@@ -26,7 +26,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
 
 export const reglerAus = (e: Einstellungen): Regler => ({ faktor: e.faktor, faFaktor: e.faFaktor, laborKlasse: 1 })
 
-export const nummerFormat = (n: number) => `PKB-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`
+export const nummerFormat = (n: number) => planNummer('PKB', n)
 
 export function neuerPlan(nummer: string, einst: Einstellungen): Plan {
   return {
@@ -56,6 +56,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     fremdlabor: { ...basis.fremdlabor, ...p.fremdlabor },
     diagnose: p.diagnose ?? '',
     bemerkung: p.bemerkung ?? '',
+    nummer: nummerMitReihe(p.nummer || basis.nummer),
   }
 }
 

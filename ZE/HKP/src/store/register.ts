@@ -177,8 +177,14 @@ const linkKopf = (z: LinkZugang): Record<string, string> => ({
 })
 
 async function linkAntwort<T>(r: Response): Promise<T> {
-  const daten = await r.json().catch(() => ({ error: `HTTP ${r.status}` }))
-  if (!r.ok || daten.ok === false) throw new RegisterFehler(r.status, daten)
+  const text = await r.text()
+  let daten: Record<string, unknown>
+  try {
+    daten = JSON.parse(text) as Record<string, unknown>
+  } catch {
+    throw new RegisterFehler(r.status, { message: 'Der HKP-Link hat keine Daten geliefert.' })
+  }
+  if (!daten || typeof daten !== 'object' || !r.ok || daten.ok === false) throw new RegisterFehler(r.status, daten ?? { message: `HTTP ${r.status}` })
   return daten as T
 }
 

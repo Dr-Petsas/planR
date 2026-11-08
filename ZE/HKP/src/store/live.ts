@@ -1,5 +1,6 @@
 import type { HkpPlan } from '../types'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
+import { befundOhneStrich } from '../engine/bruecken'
 import { planNormalisieren } from './plan'
 
 /** Fenstertitel im Live-Modus – MAS holt das Fenster darüber nach vorn (backend/src/hkp/live.js) */
@@ -41,7 +42,7 @@ export function liveZiel(von: HkpPlan, s: LiveStand): HkpPlan {
   if (s.plan) return planNormalisieren(s.plan)
   const patient = s.patient ? { ...von.patient, name: s.patient.name, vorname: s.patient.vorname, geburtsdatum: s.patient.geburtsdatum } : von.patient
   const zaehne = s.befund
-    ? Object.fromEntries(ALLE_ZAEHNE.map((z) => [z, { ...von.zaehne[z], B: s.befund?.[z] ?? '' }]))
+    ? Object.fromEntries(ALLE_ZAEHNE.map((z) => [z, { ...von.zaehne[z], B: befundOhneStrich(s.befund?.[z] ?? '') }]))
     : von.zaehne
   return { ...von, patient, zaehne }
 }

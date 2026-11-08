@@ -14,7 +14,7 @@ const QUELLE = join(WURZEL, '_gemeinsam', 'src')
 const DATEN = join(WURZEL, 'Start', 'public', 'daten')
 
 const PLANER = {
-  'ZE/HKP': ['basis', 'kasse', 'labor', 'laborimport'],
+  'ZE/HKP': ['basis', 'kasse', 'labor', 'laborimport', 'versand'],
   'ZE/Privat-HKP': ['basis', 'ablage', 'befund', 'labor', 'laborimport', 'praxiskatalog', 'pvsplan', 'versand'],
   'Implantologie/Privat-Impl': ['basis', 'ablage', 'befund', 'labor', 'praxiskatalog', 'pvsplan', 'versand'],
   'KONS/MKV': ['basis', 'ablage', 'kasse', 'befund', 'labor', 'inlay', 'praxiskatalog', 'pvsplan'],
@@ -34,6 +34,7 @@ const SAETZE = {
     'mandant.ts', 'mandant.test.ts', 'components/Mandant.tsx',
     'stammdaten.ts', 'stammdaten.test.ts', 'components/Stammdaten.tsx',
     'daten.ts', 'components/Listen.tsx', 'gemeinsam.css', 'thema.ts',
+    'arbeitDialog.ts', 'arbeitFenster.ts', 'PlanrZurueck.tsx', 'components/Handy.tsx',
   ],
   ablage: ['ablage.ts', 'ablage.test.ts', 'components/Ablage.tsx', 'arzt.ts', 'components/Arztstempel.tsx'],
   befund: ['befund01.ts', 'befund01.test.ts', 'components/Befundleiste.tsx'],

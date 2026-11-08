@@ -32,7 +32,12 @@ async function api<T>(pfad: string, body?: unknown): Promise<T & { ok?: boolean;
  * „Versenden“: Kostenvoranschlag als PDF per E-Mail. Mit Pickadoc MAS sendet Nadine über das Praxis-Postfach,
  * sonst öffnet sich ein Entwurf mit Anhang im Mailprogramm. `vorher` speichert den Plan vor dem Versand.
  */
-export function VersandKnopf({ anschreiben, vorher }: { anschreiben: Anschreiben; vorher?: () => void }) {
+export function VersandKnopf({ anschreiben, vorher, seiten }: {
+  anschreiben: Anschreiben
+  vorher?: () => void
+  /** Blätter fürs PDF. Ohne Angabe die Kostenvoranschlag-Vorschau. */
+  seiten?: () => HTMLElement[]
+}) {
   const fenster = useRef<HTMLDialogElement>(null)
   const [weg, setWeg] = useState<Weg>('mailprogramm')
   const [an, setAn] = useState('')
@@ -71,8 +76,17 @@ export function VersandKnopf({ anschreiben, vorher }: { anschreiben: Anschreiben
 
   const pdf = async () => {
     setArbeit('PDF wird erstellt …')
-    return pdfAusVorschau([...document.querySelectorAll<HTMLElement>('.vorschau .kv-blatt')])
+    const blaetter = seiten ? seiten() : [...document.querySelectorAll<HTMLElement>('.vorschau .kv-blatt')]
+    return pdfAusVorschau(blaetter)
   }
+
+  const oeffnenAktuell = useRef(oeffnen)
+  oeffnenAktuell.current = oeffnen
+  useEffect(() => {
+    const zu = () => { void oeffnenAktuell.current() }
+    window.addEventListener('planr-versand', zu)
+    return () => window.removeEventListener('planr-versand', zu)
+  }, [])
 
   const ausfuehren = async (fn: () => Promise<string>) => {
     if (!EMAIL.test(an.trim())) return setMeldung({ ok: false, text: 'Bitte eine gültige E-Mail-Adresse eintragen.' })
@@ -81,7 +95,9 @@ export function VersandKnopf({ anschreiben, vorher }: { anschreiben: Anschreiben
       vorher?.()
       const text = await fn()
       setMeldung({ ok: true, text })
-      void api('/vermerk', { nummer: anschreiben.nummer, an: an.trim(), weg }).catch(() => {})
+      void api('/vermerk', { nummer: anschreiben.nummer, an: an.trim(), weg, modul: anschreiben.modul || '' }).then((r) => {
+        if (r.ok && window.parent !== window) window.parent.postMessage({ type: 'planr-versendet' }, '*')
+      }).catch(() => {})
     } catch (e) {
       setMeldung({ ok: false, text: e instanceof Error ? e.message : String(e) })
     } finally {
@@ -114,7 +130,7 @@ export function VersandKnopf({ anschreiben, vorher }: { anschreiben: Anschreiben
   const zu = () => fenster.current?.close()
   return (
     <>
-      <button className="sekundaer" title="Kostenvoranschlag als PDF per E-Mail senden" onClick={() => void oeffnen()}>Versenden</button>
+      <button className="sekundaer" style={window.parent !== window ? { display: 'none' } : undefined} title="Kostenvoranschlag als PDF per E-Mail senden" onClick={() => void oeffnen()}>Versenden</button>
       <dialog ref={fenster} style={FENSTER} onClick={(e) => e.target === fenster.current && !arbeit && zu()}>
         <div style={KOPF}>
           <b>Kostenvoranschlag per E-Mail {weg === 'nadine' ? '· über Nadine' : '· Mailprogramm'}</b>

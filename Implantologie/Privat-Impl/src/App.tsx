@@ -16,7 +16,8 @@ import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
-import { PlanrZurueck } from './PlanrZurueck'
+import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
+import { implAnmelden } from './arbeitPlan'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
 import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
@@ -62,6 +63,13 @@ export default function App() {
   const eintrag = ablage.eintrag(plan.nummer)
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
+  const planRef = useRef(plan)
+  const sperreRef = useRef(gesperrt)
+  useEffect(() => { planRef.current = plan; sperreRef.current = gesperrt })
+  useEffect(() => implAnmelden(
+    () => ({ plan: planRef.current, gesperrt: sperreRef.current }),
+    (neu) => setPlan(neu),
+  ), [setPlan])
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   useBefundMitPlan(!gesperrt)
   const neu = (patient?: Partial<Patient> | null) => {
@@ -98,6 +106,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <PlanrLeiste punkte={REITER.map(([id, text]) => ({ id, text }))} aktiv={reiter} onWahl={(id) => setReiter(id as Reiter)} versand />
       <div className="kopfbereich">
         <header className="kopfleiste">
           <div className="marke">
