@@ -12,7 +12,7 @@ import { logo } from './logo'
 import { aboText, fotoZuschneiden, kontoMenu, persoenlichKarte } from './konto'
 import { abmelden, anmeldePopup, anmeldePopupEntfernen, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 import { planArbeit, planGespraechVergessen, planNameGesucht } from './arbeitClient'
-import { kastenSatz, OK, schemaSatz, schemaVon, SCHEMA_CODES, UK, type Kasten, type KastenGruppe } from './kasten'
+import { kastenSatz, OK, schemaVon, UK, type Kasten, type KastenGruppe } from './kasten'
 import { DAUER_MIN, dauerText, geschlecht, kalenderErlaubt, motivPasst, slotBadge, terminKurz, type TerminGrund, type TerminMotiv } from './termin'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
@@ -816,6 +816,45 @@ function claraSpalte(): HTMLElement {
 
 let kastenNr = 0
 
+/** Befund im Chat: dieselbe Karte wie in der Liste, nur zum Ansehen. */
+function befundImChat(schema: Record<string, string>) {
+  document.querySelector('.befund-blick')?.remove()
+  const dlg = document.createElement('div')
+  dlg.className = 'wahl befund-blick'
+  dlg.setAttribute('role', 'dialog')
+  dlg.setAttribute('aria-modal', 'true')
+  dlg.setAttribute('aria-label', 'Befund')
+  const zelle = (z: string) => {
+    const c = schema[z] || ''
+    const klasse = c === 'f' ? 'bz-zahn fehlt' : 'bz-zahn'
+    return `<div class="${klasse}"><b>${esc(c) || '&nbsp;'}</b></div>`
+  }
+  const nummern = (zs: string[]) => zs.map((z) => `<span class="bz-nr">${z}</span>`).join('')
+  dlg.innerHTML = `
+    <button type="button" class="wahl-grund" data-zu aria-label="Schließen"></button>
+    <div class="wahl-karte befund-karte">
+      <div class="wahl-kopf">
+        <h2>Befund (01)</h2>
+        <button type="button" data-zu aria-label="Schließen">✕</button>
+      </div>
+      <div class="bz-schema">
+        <div class="bz-reihe">${OK.map(zelle).join('')}</div>
+        <div class="bz-reihe nr">${nummern(OK)}</div>
+        <div class="bz-mitte"></div>
+        <div class="bz-reihe nr">${nummern(UK)}</div>
+        <div class="bz-reihe">${UK.map(zelle).join('')}</div>
+      </div>
+    </div>`
+  const zu = () => {
+    dlg.remove()
+    document.removeEventListener('keydown', taste)
+  }
+  const taste = (ev: KeyboardEvent) => { if (ev.key === 'Escape') zu() }
+  document.addEventListener('keydown', taste)
+  dlg.querySelectorAll('[data-zu]').forEach((k) => k.addEventListener('click', zu))
+  document.body.append(dlg)
+}
+
 function claraKasten(roh: { art?: string; titel?: string; hinweis?: string; text?: string; gruppen?: { frage?: string; punkte?: unknown; mehrere?: boolean }[] }) {
   const verlauf = document.getElementById('clara-verlauf')
   if (!verlauf) return
@@ -839,6 +878,11 @@ function claraKasten(roh: { art?: string; titel?: string; hinweis?: string; text
     text,
     gruppen,
   }
+  const schema = kasten.art === 'befund' ? schemaVon(kasten.text || '') : {}
+  if (Object.keys(schema).length > 0) {
+    befundImChat(schema)
+    return
+  }
   const n = ++kastenNr
   const el = document.createElement('form')
   el.className = 'kasten'
@@ -851,49 +895,7 @@ function claraKasten(roh: { art?: string; titel?: string; hinweis?: string; text
     el.append(hinweis)
   }
   let feld: HTMLTextAreaElement | null = null
-  const schema = kasten.art === 'befund' ? schemaVon(kasten.text || '') : {}
-  const grafisch = Object.keys(schema).length > 0
-  const stand: Record<string, string> = { ...schema }
-  let gewaehlterZahn = ''
-  const wahlZeile = document.createElement('div')
-  if (grafisch) {
-    const tafel = document.createElement('div')
-    tafel.className = 'bz-schema'
-    const zeichneSchema = () => {
-      const zelle = (z: string) => {
-        const c = stand[z] || ''
-        const klasse = ['bz-zahn', c === 'f' ? 'fehlt' : '', (stand[z] || '') !== (schema[z] || '') ? 'offen' : '', z === gewaehlterZahn ? 'gewaehlt' : ''].filter(Boolean).join(' ')
-        return `<button type="button" class="${klasse}" data-zahn="${z}"><b>${c || '&nbsp;'}</b></button>`
-      }
-      const nummern = (zs: string[]) => zs.map((z) => `<span class="bz-nr">${z}</span>`).join('')
-      tafel.innerHTML = `<div class="bz-reihe">${OK.map(zelle).join('')}</div><div class="bz-reihe nr">${nummern(OK)}</div><div class="bz-mitte"></div><div class="bz-reihe nr">${nummern(UK)}</div><div class="bz-reihe">${UK.map(zelle).join('')}</div>`
-      tafel.querySelectorAll<HTMLButtonElement>('[data-zahn]').forEach((knopfZahn) => knopfZahn.addEventListener('click', () => {
-        gewaehlterZahn = gewaehlterZahn === knopfZahn.dataset.zahn ? '' : knopfZahn.dataset.zahn || ''
-        wahlZeile.hidden = !gewaehlterZahn
-        wahlZeile.querySelector('span')!.textContent = gewaehlterZahn ? `Zahn ${gewaehlterZahn}` : ''
-        zeichneSchema()
-      }))
-    }
-    wahlZeile.className = 'bz-wahl'
-    wahlZeile.hidden = true
-    const name = document.createElement('span')
-    wahlZeile.append(name)
-    for (const [code, titel] of SCHEMA_CODES) {
-      const wahl = document.createElement('button')
-      wahl.type = 'button'
-      wahl.textContent = code || '–'
-      wahl.title = titel
-      wahl.addEventListener('click', () => {
-        if (!gewaehlterZahn) return
-        if (code) stand[gewaehlterZahn] = code
-        else delete stand[gewaehlterZahn]
-        zeichneSchema()
-      })
-      wahlZeile.append(wahl)
-    }
-    zeichneSchema()
-    el.append(tafel, wahlZeile)
-  } else if (kasten.art === 'befund') {
+  if (kasten.art === 'befund') {
     feld = document.createElement('textarea')
     feld.value = kasten.text || ''
     feld.rows = 4
@@ -932,13 +934,10 @@ function claraKasten(roh: { art?: string; titel?: string; hinweis?: string; text
     ev.preventDefault()
     if (claraLaeuft || el.classList.contains('erledigt')) return
     const gewaehlt = wahlen.map((inputs) => inputs.filter((input) => input.checked).map((input) => input.value))
-    const auswahl = kasten.gruppen?.length ? kastenSatz({ ...kasten, art: 'wahl', text: '' }, '', gewaehlt) : ''
-    const satz = grafisch
-      ? (kasten.gruppen?.length && !auswahl ? null : [schemaSatz(schema, stand), auswahl].filter(Boolean).join(' '))
-      : kastenSatz(kasten, feld?.value || '', gewaehlt)
+    const satz = kastenSatz(kasten, feld?.value || '', gewaehlt)
     if (!satz) {
       fehler.hidden = false
-      fehler.textContent = kasten.art === 'befund' && !grafisch && !(feld?.value || '').trim()
+      fehler.textContent = kasten.art === 'befund' && !(feld?.value || '').trim()
         ? 'Der Befund ist leer.'
         : 'Bitte eine Möglichkeit anklicken.'
       return

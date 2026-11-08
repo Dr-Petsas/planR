@@ -225,6 +225,9 @@ main { min-width: 0; }
 .leer { margin: 12px 0; color: var(--grau); }
 
 .wahl { position: fixed; inset: 0; z-index: 20; display: grid; justify-items: end; align-items: start; padding: 68px 20px 20px; }
+.wahl.befund-blick { z-index: 260; justify-items: center; align-items: center; padding: 20px; }
+.befund-blick .bz-zahn { cursor: default; }
+.befund-blick .bz-zahn:hover { border-color: var(--linie); background: #fff; }
 .wahl-grund { position: absolute; inset: 0; border: 0; padding: 0; background: rgba(20, 30, 40, .35); cursor: pointer; }
 .wahl-karte {
   position: relative; width: min(760px, 100%); max-height: calc(100vh - 88px); overflow: auto;
