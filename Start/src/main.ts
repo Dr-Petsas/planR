@@ -1536,7 +1536,7 @@ function zeichnen() {
           <input id="name" type="search" placeholder="Patient oder Nummer" value="${esc(name)}" autocomplete="off">
         </label>
         <button type="button" class="datum-knopf" data-datum aria-expanded="${datumAuf ? 'true' : 'false'}">${MONATE[monat]} ${jahr}${tag ? ' · Tag gewählt' : ''}</button>
-        <div class="kalender${window.matchMedia('(max-width: 800px)').matches && !datumAuf ? ' zu' : ''}">
+        <div class="kalender${datumAuf ? '' : ' zu'}">
         <div class="monat">
           <button type="button" data-monat="-1" aria-label="Vorheriger Monat">‹</button>
           <strong>${MONATE[monat]} ${jahr}</strong>
@@ -1745,6 +1745,7 @@ function zeichnen() {
   }))
   app.querySelectorAll<HTMLButtonElement>('[data-tag]').forEach((b) => b.addEventListener('click', () => {
     tag = tag === b.dataset.tag ? '' : (b.dataset.tag || '')
+    datumAuf = false
     filterSetzen()
   }))
   app.querySelectorAll<HTMLButtonElement>('[data-sicht]').forEach((b) => b.addEventListener('click', () => {
