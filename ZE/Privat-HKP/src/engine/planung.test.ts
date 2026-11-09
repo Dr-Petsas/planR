@@ -202,6 +202,68 @@ describe('Privatplanung', () => {
     expect(k.gesamt).toBeGreaterThan(basis.gesamt)
   })
 
+  const zusatz = (zaehne: Record<string, Zahn>, stufe: number) => {
+    const plan = { ...neuerPlan(1), zaehne, regler: { gozStufe: stufe, gozFaktor: 0, laborStufe: 0, laborAufschlag: 0, aus: [] } }
+    return kalkulieren(plan, STANDARD_EINSTELLUNGEN).honorar.filter((z) => z.zusatz)
+  }
+
+  it('Krone: der Regler nimmt die Kronenliste aus der Wissensbasis', () => {
+    const z = zusatz({ '21': { B: 'ww', TP: 'KM' } }, 5)
+    const nr = z.map((p) => p.nr)
+    expect(nr).toEqual(expect.arrayContaining(['2030', '0070', '0090', '2197', '2040', '8000', '8010', '8020', '8050', '8080', '8090']))
+    expect(nr).not.toContain('8035')
+    expect(nr).not.toContain('8065')
+    expect(z.find((p) => p.nr === '8010')?.anzahl).toBe(1)
+  })
+
+  it('Brücke: Stufe 5 nimmt die elektronische Analyse statt 8020 und 8050', () => {
+    const z = zusatz({ '14': { B: 'ww', TP: 'KM' }, '15': { B: 'f', TP: 'BM' }, '16': { B: 'ww', TP: 'KM' } }, 5)
+    const nr = z.map((p) => p.nr)
+    expect(nr).toEqual(expect.arrayContaining(['2030', '2197', '8000', '8035', '8065', '8080', '8090']))
+    expect(nr).not.toContain('8020')
+    expect(nr).not.toContain('8050')
+    expect(z.filter((p) => p.nr === '2197').map((p) => p.zahn)).not.toContain('15')
+  })
+
+  it('Teleskopprothese: zwei Registrierungen, Einschleifen, keine adhäsive Befestigung', () => {
+    const z = zusatz({ '14': { B: 'ww', TP: 'T' }, '16': { B: 'ww', TP: 'T' }, '15': { B: 'f', TP: 'E' } }, 5)
+    const nr = z.map((p) => p.nr)
+    expect(nr).toEqual(expect.arrayContaining(['2030', '0070', '0090', '8000', '8010', '8035', '8065', '8100']))
+    expect(nr).not.toContain('2197')
+    expect(nr).not.toContain('8020')
+    expect(z.find((p) => p.nr === '8010')?.anzahl).toBe(2)
+    expect(z.find((p) => p.nr === '8100')?.anzahl).toBe(2)
+  })
+
+  it('All-on-4 und All-on-6 führen vor der einzelnen Suprakonstruktion', () => {
+    const vier = zusatz({
+      '14': { B: 'f', TP: 'SKM' }, '16': { B: 'f', TP: 'SKM' }, '24': { B: 'f', TP: 'SKM' }, '26': { B: 'f', TP: 'SKM' },
+      '15': { B: 'f', TP: 'SBM' }, '25': { B: 'f', TP: 'SBM' },
+    }, 5)
+    expect(vier.map((p) => p.nr)).toEqual(expect.arrayContaining(['0090', '2197', '8000', '8035', '8065', '8100']))
+    expect(vier.map((p) => p.nr)).not.toContain('2030')
+    expect(vier.map((p) => p.nr)).not.toContain('8020')
+    expect(vier.find((p) => p.nr === '8010')?.anzahl).toBe(2)
+    expect(vier.find((p) => p.nr === '8100')?.anzahl).toBe(4)
+    expect(vier.filter((p) => p.nr === '0090')).toHaveLength(4)
+
+    const sechs = ['14', '15', '16', '24', '25', '26'].map((z) => [z, { B: 'f', TP: 'SK' }] as const)
+    const glieder = ['13', '12', '22', '23'].map((z) => [z, { B: 'f', TP: 'SB' }] as const)
+    const z = zusatz(Object.fromEntries([...sechs, ...glieder]), 5)
+    expect(z.find((p) => p.nr === '8100')?.anzahl).toBe(6)
+    expect(z.map((p) => p.nr)).not.toContain('2197')
+    expect(z.map((p) => p.nr)).toContain('8035')
+  })
+
+  it('eine Implantatkrone bleibt Suprakonstruktion und bekommt nicht die elektronische Achse', () => {
+    const z = zusatz({ '36': { B: 'f', TP: 'SKM' } }, 5)
+    const nr = z.map((p) => p.nr)
+    expect(nr).toEqual(expect.arrayContaining(['0090', '2197', '8000', '8020', '8050']))
+    expect(nr).not.toContain('8035')
+    expect(nr).not.toContain('2030')
+    expect(z.find((p) => p.nr === '8010')?.anzahl).toBe(1)
+  })
+
   it('Anpassungen und entfernte Positionen bleiben bestehen', () => {
     const plan = { ...neuerPlan(1), zaehne: { '21': { B: '', TP: 'KM' } } }
     const id = 'auto:GOZ:2210:21'

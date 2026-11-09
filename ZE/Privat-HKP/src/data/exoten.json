@@ -1,0 +1,191 @@
+[
+  {
+    "id": "krone",
+    "titel": "Krone",
+    "prioritaet": 10,
+    "situation": "krone-regel",
+    "kuerzel": ["K", "KV", "KM", "KH", "KVH", "KMH", "KO", "KVO", "KMO", "PK", "PKV", "PKM", "VE", "VEK", "ZA"],
+    "gruppen": {
+      "praepariert": ["K", "KV", "KM", "KH", "KVH", "KMH", "KO", "KVO", "KMO", "PK", "PKV", "PKM", "VE", "VEK", "ZA"],
+      "keramik": ["KM", "KMH", "KMO", "PKM", "VE", "VEK"]
+    },
+    "nicht": ["0040 nicht neben 0030: der schriftliche Plan ist schon berechnet", "8035 und 8065 gehören zur Brücke, zur Teleskopprothese und zu All-on, nicht zur einzelnen Krone"],
+    "kurz": "Regler Krone: 2030, 0070, 0090, an Keramik 2197 und 2040, Funktionsanalyse 8000, 8010, 8020, oben 8050, 8080, 8090. Nicht 8035, nicht 8065, 0040 nicht neben 0030.",
+    "text": "Schieberegler Zusatzleistungen für eine Krone, Teilkrone oder ein Veneer. Führend ist die speziellste Versorgung des Plans. Vorbereitende Nummern kommen aus jeder passenden Versorgung, jede Nummer nur einmal. Die Planung setzt die Krone selbst, GOZ 2210 oder 2220, das Provisorium 2270 und den Plan 0030. Der Regler setzt diese Grundnummern nicht noch einmal. Stufe 1: GOZ 2030 besondere Maßnahmen beim Präparieren, je Kieferhälfte oder Frontzahnbereich, nur am präparierten natürlichen Zahn. GOZ 0070 Vitalitätsprüfung, einmal je Sitzung. GOZ 0090 Infiltrationsanästhesie, je präpariertem Zahn. Stufe 2 nur an vollkeramischer Krone, Teilkrone oder Veneer: GOZ 2197 adhäsive Befestigung je Zahn und GOZ 2040 Kofferdam je Bereich. Nicht an einer metallischen Krone, nicht am Brückenglied, nicht an einer Teleskopprimärkrone. Stufe 3: GOZ 0065 setzt die Planung, sobald der Intraoralscan gewählt ist. Der Regler doppelt sie nicht und setzt sie nicht neben einen konventionellen Abdruck. Stufe 4 Funktionsdiagnostik: GOZ 8000 klinische Funktionsanalyse, GOZ 8010 ein Registrat, GOZ 8020 arbiträre Scharnierachse. Stufe 5 an der einzelnen Krone: GOZ 8050, 8080 und 8090. Nicht GOZ 8035 und nicht GOZ 8065. GOZ 0040 nicht neben 0030.",
+    "stufen": [
+      {"stufe": 1, "nr": "2030", "je": "bereich", "an": "praepariert", "goz": ["2210", "2220", "5010", "5040"], "leer": "2030: keine zu präparierenden Zähne", "grund": "Besondere Maßnahmen beim Präparieren, je Kieferhälfte oder Frontzahnbereich"},
+      {"stufe": 1, "nr": "0070", "je": "sitzung", "an": "praepariert", "goz": ["2210", "2220", "5010", "5040"], "grund": "Vitalitätsprüfung vor der Präparation, je Sitzung"},
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "praepariert", "goz": ["2210", "2220", "5010", "5040"], "grund": "Infiltrationsanästhesie, je Zahn"},
+      {"stufe": 2, "nr": "2197", "je": "zahn", "an": "keramik", "leer": "2197: keine vollkeramische Krone, Teilkrone oder kein Veneer", "grund": "Adhäsive Befestigung"},
+      {"stufe": 2, "nr": "2040", "je": "bereich", "an": "keramik", "grund": "Kofferdam zur adhäsiven Befestigung"},
+      {"stufe": 4, "nr": "8000", "je": "sitzung", "grund": "Klinische Funktionsanalyse zur Krone"},
+      {"stufe": 4, "nr": "8010", "je": "sitzung", "anzahl": 1, "grund": "Registrieren der Zentrallage, ein Registrat"},
+      {"stufe": 4, "nr": "8020", "je": "sitzung", "grund": "Arbiträre Scharnierachse"},
+      {"stufe": 5, "nr": "8050", "je": "sitzung", "grund": "Halbindividueller Artikulator zur Krone"},
+      {"stufe": 5, "nr": "8080", "je": "sitzung", "grund": "Diagnostische Maßnahmen am Modell"},
+      {"stufe": 5, "nr": "8090", "je": "sitzung", "grund": "Diagnostischer Aufbau der Funktionsflächen"}
+    ]
+  },
+  {
+    "id": "bruecke",
+    "titel": "Brücke",
+    "prioritaet": 30,
+    "situation": "bruecke",
+    "kuerzel": ["B", "BV", "BM", "ABV", "ABM", "ZAB", "SB", "SBV", "SBM", "A"],
+    "gruppen": {
+      "praepariert": ["K", "KV", "KM", "KH", "KVH", "KMH", "KO", "KVO", "KMO", "PK", "PKV", "PKM", "ZA", "A"],
+      "keramik": ["KM", "KMH", "KMO", "PKM", "SKM", "SKMO"],
+      "implantat": ["SK", "SKV", "SKM", "SKO", "SKVO", "SKMO", "ZAS"]
+    },
+    "nicht": ["0040 nicht neben 0030: der schriftliche Plan ist schon berechnet", "8020 nicht neben 8035", "8050 nicht neben 8065", "2197 nicht am Brückenglied"],
+    "kurz": "Regler Brücke: an den Ankern 2030, 0070, 0090, an Keramik 2197 und 2040. Funktionsanalyse Stufe 4 ist 8000, 8010, 8020. Stufe 5 ersetzt das durch 8035 und 8065, dazu 8080 und 8090. 8020 nicht neben 8035, 8050 nicht neben 8065.",
+    "text": "Schieberegler Zusatzleistungen für eine Brücke, auch implantatgetragen, solange es nicht All-on-4 oder All-on-6 ist. Führend ist die speziellste Versorgung. Die Planung setzt das Brückenglied GOZ 5070 oder die Adhäsivbrücke 5150, das Provisorium 5140 und 5120 und den Plan 0030. Der Regler setzt diese Grundnummern nicht noch einmal. Stufe 1 an den natürlichen Ankerzähnen: GOZ 2030 je Kieferhälfte oder Frontzahnbereich, GOZ 0070 einmal je Sitzung, GOZ 0090 je Ankerzahn. Am Implantatanker GOZ 0090 zur Eingliederung, keine 2030, weil kein Zahn präpariert wird. Stufe 2 nur an der keramischen Ankerkrone, nicht am Brückenglied: GOZ 2197 und GOZ 2040. Stufe 3: GOZ 0065 bleibt bei der Planung des Scans und wird nicht gedoppelt. Stufe 4: GOZ 8000, GOZ 8010 ein Registrat, GOZ 8020. Stufe 5 elektronische Funktionsanalyse: GOZ 8035 statt 8020, GOZ 8065 statt 8050, dazu GOZ 8080 und GOZ 8090. 8020 nicht neben 8035. 8050 nicht neben 8065. GOZ 0040 nicht neben 0030.",
+    "stufen": [
+      {"stufe": 1, "nr": "2030", "je": "bereich", "an": "praepariert", "goz": ["2210", "2220", "5010", "5040"], "leer": "2030: keine zu präparierenden Ankerzähne", "grund": "Besondere Maßnahmen beim Präparieren der Brückenanker"},
+      {"stufe": 1, "nr": "0070", "je": "sitzung", "an": "praepariert", "goz": ["2210", "2220", "5010", "5040"], "grund": "Vitalitätsprüfung der Anker, je Sitzung"},
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "praepariert", "goz": ["2210", "2220", "5010", "5040"], "grund": "Infiltrationsanästhesie am Ankerzahn"},
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "implantat", "grund": "Infiltrationsanästhesie zur Eingliederung der Implantatkrone"},
+      {"stufe": 2, "nr": "2197", "je": "zahn", "an": "keramik", "leer": "2197: kein keramischer Brückenanker", "grund": "Adhäsive Befestigung des Brückenankers"},
+      {"stufe": 2, "nr": "2040", "je": "bereich", "an": "keramik", "grund": "Kofferdam zur adhäsiven Befestigung"},
+      {"stufe": 4, "nr": "8000", "je": "sitzung", "grund": "Klinische Funktionsanalyse zur Brücke"},
+      {"stufe": 4, "nr": "8010", "je": "sitzung", "anzahl": 1, "grund": "Registrieren der Zentrallage, ein Registrat"},
+      {"stufe": 4, "nr": "8020", "je": "sitzung", "bisStufe": 4, "grund": "Arbiträre Scharnierachse"},
+      {"stufe": 5, "nr": "8035", "je": "sitzung", "grund": "Kinematische Scharnierachse, elektronische Aufzeichnung"},
+      {"stufe": 5, "nr": "8065", "je": "sitzung", "grund": "Elektronische Aufzeichnung der Unterkieferbewegungen"},
+      {"stufe": 5, "nr": "8080", "je": "sitzung", "grund": "Diagnostische Maßnahmen am Modell"},
+      {"stufe": 5, "nr": "8090", "je": "sitzung", "grund": "Diagnostischer Aufbau der Funktionsflächen"}
+    ]
+  },
+  {
+    "id": "teleskopprothese",
+    "titel": "Teleskopprothese",
+    "prioritaet": 50,
+    "situation": "teleskop",
+    "kuerzel": ["T", "TZ", "TZV", "TV", "TM", "T2", "T2V", "T2M", "ST", "STZ", "STZV", "STV", "STM"],
+    "dazuKuerzel": ["E", "SE", "EO", "SEO"],
+    "gruppen": {
+      "teleskop": ["T", "TZ", "TZV", "TV", "TM", "ST", "STZ", "STZV", "STV", "STM"]
+    },
+    "nicht": ["0040 nicht neben 0030: der schriftliche Plan ist schon berechnet", "8020 nicht neben 8035", "8050 nicht neben 8065", "2197 nicht an der Teleskopprimärkrone"],
+    "kurz": "Regler Teleskopprothese: 2030, 0070, 0090 an den Primärkronen, keine 2197. Funktionsanalyse 8000 und 8010 zweimal. Stufe 5: 8035 und 8065, dazu 8080, 8090 und 8100 je Zahnpaar. 8020 nicht neben 8035, 8050 nicht neben 8065.",
+    "text": "Schieberegler Zusatzleistungen für eine Teleskopprothese oder Deckprothese auf Doppelkronen. Führend ist die speziellste Versorgung. Die Planung setzt die Primärkrone GOZ 5040 und die Prothese, GOZ 5210 mit 5170 oder bei Zahnlosigkeit 5220 oder 5230 mit 5180 oder 5190, und den Plan 0030. Der Regler setzt diese Grundnummern nicht noch einmal. Stufe 1 an der Primärkrone: GOZ 2030 je Bereich, GOZ 0070 einmal je Sitzung, GOZ 0090 je Primärkrone. Keine adhäsive Befestigung GOZ 2197 und kein Kofferdam GOZ 2040, die Primärkrone wird konventionell zementiert. Stufe 3: GOZ 0065 bleibt beim Scan in der Planung. Stufe 4: GOZ 8000 und GOZ 8010 zweimal, je Registrat, höchstens zweimal je Sitzung. Stufe 5 elektronische Funktionsanalyse: GOZ 8035 statt 8020, GOZ 8065 statt 8050, dazu GOZ 8080, GOZ 8090 und GOZ 8100 systematisches Einschleifen je Zahnpaar nach der Zahl der Teleskopkronen, höchstens acht. 8020 nicht neben 8035. 8050 nicht neben 8065. GOZ 0040 nicht neben 0030.",
+    "stufen": [
+      {"stufe": 1, "nr": "2030", "je": "bereich", "an": "teleskop", "goz": ["5040"], "leer": "2030: keine Teleskopprimärkrone", "grund": "Besondere Maßnahmen beim Präparieren der Teleskopprimärkrone"},
+      {"stufe": 1, "nr": "0070", "je": "sitzung", "an": "teleskop", "goz": ["5040"], "grund": "Vitalitätsprüfung vor der Teleskoppräparation, je Sitzung"},
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "teleskop", "goz": ["5040"], "grund": "Infiltrationsanästhesie an der Primärkrone"},
+      {"stufe": 4, "nr": "8000", "je": "sitzung", "grund": "Klinische Funktionsanalyse zur Teleskopprothese"},
+      {"stufe": 4, "nr": "8010", "je": "sitzung", "anzahl": 2, "grund": "Registrieren der Zentrallage, zweites Registrat in derselben Sitzung"},
+      {"stufe": 5, "nr": "8035", "je": "sitzung", "grund": "Kinematische Scharnierachse, elektronische Aufzeichnung"},
+      {"stufe": 5, "nr": "8065", "je": "sitzung", "grund": "Elektronische Aufzeichnung der Unterkieferbewegungen"},
+      {"stufe": 5, "nr": "8080", "je": "sitzung", "grund": "Diagnostische Maßnahmen am Modell"},
+      {"stufe": 5, "nr": "8090", "je": "sitzung", "grund": "Diagnostischer Aufbau der Funktionsflächen"},
+      {"stufe": 5, "nr": "8100", "je": "paar", "an": "teleskop", "anzahlMax": 8, "grund": "Systematisches Einschleifen, je Zahnpaar"}
+    ]
+  },
+  {
+    "id": "teleskopkrone",
+    "titel": "Teleskopkronen",
+    "prioritaet": 45,
+    "situation": "teleskop",
+    "kuerzel": ["T", "TZ", "TZV", "TV", "TM", "T2", "T2V", "T2M", "ST", "STZ", "STZV", "STV", "STM"],
+    "gruppen": {
+      "teleskop": ["T", "TZ", "TZV", "TV", "TM", "ST", "STZ", "STZV", "STV", "STM"]
+    },
+    "nicht": ["0040 nicht neben 0030: der schriftliche Plan ist schon berechnet", "8020 nicht neben 8035", "8050 nicht neben 8065", "2197 nicht an der Teleskopprimärkrone"],
+    "kurz": "Regler Teleskopkronen ohne Prothese: gleiche Nummern wie die Teleskopprothese, 2030, 0070, 0090, 8000, 8010 zweimal, Stufe 5 mit 8035, 8065, 8080, 8090 und 8100. Keine 2197.",
+    "text": "Schieberegler Zusatzleistungen für Teleskopkronen, wenn noch keine Prothese im Plan steht. Dieselbe Liste wie bei der Teleskopprothese. GOZ 5040 setzt die Planung. Stufe 1: GOZ 2030, 0070 und 0090 an der Primärkrone. Keine GOZ 2197. Stufe 4: GOZ 8000 und GOZ 8010 zweimal je Sitzung. Stufe 5: GOZ 8035, 8065, 8080, 8090 und 8100 je Zahnpaar. 8020 nicht neben 8035. 8050 nicht neben 8065. GOZ 0040 nicht neben 0030. Steht die Prothese dazu, führt die Teleskopprothese, nicht diese Zeile.",
+    "stufen": [
+      {"stufe": 1, "nr": "2030", "je": "bereich", "an": "teleskop", "goz": ["5040"], "leer": "2030: keine Teleskopprimärkrone", "grund": "Besondere Maßnahmen beim Präparieren der Teleskopprimärkrone"},
+      {"stufe": 1, "nr": "0070", "je": "sitzung", "an": "teleskop", "goz": ["5040"], "grund": "Vitalitätsprüfung vor der Teleskoppräparation, je Sitzung"},
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "teleskop", "goz": ["5040"], "grund": "Infiltrationsanästhesie an der Primärkrone"},
+      {"stufe": 4, "nr": "8000", "je": "sitzung", "grund": "Klinische Funktionsanalyse zu den Teleskopkronen"},
+      {"stufe": 4, "nr": "8010", "je": "sitzung", "anzahl": 2, "grund": "Registrieren der Zentrallage, zweites Registrat in derselben Sitzung"},
+      {"stufe": 5, "nr": "8035", "je": "sitzung", "grund": "Kinematische Scharnierachse, elektronische Aufzeichnung"},
+      {"stufe": 5, "nr": "8065", "je": "sitzung", "grund": "Elektronische Aufzeichnung der Unterkieferbewegungen"},
+      {"stufe": 5, "nr": "8080", "je": "sitzung", "grund": "Diagnostische Maßnahmen am Modell"},
+      {"stufe": 5, "nr": "8090", "je": "sitzung", "grund": "Diagnostischer Aufbau der Funktionsflächen"},
+      {"stufe": 5, "nr": "8100", "je": "paar", "an": "teleskop", "anzahlMax": 8, "grund": "Systematisches Einschleifen, je Zahnpaar"}
+    ]
+  },
+  {
+    "id": "all-on-4",
+    "titel": "All-on-4",
+    "prioritaet": 60,
+    "situation": "allon",
+    "kuerzel": ["SK", "SKV", "SKM", "SKO", "SKVO", "SKMO", "ZAS"],
+    "dazuKuerzel": ["B", "BV", "BM", "SB", "SBV", "SBM", "ZAB", "E", "SE", "EO", "SEO"],
+    "implantate": {"min": 4, "max": 4},
+    "gruppen": {
+      "implantat": ["SK", "SKV", "SKM", "SKO", "SKVO", "SKMO", "ZAS"],
+      "keramik": ["SKM", "SKMO"]
+    },
+    "nicht": ["0040 nicht neben 0030: der schriftliche Plan ist schon berechnet", "8020 nicht neben 8035", "8050 nicht neben 8065", "9000 bis 9040 gehören in den Implantatplan, nicht in die Suprakonstruktion", "2030 nicht, es wird kein Zahn präpariert"],
+    "kurz": "Regler All-on-4: 0090 je Implantat, an Keramik 2197 und 2040, keine 2030. Funktionsanalyse 8000 und 8010 zweimal. Stufe 5: 8035, 8065, 8080, 8090 und 8100 viermal. 8020 nicht neben 8035. Chirurgie 9000 nicht in diesem Plan.",
+    "text": "Schieberegler Zusatzleistungen für All-on-4: genau vier implantatgetragene Kronen und eine Brücke oder Prothese. Führend vor der einzelnen Suprakonstruktion und vor der gewöhnlichen Brücke. Die Planung setzt GOZ 2200, als Anker GOZ 5000, das Glied GOZ 5070 und das Auswechseln der Aufbauten GOZ 9050. Der Regler setzt diese Grundnummern nicht noch einmal. Die Chirurgie GOZ 9000 bis 9040 gehört in den Implantatplan, nicht hier. Stufe 1: GOZ 0090 je Implantat zur Eingliederung. Keine GOZ 2030. Stufe 2 nur an der vollkeramischen Implantatkrone: GOZ 2197 und GOZ 2040. Stufe 3: GOZ 0065 bleibt beim Scan in der Planung. Stufe 4: GOZ 8000 und GOZ 8010 zweimal, höchstens zweimal je Sitzung. Stufe 5: GOZ 8035 statt 8020, GOZ 8065 statt 8050, dazu GOZ 8080, GOZ 8090 und GOZ 8100 je Zahnpaar, vier Paare. 8020 nicht neben 8035. 8050 nicht neben 8065. GOZ 0040 nicht neben 0030.",
+    "stufen": [
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "implantat", "grund": "Infiltrationsanästhesie zur Eingliederung, All-on-4"},
+      {"stufe": 2, "nr": "2197", "je": "zahn", "an": "keramik", "leer": "2197: keine vollkeramische Implantatkrone", "grund": "Adhäsive Befestigung der keramischen Implantatkrone"},
+      {"stufe": 2, "nr": "2040", "je": "bereich", "an": "keramik", "grund": "Kofferdam zur adhäsiven Befestigung"},
+      {"stufe": 4, "nr": "8000", "je": "sitzung", "grund": "Klinische Funktionsanalyse zu All-on-4"},
+      {"stufe": 4, "nr": "8010", "je": "sitzung", "anzahl": 2, "grund": "Registrieren der Zentrallage, zweites Registrat in derselben Sitzung"},
+      {"stufe": 5, "nr": "8035", "je": "sitzung", "grund": "Kinematische Scharnierachse, elektronische Aufzeichnung"},
+      {"stufe": 5, "nr": "8065", "je": "sitzung", "grund": "Elektronische Aufzeichnung der Unterkieferbewegungen"},
+      {"stufe": 5, "nr": "8080", "je": "sitzung", "grund": "Diagnostische Maßnahmen am Modell"},
+      {"stufe": 5, "nr": "8090", "je": "sitzung", "grund": "Diagnostischer Aufbau der Funktionsflächen"},
+      {"stufe": 5, "nr": "8100", "je": "paar", "an": "implantat", "anzahlMax": 4, "grund": "Systematisches Einschleifen, je Zahnpaar"}
+    ]
+  },
+  {
+    "id": "all-on-6",
+    "titel": "All-on-6",
+    "prioritaet": 70,
+    "situation": "allon",
+    "kuerzel": ["SK", "SKV", "SKM", "SKO", "SKVO", "SKMO", "ZAS"],
+    "dazuKuerzel": ["B", "BV", "BM", "SB", "SBV", "SBM", "ZAB", "E", "SE", "EO", "SEO"],
+    "implantate": {"min": 6, "max": 6},
+    "gruppen": {
+      "implantat": ["SK", "SKV", "SKM", "SKO", "SKVO", "SKMO", "ZAS"],
+      "keramik": ["SKM", "SKMO"]
+    },
+    "nicht": ["0040 nicht neben 0030: der schriftliche Plan ist schon berechnet", "8020 nicht neben 8035", "8050 nicht neben 8065", "9000 bis 9040 gehören in den Implantatplan, nicht in die Suprakonstruktion", "2030 nicht, es wird kein Zahn präpariert"],
+    "kurz": "Regler All-on-6: 0090 je Implantat, an Keramik 2197 und 2040, keine 2030. Funktionsanalyse 8000 und 8010 zweimal. Stufe 5: 8035, 8065, 8080, 8090 und 8100 sechsmal. 8020 nicht neben 8035. Chirurgie 9000 nicht in diesem Plan.",
+    "text": "Schieberegler Zusatzleistungen für All-on-6: genau sechs implantatgetragene Kronen und eine Brücke oder Prothese. Führend vor All-on-4, vor der einzelnen Suprakonstruktion und vor der gewöhnlichen Brücke. Die Planung setzt GOZ 2200, als Anker GOZ 5000, das Glied GOZ 5070 und GOZ 9050. Der Regler setzt diese Grundnummern nicht noch einmal. Die Chirurgie GOZ 9000 bis 9040 gehört in den Implantatplan. Stufe 1: GOZ 0090 je Implantat. Keine GOZ 2030. Stufe 2 nur an der vollkeramischen Implantatkrone: GOZ 2197 und GOZ 2040. Stufe 3: GOZ 0065 bleibt beim Scan in der Planung. Stufe 4: GOZ 8000 und GOZ 8010 zweimal, höchstens zweimal je Sitzung. Stufe 5: GOZ 8035 statt 8020, GOZ 8065 statt 8050, dazu GOZ 8080, GOZ 8090 und GOZ 8100 je Zahnpaar, sechs Paare. 8020 nicht neben 8035. 8050 nicht neben 8065. GOZ 0040 nicht neben 0030.",
+    "stufen": [
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "implantat", "grund": "Infiltrationsanästhesie zur Eingliederung, All-on-6"},
+      {"stufe": 2, "nr": "2197", "je": "zahn", "an": "keramik", "leer": "2197: keine vollkeramische Implantatkrone", "grund": "Adhäsive Befestigung der keramischen Implantatkrone"},
+      {"stufe": 2, "nr": "2040", "je": "bereich", "an": "keramik", "grund": "Kofferdam zur adhäsiven Befestigung"},
+      {"stufe": 4, "nr": "8000", "je": "sitzung", "grund": "Klinische Funktionsanalyse zu All-on-6"},
+      {"stufe": 4, "nr": "8010", "je": "sitzung", "anzahl": 2, "grund": "Registrieren der Zentrallage, zweites Registrat in derselben Sitzung"},
+      {"stufe": 5, "nr": "8035", "je": "sitzung", "grund": "Kinematische Scharnierachse, elektronische Aufzeichnung"},
+      {"stufe": 5, "nr": "8065", "je": "sitzung", "grund": "Elektronische Aufzeichnung der Unterkieferbewegungen"},
+      {"stufe": 5, "nr": "8080", "je": "sitzung", "grund": "Diagnostische Maßnahmen am Modell"},
+      {"stufe": 5, "nr": "8090", "je": "sitzung", "grund": "Diagnostischer Aufbau der Funktionsflächen"},
+      {"stufe": 5, "nr": "8100", "je": "paar", "an": "implantat", "anzahlMax": 6, "grund": "Systematisches Einschleifen, je Zahnpaar"}
+    ]
+  },
+  {
+    "id": "suprakonstruktion",
+    "titel": "Suprakonstruktion",
+    "prioritaet": 20,
+    "situation": "implantat-krone",
+    "kuerzel": ["SK", "SKV", "SKM", "SKO", "SKVO", "SKMO", "ZAS", "SO"],
+    "gruppen": {
+      "implantat": ["SK", "SKV", "SKM", "SKO", "SKVO", "SKMO", "ZAS", "SO"],
+      "keramik": ["SKM", "SKMO"]
+    },
+    "nicht": ["0040 nicht neben 0030: der schriftliche Plan ist schon berechnet", "9000 bis 9040 gehören in den Implantatplan, nicht in die Suprakonstruktion", "8035 und 8065 erst bei Brücke, Teleskopprothese, All-on-4 oder All-on-6"],
+    "kurz": "Regler Suprakonstruktion: 0090 je Implantat, an Keramik 2197 und 2040, keine 2030. Funktionsanalyse 8000, 8010, 8020, oben 8050, 8080, 8090. All-on-4 und All-on-6 führen, sobald es genau vier oder sechs Implantate mit Brücke oder Prothese sind.",
+    "text": "Schieberegler Zusatzleistungen für eine Suprakonstruktion, die einzelne Implantatkrone oder wenige Implantatkronen, nicht All-on-4 und nicht All-on-6. Die Planung setzt GOZ 2200 oder als Anker GOZ 5000 und das Auswechseln GOZ 9050. Der Regler setzt diese Grundnummern nicht noch einmal. Die Chirurgie GOZ 9000 bis 9040 gehört in den Implantatplan. Stufe 1: GOZ 0090 je Implantat zur Eingliederung. Keine GOZ 2030. Stufe 2 nur an der vollkeramischen Implantatkrone: GOZ 2197 und GOZ 2040. Stufe 3: GOZ 0065 bleibt beim Scan in der Planung. Stufe 4: GOZ 8000, GOZ 8010 ein Registrat, GOZ 8020. Stufe 5: GOZ 8050, 8080 und 8090. Die elektronische Analyse GOZ 8035 und 8065 übernimmt die Brücke, die Teleskopprothese oder All-on, sobald diese Versorgung führt. GOZ 0040 nicht neben 0030.",
+    "stufen": [
+      {"stufe": 1, "nr": "0090", "je": "zahn", "an": "implantat", "grund": "Infiltrationsanästhesie zur Eingliederung der Suprakonstruktion"},
+      {"stufe": 2, "nr": "2197", "je": "zahn", "an": "keramik", "leer": "2197: keine vollkeramische Implantatkrone", "grund": "Adhäsive Befestigung der keramischen Implantatkrone"},
+      {"stufe": 2, "nr": "2040", "je": "bereich", "an": "keramik", "grund": "Kofferdam zur adhäsiven Befestigung"},
+      {"stufe": 4, "nr": "8000", "je": "sitzung", "grund": "Klinische Funktionsanalyse zur Suprakonstruktion"},
+      {"stufe": 4, "nr": "8010", "je": "sitzung", "anzahl": 1, "grund": "Registrieren der Zentrallage, ein Registrat"},
+      {"stufe": 4, "nr": "8020", "je": "sitzung", "grund": "Arbiträre Scharnierachse"},
+      {"stufe": 5, "nr": "8050", "je": "sitzung", "grund": "Halbindividueller Artikulator zur Suprakonstruktion"},
+      {"stufe": 5, "nr": "8080", "je": "sitzung", "grund": "Diagnostische Maßnahmen am Modell"},
+      {"stufe": 5, "nr": "8090", "je": "sitzung", "grund": "Diagnostischer Aufbau der Funktionsflächen"}
+    ]
+  }
+]

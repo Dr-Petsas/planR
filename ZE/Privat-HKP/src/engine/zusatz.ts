@@ -1,5 +1,31 @@
 import type { Abformung, Position, Zahn } from '../types'
 import { istFrontzahn } from './zahnschema'
+import exotenDatei from '../data/exoten.json'
+
+interface ExotStufe {
+  stufe: number
+  bisStufe?: number
+  nr: string
+  je: 'bereich' | 'zahn' | 'sitzung' | 'paar'
+  an?: string
+  goz?: string[]
+  anzahl?: number
+  anzahlMax?: number
+  leer?: string
+  grund: string
+}
+interface ExotEintrag {
+  id: string
+  titel: string
+  prioritaet: number
+  kuerzel: string[]
+  dazuKuerzel?: string[]
+  implantate?: { min: number; max: number }
+  gruppen: Record<string, string[]>
+  nicht: string[]
+  stufen: ExotStufe[]
+}
+const exoten = exotenDatei as unknown as ExotEintrag[]
 
 /**
  * Regler wie im HKP: zusätzliche GOZ-Leistungen und Qualitätsstufen im Labor.
@@ -7,11 +33,11 @@ import { istFrontzahn } from './zahnschema'
  */
 export const GOZ_STUFEN = [
   { titel: 'keine', leistungen: '' },
-  { titel: 'Präparation', leistungen: 'GOZ 2030 je Kieferhälfte/Frontzahnbereich' },
-  { titel: 'Adhäsive Befestigung', leistungen: '+ GOZ 2197 je Keramikrestauration, 2040 Kofferdam' },
-  { titel: 'Digitale Abformung', leistungen: '+ GOZ 0065 je Kieferhälfte/Frontzahnbereich (nicht bei Abdruck)' },
-  { titel: 'Funktionsdiagnostik', leistungen: '+ GOZ 8000, 8010, 8020' },
-  { titel: 'Instrumentelle Planung', leistungen: '+ GOZ 8050, 8080, 8090' },
+  { titel: 'Präparation', leistungen: '2030, 0070, 0090 aus der Wissensbasis, je nach Krone, Brücke, Teleskop oder Suprakonstruktion' },
+  { titel: 'Adhäsiv', leistungen: '2197 und 2040 nur an Keramik, nicht am Teleskop und nicht am Brückenglied' },
+  { titel: 'Scan', leistungen: '0065 bleibt in der Planung und wird nicht gedoppelt' },
+  { titel: 'Funktionsdiagnostik', leistungen: '8000, 8010, 8020. Teleskop und All-on: 8010 zweimal, ohne 8020' },
+  { titel: 'elektronisch', leistungen: 'Brücke, Teleskop, All-on-4 und All-on-6: 8035 und 8065. Krone und einzelne Suprakonstruktion: 8050, 8080, 8090' },
 ] as const
 
 export const LABOR_STUFEN = [
@@ -74,40 +100,45 @@ export function zusatzleistungen({ zaehne, abformung, basis, gozStufe, laborStuf
   const bereicheVon = (liste: string[]) => [...new Set(liste.map(bereich))]
   const einzelzaehne = [...new Set(basis.map((p) => p.zahn).filter((z) => /^[1-4][1-8]$/.test(z)))]
 
-  // ---- Zahnärztliches Honorar ----
-  const praepariert = einzelzaehne.filter((z) => !/^S/.test(TP(z)) && anZahn(z).some((p) => p.ebene === 'GOZ' && /^(2210|2220|5010|5040)$/.test(p.nr)))
-  const adhaesiv = praepariert.filter((z) => /^((K|PK)M|VE)/.test(TP(z)))
-  const implantatKronen = einzelzaehne.filter((z) => /^S(K|T)/.test(TP(z)))
-  const herausnehmbar = basis.some((p) => p.ebene === 'GOZ' && /^52[0-3]0$/.test(p.nr))
-  const umfangreich = praepariert.length + implantatKronen.length >= 4 || herausnehmbar
-
-  if (gozStufe >= 1) {
-    if (!praepariert.length) nichtAngesetzt.push('2030: keine zu präparierenden Zähne')
-    for (const b of bereicheVon(praepariert)) neu('GOZ', '2030', BEREICH_ZAEHNE[b], `Besondere Maßnahmen beim Präparieren (${b}): Retraktion, Blutstillung`)
+  // Nummern stehen in der Wissensbasis (exoten.json). Der Regler liest sie.
+  // Die führende Versorgung liefert die Funktionsanalyse, jede passende Versorgung die Vorbereitung.
+  const geplante = Object.keys(zaehne).filter((z) => /^[1-4][1-8]$/.test(z) && TP(z) && TP(z) !== ')(')
+  const treffer = exoten.filter((e) => {
+    const eigene = geplante.filter((z) => e.kuerzel.includes(TP(z)))
+    if (!eigene.length) return false
+    if (e.implantate && (eigene.length < e.implantate.min || eigene.length > e.implantate.max)) return false
+    if (e.dazuKuerzel?.length && !e.dazuKuerzel.some((k) => geplante.some((z) => TP(z) === k))) return false
+    return true
+  }).sort((a, b) => b.prioritaet - a.prioritaet)
+  const fuehrung = treffer[0]
+  if (gozStufe > 0 && !fuehrung) nichtAngesetzt.push('Regler: keine Krone, Brücke, Teleskopprothese, All-on oder Suprakonstruktion im Plan')
+  if (fuehrung) nichtAngesetzt.push(`Regler folgt der Wissensbasis: ${fuehrung.titel}`)
+  const gruppe = (e: ExotEintrag, name: string | undefined, goz?: string[]) => {
+    const liste = (name && e.gruppen[name]) || []
+    return einzelzaehne.filter((z) => liste.includes(TP(z)) && (!goz?.length || anZahn(z).some((p) => p.ebene === 'GOZ' && goz.includes(p.nr))))
   }
-  if (gozStufe >= 2) {
-    if (!adhaesiv.length) nichtAngesetzt.push('2197/2040: keine vollkeramischen Kronen, Teilkronen oder Veneers')
-    for (const z of adhaesiv) neu('GOZ', '2197', z, `Adhäsive Befestigung der Keramikrestauration ${TP(z)}`)
-    for (const b of bereicheVon(adhaesiv)) neu('GOZ', '2040', BEREICH_ZAEHNE[b], `Kofferdam zur adhäsiven Befestigung (${b})`)
+  for (const e of treffer) {
+    for (const zeile of e.stufen) {
+      if (zeile.stufe >= 4 && e !== fuehrung) continue
+      if (gozStufe < zeile.stufe || (zeile.bisStufe && gozStufe > zeile.bisStufe)) continue
+      if (!zeile.nr) continue
+      const zahnListe = zeile.an ? gruppe(e, zeile.an, zeile.goz) : []
+      if (zeile.je === 'sitzung' || !zeile.an) {
+        if (zeile.an && !zahnListe.length) { if (zeile.leer) nichtAngesetzt.push(zeile.leer); continue }
+        neu('GOZ', zeile.nr, '', zeile.grund, zeile.anzahl ?? 1)
+        continue
+      }
+      if (!zahnListe.length) { if (zeile.leer) nichtAngesetzt.push(zeile.leer); continue }
+      if (zeile.je === 'zahn') for (const z of zahnListe) neu('GOZ', zeile.nr, z, `${zeile.grund} ${TP(z)}`)
+      else if (zeile.je === 'bereich') for (const b of bereicheVon(zahnListe)) neu('GOZ', zeile.nr, BEREICH_ZAEHNE[b], `${zeile.grund} (${b})`)
+      else if (zeile.je === 'paar') neu('GOZ', zeile.nr, '', zeile.grund, Math.min(zeile.anzahlMax ?? 8, zahnListe.length))
+    }
   }
+  if (gozStufe >= 4 && fuehrung) for (const n of fuehrung.nicht) nichtAngesetzt.push(n)
   if (gozStufe >= 3) {
     if (!abformung) nichtAngesetzt.push('0065: Abformung noch nicht gewählt')
     else if (abformung === 'abdruck') nichtAngesetzt.push('0065: konventioneller Abdruck gewählt')
     else if (basis.some((p) => p.nr === '0065')) nichtAngesetzt.push('0065: digitale Abformung ist bereits enthalten (Intraoralscan)')
-    else if (!praepariert.length) nichtAngesetzt.push('0065: kein festsitzender Zahnersatz an natürlichen Zähnen')
-  }
-  if (gozStufe >= 4) {
-    if (!umfangreich) nichtAngesetzt.push('8000 ff.: erst bei umfangreicher Versorgung (ab 4 Einheiten oder herausnehmbarem Zahnersatz)')
-    else {
-      neu('GOZ', '8000', '', 'Klinische Funktionsanalyse vor umfangreicher prothetischer Versorgung')
-      neu('GOZ', '8010', '', 'Registrieren der Zentrallage')
-      neu('GOZ', '8020', '', 'Arbiträre Scharnierachse / Gesichtsbogen für die Artikulatormontage')
-    }
-  }
-  if (gozStufe >= 5 && umfangreich) {
-    neu('GOZ', '8050', '', 'Registrieren der Unterkieferbewegungen, Einstellung des halbindividuellen Artikulators')
-    neu('GOZ', '8080', '', 'Diagnostische Maßnahmen an Modellen im Artikulator, Behandlungsplanung')
-    neu('GOZ', '8090', '', 'Diagnostischer Aufbau (Wax-up) der Funktionsflächen')
   }
 
   // ---- Labor ----
