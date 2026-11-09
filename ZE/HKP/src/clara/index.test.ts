@@ -6,6 +6,36 @@ import { regelUebernehmen } from '../engine/aufwertung'
 const SATZ = 'Teleskopprothese mit Teleskopen auf den OK 4ern und nach distal ersetzt als Cover Denture'
 const BEFUND = Object.fromEntries(['18', '17', '16', '15', '13', '12', '11', '21', '22', '23', '25', '26', '27', '28'].map((z) => [z, 'f']))
 
+describe('Praxiskatalog', () => {
+  const katalog = {
+    pvs: 'DS-Win', stand: '2026-11-09', listeName: 'Praxis', komplexe: [],
+    goz: [{ nr: '2220a', text: '2220 analog Tabletop', punkte: 1400, eigen: true, faktor: 2.3 }],
+    eigenlabor: [{ nr: '0010', text: 'Spezialmodell der Praxis', preis: 40, ersetzt: '0010' }],
+    bel: [{ nr: '0010', text: 'Modell der Praxis', preis: 11 }],
+  }
+  const ohne = hkpEntwurf('Unterkiefer Totalprothese', Object.fromEntries(['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38'].map((z) => [z, 'f'])))
+  const mit = hkpEntwurf('Unterkiefer Totalprothese', Object.fromEntries(['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38'].map((z) => [z, 'f'])), {}, { katalog })
+
+  it('BEL-Preis der Praxis ersetzt den Höchstpreis, Analognummer ersetzt die GOZ', () => {
+    expect(ohne.status).toBe('ok')
+    expect(mit.status).toBe('ok')
+    if (ohne.status !== 'ok' || mit.status !== 'ok') return
+    expect(mit.plan.einstellungen.labor).toBe('praxis')
+    const preis = (r: typeof ohne, nr: string) => r.status === 'ok' ? r.ergebnis.positionen.find((p) => p.ebene === 'BEL' && p.nr.replace(/\s/g, '') === nr)?.einzelpreis : undefined
+    expect(preis(mit, '0010')).toBeLessThan(preis(ohne, '0010')!)
+    const top = hkpEntwurf('Tabletop 26', { 26: '' }, {}, { katalog })
+    expect(top.status).toBe('ok')
+    if (top.status !== 'ok') return
+    expect(top.plan.positionen.some((p) => p.ebene === 'GOZ' && p.nr.toLowerCase() === '2220a')).toBe(true)
+    expect(top.ergebnis.positionen.some((p) => p.nr.toLowerCase() === '2220a')).toBe(true)
+  })
+
+  it('Fremdlabor lässt den Praxiskatalog aus', () => {
+    const fremd = hkpEntwurf('Unterkiefer Totalprothese im Fremdlabor', Object.fromEntries(['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38'].map((z) => [z, 'f'])), {}, { katalog })
+    expect(fremd.status === 'ok' && fremd.plan.einstellungen.labor).toBe('gewerbe')
+  })
+})
+
 describe('Clara-Einstieg', () => {
   it('Zahlwörter', () => {
     expect(zahlwort('einundneunzig')).toBe(91)

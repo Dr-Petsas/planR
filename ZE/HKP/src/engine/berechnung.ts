@@ -179,6 +179,36 @@ function finden<T extends { nr: string }>(liste: { eintraege: T[] } | undefined,
   return liste?.eintraege.find((e) => norm(e.nr) === n)
 }
 
+const nummer = (s: string) => s.trim().toLowerCase()
+
+/** Praxiseigene Analogposition zu einer GOZ-Nummer: analogZu, Endung a (2330a) oder Textanfang „2330 analog“. */
+export function analogPosition(liste: Preisliste<'goz'> | undefined, nr: string): GozEintrag | undefined {
+  const ziel = nummer(nr)
+  if (!liste || !/^\d{4}$/.test(ziel)) return undefined
+  const treffer = liste.eintraege.filter((e) => {
+    if (nummer(e.nr) === ziel) return false
+    if (e.analogZu && nummer(e.analogZu) === ziel) return true
+    const endung = nummer(e.nr).match(/^(\d{4})a$/)
+    if (endung && endung[1] === ziel) return true
+    const text = e.text.trim().toLowerCase().match(/^(\d{4})\s+analog\b/)
+    return !!text && text[1] === ziel
+  })
+  return treffer.length === 1 ? treffer[0] : undefined
+}
+
+/** GOZ-Zeilen des Plans auf die Analogposition der Praxis umstellen, wenn es genau eine gibt. */
+export function analogUebernehmen(plan: HkpPlan, listen: Listen): HkpPlan {
+  let n = 0
+  const positionen = plan.positionen.map((p) => {
+    if (p.ebene !== 'GOZ') return p
+    const a = analogPosition(listen.goz, p.nr)
+    if (!a || nummer(a.nr) === nummer(p.nr)) return p
+    n += 1
+    return { ...p, nr: a.nr, text: p.text || a.text, faktor: p.faktor ?? a.faktor }
+  })
+  return n ? { ...plan, positionen } : plan
+}
+
 const bemaNorm = (s: string) => s.replace(/\s/g, '').toLowerCase()
 
 /** Zähne einer Zahn-/Gebietsangabe wie „15-13“, „16,26“, „OK“ oder „UK links“ */
@@ -226,7 +256,11 @@ export function versorgungsartErmitteln(plan: HkpPlan): Versorgungsart {
   return mehr || plan.positionen.some((p) => p.ebene === 'GOZ' || p.ebene === 'BEB') ? 'gleichartig' : 'regel'
 }
 
-export function positionBerechnen(p: Position, listen: Listen, plan: HkpPlan): BerechnetePosition {
+export function positionBerechnen(roh: Position, listen: Listen, plan: HkpPlan): BerechnetePosition {
+  const analog = roh.ebene === 'GOZ' ? analogPosition(listen.goz, roh.nr) : undefined
+  const p = analog && nummer(analog.nr) !== nummer(roh.nr)
+    ? { ...roh, nr: analog.nr, text: roh.text || analog.text, faktor: roh.faktor ?? analog.faktor }
+    : roh
   const anzahl = p.anzahl || 0
   const basis = { ...p, bezeichnung: p.text ?? '', einzelpreis: 0, betrag: 0 }
   switch (p.ebene) {

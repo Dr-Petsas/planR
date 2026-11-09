@@ -6,7 +6,7 @@ import type { Ebene, HkpPlan, Preisliste } from '../types'
 import { PRAXIS_GOZ_ID, STANDARD_LISTEN, listenFuerPlan } from '../store/preislisten'
 import { belPreise, eigenlaborMischen, praxisGozListe, type PraxisKatalog } from '../store/praxiskatalogDaten'
 import { planNormalisieren } from '../store/plan'
-import { berechnen, belNrNorm, type Ergebnis, type Listen } from '../engine/berechnung'
+import { analogUebernehmen, berechnen, belNrNorm, type Ergebnis, type Listen } from '../engine/berechnung'
 import type { EigenPosition } from '../engine/eigenlabor'
 import { auftragVerstehen, befundAusAuftrag, befundVerstehen, planAusAuftrag, type Befund, type PlanOptionen, type Rueckfrage } from '../engine/auftrag'
 import { ALLE_ZAEHNE, BEFUND_KUERZEL } from '../engine/zahnschema'
@@ -133,12 +133,26 @@ export interface Entwurf {
   hinweise: string[]
 }
 
+const katalogHatLabor = (praxis: PraxisListen) =>
+  !!(praxis.katalog?.bel?.length || praxis.katalog?.eigenlabor?.length || praxis.eigen?.length)
+
 /** Gesprochener Auftrag + Befund → gerechneter HKP-Entwurf oder Rückfrage */
 export function hkpEntwurf(auftragText: string, befund: Befund, optionen: PlanOptionen = {}, praxis: PraxisListen = {}): Entwurf | Rueckfrage {
   const r = planAusAuftrag(auftragVerstehen(auftragText), befund, optionen)
   if (r.status !== 'ok') return r
-  const ergebnis = rechnen(r.plan, praxis)
-  return { status: 'ok', plan: r.plan, ergebnis, zusammenfassung: zusammenfassen(r.plan, ergebnis), hinweise: r.hinweise }
+  const fremd = /\bfremdlabor\b|\bgewerbelabor\b/i.test(auftragText)
+  const hinweise = [...r.hinweise]
+  let plan = r.plan
+  if (!fremd && katalogHatLabor(praxis) && plan.einstellungen.labor !== 'praxis') {
+    plan = { ...plan, einstellungen: { ...plan.einstellungen, labor: 'praxis' } }
+    hinweise.push('Eigenlabor der Praxis: Laborpositionen und BEL-Preise aus dem Praxiskatalog.')
+  }
+  const listen = listenFuer(plan, praxis)
+  const mitAnalog = analogUebernehmen(plan, listen)
+  if (mitAnalog !== plan) hinweise.push('Analogpositionen der Praxis ersetzen die zugehörigen GOZ-Nummern.')
+  plan = mitAnalog
+  const ergebnis = rechnen(plan, praxis)
+  return { status: 'ok', plan, ergebnis, zusammenfassung: zusammenfassen(plan, ergebnis), hinweise }
 }
 
 const EINER: Record<string, number> = {
