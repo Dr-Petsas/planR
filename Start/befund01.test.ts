@@ -18,6 +18,15 @@ describe('aktueller 01-Befund', () => {
     expect(befundAnsicht(gesagt).zaehne['16']).toBe('k')
   })
 
+  it('Implantat ohne Suprakonstruktion steht als i', () => {
+    const b = nachLesen(undefined, gelesen({ '46': 'j', '36': 'J', '16': 'k' }), T1)
+    expect(b.pvsZaehne).toMatchObject({ '46': 'i', '36': 'i', '16': 'k' })
+    expect(befundAnsicht(b).zaehne).toMatchObject({ '46': 'i', '36': 'i' })
+    const alt = nachLesen(undefined, gelesen({ '46': 'j' }), T1)
+    alt.pvsZaehne['46'] = 'j'
+    expect(befundAnsicht(alt).zaehne['46']).toBe('i')
+  })
+
   it('erstes Lesen übernimmt das Praxisprogramm', () => {
     const b = nachLesen(undefined, gelesen({ '16': 'k', '26': 'f' }), T1)
     expect(befundAnsicht(b).zaehne).toMatchObject({ '16': 'k', '26': 'f' })
