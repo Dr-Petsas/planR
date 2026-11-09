@@ -785,11 +785,7 @@ const zahnStehtNoch = (b: Befund, z: string) => {
 
 /** Erzeugt aus Auftrag und Befund einen gerechneten Plan – oder eine Rückfrage. */
 export function planAusAuftrag(auftrag: HkpAuftrag, befundRoh: Befund, optionen: PlanOptionen = {}): PlanErgebnis | Rueckfrage {
-  const befund: Befund = Object.fromEntries(Object.entries(befundRoh).map(([z, b]) => {
-    const code = (b ?? '').trim().toLowerCase()
-    // Implantat ohne Suprakonstruktion ist immer i.
-    return [z, code === 'j' ? 'i' : code]
-  }))
+  const befund: Befund = Object.fromEntries(Object.entries(befundRoh).map(([z, b]) => [z, (b ?? '').trim().toLowerCase()]))
   const hinweise: string[] = []
 
   const teile = auftrag.teile?.length ? auftrag.teile : [auftrag]

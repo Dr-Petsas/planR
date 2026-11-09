@@ -18,13 +18,12 @@ describe('aktueller 01-Befund', () => {
     expect(befundAnsicht(gesagt).zaehne['16']).toBe('k')
   })
 
-  it('Implantat ohne Suprakonstruktion steht als i', () => {
-    const b = nachLesen(undefined, gelesen({ '46': 'j', '36': 'J', '16': 'k' }), T1)
-    expect(b.pvsZaehne).toMatchObject({ '46': 'i', '36': 'i', '16': 'k' })
-    expect(befundAnsicht(b).zaehne).toMatchObject({ '46': 'i', '36': 'i' })
-    const alt = nachLesen(undefined, gelesen({ '46': 'j' }), T1)
-    alt.pvsZaehne['46'] = 'j'
-    expect(befundAnsicht(alt).zaehne['46']).toBe('i')
+  it('Kürzel aus dem Praxisprogramm bleiben, eine offene Krone gewinnt in der Anzeige', () => {
+    const b = nachLesen(undefined, gelesen({ '46': 'j', '16': 'k' }), T1)
+    expect(b.pvsZaehne).toMatchObject({ '46': 'j', '16': 'k' })
+    const mitKrone = nachAenderung(b, { '46': 'sk' }, 'Befund', T2)
+    expect(befundAnsicht(mitKrone).zaehne['46']).toBe('sk')
+    expect(befundAnsicht(mitKrone).pvsZaehne['46']).toBe('j')
   })
 
   it('erstes Lesen übernimmt das Praxisprogramm', () => {

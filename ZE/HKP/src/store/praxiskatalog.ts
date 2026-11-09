@@ -44,7 +44,18 @@ function laden(): Stand | null {
 }
 
 let stand = typeof localStorage === 'undefined' ? null : laden()
+const VOLL_KEY = mk('hkp.praxiskatalog.voll')
+function vollLaden(): PraxisKatalog | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(VOLL_KEY) ?? 'null') as PraxisKatalog | null
+    return d && Array.isArray(d.eigenlabor) && Array.isArray(d.goz) ? d : null
+  } catch {
+    return null
+  }
+}
+let voll: PraxisKatalog | null = typeof localStorage === 'undefined' ? null : vollLaden()
 const abonnenten = new Set<() => void>()
+const vollAbonnenten = new Set<() => void>()
 
 export const praxiskatalogStand = () => stand
 export function usePraxiskatalog() {
@@ -57,11 +68,24 @@ export function usePraxiskatalog() {
   )
 }
 
+export function usePraxisKatalogVoll() {
+  return useSyncExternalStore(
+    (f) => {
+      vollAbonnenten.add(f)
+      return () => vollAbonnenten.delete(f)
+    },
+    () => voll,
+  )
+}
+
 export function praxiskatalogAnwenden(k: PraxisKatalog) {
   eigenlaborSpeichern(eigenlaborMischen(eigenlaborLesen(), k))
   const basis = STANDARD_LISTEN.find((l) => l.typ === 'goz') as Preisliste<'goz'> | undefined
   if (basis && k.goz.length) listeSpeichern(praxisGozListe(basis, k))
   else if (getListen().some((l) => l.id === PRAXIS_GOZ_ID)) listeLoeschen(PRAXIS_GOZ_ID)
+  voll = k
+  localStorage.setItem(VOLL_KEY, JSON.stringify(k))
+  vollAbonnenten.forEach((f) => f())
   stand = {
     kennung: kennung(k), pvs: k.pvs, stand: k.stand, listeName: k.listeName, komplexe: k.komplexe,
     eigenlabor: k.eigenlabor.length, goz: k.goz.filter((g) => g.eigen).length,

@@ -11,9 +11,16 @@ const ALLE = [...OBERKIEFER, ...UNTERKIEFER]
 const anzahl = (o: Record<string, string>) => Object.keys(o).length
 const titel = (z: string, c: string) => `${z}: ${c ? BEFUND_KUERZEL[c] ?? c : 'vorhanden'}`
 
-/** Befund in die B-Zeile des Plans (alle 32 Zähne) */
+/** Befund in die B-Zeile des Plans (alle 32 Zähne). Intakte Implantatkrone sk: R und TP bleiben leer. */
 export const befundInPlan = (p: HkpPlan, zaehne: Record<string, string>): HkpPlan =>
-  ({ ...p, zaehne: Object.fromEntries(ALLE.map((z) => [z, { ...p.zaehne[z], B: zaehne[z] ?? '' }])) })
+  ({
+    ...p,
+    zaehne: Object.fromEntries(ALLE.map((z) => {
+      const bisher = p.zaehne[z]
+      const B = zaehne[z] ?? ''
+      return [z, { ...bisher, B, ...(B.trim().toLowerCase() === 'sk' ? { R: '', TP: '' } : {}) }]
+    })),
+  })
 
 function Schema({ b, plan }: { b: Befund01; plan: HkpPlan['zaehne'] }) {
   const weicht = abweichungen(plan, b.zaehne)
@@ -129,7 +136,8 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei }: {
     const p = planRef.current.zaehne
     const leer = ALLE.every((z) => !String(p[z]?.B ?? '').trim())
     if (!frei) {
-      if (leer && anzahl(abweichungen(p, b.zaehne))) setPlan((q) => befundInPlan(q, b.zaehne))
+      const ziel = leer ? (anzahl(abweichungen(p, b.zaehne)) ? b.zaehne : null) : befundFolgen(p, alt, b.zaehne)
+      if (ziel) setPlan((q) => befundInPlan(q, ziel))
       return
     }
     const weicht = abweichungen(p, b.zaehne)

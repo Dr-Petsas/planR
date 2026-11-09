@@ -13,6 +13,8 @@ interface Props {
   listen: Listen
   /** wechselt Intraoralscan/Abdruck und rechnet neu */
   onAbformung: (a: AbformungWahl) => void
+  /** Zeile B → Regelversorgung, Festzuschüsse und BEMA/BEL. Fehlt im reinen Leseblatt. */
+  onRegelversorgung?: () => void
 }
 
 const ZUSCHUSS_STUFEN = [['60', 'ohne Bonus'], ['70', 'Bonus 5 Jahre'], ['75', 'Bonus 10 Jahre'], ['100', 'Härtefall']] as const
@@ -96,7 +98,7 @@ function Erlaeuterung({ titel, zusatz, liste }: { titel: string; zusatz?: string
   )
 }
 
-export function Teil1({ plan, setPlan, ergebnis, listen, onAbformung }: Props) {
+export function Teil1({ plan, setPlan, ergebnis, listen, onAbformung, onRegelversorgung }: Props) {
   const s = ergebnis.summen
   const feld = <K extends keyof HkpPlan>(k: K, v: HkpPlan[K]) => setPlan((p) => ({ ...p, [k]: v }))
   const patient = (k: keyof HkpPlan['patient'], v: string) => setPlan((p) => ({ ...p, patient: { ...p.patient, [k]: v } }))
@@ -200,6 +202,18 @@ export function Teil1({ plan, setPlan, ergebnis, listen, onAbformung }: Props) {
           <span>I. Befund des gesamten Gebisses/Behandlungsplan</span>
           <span className="hb-legende"><span>TP = Therapieplanung</span><span>R = Regelversorgung</span><span>B = Befund</span></span>
         </div>
+        {onRegelversorgung && (
+          <div className="regel-leiste bildschirm">
+            <button
+              type="button"
+              className="regel-planen"
+              disabled={!Object.values(plan.zaehne).some((z) => z.B.trim())}
+              title="Aus Zeile B die Regelversorgung in Zeile R eintragen, dazu die Festzuschuss-Befunde und die BEMA- und BEL-Positionen. Eine abweichende Therapieplanung wird geleert."
+              onClick={onRegelversorgung}
+            >Regelversorgung planen</button>
+            <span>Aus Zeile B: Zeile R, Festzuschüsse, BEMA und BEL. Die Therapieplanung wird dabei geleert.</span>
+          </div>
+        )}
         <Zahnschema
           zaehne={plan.zaehne}
           onChange={(zahn, aenderung) => setPlan((p) => ({ ...p, zaehne: { ...p.zaehne, [zahn]: { ...(p.zaehne[zahn] ?? { B: '', R: '', TP: '' }), ...aenderung } } }))}

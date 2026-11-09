@@ -284,10 +284,7 @@ describe('Plan aus Auftrag', () => {
     expect(r.status).toBe('ok')
     if (r.status !== 'ok') return
     expect(r.plan.zaehne['46']).toMatchObject({ B: 'i', TP: 'E' })
-    const exportiert = { ...befund, 46: 'j' }
-    const alsI = planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), exportiert)
-    expect(alsI.status).toBe('ok')
-    if (alsI.status === 'ok') expect(alsI.plan.zaehne['46']).toMatchObject({ B: 'i', TP: 'E' })
+    expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), { ...befund, 46: 'j' })).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['46'] })
     expect(r.plan.zaehne['41']).toMatchObject({ B: 'f', TP: 'E' })
     expect(r.plan.befunde.map((b) => b.nr)).toContain('4.4')
     expect(r.hinweise.some((h) => h.includes('ohne Suprakonstruktion'))).toBe(true)

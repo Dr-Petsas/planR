@@ -9,6 +9,18 @@ import { bereich } from './zusatzleistungen'
  * die Labor-Zuordnung (Eigen/Fremd) gleicher Positionen und – nach einem XML-Import – die
  * Fremdlabor-Positionen aus der Laborrechnung.
  */
+/**
+ * Zeile B → Regelversorgung: Zeile R, Festzuschuss-Befunde und die BEMA-/BEL-Positionen.
+ * Eine leere Therapieplanung ist die Regelversorgung. Eine schon eingetragene TP würde
+ * gleichartig oder andersartig, deshalb wird sie dabei geleert.
+ */
+export function regelversorgungPlanen(plan: HkpPlan): { plan: HkpPlan; hinweise: string[] } {
+  const regel = regelversorgungErmitteln(plan.zaehne, regelOptionen(plan))
+  if (!Object.values(regel.R).some(Boolean) && !regel.befunde.length) return { plan, hinweise: regel.hinweise }
+  const zaehne = Object.fromEntries(Object.entries(plan.zaehne).map(([z, v]) => [z, { ...v, TP: '' }]))
+  return { plan: regelUebernehmen({ ...plan, versorgungsart: 'auto' }, regel, zaehne), hinweise: regel.hinweise }
+}
+
 export function regelUebernehmen(p: HkpPlan, regel: RegelErgebnis, zaehne: Record<string, ZahnZeilen> = p.zaehne, laborFuer: (x: Position) => Labor | undefined = () => undefined): HkpPlan {
   const schluessel = (x: Position) => `${x.ebene}|${x.nr}|${x.zahn}`
   const bisher = new Map(p.positionen.filter((x) => x.labor).map((x) => [schluessel(x), x.labor]))

@@ -35,8 +35,8 @@ function befund(nr: string, zahnGebiet: string, anzahl = 1): FestzuschussBefund 
 }
 
 const kuerzel = (z: ZahnZeilen | undefined) => (z?.B ?? '').trim().toLowerCase()
-/** i gesprochen, j aus DS-Win: Implantat ohne Suprakonstruktion. ix dito, schon als nicht erhaltungswürdig markiert. */
-const implantatNackt = (k: string) => k === 'i' || k === 'ix' || k === 'j'
+/** i: Implantat ohne Suprakonstruktion. ix: schon als nicht erhaltungswürdig markiert. */
+const implantatNackt = (k: string) => k === 'i' || k === 'ix'
 
 /** Analysiert einen Kiefer: vorhandene Zähne, Lücken, Freiend */
 function kieferAnalyse(reihe: string[], zaehne: Record<string, ZahnZeilen>) {

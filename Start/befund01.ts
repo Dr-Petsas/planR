@@ -129,13 +129,8 @@ export const vorgangBeenden = (alt: Befund01): Befund01 => {
   return rest
 }
 
-/** Implantat ohne Suprakonstruktion ist immer i. Ein exportiertes j wird dabei zu i. */
-const alsImplantat = (c: string) => (c.trim().toLowerCase() === 'j' ? 'i' : c)
-const kuerzelImplantat = (z: Record<string, string>) =>
-  Object.fromEntries(Object.entries(z).map(([k, v]) => [k, alsImplantat(v)]))
-
-/** Was angezeigt wird und für den nächsten Plan gilt */
-export const zaehneAktuell = (b: Befund01) => kuerzelImplantat({ ...b.pvsZaehne, ...b.offen })
+/** Was angezeigt wird und für den nächsten Plan gilt: Praxisprogramm, darüber die offenen Änderungen. */
+export const zaehneAktuell = (b: Befund01) => ({ ...b.pvsZaehne, ...b.offen })
 
 /** Gesprochene Kürzel klein (eHKP), Kürzel aus dem Praxisprogramm unverändert */
 const nurZaehne = (z: Record<string, unknown>, klein = true) =>
@@ -152,7 +147,7 @@ const gleich = (a: Record<string, string>, b: Record<string, string>) =>
 
 /** Nach dem Lesen aus dem Praxisprogramm: offene Änderungen, die dort inzwischen genauso stehen, sind erledigt. */
 export function nachLesen(alt: Befund01 | undefined, l: { patient: string; label?: string; geburt?: string; pvs: string; zaehne: Record<string, string>; datum: string }, jetzt = new Date().toISOString()): Befund01 {
-  const pvsZaehne = kuerzelImplantat(nurZaehne(l.zaehne, false))
+  const pvsZaehne = nurZaehne(l.zaehne, false)
   const offen = Object.fromEntries(Object.entries(alt?.offen ?? {}).filter(([z, c]) => !wieImPvs(pvsZaehne, z, c)))
   const vorher = alt ? zaehneAktuell(alt) : null
   const b: Befund01 = {
@@ -209,7 +204,7 @@ export function ablageKuerzen(a: Record<string, Befund01>, max = BEFUNDE_MAX): R
 export function befundAnsicht(b: Befund01) {
   return {
     patient: b.patient, label: b.label, geburt: b.geburt, pvs: b.pvs, pvsDatum: b.pvsDatum,
-    zaehne: zaehneAktuell(b), pvsZaehne: kuerzelImplantat(b.pvsZaehne), offen: kuerzelImplantat(b.offen), offenWer: b.offenWer,
+    zaehne: zaehneAktuell(b), pvsZaehne: b.pvsZaehne, offen: b.offen, offenWer: b.offenWer,
     gelesen: b.gelesen, geschrieben: b.geschrieben, stand: b.stand,
     vorgang: b.vorgang && vorgangLaeuft(b) ? b.vorgang : b.vorgang?.phase === 'angelegt' ? b.vorgang : null,
   }

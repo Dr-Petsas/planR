@@ -136,21 +136,26 @@ export interface Entwurf {
 const katalogHatLabor = (praxis: PraxisListen) =>
   !!(praxis.katalog?.bel?.length || praxis.katalog?.eigenlabor?.length || praxis.eigen?.length)
 
+/** Dieselbe Katalogrechnung für Clara und den geöffneten Planer: Eigenlabor und Analognummern. */
+export function planMitKatalog(plan: HkpPlan, praxis: PraxisListen = {}, fremd = false): HkpPlan {
+  let n = plan
+  if (!fremd && katalogHatLabor(praxis) && n.einstellungen.labor === 'gewerbe') {
+    n = { ...n, einstellungen: { ...n.einstellungen, labor: 'praxis' } }
+  }
+  return analogUebernehmen(n, listenFuer(n, praxis))
+}
+
 /** Gesprochener Auftrag + Befund → gerechneter HKP-Entwurf oder Rückfrage */
 export function hkpEntwurf(auftragText: string, befund: Befund, optionen: PlanOptionen = {}, praxis: PraxisListen = {}): Entwurf | Rueckfrage {
   const r = planAusAuftrag(auftragVerstehen(auftragText), befund, optionen)
   if (r.status !== 'ok') return r
   const fremd = /\bfremdlabor\b|\bgewerbelabor\b/i.test(auftragText)
   const hinweise = [...r.hinweise]
-  let plan = r.plan
-  if (!fremd && katalogHatLabor(praxis) && plan.einstellungen.labor !== 'praxis') {
-    plan = { ...plan, einstellungen: { ...plan.einstellungen, labor: 'praxis' } }
+  const plan = planMitKatalog(r.plan, praxis, fremd)
+  if (plan.einstellungen.labor === 'praxis' && r.plan.einstellungen.labor !== 'praxis') {
     hinweise.push('Eigenlabor der Praxis: Laborpositionen und BEL-Preise aus dem Praxiskatalog.')
   }
-  const listen = listenFuer(plan, praxis)
-  const mitAnalog = analogUebernehmen(plan, listen)
-  if (mitAnalog !== plan) hinweise.push('Analogpositionen der Praxis ersetzen die zugehörigen GOZ-Nummern.')
-  plan = mitAnalog
+  if (plan.positionen !== r.plan.positionen) hinweise.push('Analogpositionen der Praxis ersetzen die zugehörigen GOZ-Nummern.')
   const ergebnis = rechnen(plan, praxis)
   return { status: 'ok', plan, ergebnis, zusammenfassung: zusammenfassen(plan, ergebnis), hinweise }
 }

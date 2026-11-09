@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan } from '../types'
 import { planNormalisieren } from '../store/plan'
 import { berechnen, type Listen } from '../engine/berechnung'
-import { listenFuer } from '../clara'
+import { listenFuer, planMitKatalog } from '../clara'
+import { usePraxisKatalogVoll } from '../store/praxiskatalog'
 import { STATUS_TEXT, freigebenPerLink, hkpPerLink, planStand, type LinkZugang, type RegisterHkp } from '../store/register'
 import { vollansichtSuche } from '../store/mobilLink'
 import { PreisRegler } from './PreisRegler'
@@ -43,7 +44,19 @@ function MobilPlan({ zugang, start, plan, setPlan }: {
   plan: HkpPlan
   setPlan: (f: (p: HkpPlan) => HkpPlan) => void
 }) {
-  const { entwurf, listen } = start
+  const katalog = usePraxisKatalogVoll()
+  const { entwurf } = start
+  const listen = useMemo(
+    () => (katalog ? listenFuer(plan, { katalog }) : start.listen),
+    [katalog, plan.verwaltung, plan.einstellungen, start.listen],
+  )
+  useEffect(() => {
+    if (!katalog) return
+    setPlan((p) => {
+      const n = planMitKatalog(p, { katalog })
+      return n.einstellungen.labor === p.einstellungen.labor && n.positionen === p.positionen ? p : n
+    })
+  }, [katalog, setPlan])
   const [hkp, setHkp] = useState(start.hkp)
   const [meldungen, setMeldungen] = useState<string[]>([])
   const [frage, setFrage] = useState(false)

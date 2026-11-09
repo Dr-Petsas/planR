@@ -505,7 +505,12 @@ main { padding: 16px 20px 60px; max-width: 1320px; margin: 0 auto; }
 .hb-titel-block p { margin: 0; font-weight: 700; font-size: 8.5pt; line-height: 1.15; }
 
 /* I. Befund */
-.hb-abschnitt { display: flex; justify-content: space-between; margin: 1.5mm 0 0 7mm; padding: .3mm 1mm; background: var(--hb-grau-hell); font-weight: 700; font-size: 8pt; }
+.hb-abschnitt { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 1.5mm 0 0 7mm; padding: .3mm 1mm; background: var(--hb-grau-hell); font-weight: 700; font-size: 8pt; }
+.regel-leiste { display: flex; align-items: center; gap: 14px; margin: 8px 7mm 4px; padding: 10px 14px; background: #e8f1fb; border: 1px solid var(--blau); border-radius: 10px; }
+.regel-leiste span { font-size: 13px; line-height: 1.35; color: #1d4f91; }
+.regel-planen { flex: 0 0 auto; font-size: 16px; font-weight: 700; padding: 11px 18px; border: 0; border-radius: 8px; background: var(--blau); color: #fff; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 0 #1d4f91; }
+.regel-planen:hover:not(:disabled) { background: #1d4f91; }
+.regel-planen:disabled { opacity: .45; cursor: default; box-shadow: none; }
 .hb-legende { display: flex; gap: 10mm; font-weight: 400; font-size: 7.5pt; margin-right: 9mm; }
 .zahnschema { border-collapse: collapse; width: 100%; table-layout: fixed; }
 .zahnschema td, .zahnschema th { border: 1px solid var(--hb-m); padding: 0; text-align: center; height: 6.4mm; }

@@ -14,7 +14,7 @@ import { IMPLANTATSYSTEME } from '../data/implantatsysteme'
 import { OBERKIEFER, UNTERKIEFER } from './zahnschema'
 import { gebietAufloesen, kombination, kombinationenPruefen } from './kombinationen'
 import { auftragsnummerErzeugen, auftragsnummerGueltig, laborXmlErstellen, laborXmlLesen, laborXmlUebernehmen, pruefziffer } from './laborxml'
-import { PRIVAT_EXTRAS, privatKandidaten, privatProthesen, privatStufeAnwenden, regelUebernehmen } from './aufwertung'
+import { PRIVAT_EXTRAS, privatKandidaten, privatProthesen, privatStufeAnwenden, regelUebernehmen, regelversorgungPlanen } from './aufwertung'
 import { DPF_INDEX, dpfAbgleich, dpfBefundDatei, dpfErgebnisLesen, dpfUebernehmen } from './dpf'
 import { BEB_STANDARD, bebErgaenzen } from './beb-standard'
 
@@ -192,6 +192,21 @@ describe('Gebührenberechnung', () => {
 })
 
 describe('Regelengine', () => {
+  it('Regelversorgung planen trägt R, Festzuschuss und BEMA ein und leert eine abweichende TP', () => {
+    const alt = planMit({ '16': 'ww' }, { '16': 'KM' })
+    alt.positionen = [{ id: 'hand', ebene: 'GOZ', nr: '2210', zahn: '16', anzahl: 1, auto: false }]
+    const { plan, hinweise } = regelversorgungPlanen(alt)
+    expect(plan.zaehne['16']).toMatchObject({ B: 'ww', R: 'K', TP: '' })
+    expect(plan.befunde.map((b) => b.nr)).toEqual(['1.1'])
+    expect(plan.positionen.some((p) => p.auto && p.ebene === 'BEMA' && p.nr === '20a' && p.zahn === '16')).toBe(true)
+    expect(plan.positionen.some((p) => p.id === 'hand')).toBe(true)
+    expect(berechnen(plan, LISTEN).summen.festzuschuss).toBeGreaterThan(0)
+    expect(hinweise.join(' ')).not.toMatch(/kein Versorgungsbedarf/)
+    const leer = regelversorgungPlanen(planMit({ '11': 'k' }))
+    expect(leer.plan.befunde).toEqual([])
+    expect(leer.plan.zaehne['11'].R).toBe('')
+  })
+
   it('Einzelkrone Seitenzahn: 16 ww → 1.1, K', () => {
     const r = regelversorgungErmitteln(planMit({ '16': 'ww' }).zaehne)
     expect(nrs(r.befunde)).toEqual(['1.1'])

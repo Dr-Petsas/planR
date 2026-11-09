@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan, Preisliste } from './types'
 import { usePlan, leererPlan, planNormalisieren } from './store/plan'
-import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, listenFuerPlan, stichtag, usePreislisten, TYP_NAMEN } from './store/preislisten'
+import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, stichtag, usePreislisten, TYP_NAMEN } from './store/preislisten'
 import { getPraxis, usePraxis } from './store/praxis'
 import type { Praxis } from './stammdaten'
 import { PraxisFelder } from './components/Stammdaten'
@@ -9,6 +9,7 @@ import { ListenKarte } from './components/Listen'
 import { KZVEN, kzvNachNr } from './data/kzv'
 import { ListenStand } from './components/ListenStand'
 import { berechnen, type Listen } from './engine/berechnung'
+import { listenFuer, planMitKatalog } from './clara'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './engine/regeln'
 import { privatStufeAnwenden, regelUebernehmen } from './engine/aufwertung'
 import { implantatZaehne } from './engine/implantat'
@@ -22,7 +23,7 @@ import { PreisRegler } from './components/PreisRegler'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { eigenlaborLesen, eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
 import { fremdlaborLesen, fremdlaborSpeichern, useFremdlabor } from './store/fremdlabor'
-import { praxiskatalogAbgleichen, usePraxiskatalog } from './store/praxiskatalog'
+import { praxiskatalogAbgleichen, usePraxiskatalog, usePraxisKatalogVoll } from './store/praxiskatalog'
 import { RegisterLeiste, RegisterSeite } from './components/Register'
 import { useLinkAbgleich, useRegisterAbgleich, type LinkEintrag } from './store/registerAbgleich'
 import { katalogeAnMas, MasVerbindung } from './components/MasVerbindung'
@@ -31,6 +32,7 @@ import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
 import { VersandKnopf } from './components/Versenden'
 import { hkpAnmelden } from './arbeitPlan'
 import { geloescht, RueckgaengigLeiste } from './rueckgaengig'
+import { regelversorgungPlanen } from './engine/aufwertung'
 import { aktivSetzen, hkpPerLink, planStand, registerStatusSetzen, useAktiv, verbindungBereit, verbunden, type HkpStatus, type LinkZugang } from './store/register'
 import { LIVE_TITEL, PHASE_TEXT, liveAbonnieren, liveModus, liveSchritte, type LiveStand } from './store/live'
 import { patientAusFragment } from './stammdaten'
@@ -67,10 +69,22 @@ export default function App() {
   const eigenlabor = useEigenlabor()
   const fremdlabor = useFremdlabor()
   const praxiskatalog = usePraxiskatalog()
-  const lokaleListen: Listen = useMemo(
-    () => ({ ...listenFuerPlan(alle, { verwaltung: plan.verwaltung, einstellungen: e }), eigen: eigenlabor, fremd: fremdlabor, komplexe: praxiskatalog?.komplexe, belPraxis: praxiskatalog?.bel }),
-    [alle, plan.verwaltung, e, eigenlabor, fremdlabor, praxiskatalog],
+  const katalog = usePraxisKatalogVoll()
+  const praxisListen = useMemo(
+    () => ({ preislisten: alle, eigen: eigenlabor, fremd: fremdlabor, katalog: katalog ?? undefined }),
+    [alle, eigenlabor, fremdlabor, katalog],
   )
+  const lokaleListen: Listen = useMemo(
+    () => listenFuer(plan, praxisListen),
+    [plan.verwaltung, plan.einstellungen, praxisListen],
+  )
+  useEffect(() => {
+    if (!katalog) return
+    setPlan((p) => {
+      const n = planMitKatalog(p, praxisListen)
+      return n.einstellungen.labor === p.einstellungen.labor && n.positionen === p.positionen ? p : n
+    })
+  }, [katalog, praxisListen, setPlan])
   // Preise & Positionen aus dem PVS: beim Start und beim Zurückkehren in den Tab (höchstens jede Minute)
   useEffect(() => {
     let zuletzt = 0
@@ -246,6 +260,15 @@ export default function App() {
     }
   }
 
+  function regelversorgungKlick() {
+    const alt = plan
+    const { plan: neu, hinweise } = regelversorgungPlanen(plan)
+    setEngineHinweise(hinweise)
+    if (neu === alt) return
+    setPlan(() => neu)
+    geloescht('Regelversorgung eingetragen', () => setPlan(() => alt))
+  }
+
   function regelengine(aenderung: Partial<HkpPlan> = {}) {
     const q = { ...plan, ...aenderung }
     const stufe = q.einstellungen.eigenPrivatStufe ?? 0
@@ -369,7 +392,8 @@ export default function App() {
       <main>
         <div className={tab === 'teil1' ? '' : 'nur-druck'}>
           <Teil1 plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen}
-            onAbformung={(wahl) => (plan.positionen.some((p) => p.auto) ? regelengine(wahl) : setPlan((p) => ({ ...p, ...wahl })))} />
+            onAbformung={(wahl) => (plan.positionen.some((p) => p.auto) ? regelengine(wahl) : setPlan((p) => ({ ...p, ...wahl })))}
+            onRegelversorgung={regelversorgungKlick} />
         </div>
         <div className={tab === 'teil2' ? '' : 'nur-druck'}>
           {(tab === 'teil2' || ergebnis.versorgungsart !== 'regel') && <Teil2 plan={plan} ergebnis={ergebnis} />}
