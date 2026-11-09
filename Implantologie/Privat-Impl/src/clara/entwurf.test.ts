@@ -26,7 +26,7 @@ describe('Implantologie per Sprache', () => {
     expect(goz(r)).toContain('9120@OK-L')
     expect(r.hinweise).toContain('Eine resorbierbare Membran habe ich angenommen.')
     expect(r.hinweise.join(' ')).not.toMatch(/xenogenes Material angenommen/)
-    expect(implVersorgungSatz(r.zusammenfassung)).toBe('Implantat an 26; dazu externer Sinuslift und navigiert mit Bohrschablone')
+    expect(implVersorgungSatz(r.zusammenfassung)).toBe('Implantat an 26; dazu externer Sinuslift, Knochenaufbau und navigiert mit Bohrschablone')
   })
 
   it('Sinuslift ohne Art: Rückfrage; Antwort "intern" ergänzt', () => {

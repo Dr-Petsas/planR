@@ -124,10 +124,25 @@ export function planen(plan: Plan, _einst: Einstellungen): PlanungsErgebnis {
     const simultan = Object.keys(plan.zaehne).some((z) => regionVon(z) === r && IMPLANTAT_KUERZEL.has(tpVon(plan, z)))
     const opSitz = simultan ? S_IMPLANTATION : S_AUFBAU
 
-    if (o.augmentation) push(goz('9100', r, opSitz, 'Aufbau des Alveolarfortsatzes (GBR)'))
+    const sinus = !!(o.sinusIntern || o.sinusExtern)
+    const kamm = o.augmentation === true || (sinus && o.augmentation !== false && !o.boneSplitting)
+    if (kamm) push(goz('9100', r, opSitz, 'Aufbau des Alveolarfortsatzes (GBR)'))
     if (o.boneSplitting) push(goz('9130', r, opSitz, 'Bone Splitting / Spreading'))
-    if (o.sinusIntern) push(goz('9110', r, opSitz, 'Interner Sinuslift (geschlossene Sinusbodenelevation)'))
+    if (o.sinusIntern) {
+      const kavitaeten = Object.keys(plan.zaehne).filter((z) => regionVon(z) === r && IMPLANTAT_KUERZEL.has(tpVon(plan, z))).length
+      push({ ...goz('9110', r, opSitz, 'Interner Sinuslift (geschlossene Sinusbodenelevation)'), anzahl: Math.max(1, kavitaeten) })
+    }
     if (o.sinusExtern) push(goz('9120', r, opSitz, 'Externer Sinuslift (Knochenfensterung)'))
+    if (sinus) {
+      // Spülen während des Lifts steckt in 9110/9120. Die spätere Spülung durch die vorhandene Öffnung ist GOÄ 1479.
+      push({ id: `auto:goae:1479:${r}:5`, ebene: 'GOAE', nr: '1479', zahn: r, anzahl: 1, sitzung: 5, grund: 'Kieferhöhlenspülung in einer späteren Sitzung, durch die vorhandene Öffnung', auto: true })
+      if (!o.material && !o.blockEntnahme && !o.ringEntnahme) push(mat('kem-xenogen', r, opSitz))
+      if (o.sinusExtern && (!o.membran || o.membran === 'keine')) push(mat('membran-resorbierbar', r, opSitz))
+      const deckungGesagt = !!o.weichgewebe && o.weichgewebe !== 'keine'
+      if (o.sinusExtern && !kamm && !deckungGesagt) {
+        push(goz('3100', r, opSitz, 'Plastische Deckung mit Periostschlitzung, über den einfachen Wundverschluss hinaus'))
+      }
+    }
 
     // Knochenentnahme
     const block = o.blockEntnahme || o.ringEntnahme
@@ -166,6 +181,7 @@ export function planen(plan: Plan, _einst: Einstellungen): PlanungsErgebnis {
     if (wg && wg !== 'keine') {
       const wgSitz = plan.implantate && simultan ? S_FREILEGUNG : opSitz
       if (wg === 'rolllappen') push(goz('3100', r, wgSitz, 'Plastische Deckung (Rolllappen)'))
+      else if (wg === 'spaltlappen') push({ id: `auto:goae:2382:${r}:${wgSitz}`, ebene: 'GOAE', nr: '2382', zahn: r, anzahl: 1, sitzung: wgSitz, grund: 'Schwierige Lappenplastik (Spaltlappen)', auto: true })
       else if (wg === 'fst') { push(goz('4130', r, wgSitz, 'Gewinnung/Transplantation von Schleimhaut')); push(mat('naht', r, wgSitz, 2)) }
       else if (wg === 'btt') push(goz('4133', r, wgSitz, 'Gewinnung/Transplantation von Bindegewebe'))
       else if (wg === 'vestibulumplastik') push(goz('3240', r, wgSitz, 'Vestibulumplastik kleineren Umfangs'))
@@ -173,5 +189,8 @@ export function planen(plan: Plan, _einst: Einstellungen): PlanungsErgebnis {
     }
   }
 
+  if (positionen.some((p) => p.nr === '9110' || p.nr === '9120')) {
+    hinweise.push('Sinuslift: das Einbringen von Knochenersatz und Membran steckt in 9110/9120, berechnet wird nur das Material. Der Kammaufbau 9100 gilt daneben nur anteilig und verdrängt 9090 und die plastische Deckung 3100. Der Verschluss der Höhle steckt in 9120, deshalb keine 3090. Die Spülung GOÄ 1479 ist eine spätere Sitzung.')
+  }
   return { positionen, hinweise }
 }

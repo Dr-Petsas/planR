@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Einstellungen, Plan, Region, RegionOptionen, Zahn } from '../types'
 import { STANDARD_EINSTELLUNGEN, STANDARD_GLOBAL, STANDARD_REGLER, neuerPlan } from '../store'
 import { kalkulieren } from './berechnung'
+import { regelwerkAnwenden } from './regelwerk'
 import { analogWaehlen } from './analog'
 import { goaeRahmen } from './listen'
 import { analogFinden } from '../data/analog-katalog'
@@ -103,6 +104,52 @@ describe('Sinuslift und Augmentation', () => {
     expect(k.honorarGoz.map((z) => z.nr)).toEqual(expect.arrayContaining(['9120', '9100']))
     const p9100 = k.honorarGoz.find((z) => z.nr === '9100')!
     expect(p9100.gebuehrenanteil).toBeCloseTo(1 / 3, 5)
+  })
+
+  it('externer Sinuslift bringt anteiligen Kammaufbau, Membran als Material und die spätere Spülung', () => {
+    const p = plan({
+      zaehne: { '16': { B: 'f', TP: 'I' }, '14': { B: 'f', TP: 'I' } },
+      regionen: { 'OK-R': { sinusExtern: true } },
+    })
+    const k = kalkulieren(p, E)
+    expect(k.honorarGoz.map((z) => z.nr)).toEqual(expect.arrayContaining(['9120', '9100', '0530']))
+    expect(k.honorarGoz.find((z) => z.nr === '9100')!.gebuehrenanteil).toBeCloseTo(1 / 3, 5)
+    expect(k.honorarGoz.map((z) => z.nr)).not.toContain('4138')
+    expect(k.honorarGoz.map((z) => z.nr)).not.toContain('3090')
+    expect(k.honorarGoz.map((z) => z.nr)).not.toContain('3100')
+    expect(k.honorarGoae.map((z) => z.nr)).toContain('1479')
+    expect(k.material.map((z) => z.text).join(' ')).toMatch(/[Xx]enogen|Bio|Membran|Kollagen/)
+  })
+
+  it('ohne Kammaufbau bleibt die plastische Deckung, der Verschluss der Höhle nicht als 3090', () => {
+    const p = plan({
+      zaehne: { '26': { B: 'f', TP: 'I' } },
+      regionen: { 'OK-L': { sinusExtern: true, augmentation: false } },
+    })
+    const nrs = gozNrs(p)
+    expect(nrs).toContain('9120')
+    expect(nrs).toContain('3100')
+    expect(nrs).not.toContain('9100')
+    expect(nrs).not.toContain('3090')
+  })
+
+  it('3090 fällt neben dem externen Lift weg', () => {
+    const r = regelwerkAnwenden([
+      { id: 'a', ebene: 'GOZ', nr: '9120', zahn: 'OK-R', anzahl: 1, sitzung: 3, auto: true },
+      { id: 'b', ebene: 'GOZ', nr: '3090', zahn: 'OK-R', anzahl: 1, sitzung: 3, auto: true },
+    ])
+    expect(r.positionen.map((z) => z.nr)).toEqual(['9120'])
+    expect(r.hinweise.join(' ')).toMatch(/3090/)
+  })
+
+  it('interner Sinuslift je Kavität', () => {
+    const p = plan({
+      zaehne: { '24': { B: 'f', TP: 'I' }, '26': { B: 'f', TP: 'I' } },
+      regionen: { 'OK-L': { sinusIntern: true, augmentation: false } },
+    })
+    const zeile = kalkulieren(p, E).honorarGoz.find((z) => z.nr === '9110')!
+    expect(zeile.anzahl).toBe(2)
+    expect(goaeNrs(p)).toContain('1479')
   })
 
   it('zwei interne Sinuslifte + 9100 nur zur Hälfte', () => {

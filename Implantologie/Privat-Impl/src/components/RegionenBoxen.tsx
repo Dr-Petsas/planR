@@ -17,7 +17,7 @@ const MEMBRAN_WAHL: [NonNullable<RegionOptionen['membran']>, string][] = [
   ['titan', 'Titangitter (Yxoss …)'], ['vlies', 'Kollagenvlies'],
 ]
 const WEICH_WAHL: [NonNullable<RegionOptionen['weichgewebe']>, string][] = [
-  ['keine', 'keine'], ['rolllappen', 'Rolllappen'], ['fst', 'freies Schleimhauttransplantat'],
+  ['keine', 'keine'], ['rolllappen', 'Rolllappen (3100)'], ['spaltlappen', 'Spaltlappen (GOÄ 2382)'], ['fst', 'freies Schleimhauttransplantat'],
   ['btt', 'Bindegewebetransplantat'], ['vestibulumplastik', 'Vestibulumplastik'], ['tuberplastik', 'Tuberplastik'],
 ]
 
@@ -35,8 +35,8 @@ export function RegionenBoxen({ regionen, wert, onChange }: Props) {
             <legend>{REGION_NAME[r]}</legend>
             <div className="region-grid">
               <label className="chk"><input type="checkbox" checked={!!o.augmentation} onChange={(e) => setzen(r, { augmentation: e.target.checked })} /> Augmentation (GBR)</label>
-              <label className="chk"><input type="checkbox" checked={!!o.sinusIntern} onChange={(e) => setzen(r, { sinusIntern: e.target.checked })} /> Sinuslift intern</label>
-              <label className="chk"><input type="checkbox" checked={!!o.sinusExtern} onChange={(e) => setzen(r, { sinusExtern: e.target.checked })} /> Sinuslift extern</label>
+              <label className="chk"><input type="checkbox" checked={!!o.sinusIntern} onChange={(e) => setzen(r, e.target.checked ? { sinusIntern: true, sinusExtern: false, augmentation: o.boneSplitting ? o.augmentation : true, material: o.material || 'xenogen' } : { sinusIntern: false })} /> Sinuslift intern</label>
+              <label className="chk"><input type="checkbox" checked={!!o.sinusExtern} onChange={(e) => setzen(r, e.target.checked ? { sinusExtern: true, sinusIntern: false, augmentation: o.boneSplitting ? o.augmentation : true, material: o.material || 'xenogen', membran: o.membran && o.membran !== 'keine' ? o.membran : 'resorbierbar' } : { sinusExtern: false })} /> Sinuslift extern</label>
               <label className="chk"><input type="checkbox" checked={!!o.blockEntnahme} onChange={(e) => setzen(r, { blockEntnahme: e.target.checked })} /> Blockentnahme</label>
               <label className="chk"><input type="checkbox" checked={!!o.ringEntnahme} onChange={(e) => setzen(r, { ringEntnahme: e.target.checked })} /> Ringentnahme</label>
               <label className="chk"><input type="checkbox" checked={!!o.kollektor} onChange={(e) => setzen(r, { kollektor: e.target.checked })} /> Knochenkollektor</label>

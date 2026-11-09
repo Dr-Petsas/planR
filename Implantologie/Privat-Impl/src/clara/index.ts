@@ -71,6 +71,8 @@ export interface ImplAuftrag {
   sinusJe: Partial<Record<'OK-R' | 'OK-L', RegionOptionen>> | null
   materialAngenommen: boolean
   membranAngenommen: boolean
+  /** Sinuslift ohne ausdrückliches „ohne Aufbau“: Kammaufbau 9100 anteilig mit ansetzen */
+  kammZumSinus: boolean
   global: Partial<GlobalOptionen>
   deckung: ImplantatDetail['deckung']
   system: string
@@ -153,10 +155,12 @@ export function implAuftragVerstehen(roh: string): ImplAuftrag {
   else if (/membran/.test(k)) o.membran = 'resorbierbar'
   const membranAngenommen = !o.membran && !!(o.augmentation || o.sinusExtern || jeExtern || sinusOffen)
   if (membranAngenommen && !sinusJe) o.membran = 'resorbierbar'
-  if (/bindegewebe|\bbgt\b|\bctg\b/.test(k)) o.weichgewebe = 'btt'
+  const kammZumSinus = !/ohne (?:knochen)?aufbau|nur (?:der |den )?sinus/.test(k)
+  if (/spaltlappen|rehrmann|schwierige[rn]? lappen/.test(k)) o.weichgewebe = 'spaltlappen'
+  else if (/bindegewebe|\bbgt\b|\bctg\b/.test(k)) o.weichgewebe = 'btt'
   else if (/schleimhauttransplant|\bfst\b|freies schleimhaut/.test(k)) o.weichgewebe = 'fst'
   else if (/vestibulumplastik/.test(k)) o.weichgewebe = 'vestibulumplastik'
-  else if (/roll-?lappen/.test(k)) o.weichgewebe = 'rolllappen'
+    else if (/roll-?lappen|plastische deckung/.test(k)) o.weichgewebe = 'rolllappen'
 
   const g: Partial<GlobalOptionen> = {}
   if (/\bprgf\b|endoret/.test(k)) g.blut = 'prgf'
@@ -178,7 +182,7 @@ export function implAuftragVerstehen(roh: string): ImplAuftrag {
   const system = SYSTEM_WORT.find(([re]) => re.test(t))?.[1] ?? 'durchschnitt'
   return {
     zaehne: zaehneFinden(t), sofort: SOFORT.test(t), spaet: SPAET.test(t), regionen: o, sinusOffen, sinusJe,
-    materialAngenommen, membranAngenommen, global: g, deckung, system,
+    materialAngenommen, membranAngenommen, kammZumSinus, global: g, deckung, system,
     prothetik: /krone|br(?:ü|ue)cke|prothese|teleskop|\bsteg\b|suprakonstruktion/.test(k),
   }
 }
@@ -197,7 +201,7 @@ const MASSNAHME: [keyof RegionOptionen, string][] = [
   ['sinusExtern', 'externer Sinuslift'], ['sinusIntern', 'interner Sinuslift'], ['augmentation', 'Knochenaufbau'],
   ['boneSplitting', 'Bone Splitting'], ['blockEntnahme', 'Knochenblock'], ['ringEntnahme', 'Knochenring'],
 ]
-const WEICHGEWEBE: Record<string, string> = { btt: 'Bindegewebstransplantat', fst: 'Schleimhauttransplantat', vestibulumplastik: 'Vestibulumplastik', rolllappen: 'Rolllappen' }
+const WEICHGEWEBE: Record<string, string> = { btt: 'Bindegewebstransplantat', fst: 'Schleimhauttransplantat', vestibulumplastik: 'Vestibulumplastik', rolllappen: 'Rolllappen', spaltlappen: 'Spaltlappen' }
 const SEDIERUNG: Record<string, string> = { lachgas: 'Lachgas', analgosedierung: 'Analgosedierung', itn: 'Vollnarkose' }
 
 /** Gesprochener Auftrag + 01 → gerechneter Kostenvoranschlag Implantologie (ohne Nummer) oder Rückfrage */
@@ -256,6 +260,7 @@ export function implEntwurf(auftragText: string, befund: Record<string, string> 
     const ro: RegionOptionen = { ...rest }
     if (a.sinusJe && IST_OK_SEITE(r)) Object.assign(ro, a.sinusJe[r] ?? {})
     else if (IST_OK_SEITE(r)) Object.assign(ro, sinusIntern ? { sinusIntern } : {}, sinusExtern ? { sinusExtern } : {})
+    if ((ro.sinusIntern || ro.sinusExtern) && a.kammZumSinus && !ro.boneSplitting) ro.augmentation = true
     if (a.sinusJe) {
       if ((ro.sinusIntern || ro.sinusExtern || ro.augmentation) && a.materialAngenommen && !ro.material) ro.material = 'xenogen'
       if ((ro.augmentation || ro.sinusExtern) && a.membranAngenommen && !ro.membran) ro.membran = 'resorbierbar'

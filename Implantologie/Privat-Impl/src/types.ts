@@ -46,7 +46,7 @@ export interface ImplantatDetail {
 
 /** Pro Kieferregion wählbare chirurgische Zusatzmaßnahmen (Einstellboxen). */
 export interface RegionOptionen {
-  /** interner Sinuslift (Kieferhöhle, osteotom, 9120) */
+  /** interner Sinuslift (geschlossene Sinusbodenelevation, 9110 je Kavität) */
   sinusIntern?: boolean
   /** externer Sinuslift (laterales Fenster, 9120 je Kieferhälfte) */
   sinusExtern?: boolean
@@ -67,7 +67,7 @@ export interface RegionOptionen {
   /** Membran-/Blockfixierung mit Pins oder Osteosyntheseschrauben (9140) */
   fixierung?: boolean
   /** plastische Deckung / Weichgewebe (9130, 9140, GOÄ 2381/2386) */
-  weichgewebe?: 'keine' | 'rolllappen' | 'fst' | 'btt' | 'vestibulumplastik' | 'tuberplastik'
+  weichgewebe?: 'keine' | 'rolllappen' | 'spaltlappen' | 'fst' | 'btt' | 'vestibulumplastik' | 'tuberplastik'
   /** Eigenblutmembran (PRF/A-PRF/i-PRF) in dieser Region einbringen */
   eigenblut?: boolean
 }

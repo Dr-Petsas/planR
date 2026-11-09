@@ -51,6 +51,10 @@ export function regelwerkAnwenden(eingang: Position[]): RegelErgebnis {
     if (has('3100') && (has('9100') || has('3090'))) {
       raus.add(find('3100')!.id); hinweise.push(`${region}: GOZ 3100 ist neben 9100/3090 nicht berechnungsfähig – entfernt.`)
     }
+    // Der Verschluss nach dem externen Lift steckt in 9120, das ist keine Mund-Antrum-Verbindung.
+    if (has('3090') && has('9120')) {
+      raus.add(find('3090')!.id); hinweise.push(`${region}: GOZ 3090 ist nach dem externen Sinuslift nicht berechnungsfähig, der Verschluss steckt in 9120.`)
+    }
     // 9050 nicht neben 9010 oder 9040
     if (has('9050') && (has('9010') || has('9040'))) {
       raus.add(find('9050')!.id); hinweise.push(`${region}: GOZ 9050 ist neben 9010/9040 nicht berechnungsfähig – entfernt.`)
