@@ -244,17 +244,21 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
       hinweise.push(`${kieferName}: Sekundärteleskop ${t2w.join(', ')} erneuern (6.10) mit Einarbeitung in die Prothese (6.3, Modellgussbasis). Bei schleimhautgetragener Deckprothese stattdessen 6.2.`)
     }
 
-    if (!neuVersorgung) continue
+    // Nur Implantate ohne Aufbau, kein eigener Zahn: der Kiefer ist für die Totalprothese zahnlos.
+    const zahnlosTrotzImplantat = a.vorhanden.length === 0 && a.sitz.some((z) => kuerzel(zaehne[z]) === 'i' || kuerzel(zaehne[z]) === 'ix')
+    if (!neuVersorgung && !zahnlosTrotzImplantat) continue
 
     // ---- Befundklasse 4: Restzahnbestand bis 3 Zähne oder zahnlos ----
     if (a.vorhanden.length <= 3) {
       const nr = a.vorhanden.length === 0 ? (kiefer === 'OK' ? '4.2' : '4.4') : kiefer === 'OK' ? '4.1' : '4.3'
       befunde.push(befund(nr, kiefer))
-      for (const z of a.sitz) if (a.fehlt(z) && !istWeisheitszahn(z) && kuerzel(zaehne[z]) !== 'rw' && !istImplantat(kuerzel(zaehne[z]))) R[z] = 'E'
+      // i/ix: gesetztes Implantat ohne Aufbau, für die Prothese eine Lücke wie ein fehlender Zahn
+      const luecke = (z: string) => a.fehlt(z) || kuerzel(zaehne[z]) === 'i' || kuerzel(zaehne[z]) === 'ix'
+      for (const z of a.sitz) if (luecke(z) && !istWeisheitszahn(z) && kuerzel(zaehne[z]) !== 'rw' && !istImplantat(kuerzel(zaehne[z]))) R[z] = 'E'
       prothesenKiefer.push(kiefer)
       positionen.push(pos('BEMA', kiefer === 'OK' ? '97a' : '97b', kiefer))
       positionen.push(pos('BEMA', kiefer === 'OK' ? '98b' : '98c', kiefer))
-      const n = a.fehlendOhne8.length
+      const n = a.sitz.filter((z) => luecke(z) && !istWeisheitszahn(z)).length
       positionen.push(
         pos('BEL', '0010', kiefer, 2), pos('BEL', '0211', kiefer), pos('BEL', '0213', kiefer), pos('BEL', '0220', kiefer),
         pos('BEL', '0120', kiefer), pos('BEL', '3010', kiefer), pos('BEL', '3020', kiefer, n),

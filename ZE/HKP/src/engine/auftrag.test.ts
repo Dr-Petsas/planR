@@ -276,6 +276,23 @@ describe('Plan aus Auftrag', () => {
     expect(e.positionen.some((p) => p.ebene === 'BEL' && p.nr === '1200' && p.zahn === '14')).toBe(true)
   })
 
+  it('Totalprothese: Implantate ohne Suprakonstruktion sind Lücken, keine Zähne zum Entfernen', () => {
+    const uk = ['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38']
+    const befund = fehlend(...uk)
+    for (const z of ['46', '44', '43', '33', '34', '36']) befund[z] = 'i'
+    const r = planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), befund)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.plan.zaehne['46']).toMatchObject({ B: 'i', TP: 'E' })
+    expect(r.plan.zaehne['41']).toMatchObject({ B: 'f', TP: 'E' })
+    expect(r.plan.befunde.map((b) => b.nr)).toContain('4.4')
+    expect(r.hinweise.some((h) => h.includes('ohne Suprakonstruktion'))).toBe(true)
+    const krone = { ...befund, 46: 'sk' }
+    expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), krone)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['46'] })
+    const zahn = { ...befund, 41: '' }
+    expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), zahn)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['41'] })
+  })
+
   it('Frontzähne stehen noch: Rückfrage erhalten oder entfernen – danach geplant', () => {
     const befund = { ...fehlend('18', '17', '16', '15', '25', '26', '27', '28'), 14: '', 24: '', 13: '', 12: '', 11: '', 21: '', 22: '', 23: '' }
     const r = planAusAuftrag(auftragVerstehen(SATZ), befund)
