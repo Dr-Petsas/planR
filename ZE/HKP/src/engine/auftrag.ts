@@ -775,6 +775,8 @@ const IMPLANTAT_BLEIBT = /^(i|sk|skw|st|stw)$/
 const implantatBleibt = (code: string) => IMPLANTAT_BLEIBT.test(code.trim().toLowerCase())
 /** Implantat ohne Suprakonstruktion. Das Kürzel ist immer i. ix ist schon als nicht erhaltungswürdig markiert und bleibt keine Lücke, die man noch einmal fragen muss. */
 const implantatOhneAufbau = (code: string | undefined) => /^(i|ix)$/.test((code ?? '').trim().toLowerCase())
+/** sk: Suprakonstruktion mit klinisch intakter Krone. Keine Behandlung, Zeile R und TP bleiben leer. */
+const implantatkroneIntakt = (code: string | undefined) => (code ?? '').trim().toLowerCase() === 'sk'
 const zahnStehtNoch = (b: Befund, z: string) => {
   if (!(z in b) || fehlt(b, z)) return false
   const k = (b[z] ?? '').trim().toLowerCase()
@@ -921,9 +923,10 @@ function kieferPlanen(auftrag: HkpAuftrag, kiefer: Kiefer, befund: Befund, tp: R
       if (ohnePfeiler.length)
         return { status: 'rueckfrage', grund: 'pfeiler_fehlt', zaehne: ohnePfeiler, frage: `Laut Befund ${ohnePfeiler.length > 1 ? 'fehlen' : 'fehlt'} ${liste(ohnePfeiler)}. Auf welchen Zähnen sollen die Teleskope stattdessen sitzen?` }
     }
-    // Nackte Implantate sind keine Restzähne. Eine Krone darauf (sk/st) bleibt eine Rückfrage.
+    // Nackte Implantate sind keine Restzähne. sk bleibt liegen, R und TP leer. skw/st bleiben eine Rückfrage.
     const nackt = reihe.filter((z) => implantatOhneAufbau(befund[z]) && !pfeiler.includes(z))
-    const offen = reihe.filter((z) => !istWeisheitszahn(z) && z in befund && !fehlt(befund, z) && !nackt.includes(z) && !pfeiler.includes(z) && !auftrag.erhalten.includes(z))
+    const kronen = reihe.filter((z) => implantatkroneIntakt(befund[z]) && !pfeiler.includes(z))
+    const offen = reihe.filter((z) => !istWeisheitszahn(z) && z in befund && !fehlt(befund, z) && !nackt.includes(z) && !kronen.includes(z) && !pfeiler.includes(z) && !auftrag.erhalten.includes(z))
     const deckend = auftrag.coverDenture || auftrag.versorgung === 'totalprothese' || auftrag.versorgung === 'locator' || auftrag.versorgung === 'steg'
     if (deckend && offen.length)
       return { status: 'rueckfrage', grund: 'restzaehne', zaehne: offen, frage: `Im ${kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'} ${offen.length > 1 ? 'stehen' : 'steht'} noch ${liste(offen)}. ${offen.length > 1 ? 'Sollen die' : 'Soll er'} erhalten bleiben oder entfernt werden?` }
@@ -944,6 +947,7 @@ function kieferPlanen(auftrag: HkpAuftrag, kiefer: Kiefer, befund: Befund, tp: R
     }
     if (nackt.length && (auftrag.versorgung === 'totalprothese' || auftrag.coverDenture))
       hinweise.push(`${name}: Implantate an ${liste(nackt)} ohne Suprakonstruktion bleiben liegen und gelten für die Prothese wie fehlende Zähne.`)
+    if (kronen.length) hinweise.push(`${name}: Implantatkronen an ${liste(kronen)} sind intakt (sk). In Zeile R und TP bleibt das Feld leer.`)
     if (auftrag.versorgung === 'locator') hinweise.push(`${auftrag.anker === 'kugel' ? 'Kugelkopfanker' : 'Druckknopfanker'} angenommen: GOZ 5030 je Implantat und GOZ 5080 je Verbindungselement, Matrize und Patrize zusammen.`)
     if (auftrag.versorgung === 'steg') hinweise.push('Implantatsteg angenommen: je Spanne eine Stegverbindung, je Implantat eine Kappe zur Aufnahme des Stegs.')
     if (keramikTel && auftrag.versorgung === 'teleskopprothese') hinweise.push('Zirkon-Primärteleskop angenommen: Teleskopkrone plus Zuschlag für Keramik, das Sekundärteil bleibt das Teleskop.')

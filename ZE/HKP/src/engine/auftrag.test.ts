@@ -292,7 +292,11 @@ describe('Plan aus Auftrag', () => {
     expect(r.plan.befunde.map((b) => b.nr)).toContain('4.4')
     expect(r.hinweise.some((h) => h.includes('ohne Suprakonstruktion'))).toBe(true)
     const krone = { ...befund, 46: 'sk' }
-    expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), krone)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['46'] })
+    const intact = planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), krone)
+    expect(intact.status).toBe('ok')
+    if (intact.status === 'ok') expect(intact.plan.zaehne['46']).toMatchObject({ B: 'sk', R: '', TP: '' })
+    const erneuerung = { ...befund, 46: 'skw' }
+    expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), erneuerung)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['46'] })
     const zahn = { ...befund, 41: '' }
     expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), zahn)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['41'] })
     const trotzSatz = planAusAuftrag(auftragVerstehen('Totalprothese im Unterkiefer, 46 und 44 und 43 und 33 und 34 und 36 werden entfernt'), befund)
