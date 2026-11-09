@@ -299,6 +299,9 @@ describe('Plan aus Auftrag', () => {
     expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), krone)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['46'] })
     const zahn = { ...befund, 41: '' }
     expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), zahn)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['41'] })
+    const trotzSatz = planAusAuftrag(auftragVerstehen('Totalprothese im Unterkiefer, 46 und 44 und 43 und 33 und 34 und 36 werden entfernt'), ausDsWin)
+    expect(trotzSatz.status).toBe('ok')
+    if (trotzSatz.status === 'ok') expect(trotzSatz.plan.zaehne['46']).toMatchObject({ B: 'j', TP: 'E' })
   })
 
   it('Frontzähne stehen noch: Rückfrage erhalten oder entfernen – danach geplant', () => {

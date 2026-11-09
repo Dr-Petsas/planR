@@ -787,7 +787,8 @@ export function planAusAuftrag(auftrag: HkpAuftrag, befundRoh: Befund, optionen:
   const hinweise: string[] = []
 
   const teile = auftrag.teile?.length ? auftrag.teile : [auftrag]
-  for (const teil of teile) for (const z of teil.entfernen) befund[z] = 'x'
+  // i/j/ix sind gesetzte Implantate, keine Zähne. "werden entfernt" im Plansatz zieht sie nicht.
+  for (const teil of teile) for (const z of teil.entfernen) if (!implantatOhneAufbau(befund[z])) befund[z] = 'x'
   for (const teil of teile) {
     if (!teil.versorgung)
       return { status: 'rueckfrage', grund: 'versorgung', frage: 'Welche Versorgung soll ich planen – zum Beispiel Teleskopprothese, Totalprothese oder Kronen?' }

@@ -22,6 +22,7 @@ export const BEFUND_KUERZEL: Record<string, string> = {
   ew: 'ersetzter, aber erneuerungsbedürftiger Zahn',
   f: 'fehlender Zahn',
   ix: 'zu entfernendes Implantat',
+  j: 'Implantat ohne Suprakonstruktion',
   k: 'klinisch intakte Krone',
   kw: 'erneuerungsbedürftige Krone',
   pkw: 'erneuerungsbedürftige Teilkrone',
