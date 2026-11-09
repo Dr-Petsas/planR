@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  begraben, eingangOffen, entwurfNummer, ersetzbar, grabAnlegen, hkpKarten, kartePrüfen, kennungVon, loeschbar, modulErsetzen, nummerMitReihe, planDateiAus, planDateiLesen, planFiltern, planNummer, tagVon,
+  begraben, eingangOffen, entwurfNummer, ersetzbar, faelleZusammen, grabAnlegen, hkpKarten, hkpOffenKarten, kartePrüfen, kennungVon, loeschbar, modulErsetzen, nummerMitReihe, planDateiAus, planDateiLesen, planFiltern, planNummer, tagVon,
   type Eingang, type PlanKarte,
 } from './plaene'
 
@@ -23,6 +23,14 @@ describe('Patient der Zeile im Praxisprogramm (Befund)', () => {
     expect(h[0].kennung).toEqual({ patient: '4711' })
     const k = kartePrüfen({ modul: 'privat-kb', nummer: 'KB-1', art: 'Privat', patient: 'Anna Berger', betrag: 0, geaendert: '2026-10-16T08:00:00Z', plan: { patient: { vorname: 'Anna', name: 'Berger', geburtsdatum: '1970-03-02' } } })
     expect(k?.kennung).toEqual({ vorname: 'Anna', name: 'Berger', geburt: '1970-03-02' })
+  })
+
+  it('hält Implantation und Prothese als einen Fall', () => {
+    const kopf = { status: 'entwurf', geaendert: '2026-11-09T12:00:00Z', patient: 'Olga', betrag: 10, art: 'Privat' as const }
+    const a = kartePrüfen({ ...kopf, modul: 'privat-impl', nummer: 'IMPL-2026-C001', fall: '11111111-2222-3333-4444-555555555555', fallTitel: 'All-on-6 mit Implantation' })
+    const b = kartePrüfen({ ...kopf, modul: 'hkp', nummer: 'h1', art: 'Kasse', fall: '11111111-2222-3333-4444-555555555555', fallTitel: 'All-on-6 mit Implantation' })
+    const c = kartePrüfen({ ...kopf, modul: 'privat-kons', nummer: 'PK-1' })
+    expect(faelleZusammen([c!, a!, b!]).map((g) => g.karten.map((k) => k.nummer))).toEqual([['PK-1'], ['IMPL-2026-C001', 'h1']])
   })
 })
 
@@ -100,6 +108,28 @@ describe('Pläne', () => {
     expect(loeschbar(karte({ modul: 'hkp', status: 'eingereicht' }))).toBe(false)
     expect(loeschbar(karte({ modul: 'hkp', status: 'abgerechnet' }))).toBe(false)
     expect(loeschbar(karte({ modul: 'kassen-kb', status: 'freigegeben' }))).toBe(true)
+    const dswin = hkpOffenKarten([{ patient: '3', number: 7, name: 'Muster', vorname: 'Erika', genehmigt: '2026-03-01', title: 'Krone 16', eingliederung: '2026-05-20' }])[0]
+    expect(loeschbar(dswin)).toBe(false)
+    expect(ersetzbar(dswin)).toBe(false)
+  })
+
+  it('nimmt aus DS-Win nur genehmigte Pläne ohne Abrechnung', () => {
+    const k = hkpOffenKarten([
+      { patient: '3', number: 7, name: 'Muster', vorname: 'Erika', genehmigt: '2026-03-01', title: 'Krone 16', praxis: 1 },
+      { patient: '6', number: 10, genehmigt: '2026-05-01', eingliederung: '2026-05-20' },
+      { patient: 'x', number: 1, genehmigt: '2026-01-01' },
+      { patient: '4', number: 8 },
+    ])
+    expect(k.map((p) => p.nummer)).toEqual(['7', '10'])
+    expect(k[0].patient).toBe('Erika Muster · 3 · Krone 16')
+    expect(k[0].modul).toBe('dswin-hkp')
+    expect(k[0].status).toBe('genehmigt')
+    expect(k[0].geaendert).toBe('2026-03-01T12:00:00')
+    expect(k[0].kennung).toEqual({ patient: '3' })
+    expect(k[0].oeffnen).toBeUndefined()
+    expect(k[1].status).toBe('in Behandlung')
+    expect(planFiltern(k, 'muster', '').map((p) => p.nummer)).toEqual(['7'])
+    expect(planFiltern(k, '10', '').map((p) => p.nummer)).toEqual(['10'])
   })
 
   it('macht aus dem HKP-Register Kacheln', () => {

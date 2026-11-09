@@ -386,7 +386,7 @@ function einzelAuftrag(text: string, kiefer?: Kiefer): HkpAuftrag {
 
   if (/h(ä|ae)rtefall/.test(t)) auftrag.haertefall = true
   if (/(kein|ohne)(en)? bonus/.test(t)) auftrag.bonus = '60'
-  else if (/\b(75|fünfundsiebzig|fuenfundsiebzig) ?(%|prozent)|\b(30|dreißig|dreissig) ?(%|prozent) bonus|bonus (von )?(30|dreißig|dreissig)\b|zehn jahre bonus|bonus (über |ueber )?zehn jahre/.test(t)) auftrag.bonus = '75'
+  else if (/\b(75|fünfundsiebzig|fuenfundsiebzig) ?(%|prozent)|\b(30|dreißig|dreissig) ?(%|prozent) bonus|bonus (von )?(30|dreißig|dreissig)\b|zehn jahre|bonusheft.{0,20}zehn/.test(t)) auftrag.bonus = '75'
   else if (/\b(70|siebzig) ?(%|prozent)|\b(20|zwanzig) ?(%|prozent) bonus|bonus (von )?(20|zwanzig)\b|fünf jahre bonus|fuenf jahre bonus|bonusheft/.test(t)) auftrag.bonus = '70'
   else if (/\b(60|sechzig) ?(%|prozent)/.test(t)) auftrag.bonus = '60'
 

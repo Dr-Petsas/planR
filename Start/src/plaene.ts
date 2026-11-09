@@ -30,6 +30,9 @@ export interface PlanKarte {
   kennung?: PatientKennung
   /** Sichtbare Plan-Nummer, wenn `nummer` die interne Kennung bleibt (HKP) */
   schein?: string
+  /** Gemeinsamer Fall aus Implantation und Prothese */
+  fall?: string
+  fallTitel?: string
 }
 
 /** Lauf 1 ist A001, 934 ist A934, 1000 ist B001. Clara-Nummern wie C002 bleiben unverändert. */
@@ -131,7 +134,28 @@ export function kartePrüfen(roh: unknown): PlanKarte | null {
   if (Number.isInteger(e.praxis) && (e.praxis as number) >= 1 && (e.praxis as number) <= 9) karte.praxis = e.praxis as number
   const kennung = kennungVon(e.kennung) ?? kennungVon((e.plan as { patient?: unknown } | undefined)?.patient)
   if (kennung) karte.kennung = kennung
+  const fall = String(e.fall ?? '').trim()
+  if (/^[A-Za-z0-9-]{8,80}$/.test(fall)) {
+    karte.fall = fall
+    const titel = String(e.fallTitel ?? '').trim().slice(0, 160)
+    if (titel) karte.fallTitel = titel
+  }
   return karte
+}
+
+/** Pläne mit derselben Fall-Kennung bleiben ein Block, in der Reihenfolge der Liste. */
+export function faelleZusammen(karten: PlanKarte[]): { fall: string; titel: string; karten: PlanKarte[] }[] {
+  const gesehen = new Set<string>()
+  const aus: { fall: string; titel: string; karten: PlanKarte[] }[] = []
+  for (const p of karten) {
+    if (p.fall) {
+      if (gesehen.has(p.fall)) continue
+      gesehen.add(p.fall)
+      const gruppe = karten.filter((x) => x.fall === p.fall)
+      aus.push({ fall: p.fall, titel: gruppe.find((x) => x.fallTitel)?.fallTitel || '', karten: gruppe })
+    } else aus.push({ fall: '', titel: '', karten: [p] })
+  }
+  return aus
 }
 
 /** Nummer für einen Sprach-Entwurf von Clara: eigener Kreis („KV-2026-C001“), damit sie keine Nummer eines Planers trifft. */
@@ -239,9 +263,11 @@ export const eingangOffen = (eingang: Eingang[], gemeldet: Pick<PlanKarte, 'modu
 
 /** HKPs aus dem MAS-Register: verwerfen nur, solange nichts bei der Kasse liegt */
 export const HKP_VERWERFBAR = ['wartet_auf_freigabe', 'freigegeben', 'abgelehnt']
-export const loeschbar = (k: PlanKarte) => k.modul !== 'hkp' || HKP_VERWERFBAR.includes(k.status)
+/** Zeile aus DS-Win (genehmigt, nicht abgerechnet) – liegt nicht in PlanR, also nichts löschen oder ersetzen */
+export const ausDswin = (k: Pick<PlanKarte, 'modul'>) => k.modul === 'dswin-hkp'
+export const loeschbar = (k: PlanKarte) => !ausDswin(k) && (k.modul !== 'hkp' || HKP_VERWERFBAR.includes(k.status))
 /** Import ersetzt den Planinhalt – bei HKPs nur, solange er noch auf Freigabe wartet */
-export const ersetzbar = (k: PlanKarte) => k.modul !== 'hkp' || k.status === 'wartet_auf_freigabe'
+export const ersetzbar = (k: PlanKarte) => !ausDswin(k) && (k.modul !== 'hkp' || k.status === 'wartet_auf_freigabe')
 
 export function planFiltern(plaene: PlanKarte[], name: string, tag: string, planart = '', behandler = ''): PlanKarte[] {
   const n = name.trim().toLowerCase()
@@ -251,7 +277,7 @@ export function planFiltern(plaene: PlanKarte[], name: string, tag: string, plan
     if (planart && p.kuerzel !== planart) return false
     if (behandler === '__ohne__' ? !!p.behandler : behandler && p.behandler !== behandler) return false
     if (!n) return true
-    return `${p.patient} ${p.nummer} ${p.kuerzel}`.toLowerCase().includes(n)
+    return `${p.patient} ${p.nummer} ${p.kuerzel} ${p.fallTitel || ''}`.toLowerCase().includes(n)
   })
 }
 
@@ -261,6 +287,8 @@ interface HkpKopf {
   erstellt?: string
   aktualisiert?: string
   patient?: { label?: string; id?: string; quelle?: string; pvsNummer?: string; firstName?: string; lastName?: string; birthDate?: string }
+  fallId?: string
+  fallTitel?: string
   summen?: { gesamt?: number }
   versorgungText?: string
   /** Lese-Link aus MAS: ohne ihn öffnet der Planer über den Tunnel (kein Praxis-Schlüssel) den HKP nicht; b = Änderungen speichern */
@@ -285,6 +313,46 @@ function hkpOeffnen(id: string, link: HkpKopf['link']): string {
   return q.toString()
 }
 
+export interface DswinHkpOffen {
+  praxis?: number
+  patient?: string
+  number?: number
+  title?: string
+  name?: string
+  vorname?: string
+  genehmigt?: string
+  eingliederung?: string | null
+}
+
+/** DS-Win-Kontrollbuch: Zuschussdatum gesetzt, Abrechnungsdatum leer. Kein Link in den Planer. */
+export function hkpOffenKarten(liste: DswinHkpOffen[]): PlanKarte[] {
+  const karten: PlanKarte[] = []
+  for (const h of liste) {
+    const nummer = Math.trunc(Number(h.number))
+    const patientNr = String(h.patient ?? '').trim()
+    const genehmigt = String(h.genehmigt ?? '')
+    if (!/^\d+$/.test(String(nummer)) || nummer < 1 || !/^\d{1,9}$/.test(patientNr) || !/^\d{4}-\d{2}-\d{2}$/.test(genehmigt)) continue
+    const name = [h.vorname, h.name].map((x) => String(x ?? '').trim()).filter(Boolean).join(' ')
+    const titel = String(h.title ?? '').trim()
+    const wer = [name || `Patient ${patientNr}`, patientNr, titel].filter(Boolean).join(' · ')
+    const praxis = Number(h.praxis)
+    karten.push({
+      modul: 'dswin-hkp',
+      kuerzel: 'HKP',
+      art: 'Kasse',
+      nummer: String(nummer),
+      schein: String(nummer),
+      patient: wer.slice(0, 160),
+      betrag: 0,
+      status: h.eingliederung ? 'in Behandlung' : 'genehmigt',
+      geaendert: `${genehmigt}T12:00:00`,
+      kennung: { patient: patientNr },
+      ...(Number.isInteger(praxis) && praxis >= 1 && praxis <= 9 ? { praxis } : {}),
+    })
+  }
+  return karten
+}
+
 /** MAS-Register → Kacheln. Verworfene Entwürfe bleiben aussen vor. */
 export function hkpKarten(liste: HkpKopf[]): PlanKarte[] {
   const karten: PlanKarte[] = []
@@ -304,6 +372,8 @@ export function hkpKarten(liste: HkpKopf[]): PlanKarte[] {
       befund: befundDateiVon(h),
       praxis: h.praxis,
       kennung: h.patient,
+      fall: h.fallId,
+      fallTitel: h.fallTitel,
     })
     if (karte) karten.push(karte)
   }

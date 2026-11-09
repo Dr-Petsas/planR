@@ -20,6 +20,12 @@ describe('Auftrag verstehen', () => {
     })
   })
 
+  it('Bonusheft über zehn Jahre ist 75 Prozent', () => {
+    expect(auftragVerstehen('Bonusheft zehn Jahre').bonus).toBe('75')
+    expect(auftragVerstehen('ohne Bonus').bonus).toBe('60')
+    expect(auftragVerstehen('Mach die Teleskope in Hochgold')).toMatchObject({ versorgung: 'teleskopprothese', werkstoff: 'hochgold' })
+  })
+
   it('Zahnangaben: Spannen über die Mitte, Seiten, Wortformen', () => {
     expect(zaehneIn('13 bis 23')).toEqual(['13', '12', '11', '21', '22', '23'])
     expect(zaehneIn('auf dem rechten Vierer unten')).toEqual(['44'])
