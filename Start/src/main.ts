@@ -816,6 +816,13 @@ function claraSpalte(): HTMLElement {
 
 let kastenNr = 0
 
+/** Dieselbe Zahnkarte wie der Zahn-Knopf in der Liste, nicht der aus dem Satz nachgebaute Befund. */
+async function befundDerListe(patient: string, ersatz: Record<string, string>) {
+  const r = await apiJson<{ befund?: { zaehne?: Record<string, string> } }>(`/api/befund?patient=${encodeURIComponent(patient)}`)
+  const zaehne = r.befund?.zaehne
+  befundImChat(zaehne && Object.keys(zaehne).length ? zaehne : ersatz)
+}
+
 /** Befund im Chat: dieselbe Karte wie in der Liste, nur zum Ansehen. */
 function befundImChat(schema: Record<string, string>) {
   document.querySelector('.befund-blick')?.remove()
@@ -855,7 +862,7 @@ function befundImChat(schema: Record<string, string>) {
   document.body.append(dlg)
 }
 
-function claraKasten(roh: { art?: string; titel?: string; hinweis?: string; text?: string; gruppen?: { frage?: string; punkte?: unknown; mehrere?: boolean }[] }) {
+function claraKasten(roh: { art?: string; titel?: string; hinweis?: string; text?: string; gruppen?: { frage?: string; punkte?: unknown; mehrere?: boolean }[]; patient?: string }) {
   const verlauf = document.getElementById('clara-verlauf')
   if (!verlauf) return
   const art = roh.art === 'befund' || roh.art === 'wahl' ? roh.art : ''
@@ -879,8 +886,10 @@ function claraKasten(roh: { art?: string; titel?: string; hinweis?: string; text
     gruppen,
   }
   const schema = kasten.art === 'befund' ? schemaVon(kasten.text || '') : {}
-  if (Object.keys(schema).length > 0) {
-    befundImChat(schema)
+  const patient = typeof roh.patient === 'string' && /^\d{1,9}$/.test(roh.patient) ? roh.patient : ''
+  if (Object.keys(schema).length > 0 || patient) {
+    if (patient) void befundDerListe(patient, schema)
+    else befundImChat(schema)
     return
   }
   const n = ++kastenNr
