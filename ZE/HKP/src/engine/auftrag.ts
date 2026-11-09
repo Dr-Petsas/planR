@@ -773,12 +773,12 @@ const fehlt = (b: Befund, z: string) => FEHLEND.has((b[z] ?? '').trim().toLowerC
 /** i/sk/st: Implantat oder implantatgetragene Krone. ix kommt raus und ist ebenfalls kein Zahn. */
 const IMPLANTAT_BLEIBT = /^(i|sk|skw|st|stw)$/
 const implantatBleibt = (code: string) => IMPLANTAT_BLEIBT.test(code.trim().toLowerCase())
-/** Implantat ohne Suprakonstruktion. Es stört eine schleimhautgetragene Prothese nicht und zählt wie ein fehlender Zahn. */
-const implantatOhneAufbau = (code: string | undefined) => /^(i|ix)$/.test((code ?? '').trim().toLowerCase())
+/** Implantat ohne Suprakonstruktion. i im Gespräch, j so aus DS-Win. ix ist schon als nicht erhaltungswürdig markiert und bleibt trotzdem keine Lücke, die man noch einmal fragen muss. Es stört eine schleimhautgetragene Prothese nicht. */
+const implantatOhneAufbau = (code: string | undefined) => /^(i|ix|j)$/.test((code ?? '').trim().toLowerCase())
 const zahnStehtNoch = (b: Befund, z: string) => {
   if (!(z in b) || fehlt(b, z)) return false
   const k = (b[z] ?? '').trim().toLowerCase()
-  return !implantatBleibt(k) && k !== 'ix'
+  return !implantatBleibt(k) && !implantatOhneAufbau(k)
 }
 
 /** Erzeugt aus Auftrag und Befund einen gerechneten Plan – oder eine Rückfrage. */

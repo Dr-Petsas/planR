@@ -287,6 +287,14 @@ describe('Plan aus Auftrag', () => {
     expect(r.plan.zaehne['41']).toMatchObject({ B: 'f', TP: 'E' })
     expect(r.plan.befunde.map((b) => b.nr)).toContain('4.4')
     expect(r.hinweise.some((h) => h.includes('ohne Suprakonstruktion'))).toBe(true)
+    const ausDsWin = { ...fehlend(...uk) }
+    for (const z of ['46', '44', '43', '33', '34', '36']) ausDsWin[z] = 'j'
+    const ds = planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), ausDsWin)
+    expect(ds.status).toBe('ok')
+    if (ds.status === 'ok') {
+      expect(ds.plan.zaehne['46']).toMatchObject({ B: 'j', TP: 'E' })
+      expect(ds.plan.befunde.map((b) => b.nr)).toContain('4.4')
+    }
     const krone = { ...befund, 46: 'sk' }
     expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), krone)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['46'] })
     const zahn = { ...befund, 41: '' }

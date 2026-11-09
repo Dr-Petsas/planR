@@ -35,13 +35,15 @@ function befund(nr: string, zahnGebiet: string, anzahl = 1): FestzuschussBefund 
 }
 
 const kuerzel = (z: ZahnZeilen | undefined) => (z?.B ?? '').trim().toLowerCase()
+/** i gesprochen, j aus DS-Win: Implantat ohne Suprakonstruktion. ix dito, schon als nicht erhaltungswürdig markiert. */
+const implantatNackt = (k: string) => k === 'i' || k === 'ix' || k === 'j'
 
 /** Analysiert einen Kiefer: vorhandene Zähne, Lücken, Freiend */
 function kieferAnalyse(reihe: string[], zaehne: Record<string, ZahnZeilen>) {
   const sitz = reihe.filter((z) => kuerzel(zaehne[z]) !== ')(')
   const fehlt = (z: string) => FEHLEND.has(kuerzel(zaehne[z]))
   // i = Implantat, kein natürlicher Restzahn. Zahnlos mit Implantaten bleibt Befund 4.2/4.4.
-  const vorhanden = sitz.filter((z) => !fehlt(z) && kuerzel(zaehne[z]) !== 'i' && kuerzel(zaehne[z]) !== 'ix')
+  const vorhanden = sitz.filter((z) => !fehlt(z) && !implantatNackt(kuerzel(zaehne[z])))
   const fehlendOhne8 = sitz.filter((z) => fehlt(z) && !istWeisheitszahn(z))
 
   // Zahnbegrenzte Lücken zwischen vorhandenen Zähnen
@@ -245,7 +247,7 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
     }
 
     // Nur Implantate ohne Aufbau, kein eigener Zahn: der Kiefer ist für die Totalprothese zahnlos.
-    const zahnlosTrotzImplantat = a.vorhanden.length === 0 && a.sitz.some((z) => kuerzel(zaehne[z]) === 'i' || kuerzel(zaehne[z]) === 'ix')
+    const zahnlosTrotzImplantat = a.vorhanden.length === 0 && a.sitz.some((z) => implantatNackt(kuerzel(zaehne[z])))
     if (!neuVersorgung && !zahnlosTrotzImplantat) continue
 
     // ---- Befundklasse 4: Restzahnbestand bis 3 Zähne oder zahnlos ----
@@ -253,7 +255,7 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
       const nr = a.vorhanden.length === 0 ? (kiefer === 'OK' ? '4.2' : '4.4') : kiefer === 'OK' ? '4.1' : '4.3'
       befunde.push(befund(nr, kiefer))
       // i/ix: gesetztes Implantat ohne Aufbau, für die Prothese eine Lücke wie ein fehlender Zahn
-      const luecke = (z: string) => a.fehlt(z) || kuerzel(zaehne[z]) === 'i' || kuerzel(zaehne[z]) === 'ix'
+      const luecke = (z: string) => a.fehlt(z) || implantatNackt(kuerzel(zaehne[z]))
       for (const z of a.sitz) if (luecke(z) && !istWeisheitszahn(z) && kuerzel(zaehne[z]) !== 'rw' && !istImplantat(kuerzel(zaehne[z]))) R[z] = 'E'
       prothesenKiefer.push(kiefer)
       positionen.push(pos('BEMA', kiefer === 'OK' ? '97a' : '97b', kiefer))
