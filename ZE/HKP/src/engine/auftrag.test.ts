@@ -284,24 +284,20 @@ describe('Plan aus Auftrag', () => {
     expect(r.status).toBe('ok')
     if (r.status !== 'ok') return
     expect(r.plan.zaehne['46']).toMatchObject({ B: 'i', TP: 'E' })
+    const exportiert = { ...befund, 46: 'j' }
+    const alsI = planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), exportiert)
+    expect(alsI.status).toBe('ok')
+    if (alsI.status === 'ok') expect(alsI.plan.zaehne['46']).toMatchObject({ B: 'i', TP: 'E' })
     expect(r.plan.zaehne['41']).toMatchObject({ B: 'f', TP: 'E' })
     expect(r.plan.befunde.map((b) => b.nr)).toContain('4.4')
     expect(r.hinweise.some((h) => h.includes('ohne Suprakonstruktion'))).toBe(true)
-    const ausDsWin = { ...fehlend(...uk) }
-    for (const z of ['46', '44', '43', '33', '34', '36']) ausDsWin[z] = 'j'
-    const ds = planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), ausDsWin)
-    expect(ds.status).toBe('ok')
-    if (ds.status === 'ok') {
-      expect(ds.plan.zaehne['46']).toMatchObject({ B: 'j', TP: 'E' })
-      expect(ds.plan.befunde.map((b) => b.nr)).toContain('4.4')
-    }
     const krone = { ...befund, 46: 'sk' }
     expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), krone)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['46'] })
     const zahn = { ...befund, 41: '' }
     expect(planAusAuftrag(auftragVerstehen('Unterkiefer Totalprothese'), zahn)).toMatchObject({ status: 'rueckfrage', grund: 'restzaehne', zaehne: ['41'] })
-    const trotzSatz = planAusAuftrag(auftragVerstehen('Totalprothese im Unterkiefer, 46 und 44 und 43 und 33 und 34 und 36 werden entfernt'), ausDsWin)
+    const trotzSatz = planAusAuftrag(auftragVerstehen('Totalprothese im Unterkiefer, 46 und 44 und 43 und 33 und 34 und 36 werden entfernt'), befund)
     expect(trotzSatz.status).toBe('ok')
-    if (trotzSatz.status === 'ok') expect(trotzSatz.plan.zaehne['46']).toMatchObject({ B: 'j', TP: 'E' })
+    if (trotzSatz.status === 'ok') expect(trotzSatz.plan.zaehne['46']).toMatchObject({ B: 'i', TP: 'E' })
   })
 
   it('Frontzähne stehen noch: Rückfrage erhalten oder entfernen – danach geplant', () => {

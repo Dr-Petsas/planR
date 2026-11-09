@@ -97,6 +97,8 @@ describe('Befund aus dem und ins PVS', () => {
     expect(b?.version).toBe('v1')
     expect(b?.datum).toBe('2026-10-12')
     expect(b?.zaehne).toMatchObject({ 18: 'f', 16: 'sk', 15: 't1', 11: '', 48: '' })
+    const implantat = befundAusPvs({ version: 'v1', current: { teeth: { 46: zahn('j'), 36: zahn('i') } } })
+    expect(implantat?.zaehne).toMatchObject({ 46: 'i', 36: 'i' })
     expect(Object.keys(b!.zaehne)).toHaveLength(32)
     expect(befundAusPvs({ current: { teeth: {} } })).toBeNull()
   })

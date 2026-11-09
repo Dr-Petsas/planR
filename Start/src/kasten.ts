@@ -13,7 +13,7 @@ export const SCHEMA_CODES: [string, string][] = [
   ['ww', 'weitgehend zerstört'],
   ['x', 'nicht erhaltungswürdig'],
   ['b', 'Brückenglied'],
-  ['i', 'Implantat vorhanden'],
+  ['i', 'Implantat ohne Suprakonstruktion'],
   ['t', 'Teleskop vorhanden'],
 ]
 
@@ -27,6 +27,7 @@ const WORT: [string, string][] = [
   ['k', 'überkront'],
   ['kw', 'krone erneuerungsbedürftig'],
   ['b', 'brückenglied'],
+  ['i', 'implantat ohne suprakonstruktion'],
   ['i', 'implantat vorhanden'],
   ['i', 'implantat'],
   ['t', 'teleskop vorhanden'],

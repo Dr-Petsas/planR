@@ -773,8 +773,8 @@ const fehlt = (b: Befund, z: string) => FEHLEND.has((b[z] ?? '').trim().toLowerC
 /** i/sk/st: Implantat oder implantatgetragene Krone. ix kommt raus und ist ebenfalls kein Zahn. */
 const IMPLANTAT_BLEIBT = /^(i|sk|skw|st|stw)$/
 const implantatBleibt = (code: string) => IMPLANTAT_BLEIBT.test(code.trim().toLowerCase())
-/** Implantat ohne Suprakonstruktion. i im Gespräch, j so aus DS-Win. ix ist schon als nicht erhaltungswürdig markiert und bleibt trotzdem keine Lücke, die man noch einmal fragen muss. Es stört eine schleimhautgetragene Prothese nicht. */
-const implantatOhneAufbau = (code: string | undefined) => /^(i|ix|j)$/.test((code ?? '').trim().toLowerCase())
+/** Implantat ohne Suprakonstruktion. Das Kürzel ist immer i. ix ist schon als nicht erhaltungswürdig markiert und bleibt keine Lücke, die man noch einmal fragen muss. */
+const implantatOhneAufbau = (code: string | undefined) => /^(i|ix)$/.test((code ?? '').trim().toLowerCase())
 const zahnStehtNoch = (b: Befund, z: string) => {
   if (!(z in b) || fehlt(b, z)) return false
   const k = (b[z] ?? '').trim().toLowerCase()
@@ -783,11 +783,15 @@ const zahnStehtNoch = (b: Befund, z: string) => {
 
 /** Erzeugt aus Auftrag und Befund einen gerechneten Plan – oder eine Rückfrage. */
 export function planAusAuftrag(auftrag: HkpAuftrag, befundRoh: Befund, optionen: PlanOptionen = {}): PlanErgebnis | Rueckfrage {
-  const befund: Befund = Object.fromEntries(Object.entries(befundRoh).map(([z, b]) => [z, (b ?? '').trim().toLowerCase()]))
+  const befund: Befund = Object.fromEntries(Object.entries(befundRoh).map(([z, b]) => {
+    const code = (b ?? '').trim().toLowerCase()
+    // Implantat ohne Suprakonstruktion ist immer i.
+    return [z, code === 'j' ? 'i' : code]
+  }))
   const hinweise: string[] = []
 
   const teile = auftrag.teile?.length ? auftrag.teile : [auftrag]
-  // i/j/ix sind gesetzte Implantate, keine Zähne. "werden entfernt" im Plansatz zieht sie nicht.
+  // i/ix sind gesetzte Implantate, keine Zähne. "werden entfernt" im Plansatz zieht sie nicht.
   for (const teil of teile) for (const z of teil.entfernen) if (!implantatOhneAufbau(befund[z])) befund[z] = 'x'
   for (const teil of teile) {
     if (!teil.versorgung)

@@ -32,7 +32,7 @@ const ERL_BEFUND: [string, string][] = [
   ['e', 'ersetzter Zahn'], ['ur', 'unzureichende Retention'],
   ['ew', 'ersetzter, aber erneuerungsbedürftiger Zahn'], ['ww', 'erhaltungswürdiger Zahn mit weitgehender Zerstörung'],
   ['f', 'fehlender Zahn'], ['x', 'nicht erhaltungswürdiger Zahn'],
-  ['i', 'Implantat mit intakter Suprakonstruktion'], [')(', 'Lückenschluss'],
+  ['i', 'Implantat ohne Suprakonstruktion'], [')(', 'Lückenschluss'],
   ['ix', 'zu entfernendes Implantat'], ['', ''],
   ['k', 'klinisch intakte Krone'], ['', ''],
   ['kw', 'erneuerungsbedürftige Krone'], ['', ''],

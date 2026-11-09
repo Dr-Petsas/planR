@@ -159,7 +159,10 @@ export function befundAusPvs(d: unknown): PvsBefund | null {
   const o = d as { version?: unknown; current?: { date?: unknown; teeth?: Record<string, { status?: unknown }> }; items?: { date?: unknown }[] }
   const teeth = o?.current?.teeth
   if (typeof o?.version !== 'string' || !teeth || typeof teeth !== 'object') return null
-  const zaehne = Object.fromEntries([...KIEFER.OK, ...KIEFER.UK].map((z) => [z, String(teeth[z]?.status ?? '').trim()]))
+  const zaehne = Object.fromEntries([...KIEFER.OK, ...KIEFER.UK].map((z) => {
+    const code = String(teeth[z]?.status ?? '').trim()
+    return [z, code.toLowerCase() === 'j' ? 'i' : code]
+  }))
   return { datum: datumIso(o.current?.date) || datumIso(o.items?.[0]?.date), version: o.version, zaehne }
 }
 

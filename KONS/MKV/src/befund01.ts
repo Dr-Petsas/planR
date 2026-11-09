@@ -33,7 +33,7 @@ export const ALLE_ZAEHNE = [...OBERKIEFER, ...UNTERKIEFER]
 export const BEFUND_KUERZEL: Record<string, string> = {
   a: 'Adhäsivbrücke (Anker)', ab: 'Adhäsivbrücke (Brückenglied)', abw: 'erneuerungsbedürftige Adhäsivbrücke (Brückenglied)',
   aw: 'erneuerungsbedürftige Adhäsivbrücke (Anker)', b: 'Brückenglied', bw: 'erneuerungsbedürftiges Brückenglied',
-  e: 'ersetzter Zahn', ew: 'ersetzter, aber erneuerungsbedürftiger Zahn', f: 'fehlender Zahn', i: 'Implantat mit intakter Suprakonstruktion',
+  e: 'ersetzter Zahn', ew: 'ersetzter, aber erneuerungsbedürftiger Zahn', f: 'fehlender Zahn', i: 'Implantat ohne Suprakonstruktion',
   ix: 'zu entfernendes Implantat', k: 'klinisch intakte Krone', kw: 'erneuerungsbedürftige Krone', pkw: 'erneuerungsbedürftige Teilkrone',
   pw: 'erhaltungswürdiger Zahn mit partiellen Substanzdefekten', r: 'Wurzelstiftkappe mit ersetztem Zahn', rw: 'erneuerungsbedürftige Wurzelstiftkappe',
   sb: 'implantatgetragenes Brückenglied', sbw: 'erneuerungsbedürftiges implantatgetragenes Brückenglied',
