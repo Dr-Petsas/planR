@@ -1,0 +1,10 @@
+# paddlepaddle bleibt auf 3.2.2: neuere Versionen scheitern mit MKL-DNN
+# (ConvertPirAttribute2RuntimeAttribute), ohne MKL-DNN dauert eine Seite 50 s statt 9 s.
+paddlepaddle==3.2.2
+paddleocr==3.7.0
+paddlex==3.7.2
+pypdfium2==5.15.2
+pillow==13.0.0
+fastapi==0.162.5
+uvicorn==0.54.0
+python-multipart==0.0.33

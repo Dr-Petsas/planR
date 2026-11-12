@@ -1,0 +1,62 @@
+# PlanR-Einlesen auf pickadoc1 — Port 8214
+# (Landkarte: vLLM 8000, Lisa 8095, Bianca 8096, STT 8212, TTS 8213, Einlesen 8214).
+#
+# Nur CPU: keine GPU-Reservation, vLLM und TTS bleiben unberührt.
+# Auf derselben Maschine läuft das Telefon-STT (Parakeet) ebenfalls auf der CPU.
+# Deshalb sind beide Container gedeckelt (cpus) und haben eine niedrige
+# Priorität (cpu_shares 128 statt 1024): bei Engpass gewinnt das Telefon.
+#
+# Token: .env mit EINLESEN_TOKEN=... (ohne Token lehnt der Dienst alles ab).
+name: planr-einlesen
+
+services:
+  einlesen:
+    build: ./docling
+    image: planr-einlesen-docling:v1
+    ports:
+      - "8214:8100"
+    environment:
+      EINLESEN_TOKEN: "${EINLESEN_TOKEN:?EINLESEN_TOKEN fehlt in .env}"
+      PADDLE_URL: "http://paddle:8100"
+      EINLESEN_THREADS: "6"
+      OMP_NUM_THREADS: "6"
+    volumes:
+      - modelle-docling:/modelle
+    cpus: 6
+    cpu_shares: 128
+    mem_limit: 12g
+    restart: unless-stopped
+    depends_on:
+      - paddle
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
+
+  # Ergänzung für schlechte Scans. Kein Host-Port, nur im Compose-Netz.
+  paddle:
+    build: ./paddle
+    image: planr-einlesen-paddle:v1
+    environment:
+      OMP_NUM_THREADS: "4"
+      PADDLE_THREADS: "4"
+    volumes:
+      - modelle-paddle:/modelle
+    cpus: 4
+    cpu_shares: 128
+    mem_limit: 8g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
+
+volumes:
+  modelle-docling:
+  modelle-paddle:
