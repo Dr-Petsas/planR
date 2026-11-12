@@ -7,6 +7,7 @@ import { BEFUND_KUERZEL, THERAPIE_KUERZEL, ALLE_ZAEHNE, kieferVon } from './engi
 import { befundOhneStrich, markeLesen } from './engine/bruecken'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden, type RegelOptionen } from './engine/regeln'
 import { regelUebernehmen } from './engine/aufwertung'
+import { berechnen, type Listen } from './engine/berechnung'
 import { leererPlan } from './store/plan'
 
 export interface ProbeSchema {
@@ -22,6 +23,10 @@ export interface ProbeGebuehr {
   anzahl?: number
   faktor?: number
   betrag?: number
+}
+
+export interface ProbeSummen {
+  festzuschuss?: number
 }
 
 const BEMA_AM_ZAHN = new Set(['20a', '20b', '20c', '91a', '91b', '91d', '90'])
@@ -181,14 +186,42 @@ export function planAusSchema(einstellungen: HkpPlan['einstellungen'], schema: P
   return { plan, hinweise: [...abgleich, ...stand.hinweise] }
 }
 
-/** Der eingebettete Planer nimmt Schema und Gebührenzeilen von der Probeseite an. */
-export function probeHoren(uebernehmen: (schema: ProbeSchema, gebuehren: ProbeGebuehr[]) => void) {
+const euro = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+
+/**
+ * Zweite Gegenprobe: Der Festzuschuss vom Blatt gegen den gerechneten. Passt er nur zu einer anderen
+ * Bonusstufe, wird die übernommen. Passt er zu keiner, stimmt der Befund nicht mit dem Blatt überein.
+ */
+export function zuschussAbgleich(plan: HkpPlan, listen: Listen, summen: ProbeSummen | undefined): { plan: HkpPlan; hinweise: string[] } {
+  const blatt = summen?.festzuschuss
+  if (!blatt || blatt <= 0 || !Object.values(plan.zaehne).some((z) => z.B)) return { plan, hinweise: [] }
+  const mit = (zuschuss: HkpPlan['zuschuss']) => berechnen({ ...plan, zuschuss }, listen).summen.festzuschuss
+  const passt = (n: number) => Math.abs(n - blatt) <= 0.05
+  const gerechnet = mit(plan.zuschuss)
+  if (passt(gerechnet)) return { plan, hinweise: [] }
+  const stufen: { zuschuss: HkpPlan['zuschuss']; name: string }[] = [
+    ...(['60', '70', '75'] as const).map((bonus) => ({ zuschuss: { bonus, haertefall: false }, name: `${bonus} %` })),
+    { zuschuss: { ...plan.zuschuss, haertefall: true }, name: '100 % (Härtefall)' },
+  ]
+  const treffer = stufen.find((s) => passt(mit(s.zuschuss)))
+  if (treffer) return {
+    plan: { ...plan, zuschuss: treffer.zuschuss },
+    hinweise: [`Festzuschuss auf dem Blatt ${euro(blatt)}: passt zur Stufe ${treffer.name}, die Stufe ist übernommen.`],
+  }
+  return {
+    plan,
+    hinweise: [`Festzuschuss weicht vom Blatt ab: Blatt ${euro(blatt)}, PlanR ${euro(gerechnet)}. Dann stimmt der gelesene Befund nicht mit dem Blatt überein, oder das Blatt rechnet mit Festzuschüssen aus einem anderen Jahr. Bitte Befund und Regelversorgung gegenlesen.`],
+  }
+}
+
+/** Der eingebettete Planer nimmt Schema, Gebührenzeilen und Summen von der Probeseite an. */
+export function probeHoren(uebernehmen: (schema: ProbeSchema, gebuehren: ProbeGebuehr[], summen: ProbeSummen) => void) {
   if (window.parent === window) return () => {}
   const auf = (ev: MessageEvent) => {
     if (ev.origin !== location.origin) return
-    const daten = ev.data as { type?: string; schema?: ProbeSchema; positionen?: ProbeGebuehr[] } | null
+    const daten = ev.data as { type?: string; schema?: ProbeSchema; positionen?: ProbeGebuehr[]; summen?: ProbeSummen } | null
     if (!daten || daten.type !== 'planr-probe' || !daten.schema) return
-    uebernehmen(daten.schema, Array.isArray(daten.positionen) ? daten.positionen : [])
+    uebernehmen(daten.schema, Array.isArray(daten.positionen) ? daten.positionen : [], daten.summen ?? {})
   }
   window.addEventListener('message', auf)
   const bereit = () => window.parent.postMessage({ type: 'planr-probe-bereit' }, location.origin)

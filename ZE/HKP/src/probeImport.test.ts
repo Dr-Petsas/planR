@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { leererPlan } from './store/plan'
-import { planAusSchema } from './probeImport'
+import { planAusSchema, zuschussAbgleich } from './probeImport'
+import { berechnen, type Listen } from './engine/berechnung'
+import { STANDARD_LISTEN } from './store/preislisten'
+import type { HkpPlan, Preisliste } from './types'
 
 describe('Probe-Import in den HKP-Planer', () => {
   it('setzt Befund und Therapie und rechnet Positionen', () => {
@@ -82,5 +85,34 @@ describe('Probe-Import in den HKP-Planer', () => {
     expect(plan.zaehne['26'].TP).toBe('')
     expect(plan.zaehne['26'].R).not.toBe('')
     expect(plan.positionen.some((p) => p.ebene === 'BEMA' || p.ebene === 'GOZ')).toBe(true)
+  })
+})
+
+describe('Festzuschuss vom Blatt als Gegenprobe', () => {
+  const liste = <T extends Preisliste['typ']>(typ: T, id: string) => STANDARD_LISTEN.find((l) => l.typ === typ && l.id === id) as Preisliste<T>
+  const LISTEN: Listen = {
+    bema: liste('bema', 'bema-2026'), goz: liste('goz', 'goz-2012'), bel: liste('bel2', 'bel2-bayern-2026'),
+    beb: liste('beb', 'beb-itz-2024'), fz: liste('festzuschuss', 'fz-2026'),
+  }
+  const { plan } = planAusSchema(leererPlan().einstellungen, { B: { '14': 'ww', '15': 'f', '16': 'ww' }, R: { '14': 'KV', '15': 'BV', '16': 'KV' }, TP: { '14': 'KM', '15': 'BM', '16': 'KM' } })
+  const bei = (zuschuss: HkpPlan['zuschuss']) => berechnen({ ...plan, zuschuss }, LISTEN).summen.festzuschuss
+
+  it('bleibt still, wenn der Festzuschuss passt oder nicht gelesen wurde', () => {
+    expect(bei(plan.zuschuss)).toBeGreaterThan(0)
+    expect(zuschussAbgleich(plan, LISTEN, { festzuschuss: bei(plan.zuschuss) }).hinweise).toEqual([])
+    expect(zuschussAbgleich(plan, LISTEN, {}).hinweise).toEqual([])
+    expect(zuschussAbgleich(leererPlan(), LISTEN, { festzuschuss: 571.29 }).hinweise).toEqual([])
+  })
+
+  it('übernimmt die Bonusstufe, zu der der Festzuschuss vom Blatt passt', () => {
+    const r = zuschussAbgleich(plan, LISTEN, { festzuschuss: bei({ bonus: '70', haertefall: false }) })
+    expect(r.plan.zuschuss).toEqual({ bonus: '70', haertefall: false })
+    expect(r.hinweise[0]).toContain('70 %')
+  })
+
+  it('meldet einen Festzuschuss, der zu keiner Stufe passt', () => {
+    const r = zuschussAbgleich(plan, LISTEN, { festzuschuss: bei(plan.zuschuss) + 123.45 })
+    expect(r.plan).toBe(plan)
+    expect(r.hinweise[0]).toContain('Festzuschuss weicht vom Blatt ab')
   })
 })

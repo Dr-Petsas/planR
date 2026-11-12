@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan, Preisliste } from './types'
 import { usePlan, leererPlan, planNormalisieren, probeAktiv } from './store/plan'
-import { planAusSchema, probeHoren } from './probeImport'
+import { planAusSchema, probeHoren, zuschussAbgleich } from './probeImport'
 import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, stichtag, usePreislisten, TYP_NAMEN } from './store/preislisten'
 import { getPraxis, usePraxis } from './store/praxis'
 import type { Praxis } from './stammdaten'
@@ -187,16 +187,19 @@ export default function App() {
   const [live, setLive] = useState<{ an: boolean; stand: LiveStand | null; spielt: boolean }>({ an: false, stand: null, spielt: false })
   const planRef = useRef(plan)
   const registerRef = useRef(register)
+  const listenRef = useRef(listen)
   useEffect(() => {
+    listenRef.current = listen
     planRef.current = plan
     registerRef.current = register
   })
   useEffect(() => {
     if (!probeAktiv()) return
-    return probeHoren((schema, gebuehren) => {
-      const { plan: neu, hinweise } = planAusSchema(planRef.current.einstellungen, schema, gebuehren)
-      setPlan(() => neu)
-      setEngineHinweise(hinweise)
+    return probeHoren((schema, gebuehren, summen) => {
+      const gelesen = planAusSchema(planRef.current.einstellungen, schema, gebuehren)
+      const zuschuss = zuschussAbgleich(gelesen.plan, listenRef.current, summen)
+      setPlan(() => zuschuss.plan)
+      setEngineHinweise([...zuschuss.hinweise, ...gelesen.hinweise])
       setTab('teil1')
     })
   }, [setPlan])

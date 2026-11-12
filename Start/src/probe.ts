@@ -4,10 +4,10 @@
  */
 import './homepage.css'
 import { logo, wortmarke } from './logo'
-import { blattAusEinlesen, type EinleseAntwort } from './einlesenZeilen'
+import { blattAusEinlesen, type BlattSummen, type EinleseAntwort } from './einlesenZeilen'
 import { blattAusZeilen, textSchichtenAusPdf, zeilenAusPdf, zeilenAusText, type ProbePosition, type ZahnSchema } from './hkpPdf'
 
-interface Blatt { schema: ZahnSchema; positionen: ProbePosition[] }
+interface Blatt { schema: ZahnSchema; positionen: ProbePosition[]; summen?: BlattSummen }
 const LEER: Blatt = { schema: { B: {}, R: {}, TP: {} }, positionen: [] }
 
 function zaehlt(schema: ZahnSchema) {
@@ -37,7 +37,9 @@ function vereinen(teile: Blatt[]): Blatt {
       positionen.push(p)
     }
   }
-  return { schema, positionen }
+  const summen: BlattSummen = {}
+  for (const teil of [...teile].reverse()) Object.assign(summen, teil.summen)
+  return { schema, positionen, summen }
 }
 
 function alsBase64(buf: ArrayBuffer) {
@@ -131,7 +133,7 @@ export function probeSeite(app: HTMLElement) {
 
   const schicken = () => {
     if (!bereit || !hat(blatt) || !rahmen.contentWindow) return
-    rahmen.contentWindow.postMessage({ type: 'planr-probe', schema: blatt.schema, positionen: blatt.positionen }, location.origin)
+    rahmen.contentWindow.postMessage({ type: 'planr-probe', schema: blatt.schema, positionen: blatt.positionen, summen: blatt.summen ?? {} }, location.origin)
   }
 
   window.addEventListener('message', (ev) => {
@@ -182,7 +184,7 @@ export function probeSeite(app: HTMLElement) {
       const d = await r.json() as { ok?: boolean; ergaenzung?: EinleseAntwort['ergaenzung'] }
       if (!d.ok || !d.ergaenzung) return null
       const gelesen = blattAusEinlesen({ seiten: [], tabellen: [], ergaenzung: d.ergaenzung })
-      const fund: Blatt = { schema: gelesen.schema, positionen: gelesen.positionen }
+      const fund: Blatt = { schema: gelesen.schema, positionen: gelesen.positionen, summen: gelesen.summen }
       if (!hat(fund)) return null
       if (gelesen.pruefen.length) hinweise.push(`${datei.name}: Bitte gegenlesen, unsicher gelesen: ${gelesen.pruefen.join(', ')}.`)
       return fund
