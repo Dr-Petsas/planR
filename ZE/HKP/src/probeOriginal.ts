@@ -48,7 +48,7 @@ function gozVomBlatt(plan: HkpPlan, listen: Listen, zeilen: ProbeGebuehr[], betr
     betraege[basis.id] = z.betrag
     const probe = positionBerechnen({ ...basis, faktor: 1 }, listen, plan)
     const faktor = probe.punkte ? faktorAus(probe.punkte, listen.goz?.punktwert ?? 0.0562421, anzahl, z.betrag) : undefined
-    return faktor ? { ...basis, faktor } : { ...basis, preis: runden(z.betrag / anzahl) }
+    return faktor ? { ...basis, faktor } : { ...basis, preis: runden(z.betrag / anzahl), reglerPreis: true }
   })
 }
 
@@ -64,7 +64,7 @@ function laborVomBlatt(plan: HkpPlan, listen: Listen, zeilen: ProbeGebuehr[], la
     // Steht der Preis so in der Liste, bleibt die Zeile an den Reglern; sonst gilt der Preis vom Blatt fest.
     const liste = positionBerechnen(basis, listen, plan)
     if (!liste.fehler && gleich(liste.einzelpreis, z.betrag)) return basis
-    return { ...basis, preis: z.betrag, ...(basis.text ? {} : { text: liste.bezeichnung || 'Laborleistung laut Beleg' }) }
+    return { ...basis, preis: z.betrag, reglerPreis: true, ...(basis.text ? {} : { text: liste.bezeichnung || 'Laborleistung laut Beleg' }) }
   })
 }
 

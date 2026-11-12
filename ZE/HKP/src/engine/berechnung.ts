@@ -283,7 +283,10 @@ export function positionBerechnen(roh: Position, listen: Listen, plan: HkpPlan):
       const regler = Math.min(plan.einstellungen.honorarFaktor || 0, GOZ_HOECHSTSATZ)
       const faktor = Math.max(eigen, regler)
       // § 5 Abs. 1 GOZ: Rundung erst nach Multiplikation mit dem Steigerungsfaktor
-      const einzel = p.preis ?? runden((e?.punkte ?? 0) * pw * faktor)
+      const nachFaktor = runden((e?.punkte ?? 0) * pw * faktor)
+      // Preis vom Blatt: der Faktor-Regler hebt nur an, nie unter den Betrag des Blatts
+      const hebt = p.preis !== undefined && !!p.reglerPreis && regler > 0 && nachFaktor > p.preis
+      const einzel = p.preis === undefined || hebt ? nachFaktor : p.preis
       const faktorBegruendung = faktor > GOZ_SCHWELLENWERT ? p.faktorBegruendung?.trim() || standardBegruendung(p.nr) : undefined
       return { ...basis, faktor, faktorBegruendung, bezeichnung: p.text || e?.text || '', punkte: e?.punkte, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
     }
@@ -311,12 +314,13 @@ export function positionBerechnen(roh: Position, listen: Listen, plan: HkpPlan):
       const eigen = labor === 'eigen' || !e ? eigenFinden(eigenKatalog(listen.eigen), p.nr, k) : undefined
       // Der Regler hebt nur an: der Preis der Praxis bzw. der BEB-Liste ist seine Untergrenze.
       const aufschlag = labor === 'eigen' ? Math.min(Math.max(0, plan.einstellungen.eigenPrivatAufschlag || 0), BEB_AUFSCHLAG_MAX) : 0
+      const fest = p.preis === undefined ? undefined : p.reglerPreis ? runden(p.preis * (1 + aufschlag / 100)) : p.preis
       if (eigen) {
-        const einzel = p.preis ?? runden(eigen.preis * (1 + aufschlag / 100))
+        const einzel = fest ?? runden(eigen.preis * (1 + aufschlag / 100))
         return { ...basis, labor, eigen: eigen.nr, bezeichnung: p.text || eigen.text, listenpreis: eigen.preis, einzelpreis: einzel, betrag: runden(einzel * anzahl) }
       }
       if (!e && p.preis === undefined) return { ...basis, labor, fehler: `BEB-Nr. ${p.nr} nicht in der Liste` }
-      const einzel = p.preis ?? runden(e!.preis * (1 + aufschlag / 100))
+      const einzel = fest ?? runden(e!.preis * (1 + aufschlag / 100))
       const richtpreis = p.preis === undefined && e?.richtpreis ? { richtpreis: true } : {}
       return { ...basis, labor, bezeichnung: p.text || e?.text || '', listenpreis: e?.preis, einzelpreis: einzel, betrag: runden(einzel * anzahl), ...richtpreis }
     }

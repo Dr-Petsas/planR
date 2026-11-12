@@ -3,7 +3,7 @@ import type { Einstellungen, HkpPlan } from '../types'
 import { BEB_AUFSCHLAG_MAX, GOZ_HOECHSTSATZ, GOZ_SCHWELLENWERT, berechnen, type Ergebnis, type Listen } from '../engine/berechnung'
 import { XML_VERSION, auftragsnummerErzeugen, laborXmlErstellen, laborXmlLesen, laborXmlUebernehmen } from '../engine/laborxml'
 import { ZUSATZ_STUFEN } from '../engine/zusatzleistungen'
-import { PRIVAT_STUFEN, PRIVAT_STUFE_MAX, privatKandidaten, privatProthesen, privatStufeAnwenden } from '../engine/aufwertung'
+import { PRIVAT_STUFEN, PRIVAT_STUFE_MAX, privatKandidaten, privatProthesen, privatStufeAnwenden, privatStufeAufBlatt } from '../engine/aufwertung'
 import { herunterladen } from '../store/import'
 import { euro, zahlDe } from '../format'
 
@@ -28,6 +28,10 @@ const delta = (n: number) => (n > 0.004 ? `+${euro(n)}` : n < -0.004 ? `−${eur
 /** Aus dem PVS übernommene Zeilen: Labor ohne Zahnbezug, Liste wie im PVS – erst die Regelengine ordnet sie Zähnen und Listen zu */
 const ausPvs = (x: HkpPlan['positionen'][number]) => !!x.auto && /^(dens|dswin)-/.test(x.id)
 
+/** Hochgeladener Plan (Probe): Laborzeilen vom Beleg bleiben stehen, die Regelengine läuft für die Privatstufe nicht */
+const hatBlatt = (p: HkpPlan) => p.positionen.some((x) => x.id.startsWith('blatt-'))
+const privatSetzen = (p: HkpPlan, stufe: number) => (hatBlatt(p) ? privatStufeAufBlatt(p, stufe) : privatStufeAnwenden(p, stufe))
+
 export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, onNeuRechnen, mobil = false, original = false }: Props) {
   const e = plan.einstellungen
   const mitPraxisBel = Object.keys(listen.belPraxis ?? {}).length > 0
@@ -36,13 +40,16 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
   const pStufe = Math.min(Math.max(0, e.eigenPrivatStufe ?? 0), PRIVAT_STUFE_MAX)
   const kandidaten = useMemo(() => privatKandidaten(plan), [plan])
   const prothesen = useMemo(() => privatProthesen(plan), [plan])
-  const aufwertbar = [
+  const blatt = hatBlatt(plan)
+  const blattZaehne = blatt ? Object.entries(plan.zaehne).filter(([, z]) => z.TP.trim()).map(([z]) => z).sort() : []
+  const blattEigen = plan.positionen.some((x) => (x.ebene === 'BEL' || x.ebene === 'BEB') && x.labor === 'eigen')
+  const aufwertbar = blatt ? (blattZaehne.length && blattEigen ? [`Zahn ${blattZaehne.join(', ')}`] : []) : [
     ...(kandidaten.length ? [`Zahn ${kandidaten.join(', ')}`] : []),
     ...(['OK', 'UK'] as const).filter((k) => prothesen[k].length).map((k) => `Prothese ${k}`),
   ]
   const gerechnet = useMemo(() => {
     const ohne: HkpPlan = { ...plan, einstellungen: { ...e, honorarFaktor: 0, gozZusatzStufe: 0, eigenKasseProzent: 100, eigenPrivatAufschlag: 0 } }
-    return berechnen(pStufe > 0 ? privatStufeAnwenden(ohne, 0).plan : ohne, listen).summen
+    return berechnen(pStufe > 0 ? privatSetzen(ohne, 0).plan : ohne, listen).summen
   }, [plan, e, listen, pStufe])
   const s = ergebnis.summen
   const basis = original ? s : gerechnet
@@ -63,11 +70,12 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
   const privatTitel = pStufe > 0 || aufwertbar.length ? undefined
     : !nEigen && nFremdLab ? 'Gesperrt: alle Laborarbeiten gehen ans Fremdlabor – oben „Eigenlabor“ wählen.'
       : 'Keine Eigenlabor-Versorgung in der Regelversorgung.'
+  const amHoechstsatz = nGoz > 0 && ergebnis.positionen.filter((p) => p.ebene === 'GOZ' && p.faktor !== undefined).every((p) => (p.faktor ?? 0) >= GOZ_HOECHSTSATZ)
   const fl = plan.fremdlabor
   const geaendert = e.honorarFaktor > 0 || stufe > 0 || e.eigenKasseProzent !== 100 || e.eigenPrivatAufschlag > 0 || pStufe > 0
 
   function privatStufe(v: number) {
-    const r = privatStufeAnwenden(plan, v)
+    const r = privatSetzen(plan, v)
     setPlan(() => r.plan)
     onMeldungen(r.hinweise)
   }
@@ -83,7 +91,7 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
         return x
       }),
     }
-    return labor === 'gewerbe' && (p.einstellungen.eigenPrivatStufe ?? 0) > 0 ? privatStufeAnwenden(q, 0).plan : q
+    return labor === 'gewerbe' && (p.einstellungen.eigenPrivatStufe ?? 0) > 0 ? privatSetzen(q, 0).plan : q
   }
 
   function laborWechseln(labor: Einstellungen['labor']) {
@@ -93,7 +101,7 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
 
   function zuruecksetzen() {
     const ohne: HkpPlan = { ...plan, einstellungen: { ...e, honorarFaktor: 0, gozZusatzStufe: 0, gozZusatzAus: [], eigenKasseProzent: 100, eigenPrivatAufschlag: 0, eigenPrivatAus: [] } }
-    setPlan(() => (pStufe > 0 ? privatStufeAnwenden(ohne, 0).plan : ohne))
+    setPlan(() => (pStufe > 0 ? privatSetzen(ohne, 0).plan : ohne))
   }
 
   function xmlErstellen() {
@@ -143,7 +151,7 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
           />
         </label>
         <label className="regler" title={faktorTitel}>
-          <span className="regler-kopf">GOZ-Faktor erhöhen <b>{zahlDe(faktor)}</b></span>
+          <span className="regler-kopf">GOZ-Faktor erhöhen <b>{zahlDe(faktor)}</b>{amHoechstsatz && <small> alle Zeilen stehen schon auf {zahlDe(GOZ_HOECHSTSATZ)}</small>}</span>
           <input
             type="range" min={min} max={GOZ_HOECHSTSATZ} step={0.1} value={faktor} list="goz-marken"
             onChange={(ev) => { const v = Number(ev.target.value); setEinstellung('honorarFaktor', v <= min ? 0 : v) }}

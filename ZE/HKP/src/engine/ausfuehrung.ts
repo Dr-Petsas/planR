@@ -5,7 +5,7 @@
  */
 import type { Abformung, HkpPlan, Position } from '../types'
 import { IMPLANTATSYSTEME } from '../data/implantatsysteme'
-import { PRIVAT_STUFEN, PRIVAT_STUFE_MAX, privatStufeAnwenden } from './aufwertung'
+import { PRIVAT_STUFEN, PRIVAT_STUFE_PREMIUM, privatStufeAnwenden } from './aufwertung'
 import { IMPLANTAT_TP } from './implantat'
 import { WERKSTOFFE_FUER, kronenEinheiten, werkstoffVon, type Werkstoff } from './material'
 import { imVerblendbereich } from './zahnschema'
@@ -82,7 +82,7 @@ const SYSTEM_SPRECH: Record<string, string> = {
 }
 
 const STUFE_MUSTER: Muster<number> = [
-  [PRIVAT_STUFE_MAX, /premium|maximal teuer|m(?:ö|oe)glichst teuer|so teuer wie m(?:ö|oe)glich|h(?:ö|oe)chste[nr]? stufe|maximale[nr]? stufe|stufe maximal|alles privat|voll privat|komplett privat|stufe (?:vier|4)\b/],
+  [PRIVAT_STUFE_PREMIUM, /premium|maximal teuer|m(?:ö|oe)glichst teuer|so teuer wie m(?:ö|oe)glich|h(?:ö|oe)chste[nr]? stufe|maximale[nr]? stufe|stufe maximal|alles privat|voll privat|komplett privat|stufe (?:vier|4)\b/],
   [3, /(?:ä|ae)sthetik|stufe (?:drei|3)\b/],
   [2, /stufe vollkeramik|vollkeramik ?stufe|stufe (?:zwei|2)\b/],
   [1, /stufe (?:eins|1)\b/],

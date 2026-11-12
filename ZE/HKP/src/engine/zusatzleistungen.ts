@@ -13,7 +13,14 @@ export const ZUSATZ_STUFEN = [
   { titel: 'Digitale Abformung', leistungen: '+ GOZ 0065 je Kieferhälfte/Frontzahnbereich (nicht bei Abdruck)' },
   { titel: 'Funktionsdiagnostik', leistungen: '+ GOZ 8000, 8010, 8020' },
   { titel: 'Instrumentelle Planung', leistungen: '+ GOZ 8050, 8080, 8090' },
+  { titel: 'Anästhesie und Vitalität', leistungen: '+ GOZ 0090 je Zahn bzw. Implantatkrone, 0070 je Sitzung' },
+  { titel: 'Elektronische Aufzeichnung', leistungen: '+ GOZ 8035 und 8065 statt 8020 und 8050, 8100 je Zahnpaar (Brücke, Teleskop, ab 4 Implantaten)' },
 ] as const
+
+/** Kürzel aus der Wissensbasis (Privat-HKP exoten.json): Brücke und Teleskop tragen die elektronische Aufzeichnung */
+const BRUECKE = new Set(['B', 'BV', 'BM', 'ABV', 'ABM', 'ZAB', 'SB', 'SBV', 'SBM', 'A'])
+const TELESKOP = new Set(['T', 'TZ', 'TZV', 'TV', 'TM', 'T2', 'T2V', 'T2M', 'ST', 'STZ', 'STZV', 'STV', 'STM'])
+const IMPLANTAT_KERAMIK = new Set(['SKM', 'SKMO'])
 
 export interface Zusatz extends Position {
   begruendung: string
@@ -48,7 +55,7 @@ export function zusatzleistungen(plan: HkpPlan): ZusatzErgebnis {
 
   const versorgung = (z: string) => (plan.zaehne[z].TP.trim() || plan.zaehne[z].R.trim()).toUpperCase()
   const zaehne = Object.keys(plan.zaehne)
-  const anZahn = (z: string) => plan.positionen.filter((p) => p.zahn === z)
+  const anZahn = (z: string) => plan.positionen.filter((p) => p.zahn === z || p.zahn.split(',').some((t) => t.trim() === z))
   /** natürliche Zähne, die laut Planung eine Krone, Teilkrone, Teleskop- oder Ankerkrone erhalten (Zeile R allein reicht nicht – die Regelbrücke kann entfallen) */
   const fehlt = (z: string) => FEHLEND.has(plan.zaehne[z].B.trim().toLowerCase()) || /^(B|E)/.test(plan.zaehne[z].R.trim().toUpperCase())
   const implantat = (z: string) => /^S/.test(versorgung(z)) || /^[si]/.test(plan.zaehne[z].B.trim().toLowerCase())
@@ -56,9 +63,14 @@ export function zusatzleistungen(plan: HkpPlan): ZusatzErgebnis {
     (p.ebene === 'BEMA' && /^(20[abc]|91[abcd])$/.test(p.nr)) || (p.ebene === 'GOZ' && /^(22[012]0|50[0-4]0)$/.test(p.nr))))
   /** vollkeramische bzw. keramisch vollverblendete Kronen/Teilkronen – adhäsiv zu befestigen (auch vom Eigenlabor-Regler aufgewertete) */
   const adhaesiv = praepariert.filter((z) => /^(K|PK)M/.test(versorgung(z)) || anZahn(z).some((p) => p.ebene === 'BEB' && (p.nr === '2281' || p.nr === '2534')))
-  const implantatKronen = zaehne.filter((z) => /^S(K|B|T)/.test(versorgung(z)) && anZahn(z).some((p) => p.ebene === 'GOZ'))
+  const hatGoz = plan.positionen.some((p) => p.ebene === 'GOZ')
+  const implantatKronen = zaehne.filter((z) => /^S(K|B|T)/.test(versorgung(z)) && (anZahn(z).some((p) => p.ebene === 'GOZ') || hatGoz))
+  /** keramische Implantatkronen werden wie Keramikkronen adhäsiv befestigt (Wissensbasis Suprakonstruktion) */
+  const adhaesivImplantat = implantatKronen.filter((z) => IMPLANTAT_KERAMIK.has(versorgung(z)))
+  const teleskope = zaehne.filter((z) => TELESKOP.has(versorgung(z)))
+  const gross = zaehne.some((z) => BRUECKE.has(versorgung(z))) || teleskope.length > 0 || implantatKronen.length >= 4
   const herausnehmbar = plan.positionen.some((p) => (p.ebene === 'BEMA' && /^9[67][abc]$/.test(p.nr)) || (p.ebene === 'GOZ' && /^52[0-5]0$/.test(p.nr)))
-  const umfangreich = praepariert.length + implantatKronen.length >= 4 || herausnehmbar
+  const umfangreich = praepariert.length + implantatKronen.length >= 4 || herausnehmbar || implantatKronen.length > 0
 
   const vorhanden = new Set(plan.positionen.filter((p) => p.ebene === 'GOZ').map(zusatzSchluessel))
   const neu = (nr: string, zahn: string, begruendung: string, anzahl = 1) => {
@@ -76,9 +88,11 @@ export function zusatzleistungen(plan: HkpPlan): ZusatzErgebnis {
 
   // Stufe 2: adhäsive Befestigung vollkeramischer Restaurationen, Kofferdam je Bereich
   if (stufe >= 2) {
-    if (!adhaesiv.length) nichtAngesetzt.push('2197/2040: keine vollkeramischen Kronen oder Teilkronen (TP …M)')
+    const kleben = [...adhaesiv, ...adhaesivImplantat]
+    if (!kleben.length) nichtAngesetzt.push('2197/2040: keine vollkeramischen Kronen oder Teilkronen (TP …M)')
     for (const z of adhaesiv) neu('2197', z, `Adhäsive Befestigung der Keramikrestauration ${versorgung(z)}`)
-    for (const b of bereicheVon(adhaesiv)) neu('2040', BEREICH_ZAEHNE[b], `Kofferdam zur adhäsiven Befestigung (${b})`)
+    for (const z of adhaesivImplantat) neu('2197', z, `Adhäsive Befestigung der keramischen Implantatkrone ${versorgung(z)}`)
+    for (const b of bereicheVon(kleben)) neu('2040', BEREICH_ZAEHNE[b], `Kofferdam zur adhäsiven Befestigung (${b})`)
   }
 
   // Stufe 3: optisch-elektronische Abformung (schließt konventionelle GOZ-Abformungen im selben Bereich aus)
@@ -91,19 +105,40 @@ export function zusatzleistungen(plan: HkpPlan): ZusatzErgebnis {
       if (!konventionell.has(BEREICH_ZAEHNE[b]) && !gescannt.has(b)) neu('0065', BEREICH_ZAEHNE[b], `Digitale Abformung (${b}) statt konventioneller Abformung`)
   }
 
+  // Stufe 7 ersetzt 8020 und 8050: nicht neben 8035 bzw. 8065 berechnungsfähig
+  const elektronisch = stufe >= 7 && gross
   // Stufe 4/5: Funktionsdiagnostik nur bei umfangreicher Versorgung
   if (stufe >= 4) {
-    if (!umfangreich) nichtAngesetzt.push('8000 ff.: erst bei umfangreicher Versorgung (ab 4 Einheiten oder herausnehmbarem Zahnersatz)')
+    if (!umfangreich) nichtAngesetzt.push('8000 ff.: erst bei umfangreicher Versorgung (ab 4 Einheiten, herausnehmbarem Zahnersatz oder Implantatkronen)')
     else {
       neu('8000', '', 'Klinische Funktionsanalyse vor umfangreicher prothetischer Versorgung')
       neu('8010', '', 'Registrieren der Zentrallage (höchstens 2 je Sitzung)')
-      neu('8020', '', 'Arbiträre Scharnierachse / Gesichtsbogen für die Artikulatormontage')
+      if (!elektronisch) neu('8020', '', 'Arbiträre Scharnierachse / Gesichtsbogen für die Artikulatormontage')
     }
   }
   if (stufe >= 5 && umfangreich) {
-    neu('8050', '', 'Registrieren der Unterkieferbewegungen, Einstellung des halbindividuellen Artikulators')
+    if (!elektronisch) neu('8050', '', 'Registrieren der Unterkieferbewegungen, Einstellung des halbindividuellen Artikulators')
     neu('8080', '', 'Diagnostische Maßnahmen an Modellen im Artikulator, Behandlungsplanung')
     neu('8090', '', 'Diagnostischer Aufbau (Wax-up) der Funktionsflächen')
+  }
+
+  // Stufe 6: Anästhesie je Zahn bzw. Implantatkrone, Vitalitätsprüfung einmal je Sitzung (nur natürliche Zähne)
+  if (stufe >= 6) {
+    if (!praepariert.length && !implantatKronen.length) nichtAngesetzt.push('0090/0070: keine Kronen, Anker oder Implantatkronen')
+    for (const z of praepariert) neu('0090', z, `Infiltrationsanästhesie zur Präparation ${versorgung(z)}`)
+    for (const z of implantatKronen) neu('0090', z, 'Infiltrationsanästhesie zur Eingliederung der Implantatkrone')
+    if (praepariert.length) neu('0070', '', 'Vitalitätsprüfung vor der Präparation, je Sitzung')
+  }
+
+  // Stufe 7: elektronische Aufzeichnung und Einschleifen – nur Brücke, Teleskop oder ab 4 Implantaten
+  if (stufe >= 7) {
+    if (!gross) nichtAngesetzt.push('8035/8065/8100: erst bei Brücke, Teleskopen oder ab 4 Implantaten (einzelne Kronen: 8020 und 8050)')
+    else {
+      neu('8035', '', 'Kinematische Scharnierachse, elektronische Aufzeichnung (statt 8020)')
+      neu('8065', '', 'Elektronische Aufzeichnung der Unterkieferbewegungen (statt 8050)')
+      const paare = teleskope.length || (implantatKronen.length >= 4 ? implantatKronen.length : 0)
+      if (paare) neu('8100', '', 'Systematisches Einschleifen, je Zahnpaar', Math.min(8, paare))
+    }
   }
   return { positionen, nichtAngesetzt }
 }

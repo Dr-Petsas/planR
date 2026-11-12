@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ZUSATZ_STUFEN } from '../engine/zusatzleistungen'
 import { hkpEntwurf } from './index'
 import { EIGEN_KASSE_MIN, aufZielpreis, preisSpanne } from './zielpreis'
 
@@ -37,7 +38,7 @@ describe('Zielpreis', () => {
     for (let ziel = min; ziel <= max; ziel += (max - min) / 40) {
       const s = aufZielpreis(plan, ziel).stand
       const eigenBewegt = s.eigenKasseProzent > EIGEN_KASSE_MIN || s.eigenPrivatStufe > 0 || s.eigenPrivatAufschlag > 0
-      if (eigenBewegt) expect([s.gozZusatzStufe, s.honorarFaktor]).toEqual([5, 3.5])
+      if (eigenBewegt) expect([s.gozZusatzStufe, s.honorarFaktor]).toEqual([ZUSATZ_STUFEN.length - 1, 3.5])
       if (s.eigenPrivatStufe > 0) expect(s.eigenKasseProzent).toBe(100)
     }
     const knapp = aufZielpreis(plan, min + 5).stand

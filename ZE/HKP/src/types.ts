@@ -111,6 +111,8 @@ export interface Position {
   nachtraeglich?: boolean
   /** GOZ: eigene Begründung für einen Faktor über 2,3 (§ 10 Abs. 3 GOZ); leer = Standardtext */
   faktorBegruendung?: string
+  /** Preis vom hochgeladenen Blatt: Ausgangswert, den GOZ-Faktor- und BEB-Aufschlag-Regler anheben dürfen */
+  reglerPreis?: boolean
   /** MAT: Materialrolle (engine/zuordnung.ts ROLLEN), über die der Katalog der Praxis bzw. des Fremdlabors den Preis liefert */
   rolle?: string
 }

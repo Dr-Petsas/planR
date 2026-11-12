@@ -56,8 +56,11 @@ export const PRIVAT_STUFEN: PrivatStufe[] = [
   { titel: 'Vollkeramik', text: 'Vollkeramik, keramisch geschichtet (KM, BM, PKM, TM, SKM, SBM) + Keramikstufe' },
   { titel: 'Ästhetik', text: '+ Charakterisierung, Papillen, individuelles Abutment, Sägemodell, Fräsmodell, Aufstellung am Patienten, Farbbestimmung, Gesichtsbogen' },
   { titel: 'Premium', text: '+ Wax-up/Mock-up, Wurzelpontic, Keramik-Aufbau/-Primärteleskop, Zahnfleischmaske, Sonderkunststoff, Farbbestimmung in der Praxis, Fotodokumentation' },
+  { titel: 'Exoten', text: '+ Stumpf unter dem Mikroskop, individueller Artikulator, Registrat auswerten und einstellen, Kontrollmodell, Aufwand verschraubte Suprastruktur, Implantat-Kontrollschablone, Farbanpassung im Labor' },
 ]
 export const PRIVAT_STUFE_MAX = PRIVAT_STUFEN.length - 1
+/** Stufe „Premium“: das meint der gesprochene Auftrag mit „maximal teuer“; „Exoten“ darüber gibt es nur am Regler */
+export const PRIVAT_STUFE_PREMIUM = 4
 
 const STUFE_1: Record<string, string> = { K: 'KV', KH: 'KVH', B: 'BV', PK: 'PKV', SK: 'SKV', SB: 'SBV', ST: 'STV' }
 const STUFE_2: Record<string, string> = {
@@ -167,6 +170,14 @@ export const PRIVAT_EXTRAS: Extra[] = [
   { nr: '0404', ab: 3, je: 'fall', wenn: () => true }, // Montage nach Gesichtsbogen
   { nr: '0522', ab: 4, je: 'fall', wenn: (i) => i.front }, // individueller Frontzahnführungsteller
   { nr: '0706', ab: 4, je: 'fall', wenn: () => true }, // Fotodokumentation
+  { nr: '0217', ab: 5, je: 'zahn', wenn: (i) => !i.implantat && (i.art === 'krone' || i.art === 'teleskop') }, // Stumpf unter Mikroskop vorbereiten
+  { nr: '2972', ab: 5, je: 'zahn', wenn: (i) => i.implantat && festsitzend(i) }, // Aufwand Suprastruktur bei verschraubbarem Implantat
+  { nr: '1225', ab: 5, je: 'kiefer', wenn: (i) => i.implantat }, // Implantat-Kontrollschablone
+  { nr: '0007', ab: 5, je: 'kiefer', wenn: festsitzend }, // Kontrollmodell
+  { nr: '0405', ab: 5, je: 'fall', wenn: festsitzend }, // Modellmontage im individuellen Artikulator
+  { nr: '0521', ab: 5, je: 'fall', wenn: () => true }, // Auswerten eines Registrates
+  { nr: '0511', ab: 5, je: 'fall', wenn: () => true }, // Mehraufwand Einstellen nach Zentrikregistrat
+  { nr: '0705', ab: 5, je: 'fall', wenn: keramischFest }, // nachträgliche Farbanpassung im Labor
 ]
 
 /** Abutment-Leistungen der Implantatprothetik (konfektioniert bearbeiten, individuell, Keramik) */
@@ -192,6 +203,36 @@ export function privatExtras(plan: HkpPlan, infos: ZahnInfo[], stufe: number): P
     }
   }
   return [...out.values()]
+}
+
+const KEINE_LABORARBEIT = new Set(['SO', 'H', ')(', 'X'])
+
+/**
+ * Stufe „Kasse → Privat“ für einen hochgeladenen Plan (Probe). Die Laborzeilen stehen wie auf dem Beleg,
+ * ohne Zahnbezug. Die Regelengine läuft nicht: Zu den geplanten Zähnen kommen nur die passenden
+ * Privatleistungen dazu. Was der Beleg schon führt, wird nicht doppelt angesetzt.
+ */
+export function privatStufeAufBlatt(plan: HkpPlan, stufe: number): { plan: HkpPlan; hinweise: string[] } {
+  const norm = (nr: string) => (Number.isFinite(Number(nr)) ? String(Number(nr)).padStart(4, '0') : nr.trim().toUpperCase())
+  const ohne = plan.positionen.filter((x) => !x.id.startsWith('aufw-'))
+  const beleg = new Set(ohne.filter((x) => x.ebene === 'BEB' || x.ebene === 'BEL').map((x) => norm(x.nr)))
+  const infos = Object.entries(plan.zaehne)
+    .map(([z, v]) => [z, (v.TP.trim() || v.R.trim()).toUpperCase()] as const)
+    .filter(([, k]) => k && !KEINE_LABORARBEIT.has(k))
+    .map(([z, k]) => zahnInfo(z, k))
+  const aus = new Set(plan.einstellungen.eigenPrivatAus ?? [])
+  const abutmentDa = ABUTMENT_BEB.some((nr) => beleg.has(nr))
+  const extras = privatExtras({ ...plan, positionen: [] }, infos, stufe).filter((x) => {
+    if (aus.has(x.id) || beleg.has(x.nr)) return false
+    if (abutmentDa && ABUTMENT_BEB.includes(x.nr)) return false
+    return !PRIVAT_EXTRAS.some((e) => e.nr === x.nr && ((e.ohneBeb && beleg.has(e.ohneBeb)) || (e.ohneBel && beleg.has(e.ohneBel))))
+  })
+  const hinweise = stufe > 0
+    ? [extras.length
+      ? `Eigenlabor privat (${PRIVAT_STUFEN[stufe].titel}): ${extras.length} zusätzliche Privatleistungen (BEB ${[...new Set(extras.map((x) => x.nr))].join(', ')}) zu den Zeilen vom Beleg. Leistungen nur berechnen, wenn sie tatsächlich erbracht werden.`
+      : `Eigenlabor privat (${PRIVAT_STUFEN[stufe].titel}): Zu dieser Planung passt keine weitere Privatleistung, die der Beleg nicht schon führt.`]
+    : []
+  return { plan: { ...plan, positionen: [...ohne, ...extras], einstellungen: { ...plan.einstellungen, eigenPrivatStufe: stufe } }, hinweise }
 }
 
 /**
