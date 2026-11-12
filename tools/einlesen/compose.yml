@@ -57,6 +57,29 @@ services:
       retries: 3
       start_period: 300s
 
+  # Rücktunnel zum PlanR-Server (Strato): dort ist der Dienst unter
+  # 127.0.0.1:40214 erreichbar (PLANR_EINLESEN_URL). Eigener Schlüssel, auf dem
+  # Zielserver auf genau diesen Port beschränkt und ohne Shell. Der Tunnel der
+  # Telefon-KI (40101/40102) ist ein anderer Dienst und bleibt unberührt.
+  tunnel:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      - einlesen
+    cpu_shares: 128
+    volumes:
+      - ${TUNNEL_KEY:-/home/cursor/.ssh/id_ed25519_planr_einlesen}:/tunnel_key:ro
+    command: >
+      sh -c "apk add --no-cache openssh-client >/dev/null
+      && install -m 600 /tunnel_key /tmp/key
+      && exec ssh -N
+      -o StrictHostKeyChecking=accept-new
+      -o ServerAliveInterval=30 -o ServerAliveCountMax=3
+      -o ExitOnForwardFailure=yes
+      -i /tmp/key
+      -R 127.0.0.1:40214:einlesen:8100
+      ${PLANR_SSH:-root@212.132.104.205}"
+
 volumes:
   modelle-docling:
   modelle-paddle:

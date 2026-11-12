@@ -60,6 +60,12 @@ if (Test-Path $mail) {
   $umgebung += ((Get-Content $mail -Encoding UTF8) -match '^\s*PLANR_[A-Z_]+\s*=' | ForEach-Object { $_.Trim() }) -join "`n"
   $umgebung += "`n"
 } else { Write-Warning "Keine $mail - Buchungen werden gespeichert, aber nicht gemailt." }
+# Einlese-Dienst der Probe-Seite: Schlüssel nur lokal in data\, erreichbar über den Rücktunnel von pickadoc1 (tools\einlesen\compose.yml)
+$einlesen = Join-Path $wurzel 'Start\data\planr-einlesen.env'
+if (Test-Path $einlesen) {
+  $umgebung += ((Get-Content $einlesen -Encoding UTF8) | Where-Object { $_.Trim().StartsWith('PLANR_EINLESEN_TOKEN=') } | ForEach-Object { $_.Trim() }) -join "`n"
+  $umgebung += "`nPLANR_EINLESEN_URL=http://127.0.0.1:40214`n"
+} else { Write-Warning "Keine $einlesen - die Probe-Seite liest ohne den Einlese-Dienst." }
 [IO.File]::WriteAllText("$bau\planr.env", $umgebung, $utf8)
 $hoch += "$bau\planr.env"
 
