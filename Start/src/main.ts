@@ -2197,8 +2197,15 @@ document.addEventListener('keydown', (ev) => {
   zeichnen()
 })
 
+function probeOeffnen() {
+  document.body.classList.remove('planr-app', 'plan-offen')
+  return import('./probe').then(({ probeSeite }) => probeSeite(app))
+}
+
 ausPickadoc().then(ichLaden).then(async (wer) => {
   if (!wer) return ohneAnmeldung()
+  addEventListener('hashchange', () => { if (location.hash === '#probe') void probeOeffnen() })
+  if (location.hash === '#probe') return probeOeffnen()
   ich = wer
   sitzungBewachen()
   await einstellungenLaden()
