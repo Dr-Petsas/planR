@@ -22,6 +22,7 @@ import { Anlage, Eigenlaborbeleg } from './components/Anlagen'
 import { Positionen } from './components/Positionen'
 import { Preislisten } from './components/Preislisten'
 import { PreisRegler } from './components/PreisRegler'
+import { euro } from './format'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
 import { eigenlaborLesen, eigenlaborSpeichern, useEigenlabor } from './store/eigenlabor'
 import { fremdlaborLesen, fremdlaborSpeichern, useFremdlabor } from './store/fremdlabor'
@@ -414,6 +415,22 @@ export default function App() {
         <AktuellerBefundLeiste plan={plan} setPlan={setPlan} frei={!register.aktiv && !linkEintrag && !liveAn} />
       )}
 
+      {hkpAnsicht && (
+        <div className="summenkopf bildschirm" aria-live="polite">
+          <div className="sk-haupt">
+            <span>Gesamtkosten</span>
+            <b>{euro(ergebnis.summen.gesamt)}</b>
+          </div>
+          <div className="sk-neben">
+            <span>Festzuschuss</span>
+            <b>− {euro(ergebnis.summen.kassenanteil)}</b>
+          </div>
+          <div className="sk-neben sk-eigen">
+            <span>Eigenanteil</span>
+            <b>{euro(ergebnis.summen.eigenanteil)}</b>
+          </div>
+        </div>
+      )}
       <div className={hkpAnsicht ? 'arbeitsflaeche' : ''}>
       {hkpAnsicht && (
         <button type="button" className="regler-knopf" onClick={() => setReglerOffen((an) => !an)}>

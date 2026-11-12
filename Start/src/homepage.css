@@ -212,8 +212,14 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
   background: rgba(255, 255, 255, 0.06); border: 1px dashed var(--hp-linie); color: #e8f4f4; cursor: pointer;
 }
 .hp-probe-feld span, .hp-probe-status { color: var(--hp-grau); font-size: 14px; }
-.hp-probe-plan { padding: 0 0 28px; background: #e7eeee; }
-.hp-probe-rahmen { display: block; width: 100%; height: min(1100px, calc(100vh - 12px)); border: 0; background: #fff; }
+.hp-probe-plan { padding: 0 0 28px; background: var(--hp-tief, #071a1f); }
+.hp-probe-rahmen { display: block; width: 100%; height: min(1100px, calc(100vh - 12px)); height: min(1100px, calc(100dvh - 12px)); border: 0; background: #071a1f; color-scheme: dark; }
+@media (max-width: 700px) {
+  .hp-probe-feld { padding: 16px; }
+  .hp-probe-feld input { max-width: 100%; }
+  .hp-probe-liste li { grid-template-columns: 1fr; gap: 2px; }
+  .hp-probe-rahmen { height: calc(100dvh - 4px); }
+}
 .hp-spin { display: flex; align-items: center; gap: 12px; margin-top: 14px; color: #e8f4f4; font-weight: 650; }
 .hp-spin[hidden] { display: none; }
 .hp-spin i {

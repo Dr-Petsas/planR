@@ -992,3 +992,76 @@ button.bf-zelle.b { cursor: pointer; }
   .regler input[type=range] { height: 22px; }
   .pl-tabelle-scroll, .el-scroll, .pos-treffer { border-radius: 12px; }
 }
+
+/* ---------- Summenkopf: Gesamtsumme bleibt beim Scrollen und Regeln oben stehen ---------- */
+.summenkopf {
+  position: sticky; top: var(--kopf-hoehe, 50px); z-index: 6;
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 28px;
+  padding: 8px 20px; background: #fff; border-bottom: 1px solid var(--linie);
+  box-shadow: 0 6px 18px rgba(20, 20, 40, .10); font-variant-numeric: tabular-nums;
+}
+html.planr-eingebettet .summenkopf { top: 0; }
+.summenkopf > div { display: flex; flex-direction: column; line-height: 1.15; }
+.summenkopf span { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--grau); }
+.summenkopf b { font-size: 17px; white-space: nowrap; }
+.summenkopf .sk-haupt { margin-right: auto; }
+.summenkopf .sk-haupt b { font-size: 34px; font-weight: 800; letter-spacing: -.01em; }
+.summenkopf .sk-eigen b { font-size: 22px; color: var(--rot); }
+.kostenleiste { top: calc(var(--kopf-hoehe, 50px) + 62px); max-height: calc(100vh - var(--kopf-hoehe, 50px) - 62px); }
+
+/* ---------- Handy ---------- */
+@media screen and (max-width: 840px) {
+  html:root, html:root body { overflow-x: clip; }
+  .kopfleiste { position: static; flex-wrap: wrap; padding: 6px 10px; }
+  .summenkopf { top: 0; }
+  .summenkopf { padding: 6px 12px; gap: 2px 14px; }
+  .summenkopf .sk-haupt { flex: 1 0 100%; flex-direction: row; align-items: baseline; justify-content: space-between; margin: 0; }
+  .summenkopf .sk-haupt b { font-size: 28px; }
+  .summenkopf .sk-neben { flex: 1 1 0; flex-direction: row; align-items: baseline; gap: 6px; }
+  .summenkopf .sk-eigen { justify-content: flex-end; }
+  .summenkopf span { font-size: 10px; }
+  .summenkopf b { font-size: 14px; }
+  .summenkopf .sk-eigen b { font-size: 16px; }
+  .kostenleiste { top: auto; max-height: none; padding: 8px; }
+  main { padding: 8px 4px 40px; }
+  .hinweise { margin: 8px 8px 0; }
+  .register-leiste { margin: 0 8px 8px; }
+  .formular { padding: 12px 10px; overflow-x: auto; }
+  .hkp-arbeitsbereich { padding: 8px 10px 12px; overflow-x: auto; }
+  .pos-labore, .zwei, .drei, .zwei-spalten, .formular-kopf, .unterschriften { grid-template-columns: 1fr; }
+  .span2 { grid-column: auto; }
+  .kl-block input[type=range] { min-height: 34px; }
+  button, select { min-height: 36px; }
+  .hkp-blatt button, .hkp-blatt select { min-height: 0; }
+}
+
+/* ---------- Dunkel (Probe auf der Startseite): Flächen in den Farben der Seite ----------
+   Die hellen Flächen werden umgekehrt und über den dunklen Seitengrund geblendet:
+   Weiß nimmt die Farbe der Seite an, Schrift und Linien werden hell. Der Druck bleibt hell. */
+@media screen {
+  html.planr-dunkel, html.planr-dunkel body { background: #071a1f; color: #e9f3f2; }
+  html.planr-dunkel .kostenleiste { background: #071a1f; border-color: rgba(255, 255, 255, .09); }
+  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-blatt, .hkp-arbeitsbereich, .formular, .abschnitt.bildschirm, .befund-leiste) {
+    filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen;
+    box-shadow: none; border-color: rgba(0, 0, 0, .14);
+  }
+  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-arbeitsbereich, .formular) { background: #e2f0f4; border: 1px solid rgba(0, 0, 0, .12); }
+  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-arbeitsbereich, .formular, .abschnitt.bildschirm, .befund-leiste) { color: #1f2328; }
+  html.planr-dunkel .kl-berechnen { background: #e0407b; color: #fff; }
+  html.planr-dunkel .kl-berechnen:disabled { background: #11313a; color: #9db3b4; }
+  html.planr-dunkel .kopfleiste { background: #0d262c; border-bottom-color: #e0407b; }
+  html.planr-dunkel .kopfleiste h1 { color: #ff7aa8; }
+  html.planr-dunkel .kopfleiste h1 span { color: #9db3b4; }
+  html.planr-dunkel .kopfleiste nav button { background: transparent; color: #c9dcdc; }
+  html.planr-dunkel .kopfleiste nav button.aktiv { color: #ff7aa8; border-bottom-color: #ff7aa8; }
+  html.planr-dunkel .hkp-blatt { --hb-flaeche: #e2f0f4; border: 1px solid rgba(0, 0, 0, .12); }
+  html.planr-dunkel .formular :is(.kl-block, .hinweise, .abschnitt.bildschirm), html.planr-dunkel .hkp-arbeitsbereich :is(.abschnitt.bildschirm, .hinweise) { filter: none; mix-blend-mode: normal; }
+  html.planr-dunkel .summenkopf {
+    background: rgba(13, 38, 44, .92); backdrop-filter: blur(10px); color: #e9f3f2;
+    border-bottom: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+  }
+  html.planr-dunkel .summenkopf span { color: #9db3b4; }
+  html.planr-dunkel .summenkopf .sk-haupt b { color: #3fd8b5; }
+  html.planr-dunkel .summenkopf .sk-eigen b { color: #ff7aa8; }
+  html.planr-dunkel .regler-knopf { background: #e0407b; border-color: #e0407b; }
+}
