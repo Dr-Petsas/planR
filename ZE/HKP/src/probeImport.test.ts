@@ -36,6 +36,44 @@ describe('Probe-Import in den HKP-Planer', () => {
     expect(plan.positionen.some((p) => p.ebene === 'BEMA' && p.zahn === '16' && (p.nr === '20a' || p.nr === '20b' || p.nr === '20c'))).toBe(false)
   })
 
+  // Testplan 1, so gelesen: Lückenschluss )( an 26 kam als x an, im Oberkiefer steht auf dem Blatt keine Regelversorgung.
+  const testplan1 = {
+    B: { '11': 'k', '12': 'k', '18': 'f', '21': 'k', '22': 'k', '26': 'x', '35': 'k', '36': 'k', '38': 'f', '46': 'f', '47': 'f', '48': 'f' },
+    R: { '34': 'H', '45': 'H', '46': 'E', '47': 'E' },
+    TP: { '46': 'SKM', '47': 'SKM' },
+  }
+
+  it('erfindet im Oberkiefer keine Brücke, wenn dort auf dem Blatt keine Regelversorgung steht', () => {
+    const { plan, hinweise } = planAusSchema(leererPlan().einstellungen, testplan1)
+    for (const z of ['25', '26', '27']) expect(plan.zaehne[z].R).toBe('')
+    expect(plan.positionen.some((p) => ['25', '26', '27'].includes(p.zahn))).toBe(false)
+    expect(hinweise.some((h) => h.startsWith('Oberkiefer: auf dem Blatt weder Regelversorgung noch Therapie') && h.includes('26 B'))).toBe(true)
+    expect(Object.fromEntries(Object.entries(plan.zaehne).filter(([, z]) => z.R).map(([n, z]) => [n, z.R]))).toEqual(testplan1.R)
+  })
+
+  it('liest x als Lückenschluss, wenn nur so die Regelzeile vom Blatt herauskommt', () => {
+    const { plan, hinweise } = planAusSchema(leererPlan().einstellungen, {
+      B: { '25': 'ww', '26': 'x', '27': 'ww', '46': 'f', '47': 'f', '48': 'f' },
+      R: { '25': 'KV', '27': 'K', '34': 'H', '45': 'H', '46': 'E', '47': 'E' },
+      TP: { '25': 'KM', '27': 'KM', '46': 'SKM', '47': 'SKM' },
+    })
+    expect(plan.zaehne['26'].B).toBe(')(')
+    expect(plan.zaehne['26'].R).toBe('')
+    expect(hinweise.some((h) => h.startsWith('Zahn 26: „x“ gelesen') && h.includes('„)(“'))).toBe(true)
+  })
+
+  it('lässt ein echtes x stehen, wenn das Blatt die Brücke trägt', () => {
+    const { plan, hinweise } = planAusSchema(leererPlan().einstellungen, {
+      B: { '11': 'k', '12': 'x', '13': 'k' },
+      R: { '11': 'KV', '12': 'BV', '13': 'KV' },
+      TP: { '11': 'KM', '12': 'BM', '13': 'KM' },
+    })
+    expect(plan.zaehne['12'].B).toBe('x')
+    expect(plan.zaehne['12'].R).toBe('BV')
+    expect(hinweise.some((h) => h.startsWith('Zahn 12: „x“ gelesen'))).toBe(false)
+    expect(hinweise.some((h) => h.startsWith('Regelversorgung weicht'))).toBe(false)
+  })
+
   it('ohne Therapieplanung trägt die Regelversorgung ein', () => {
     const { plan } = planAusSchema(leererPlan().einstellungen, {
       B: { '26': 'ww' },

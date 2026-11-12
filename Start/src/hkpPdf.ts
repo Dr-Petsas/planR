@@ -9,6 +9,8 @@ export interface PdfZeile { teile: PdfTeil[] }
 
 const ZAHN = /^[1-4][1-8]$/
 const BEFUND = /^(ww|kw|f|x|k|pw|pkw|e|ew|b|bw|ur|a|aw|ab|abw|i|ix|sk|skw|t|tw|r|rw|sb|sbw|se|sew|so|sow|st|stw)$/i
+const LUECKENSCHLUSS = ')('
+const befundKuerzel = (text: string) => BEFUND.test(text) || text.trim() === LUECKENSCHLUSS
 const ZEILEN_ART: Record<string, 'B' | 'R' | 'TP'> = {
   b: 'B', befund: 'B', bef: 'B',
   r: 'R', regelversorgung: 'R', regelvers: 'R', rv: 'R',
@@ -62,7 +64,7 @@ function teileWoerter(teile: PdfTeil[]): PdfTeil[] {
 
 /** Großes K, E, B ist Therapie. Dieselben Buchstaben klein sind Befund. ww und f gelten in jeder Schreibung. */
 function istBefundToken(text: string) {
-  if (!BEFUND.test(text)) return false
+  if (!befundKuerzel(text)) return false
   const kern = text.trim()
   if (kern.length > 1) return true
   if (kern === kern.toLowerCase()) return true
@@ -131,7 +133,7 @@ function zeilenArt(teile: PdfTeil[]): { art: 'B' | 'R' | 'TP'; codes: PdfTeil[] 
 }
 
 function codeGueltig(art: 'B' | 'R' | 'TP', text: string) {
-  if (art === 'B') return BEFUND.test(text)
+  if (art === 'B') return befundKuerzel(text)
   const kern = text.trim().replace(/^-+|-+$/g, '').toUpperCase()
   return THERAPIE.has(kern)
 }

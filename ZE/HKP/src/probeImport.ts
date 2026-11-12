@@ -2,11 +2,11 @@
  * Öffentliche Probe: Befund, Regelversorgung, Therapieplanung und die Gebührenzeilen
  * in einen leeren HKP. Nichts davon geht ins Register.
  */
-import type { Ebene, HkpPlan, Position } from './types'
-import { BEFUND_KUERZEL, THERAPIE_KUERZEL, ALLE_ZAEHNE } from './engine/zahnschema'
+import type { Ebene, HkpPlan, Position, ZahnZeilen } from './types'
+import { BEFUND_KUERZEL, THERAPIE_KUERZEL, ALLE_ZAEHNE, kieferVon } from './engine/zahnschema'
 import { befundOhneStrich, markeLesen } from './engine/bruecken'
-import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './engine/regeln'
-import { regelUebernehmen, regelversorgungPlanen } from './engine/aufwertung'
+import { regelOptionen, regelversorgungErmitteln, therapieAnwenden, type RegelOptionen } from './engine/regeln'
+import { regelUebernehmen } from './engine/aufwertung'
 import { leererPlan } from './store/plan'
 
 export interface ProbeSchema {
@@ -30,16 +30,48 @@ function wert(map: Record<string, string> | undefined, zahn: string) {
   return (map?.[zahn] ?? '').trim()
 }
 
-function regelVomBlatt(plan: HkpPlan, schema: ProbeSchema): HkpPlan {
-  if (!schema.R) return plan
-  const zaehne = { ...plan.zaehne }
+type Kiefer = 'OK' | 'UK'
+
+const KIEFER_NAME: Record<Kiefer, string> = { OK: 'Oberkiefer', UK: 'Unterkiefer' }
+
+/** Das Einlesen verwechselt den Lückenschluss )( mit x. */
+const VERWECHSELT: Record<string, string> = { x: ')(', ')(': 'x' }
+
+interface Lesart {
+  B: Record<string, string>
+  nichtErsetzen: string[]
+}
+
+function regelzeile(schema: ProbeSchema): Record<string, string> {
+  const aus: Record<string, string> = {}
   for (const z of ALLE_ZAEHNE) {
     const roh = wert(schema.R, z)
-    if (!roh) continue
-    const kuerzel = markeLesen(roh).kuerzel.toUpperCase()
-    if (!(kuerzel in THERAPIE_KUERZEL)) continue
-    zaehne[z] = { ...zaehne[z], R: kuerzel }
+    const kuerzel = roh ? markeLesen(roh).kuerzel.toUpperCase() : ''
+    if (kuerzel in THERAPIE_KUERZEL) aus[z] = kuerzel
   }
+  return aus
+}
+
+function rechnen(basis: HkpPlan, optionen: RegelOptionen): { plan: HkpPlan; hinweise: string[] } {
+  const regel = regelversorgungErmitteln(basis.zaehne, optionen)
+  if (Object.values(basis.zaehne).some((z) => z.TP)) {
+    const therapie = therapieAnwenden(regel, basis.zaehne, basis)
+    return { plan: regelUebernehmen(basis, therapie, basis.zaehne), hinweise: therapie.hinweise }
+  }
+  if (!Object.values(regel.R).some(Boolean) && !regel.befunde.length) return { plan: basis, hinweise: regel.hinweise }
+  const ohneTp = Object.fromEntries(Object.entries(basis.zaehne).map(([z, v]) => [z, { ...v, TP: '' }]))
+  return { plan: regelUebernehmen({ ...basis, versorgungsart: 'auto' }, regel, ohneTp), hinweise: regel.hinweise }
+}
+
+function abweichend(plan: HkpPlan, blatt: Record<string, string>, verglichen: Set<Kiefer>) {
+  return ALLE_ZAEHNE.filter((z) => verglichen.has(kieferVon(z)) && (plan.zaehne[z]?.R ?? '') !== (blatt[z] ?? ''))
+}
+
+/** In jedem Kiefer, dessen Regelzeile gelesen wurde, gilt die Zeile vom Blatt, auch wo sie leer ist. */
+function regelVomBlatt(plan: HkpPlan, blatt: Record<string, string>, verglichen: Set<Kiefer>): HkpPlan {
+  if (!verglichen.size) return plan
+  const zaehne = { ...plan.zaehne }
+  for (const z of ALLE_ZAEHNE) if (verglichen.has(kieferVon(z))) zaehne[z] = { ...zaehne[z], R: blatt[z] ?? '' }
   return { ...plan, zaehne }
 }
 
@@ -74,9 +106,13 @@ function gebuehrenDazu(plan: HkpPlan, liste: ProbeGebuehr[]): HkpPlan {
   return { ...plan, positionen }
 }
 
-/** Zahnschema übernehmen, rechnen lassen und die Gebührenzeilen des Blatts dazulegen. Patientenfelder bleiben leer. */
+/**
+ * Zahnschema übernehmen, rechnen lassen und die Gebührenzeilen des Blatts dazulegen. Patientenfelder bleiben leer.
+ * Die gerechnete Regelversorgung wird gegen die Zeile R vom Blatt geprüft: Ein Kiefer ohne R und TP auf dem Blatt
+ * wird nicht geplant, eine Abweichung probiert die bekannten Lesefehler am Befund aus, der Rest wird gemeldet.
+ */
 export function planAusSchema(einstellungen: HkpPlan['einstellungen'], schema: ProbeSchema, gebuehren: ProbeGebuehr[] = []): { plan: HkpPlan; hinweise: string[] } {
-  const zaehne = Object.fromEntries(ALLE_ZAEHNE.map((z) => {
+  const zaehne: Record<string, ZahnZeilen> = Object.fromEntries(ALLE_ZAEHNE.map((z) => {
     const befund = befundOhneStrich(wert(schema.B, z))
     const tp = markeLesen(wert(schema.TP, z))
     const kuerzel = tp.kuerzel.toUpperCase()
@@ -90,15 +126,59 @@ export function planAusSchema(einstellungen: HkpPlan['einstellungen'], schema: P
     }]
   }))
   const basis: HkpPlan = { ...leererPlan(), einstellungen, zaehne, patient: leererPlan().patient }
-  const hatPlanung = Object.values(zaehne).some((z) => z.TP)
-  const gerechnet = hatPlanung
-    ? (() => {
-      const therapie = therapieAnwenden(regelversorgungErmitteln(zaehne, regelOptionen(basis)), zaehne, basis)
-      return { plan: regelUebernehmen(basis, therapie, zaehne), hinweise: therapie.hinweise }
-    })()
-    : regelversorgungPlanen(basis)
-  const plan = gebuehrenDazu(regelVomBlatt(gerechnet.plan, schema), gebuehren)
-  return { plan, hinweise: gerechnet.hinweise }
+  const blatt = regelzeile(schema)
+  const geplant = new Set(ALLE_ZAEHNE.filter((z) => blatt[z] || zaehne[z].TP).map(kieferVon))
+  const verglichen = new Set(Object.keys(blatt).map(kieferVon))
+  const optionen = (l: Lesart): RegelOptionen => ({
+    ...regelOptionen(basis),
+    ...(geplant.size ? { nurKiefer: [...geplant] } : {}),
+    ...(l.nichtErsetzen.length ? { nichtErsetzen: l.nichtErsetzen } : {}),
+  })
+  const mit = (l: Lesart) => rechnen({ ...basis, zaehne: Object.fromEntries(ALLE_ZAEHNE.map((z) => [z, { ...zaehne[z], B: l.B[z] }])) }, optionen(l))
+
+  let lesart: Lesart = { B: Object.fromEntries(ALLE_ZAEHNE.map((z) => [z, zaehne[z].B])), nichtErsetzen: [] }
+  let stand = mit(lesart)
+  let offen = abweichend(stand.plan, blatt, verglichen)
+  const abgleich: string[] = []
+  while (offen.length) {
+    let bester: { lesart: Lesart; stand: typeof stand; offen: string[]; hinweis?: string } | null = null
+    for (const z of offen) {
+      if (zaehne[z].TP) continue
+      const b = lesart.B[z]
+      const versuche: { lesart: Lesart; hinweis?: string }[] = []
+      const anders = VERWECHSELT[b]
+      if (anders) versuche.push({
+        lesart: { ...lesart, B: { ...lesart.B, [z]: anders } },
+        hinweis: `Zahn ${z}: „${b}“ gelesen, zur Regelversorgung auf dem Blatt passt nur „${anders}“ (${BEFUND_KUERZEL[anders]}). Übernommen, bitte gegenlesen.`,
+      })
+      if (b === 'f' && !blatt[z] && !lesart.nichtErsetzen.includes(z)) versuche.push({ lesart: { ...lesart, nichtErsetzen: [...lesart.nichtErsetzen, z] } })
+      for (const v of versuche) {
+        const s = mit(v.lesart)
+        const o = abweichend(s.plan, blatt, verglichen)
+        if (o.length < (bester?.offen.length ?? offen.length)) bester = { ...v, stand: s, offen: o }
+      }
+    }
+    if (!bester) break
+    lesart = bester.lesart
+    stand = bester.stand
+    offen = bester.offen
+    if (bester.hinweis) abgleich.push(bester.hinweis)
+  }
+  if (offen.length) {
+    const liste = offen.map((z) => `${z} Blatt „${blatt[z] || '–'}“ / PlanR „${stand.plan.zaehne[z]?.R || '–'}“`).join(', ')
+    abgleich.push(`Regelversorgung weicht vom Blatt ab: ${liste}. Eingetragen ist die Zeile vom Blatt, bitte Befund und Regelzeile an diesen Zähnen gegenlesen.`)
+  }
+  const ohneGrenze = geplant.size < 2 ? rechnen(basis, regelOptionen(basis)).plan : null
+  for (const k of ['OK', 'UK'] as const) {
+    const haette = ohneGrenze && !geplant.has(k) ? ALLE_ZAEHNE.filter((z) => kieferVon(z) === k && ohneGrenze.zaehne[z]?.R) : []
+    if (geplant.size && haette.length) {
+      const liste = haette.map((z) => `${z} ${ohneGrenze?.zaehne[z].R}`).join(', ')
+      abgleich.push(`${KIEFER_NAME[k]}: auf dem Blatt weder Regelversorgung noch Therapie, deshalb nicht geplant. Aus dem gelesenen Befund hätte PlanR ${liste} gerechnet, bitte den Befund gegenlesen.`)
+    }
+    if (geplant.has(k) && !verglichen.has(k)) abgleich.push(`${KIEFER_NAME[k]}: Regelversorgung auf dem Blatt nicht gelesen, PlanR hat sie aus dem Befund gerechnet. Bitte gegenlesen.`)
+  }
+  const plan = gebuehrenDazu(regelVomBlatt(stand.plan, blatt, verglichen), gebuehren)
+  return { plan, hinweise: [...abgleich, ...stand.hinweise] }
 }
 
 /** Der eingebettete Planer nimmt Schema und Gebührenzeilen von der Probeseite an. */

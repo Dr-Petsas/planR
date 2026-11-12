@@ -83,6 +83,16 @@ describe('HKP-PDF', () => {
     expect(schema.B['11']).toBeUndefined()
   })
 
+  it('übernimmt den Lückenschluss )( als Befund', () => {
+    const befund = obere.map((z) => (z === '26' ? ')(' : z === '25' || z === '27' ? 'k' : ''))
+    const schema = schemaAusZeilen([
+      zeile(['B', ...befund], -28),
+      zeile(obere),
+    ])
+    expect(schema.B['26']).toBe(')(')
+    expect(schema.B['25']).toBe('k')
+  })
+
   it('lässt eine großgeschriebene Therapiezeile aus dem Befund und liest die Gebühr auch hinter der Nummer', () => {
     const therapie = obere.map((z) => (z === '16' ? 'KM' : ''))
     const schema = schemaAusZeilen([
