@@ -322,7 +322,9 @@ export default function App() {
   const hkpAnsicht = tab === 'teil1' || tab === 'teil2' || tab === 'anlage' || tab === 'eigenlabor'
   // Probe: Teil 1, Teil 2 und Eigenlaborbeleg stehen untereinander auf einer Seite, die Reiter springen hin.
   const blaetterZusammen = probe && (tab === 'teil1' || tab === 'teil2' || tab === 'eigenlabor')
+  const ersterTab = useRef(true)
   useEffect(() => {
+    if (ersterTab.current) { ersterTab.current = false; return }
     if (!blaetterZusammen) return
     document.getElementById(`blatt-${tab}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [tab, blaetterZusammen])
@@ -419,7 +421,7 @@ export default function App() {
         </button>
       )}
       {hkpAnsicht && reglerOffen && (
-        <PreisRegler plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen} setEinstellung={setEinstellung} onMeldungen={setEngineHinweise} onBerechnen={berechnenKlick} onNeuRechnen={regelengine} />
+        <PreisRegler plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen} setEinstellung={setEinstellung} onMeldungen={setEngineHinweise} onBerechnen={berechnenKlick} onNeuRechnen={regelengine} original={imOriginal} />
       )}
 
       <div className="hauptspalte" ref={hauptRef}>

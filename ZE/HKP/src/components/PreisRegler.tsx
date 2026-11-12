@@ -19,6 +19,8 @@ interface Props {
   onNeuRechnen?: (plan: HkpPlan) => void
   /** Handy: nur Regler und Summen (kein Berechnen, kein Labor-XML) */
   mobil?: boolean
+  /** Probe im Originalzustand: Summen stehen wie auf dem Blatt, keine Abweichung anzeigen */
+  original?: boolean
 }
 
 const delta = (n: number) => (n > 0.004 ? `+${euro(n)}` : n < -0.004 ? `−${euro(-n)}` : '±0,00 €')
@@ -26,7 +28,7 @@ const delta = (n: number) => (n > 0.004 ? `+${euro(n)}` : n < -0.004 ? `−${eur
 /** Aus dem PVS übernommene Zeilen: Labor ohne Zahnbezug, Liste wie im PVS – erst die Regelengine ordnet sie Zähnen und Listen zu */
 const ausPvs = (x: HkpPlan['positionen'][number]) => !!x.auto && /^(dens|dswin)-/.test(x.id)
 
-export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, onNeuRechnen, mobil = false }: Props) {
+export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, onNeuRechnen, mobil = false, original = false }: Props) {
   const e = plan.einstellungen
   const mitPraxisBel = Object.keys(listen.belPraxis ?? {}).length > 0
   const hatBefund = Object.values(plan.zaehne).some((z) => z.B.trim()) || plan.reparaturen.length > 0
@@ -38,11 +40,12 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
     ...(kandidaten.length ? [`Zahn ${kandidaten.join(', ')}`] : []),
     ...(['OK', 'UK'] as const).filter((k) => prothesen[k].length).map((k) => `Prothese ${k}`),
   ]
-  const basis = useMemo(() => {
+  const gerechnet = useMemo(() => {
     const ohne: HkpPlan = { ...plan, einstellungen: { ...e, honorarFaktor: 0, gozZusatzStufe: 0, eigenKasseProzent: 100, eigenPrivatAufschlag: 0 } }
     return berechnen(pStufe > 0 ? privatStufeAnwenden(ohne, 0).plan : ohne, listen).summen
   }, [plan, e, listen, pStufe])
   const s = ergebnis.summen
+  const basis = original ? s : gerechnet
   const anzahl = (f: (p: Ergebnis['positionen'][number]) => boolean) => ergebnis.positionen.filter(f).length
   const nGoz = anzahl((p) => p.ebene === 'GOZ')
   const nEigenBel = anzahl((p) => p.ebene === 'BEL' && p.labor === 'eigen')
