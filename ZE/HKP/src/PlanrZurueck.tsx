@@ -41,6 +41,7 @@ export function PlanrZurueck() {
     : window.location.hostname.endsWith('.pickadoc-tunnel.com')
     ? `https://planr.pickadoc-tunnel.com/${q}`
     : `${window.location.protocol}//${window.location.hostname || '127.0.0.1'}:5189/${q}`
+  if (new URLSearchParams(window.location.search).get('probe') === '1') return null
   const eingebettet = window.parent !== window
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>

@@ -12,6 +12,7 @@ describe('PVS-Vermerk', () => {
     expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv', 'privat-kb'].every((m) => planInsPvsMoeglich('dampsoft', m))).toBe(true)
     expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv', 'privat-kb'].every((m) => planInsPvsMoeglich('dens', m))).toBe(true)
     expect(planInsPvsMoeglich('dens', 'hkp')).toBe(false)
+    expect(planInsPvsMoeglich('cgm-z1pro', 'privat-kv')).toBe(false)
     expect(planInsPvsMoeglich('evident', 'kons-mkv')).toBe(false)
     expect(planInsPvsMoeglich(undefined, 'kons-mkv')).toBe(false)
   })
@@ -97,6 +98,10 @@ describe('Befund aus dem und ins PVS', () => {
     expect(b?.version).toBe('v1')
     expect(b?.datum).toBe('2026-10-12')
     expect(b?.zaehne).toMatchObject({ 18: 'f', 16: 'sk', 15: 't1', 11: '', 48: '' })
+    const implantat = befundAusPvs({
+      version: 'v1', current: { date: '', teeth: { 13: zahn('j'), 24: zahn('j 2'), 46: zahn('j 1'), 15: zahn('t1') } },
+    })
+    expect(implantat?.zaehne).toMatchObject({ 13: 'i', 24: 'i', 46: 'i', 15: 't1' })
     expect(Object.keys(b!.zaehne)).toHaveLength(32)
     expect(befundAusPvs({ current: { teeth: {} } })).toBeNull()
   })

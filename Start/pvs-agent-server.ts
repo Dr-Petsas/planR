@@ -304,5 +304,7 @@ const PFADE: [Auftrag['method'], RegExp][] = [
   ['POST', /^\/patients\/\d{1,9}\/befunde\/01$/],
   ['GET', /^\/praxis\/katalog$/],
   ['GET', /^\/praxen$/],
+  // Kontrollbuch: Zuschussdatum gesetzt, Abrechnungsdatum leer
+  ['GET', /^\/hkps\/offen$/],
 ]
 export const auftragErlaubt = (method: string, pfad: string) => PFADE.some(([m, re]) => m === method && re.test(pfad))

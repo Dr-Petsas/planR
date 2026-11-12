@@ -4,6 +4,7 @@
 export const PVS_CONNECTOR: Record<string, string> = {
   dens: 'http://127.0.0.1:8770',
   dampsoft: 'http://127.0.0.1:8766',
+  'cgm-z1pro': 'http://127.0.0.1:8772',
 }
 
 /** PVS, in denen die Patientensuche sucht und ihre HKPs listet (Übernahme nur mit PVS_CONNECTOR) */
@@ -154,12 +155,20 @@ export interface PvsBefund {
   zaehne: Record<string, string>
 }
 
+/**
+ * DS-Win schreibt Implantate in dieser Praxis als j, j1 oder j2 (auch „j 1“ / „j 2“).
+ * PlanR und das Handy zeigen und planen sie als i.
+ */
+export function implantKuerzel(code: string): string {
+  return /^j(?:\s*[12])?$/i.test(code.trim()) ? 'i' : code
+}
+
 /** Antwort des Connectors auf GET /patients/<nr>/befunde/01; Datum: aktueller Status, sonst letzter 01-Befund */
 export function befundAusPvs(d: unknown): PvsBefund | null {
   const o = d as { version?: unknown; current?: { date?: unknown; teeth?: Record<string, { status?: unknown }> }; items?: { date?: unknown }[] }
   const teeth = o?.current?.teeth
   if (typeof o?.version !== 'string' || !teeth || typeof teeth !== 'object') return null
-  const zaehne = Object.fromEntries([...KIEFER.OK, ...KIEFER.UK].map((z) => [z, String(teeth[z]?.status ?? '').trim()]))
+  const zaehne = Object.fromEntries([...KIEFER.OK, ...KIEFER.UK].map((z) => [z, implantKuerzel(String(teeth[z]?.status ?? '').trim())]))
   return { datum: datumIso(o.current?.date) || datumIso(o.items?.[0]?.date), version: o.version, zaehne }
 }
 

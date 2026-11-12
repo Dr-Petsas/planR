@@ -19,11 +19,18 @@ describe('aktueller 01-Befund', () => {
   })
 
   it('Kürzel aus dem Praxisprogramm bleiben, eine offene Krone gewinnt in der Anzeige', () => {
-    const b = nachLesen(undefined, gelesen({ '46': 'j', '16': 'k' }), T1)
-    expect(b.pvsZaehne).toMatchObject({ '46': 'j', '16': 'k' })
+    const b = nachLesen(undefined, gelesen({ '46': 'f', '16': 'k' }), T1)
+    expect(b.pvsZaehne).toMatchObject({ '46': 'f', '16': 'k' })
     const mitKrone = nachAenderung(b, { '46': 'sk' }, 'Befund', T2)
     expect(befundAnsicht(mitKrone).zaehne['46']).toBe('sk')
-    expect(befundAnsicht(mitKrone).pvsZaehne['46']).toBe('j')
+    expect(befundAnsicht(mitKrone).pvsZaehne['46']).toBe('f')
+  })
+
+  it('Implantate aus DS-Win (j, j 1, j 2) werden i, auch aus einem schon gemerkten Stand', () => {
+    const b = nachLesen(undefined, gelesen({ '13': 'j', '24': 'j 2', '46': 'j 1', '16': 'k', '15': 't1' }), T1)
+    expect(b.pvsZaehne).toMatchObject({ '13': 'i', '24': 'i', '46': 'i', '16': 'k', '15': 't1' })
+    const alt = { ...b, pvsZaehne: { '26': 'j', '44': 'J2' } }
+    expect(befundAnsicht(alt).zaehne).toMatchObject({ '26': 'i', '44': 'i' })
   })
 
   it('erstes Lesen übernimmt das Praxisprogramm', () => {

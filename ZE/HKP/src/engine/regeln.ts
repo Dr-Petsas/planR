@@ -101,6 +101,8 @@ export interface RegelOptionen {
   interimUK?: boolean
   /** Nur diese Kiefer rechnen. Der andere Kiefer bleibt Befund, ohne Regelversorgung und ohne Positionen. */
   nurKiefer?: ('OK' | 'UK')[]
+  /** Zähne aus dem Werkzeugfeld erhalten: auch fehlende bleiben ohne Ersatz. */
+  nichtErsetzen?: string[]
   klinisch?: Partial<KlinischeAngaben>
   reparaturen?: Reparatur[]
 }
@@ -183,6 +185,10 @@ function zuschlaegeAnsetzen(
   }
 }
 
+function lueckeErsetzen(z: string, optionen: RegelOptionen): boolean {
+  return !optionen.nichtErsetzen?.includes(z)
+}
+
 export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, optionen: RegelOptionen = {}): RegelErgebnis {
   zaehler = 0
   const R: Record<string, string> = {}
@@ -216,12 +222,13 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
 
     // ---- Befundklasse 5: Interimsversorgung ----
     if (kiefer === 'OK' ? optionen.interimOK : optionen.interimUK) {
-      const n = a.fehlendOhne8.length
+      const luecken = a.fehlendOhne8.filter((z) => !istImplantat(kuerzel(zaehne[z])) && lueckeErsetzen(z, optionen))
+      const n = luecken.length
       if (a.vorhanden.length === 0) befunde.push(befund('5.4', kiefer))
       else if (n > 0) befunde.push(befund(n <= 4 ? '5.1' : n <= 8 ? '5.2' : '5.3', kiefer))
       if (a.vorhanden.length === 0) positionen.push(pos('BEMA', kiefer === 'OK' ? '97a' : '97b', kiefer))
       else if (n > 0) positionen.push(pos('BEMA', n <= 4 ? '96a' : n <= 8 ? '96b' : '96c', kiefer))
-      for (const z of a.fehlendOhne8) if (!istImplantat(kuerzel(zaehne[z]))) R[z] = 'E'
+      for (const z of luecken) R[z] = 'E'
       if (n > 0) hinweise.push(`${kieferName}: Interimsprothese (Befund 5.x) – zahntechnische Leistungen bitte ergänzen.`)
       else hinweise.push(`${kieferName}: Interimsversorgung angekreuzt, aber kein fehlender Zahn im Befund.`)
       continue
@@ -315,6 +322,7 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
     prothesenKiefer.push(kiefer)
     // fehlender 8er am Ende einer Freiendlücke zählt mit (E für BEMA 96, ohne Einfluss auf den Festzuschuss)
     const zuErsetzen = a.sitz.filter((z) => a.fehlt(z) && !istImplantat(kuerzel(zaehne[z])) &&
+      lueckeErsetzen(z, optionen) &&
       (!istWeisheitszahn(z) || (a.sitz.includes(`${z[0]}7`) && a.fehlt(`${z[0]}7`))))
     for (const z of zuErsetzen) R[z] = 'E'
     // Halteelemente an den lückenbegrenzenden Zähnen

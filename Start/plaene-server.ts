@@ -7,6 +7,7 @@ import {
   type Eingang, type Grab, type PlanKarte,
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
+import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import {
   PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
@@ -17,11 +18,11 @@ import {
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { arztAusPickadoc, avatarHolen } from './pickadocArzt.ts'
-import { freieSlots, kalenderGehoert, kalenderStand, terminEintragen } from './terminKalender.ts'
-import { geschlecht, kalenderErlaubt, stammAus, type Stamm } from './src/termin.ts'
+import { freieSlots, kalenderStand, terminEintragen, terminNachsehen } from './terminKalender.ts'
+import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patientAbgleichen, stammAus, vermerkNachKalender, type Akte, type Stamm } from './src/termin.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
-  PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, mandantVon, neuesToken, registerVon,
+  PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, idTokenHolen, mandantVon, neuesToken, registerVon,
   passwortVergessen, praxenVon, praxisNr, sitzungFinden, sitzungHash, sitzungenAufraeumen, zugaengePruefen,
   type Konto, type PraxisInfo, type Sitzung, type Zugaenge,
 } from './anmeldung.ts'
@@ -35,6 +36,7 @@ import {
 } from './rechnung.ts'
 import type { Paket } from './src/paket.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
+import { fallAnsicht, fallAufnehmen, fallEntfernen, regelnAus, type Fall, type Praxisregel } from './src/fallkatalog.ts'
 import {
   ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, befundOhnePvs, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
   vorgangBeenden, vorgangKarten, vorgangLaeuft, vorgangMelden, zaehneAktuell, type Befund01,
@@ -686,10 +688,45 @@ const versendetLesen = async (m: string) => {
   const roh = await jsonLesen<unknown>(ABLAGE(m, 'versendet'), {})
   return (roh && typeof roh === 'object' && !Array.isArray(roh) ? roh : {}) as Record<string, VersandVermerk>
 }
-interface TerminVermerk { iso: string; behandler: string; grund: string; minuten: number; am: string }
+interface TerminVermerk { iso: string; behandler: string; grund: string; minuten: number; am: string; appointmentId?: string; locationId?: string }
 const termineLesen = async (m: string) => {
   const roh = await jsonLesen<unknown>(ABLAGE(m, 'termine'), {})
   return (roh && typeof roh === 'object' && !Array.isArray(roh) ? roh : {}) as Record<string, TerminVermerk>
+}
+
+async function refreshHolen(req: IncomingMessage): Promise<string> {
+  const token = cookieWert(req.headers.cookie, SITZUNG_COOKIE)
+  if (!token) return ''
+  const s = await sitzungExklusiv(async (liste) => sitzungFinden(liste, token))
+  return s?.erneuern ?? ''
+}
+
+/** Gelöschte oder verschobene CalendR-Termine aus der Planliste nehmen. Bei Ausfall bleibt der Vermerk. */
+async function termineAbgleichen(req: IncomingMessage, w: Wer, liste: PlanKarte[], termine: Record<string, TerminVermerk>): Promise<Record<string, TerminVermerk> | null> {
+  const offen = liste.filter((k) => termine[schluessel(k.modul, k.nummer)]?.iso)
+  if (!offen.length) return null
+  const token = await idTokenHolen(await refreshHolen(req))
+  if (!token) return null
+  const stand = await kalenderStand(w.konto.clientId).catch(() => null)
+  const orte = [...new Set((stand?.behandler ?? []).map((k) => k.locationId))]
+  const neu = { ...termine }
+  let geaendert = false
+  await Promise.all(offen.map(async (k) => {
+    const key = schluessel(k.modul, k.nummer)
+    const alt = neu[key]
+    if (!alt) return
+    const fund = await terminNachsehen(token, w.konto.clientId, alt, k.patient || '', orte).catch(() => 'unbekannt' as const)
+    if (fund === 'unbekannt') return
+    const danach = vermerkNachKalender(alt, fund)
+    if (danach === alt) return
+    geaendert = true
+    if (danach) neu[key] = danach
+    else {
+      delete neu[key]
+      console.log('[planr] Termin weg', key)
+    }
+  }))
+  return geaendert ? neu : null
 }
 const versandText = (v: VersandVermerk) => {
   const am = new Date(v.am).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -810,7 +847,9 @@ async function insPvs(req: IncomingMessage, w: Wer, modul: string, nummer: strin
     const wer = `${patient.vorname ?? ''} ${patient.name ?? ''}`.trim()
     const dort = dampsoft
       ? `Dort: Patient (Nr. ${wahl.id}) öffnen und die HKP-Auswahl neu laden.`
-      : `Dort: Patient (Nr. ${wahl.id}) → Prothetik → Plan ${vermerk.planNr} öffnen.`
+      : pvs.id === 'cgm-z1pro'
+        ? `Dort: Patient (Nr. ${wahl.id}) öffnen und Plan ${vermerk.planNr} in der Planauswahl neu laden.`
+        : `Dort: Patient (Nr. ${wahl.id}) → Prothetik → Plan ${vermerk.planNr} öffnen.`
     const hinweise = anlage.daten.hinweise?.length ? ` Hinweise: ${anlage.daten.hinweise.join(' ')}` : ''
     json(res, 200, { ok: true, meldung: `HKP für ${wer} in ${pvs.name} als Plan Nr. ${vermerk.planNr} angelegt. ${dort}${hinweise}` })
   } catch (e) {
@@ -902,6 +941,30 @@ async function pvsLesen(req: IncomingMessage, w: Wer, art: string, q: URLSearchP
         }))
         .filter((p) => p.id)
       return json(res, 200, { ok: true, pvs: c.name, patienten })
+    }
+    if (art === 'hkps-offen') {
+      if (!dampsoft) return json(res, 422, { ok: false, meldung: 'Diese Liste liest PlanR aus DS-Win. In den Einstellungen ist ein anderes Praxisprogramm gewählt.' })
+      const r = await c.rufen<{ items?: Record<string, unknown>[] }>('/hkps/offen', { ms: 60_000 })
+      if (!r.ok) {
+        const alt = r.status === 403 || r.status === 404
+        return json(res, 502, {
+          ok: false,
+          meldung: alt
+            ? 'Die PlanR-Bridge an DS-Win kennt diese Abfrage noch nicht. Sie holt das Update selbst; sonst unter Einrichtung die Bridge erneut laden.'
+            : `${c.name}: ${String(r.daten.error ?? `HTTP ${r.status}`)}`,
+        })
+      }
+      const plaene = (r.daten.items ?? []).slice(0, 2000).map((h) => ({
+        praxis: Number(h.praxis) || undefined,
+        patient: String(h.patient ?? ''),
+        number: Number(h.number),
+        title: String(h.title ?? '').slice(0, 80),
+        name: String(h.name ?? '').slice(0, 80),
+        vorname: String(h.vorname ?? '').slice(0, 80),
+        genehmigt: String(h.genehmigt ?? ''),
+        eingliederung: h.eingliederung ? String(h.eingliederung) : null,
+      }))
+      return json(res, 200, { ok: true, plaene })
     }
     const id = q.get('patient') ?? ''
     if (!(dampsoft ? /^\d{1,5}$/ : /^\d{1,9}$/).test(id)) return json(res, 400, { ok: false })
@@ -1020,6 +1083,18 @@ function praxisWissenMelden(w: Wer) {
   }
 }
 
+/** Fallkatalog-Regeln in Claras Wissensbasis. true, sobald mindestens eine Praxis sie angenommen hat. */
+async function stilMelden(w: Wer, regeln: Praxisregel[]): Promise<boolean> {
+  let ok = false
+  for (const id of new Set([w.konto.clientId, w.register].filter(Boolean))) {
+    try {
+      const r = await masPlanr({ register: id } as Wer, '/praxis-stil', { method: 'POST', body: { regeln }, ms: 20_000 })
+      ok = ok || r.ok
+    } catch { /* Clara holt beim nächsten Upload nach */ }
+  }
+  return ok
+}
+
 const katalogInfo = (a: Ablage | null) => a && {
   pvs: a.katalog.pvs, stand: a.katalog.stand, wahl: a.wahl, listeName: a.katalog.listeName, belListeName: a.katalog.belListeName ?? '',
   listen: a.roh.listen, vorschlag: a.roh.vorschlag ?? null, vorschlagKasse: a.roh.vorschlagKasse ?? null, aenderungen: a.aenderungen ?? null,
@@ -1032,6 +1107,54 @@ const katalogInfo = (a: Ablage | null) => a && {
     faktoren: a.katalog.goz.filter((g) => g.faktor).length,
     komplexe: a.katalog.komplexe.length,
   },
+}
+
+interface FallAblage { faelle: Fall[]; clara?: boolean }
+const fallDatei = (mandant: string) => `${ORDNER}/fallkatalog/${mandant}.json`
+
+/** Fallkatalog der Einrichtung: vollständige Pläne je Art, daraus die Praxisregeln für Clara. */
+function fallkatalog(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  const datei = fallDatei(w.mandant)
+  const antwort = (faelle: Fall[], clara: boolean, meldung = '') => {
+    const sicht = fallAnsicht(faelle)
+    json(res, 200, { ok: true, ...sicht, clara, ...(meldung ? { meldung } : {}) })
+  }
+  if (req.method === 'GET') {
+    jsonLesen<FallAblage>(datei, { faelle: [] })
+      .then((a) => antwort(Array.isArray(a.faelle) ? a.faelle : [], !!a.clara))
+      .catch(() => json(res, 500, { ok: false }))
+    return
+  }
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Pläne für Clara hochladen dürfen nur Praxis-Admins.' })
+  lesenBody(req, 2_000_000).then(async (text) => {
+    const b = JSON.parse(text) as { slot?: unknown; datei?: unknown; entfernen?: unknown }
+    const slot = String(b.slot ?? '')
+    await exklusiv(async () => {
+      const alt = await jsonLesen<FallAblage>(datei, { faelle: [] })
+      const faelle = Array.isArray(alt.faelle) ? alt.faelle : []
+      let neu = faelle
+      let hinweis = ''
+      if (b.entfernen === true) {
+        const r = fallEntfernen(faelle, slot)
+        if (!r.entfernt) return json(res, 404, { ok: false, meldung: 'Für diese Art liegt kein Plan vor.' })
+        neu = r.faelle
+        hinweis = 'Letzten Plan dieser Art entfernt.'
+      } else {
+        const r = fallAufnehmen(faelle, slot, b.datei)
+        if (r.fehler || !r.fall) return json(res, 400, { ok: false, meldung: r.fehler || 'Das hat gerade nicht geklappt.' })
+        neu = r.faelle
+        hinweis = r.fall && fallAnsicht(neu).zeilen.find((z) => z.id === slot)?.fertig
+          ? 'Plan übernommen. Diese Art ist vollständig.'
+          : 'Plan übernommen.'
+      }
+      const regeln = regelnAus(neu)
+      await jsonSchreiben(datei, { faelle: neu, clara: false })
+      const clara = await stilMelden(w, regeln)
+      if (clara) await jsonSchreiben(datei, { faelle: neu, clara: true })
+      antwort(neu, clara, clara ? hinweis : `${hinweis} Clara übernimmt die Regeln, sobald die Verbindung steht.`)
+    })
+  }).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Die Datei ist kein gültiges JSON.' }) })
 }
 
 /**
@@ -1154,7 +1277,7 @@ async function entwuerfeAbholen(w: Wer): Promise<void> {
   }
   const m = w.mandant
   for (const roh of liste) {
-    const e = (roh ?? {}) as { id?: unknown; modul?: unknown; patient?: unknown; betrag?: unknown; plan?: unknown }
+    const e = (roh ?? {}) as { id?: unknown; modul?: unknown; patient?: unknown; betrag?: unknown; plan?: unknown; fallId?: unknown; fallTitel?: unknown }
     const modul = String(e.modul ?? '')
     const meta = ENTWURF_PLANER[modul]
     const id = String(e.id ?? '')
@@ -1164,7 +1287,7 @@ async function entwuerfeAbholen(w: Wer): Promise<void> {
     const geaendert = new Date().toISOString()
     const karte = kartePrüfen({
       modul, kuerzel: meta.kuerzel, art: meta.art, nummer, patient: String(e.patient ?? ''), betrag: Number(e.betrag) || 0,
-      status: 'entwurf', geaendert, praxis: stempel(w),
+      status: 'entwurf', geaendert, praxis: stempel(w), fall: e.fallId, fallTitel: e.fallTitel,
     })
     if (!karte) continue
     try {
@@ -1222,6 +1345,7 @@ async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfer
   for (const k of neu) {
     const da = karten.get(k.nummer)
     if (!k.behandler && da?.behandler) k.behandler = da.behandler
+    if (!k.fall && da?.fall) { k.fall = da.fall; if (da.fallTitel) k.fallTitel = da.fallTitel }
     if (offen.has(k.nummer) || (da && da.geaendert > k.geaendert)) delete inhalteNeu[schluessel(modul, k.nummer)]
     else karten.set(k.nummer, k)
   }
@@ -2125,8 +2249,8 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
   if (!('nummer' in l)) return json(res, l.status, l.daten)
   if (req.method === 'GET') {
     // Offene Änderungen aus dem Gespräch gehören zum aktuellen Befund (nächster Plan, Freigabe)
-    const b = await befundGelesen(w, l)
-    return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, datum: l.befund.datum, zaehne: l.befund.zaehne, offen: b.offen, offenWer: b.offenWer, stand: b.stand, geschrieben: b.geschrieben })
+    const b = befundAnsicht(await befundGelesen(w, l))
+    return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, datum: l.befund.datum, zaehne: b.zaehne, offen: b.offen, offenWer: b.offenWer, stand: b.stand, geschrieben: b.geschrieben })
   }
   // MAS schreibt nur nach dem Ja im Gespräch
   const s = await befundSchreiben(w, l, Array.isArray(body.kiefer) ? body.kiefer : [], (body.zaehne ?? {}) as Record<string, unknown>, 'Gespräch')
@@ -2419,6 +2543,12 @@ async function internPatienten(req: IncomingMessage, w: Wer, q: URLSearchParams,
   const zeile = (p: PvsZeile) => ({
     id: String(p.id ?? p.patientNumber ?? ''), vorname: p.firstName ?? '', name: p.lastName ?? '',
     geburtsdatum: isoDatum(String(p.birthDate ?? '')), ort: p.city ?? p.postalCodeAndCity ?? '',
+    ...((p as { versicherung?: string; insurance?: string }).versicherung || (p as { insurance?: string }).insurance
+      ? { versicherung: String((p as { versicherung?: string; insurance?: string }).versicherung || (p as { insurance?: string }).insurance) } : {}),
+    ...((p as { privateInsurance?: boolean }).privateInsurance === true ? { versicherung: 'privat', privateInsurance: true } : {}),
+    ...((p as { privateInsurance?: boolean }).privateInsurance === false ? { versicherung: 'kasse', privateInsurance: false } : {}),
+    ...((p as { bonus?: string; bonusheft?: string }).bonus || (p as { bonusheft?: string }).bonusheft
+      ? { bonus: String((p as { bonus?: string; bonusheft?: string }).bonus || (p as { bonusheft?: string }).bonusheft) } : {}),
   })
   const suche = async (text: string) => {
     const r = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: text, ...(c.id === 'dampsoft' ? { limit: '100' } : {}) })}`)
@@ -2447,6 +2577,58 @@ async function internPatienten(req: IncomingMessage, w: Wer, q: URLSearchParams,
 
 const ID_RE = /^[A-Za-z0-9_-]{1,128}$/
 
+const anredeAus = (gender: string) => {
+  const g = geschlecht(gender)
+  return g === 'f' ? 'Frau' : g === 'm' ? 'Herr' : ''
+}
+
+async function pickadocAkten(clientId: string, orte: string[], nachname: string): Promise<Akte[] | null> {
+  const gesehen = new Map<string, Akte>()
+  for (const locationId of [...new Set(orte)].slice(0, 4)) {
+    try {
+      const r = await fetch('https://europe-west3-docgenda.cloudfunctions.net/masSearchPatients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, locationId, query: nachname }),
+        signal: AbortSignal.timeout(20_000),
+      })
+      const d = await r.json().catch(() => null) as { status?: string; patients?: Record<string, unknown>[] } | null
+      if (!r.ok || d?.status !== 'success' || !Array.isArray(d.patients)) return null
+      for (const p of d.patients) {
+        const id = String(p.id ?? '')
+        if (!id || gesehen.has(id)) continue
+        const telefon = String(p.mobilePhoneNumber ?? '').trim()
+        gesehen.set(id, {
+          vorname: String(p.firstName ?? ''), nachname: String(p.lastName ?? ''),
+          geburt: String(p.birthDate ?? '').slice(0, 10),
+          telefone: telefon ? [telefon] : [], anrede: anredeAus(String(p.gender ?? '')),
+          email: String(p.email ?? ''),
+        })
+      }
+    } catch {
+      return null
+    }
+  }
+  return [...gesehen.values()]
+}
+
+async function dampsoftAkten(req: IncomingMessage, w: Wer, nachname: string): Promise<Akte[] | null | undefined> {
+  const c = await pvsConnector(req, w, 'suche')
+  if (c.id !== 'dampsoft') return undefined
+  if (!c.rufen) return null
+  try {
+    const r = await c.rufen<{ items?: Record<string, unknown>[] }>(`/patients?${new URLSearchParams({ q: nachname, limit: '100' })}`, { ms: 45_000 })
+    if (!r.ok) return null
+    return (r.daten.items ?? []).map((p) => ({
+      vorname: String(p.firstName ?? ''), nachname: String(p.lastName ?? ''),
+      geburt: String(p.birthDate ?? '').slice(0, 10),
+      telefone: [p.mobile, p.phone].map((x) => String(x ?? '').trim()).filter(Boolean),
+      anrede: '', email: String(p.email ?? ''),
+    }))
+  } catch {
+    return null
+  }
+}
+
 async function stammVonPlan(w: Wer, modul: string, nummer: string): Promise<Stamm | null> {
   if (modul === 'hkp') {
     const h = await hkpHolen(w, nummer)
@@ -2470,11 +2652,16 @@ async function termineEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     const modul = q.get('modul') ?? ''
     const nummer = q.get('nummer') ?? ''
     if (!modulAus(modul, nummer)) return json(res, 400, { ok: false })
-    const stamm = await stammVonPlan(w, modul, nummer)
-    if (!stamm) return json(res, 404, { ok: false, meldung: 'Plan nicht gefunden.' })
-    if (!frei) return json(res, 200, { ok: true, kalender: false, stamm })
+    const roh = await stammVonPlan(w, modul, nummer)
+    if (!roh) return json(res, 404, { ok: false, meldung: 'Plan nicht gefunden.' })
+    if (!frei) return json(res, 200, { ok: true, kalender: false, stamm: roh })
     const stand = await kalenderStand(w.konto.clientId)
-    return json(res, 200, { ok: true, kalender: true, stamm, behandler: stand.behandler, motive: stand.motive })
+    const behandler = eigeneKalender(stand.behandler, w.konto.uid, w.konto.name)
+    const motive = motiveDerKalender(stand.motive, behandler)
+    if (!behandler.length) return json(res, 200, { ok: true, kalender: true, stamm: roh, behandler, motive, meldung: 'Für Ihr Konto ist kein eigener Kalender hinterlegt.' })
+    const ab = patientAbgleichen(roh, await pickadocAkten(w.konto.clientId, behandler.map((k) => k.locationId), roh.nachname), await dampsoftAkten(req, w, roh.nachname))
+    console.log('[planr] Termin', roh.nachname, ab.meldung || 'daten vollständig')
+    return json(res, 200, { ok: true, kalender: true, stamm: ab.stamm, behandler, motive, ...(ab.meldung ? { meldung: ab.meldung } : {}) })
   }
   const body = async () => JSON.parse(await lesenBody(req, 4000)) as Record<string, unknown>
   if (!frei) return json(res, 403, { ok: false, kalender: false, meldung: 'Terminvergabe gibt es mit CalendR.' })
@@ -2485,8 +2672,9 @@ async function termineEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     const visitMotiveId = String(b.visitMotiveId ?? '')
     if (![locationId, calendarId, visitMotiveId].every((id) => ID_RE.test(id))) return json(res, 400, { ok: false })
     const stand = await kalenderStand(w.konto.clientId)
-    const motiv = stand.motive.find((m) => m.id === visitMotiveId && m.locationId === locationId)
-    if (!kalenderGehoert(stand, locationId, calendarId) || !motiv) return json(res, 404, { ok: false, meldung: 'Diesen Kalender gibt es nicht.' })
+    const behandler = eigeneKalender(stand.behandler, w.konto.uid, w.konto.name)
+    const motiv = motiveDerKalender(stand.motive, behandler).find((m) => m.id === visitMotiveId && m.locationId === locationId)
+    if (!behandler.some((k) => k.locationId === locationId && k.id === calendarId) || !motiv) return json(res, 404, { ok: false, meldung: 'Diesen Kalender gibt es nicht.' })
     if (motiv.calendarIds.length && !motiv.calendarIds.includes(calendarId)) return json(res, 404, { ok: false, meldung: 'Diesen Besuchsgrund gibt es in dem Kalender nicht.' })
     const slots = await freieSlots(w.konto.clientId, locationId, calendarId, visitMotiveId)
     if (!slots) return json(res, 502, { ok: false, meldung: 'Die freien Termine lassen sich gerade nicht aus CalendR lesen.' })
@@ -2503,17 +2691,19 @@ async function termineEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     if (!modulAus(modul, nummer) || ![locationId, calendarId, visitMotiveId].every((id) => ID_RE.test(id)) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso)) {
       return json(res, 400, { ok: false, meldung: 'Der Termin ist unvollständig.' })
     }
-    const stamm = await stammVonPlan(w, modul, nummer)
+    const roh = await stammVonPlan(w, modul, nummer)
     const stand = await kalenderStand(w.konto.clientId)
-    const kalender = kalenderGehoert(stand, locationId, calendarId)
-    const motiv = stand.motive.find((m) => m.id === visitMotiveId && m.locationId === locationId)
-    if (!stamm || !kalender || !motiv || (motiv.calendarIds.length && !motiv.calendarIds.includes(calendarId))) {
+    const behandler = eigeneKalender(stand.behandler, w.konto.uid, w.konto.name)
+    const kalender = behandler.find((k) => k.locationId === locationId && k.id === calendarId)
+    const motiv = motiveDerKalender(stand.motive, behandler).find((m) => m.id === visitMotiveId && m.locationId === locationId)
+    if (!roh || !kalender || !motiv || (motiv.calendarIds.length && !motiv.calendarIds.includes(calendarId))) {
       return json(res, 404, { ok: false, meldung: 'Plan oder Kalender nicht gefunden.' })
     }
+    const ab = patientAbgleichen(roh, await pickadocAkten(w.konto.clientId, [locationId], roh.nachname), await dampsoftAkten(req, w, roh.nachname))
+    if (ab.meldung) return json(res, 409, { ok: false, meldung: ab.meldung })
+    const stamm = ab.stamm
     const gender = geschlecht(stamm.anrede)
-    if (!stamm.vorname || !stamm.nachname) return json(res, 409, { ok: false, meldung: 'In den Stammdaten fehlen Vor- und Nachname.' })
-    if (stamm.telefon.replace(/\D/g, '').length < 6) return json(res, 409, { ok: false, meldung: 'In den Stammdaten fehlt die Telefonnummer.' })
-    if (!gender) return json(res, 409, { ok: false, meldung: 'In den Stammdaten fehlt die Anrede.' })
+    if (!gender) return json(res, 409, { ok: false, meldung: 'Weder der Plan noch Pickadoc nennt die Anrede dieses Patienten.' })
     const gebucht = await terminEintragen({
       clientId: w.konto.clientId, locationId, calendarId, visitMotiveId, appointmentStartDate: iso,
       patientGender: gender, patientFirstName: stamm.vorname, patientLastName: stamm.nachname, patientMobilePhoneNumber: stamm.telefon,
@@ -2521,7 +2711,10 @@ async function termineEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     if (!gebucht.ok) return json(res, 502, { ok: false, meldung: 'Der Termin ließ sich in CalendR nicht eintragen.' })
     await exklusiv(async () => {
       const alle = await termineLesen(w.mandant)
-      alle[schluessel(modul, nummer)] = { iso, behandler: kalender.name, grund: motiv.grund, minuten: motiv.dauer, am: new Date().toISOString() }
+      alle[schluessel(modul, nummer)] = {
+        iso, behandler: kalender.name, grund: motiv.grund, minuten: motiv.dauer, am: new Date().toISOString(),
+        appointmentId: gebucht.appointmentId, locationId,
+      }
       await jsonSchreiben(ABLAGE(w.mandant, 'termine'), alle)
     })
     return json(res, 200, { ok: true, termin: iso })
@@ -2538,6 +2731,105 @@ const fehler500 = (res: ServerResponse) => (e: unknown) => {
  * Alle /api-Wege außer Anmeldung, Bridge (eigener Schlüssel) und Download verlangen eine PlanR-Sitzung.
  * Mandant und Praxen kommen allein aus ihr – Angaben in Adresse oder Anfrage zählen nicht.
  */
+const GOZ_DATEI = `${ORDNER}/goz-zuordnung.json`
+
+/** Geprüfte GOZ-Ziffern je Behandlung. Nur Praxis-Admins. Ohne Datei gilt der Engine-Stand im Browser. */
+async function gozZuordnung(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Zuordnung prüfen dürfen nur Praxis-Admins.' })
+  if (req.method === 'GET') {
+    const wahl = await jsonLesen<Record<string, unknown>>(GOZ_DATEI, {})
+    return json(res, 200, { ok: true, wahl })
+  }
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  const roh = JSON.parse(await lesenBody(req, 200_000)) as { wahl?: unknown }
+  const wahl: Record<string, string[]> = {}
+  if (!roh.wahl || typeof roh.wahl !== 'object') return json(res, 400, { ok: false, meldung: 'Die Zuordnung ist unvollständig.' })
+  for (const [id, liste] of Object.entries(roh.wahl as Record<string, unknown>)) {
+    if (!GOZ_KLASSEN_IDS.has(id) || !Array.isArray(liste)) continue
+    wahl[id] = [...new Set(liste.map((n) => String(n).trim()).filter((n) => /^\d{4}$/.test(n)))]
+  }
+  await jsonSchreiben(GOZ_DATEI, wahl)
+  return json(res, 200, { ok: true })
+}
+
+/** Öffentliche Probe: Foto oder Text an Qwen, ohne Speicherung. Der Schlüssel bleibt auf dem Server. */
+async function probeLesen(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  const key = masSchluessel()
+  if (!key) return json(res, 503, { ok: false, message: 'Das Lesen ist gerade nicht erreichbar.' })
+  const roh = JSON.parse(await lesenBody(req, 12_000_000)) as { text?: unknown; bild?: unknown; bilder?: unknown; typ?: unknown }
+  const bilder = Array.isArray(roh.bilder) ? roh.bilder.slice(0, 3).map((eintrag) => String(eintrag || '').slice(0, 5_500_000)) : []
+  const r = await fetch(`${MAS}/probe-lesen?clientId=probe`, {
+    method: 'POST',
+    headers: { 'X-PlanR-Key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: String(roh.text || '').slice(0, 20000),
+      bild: String(roh.bild || '').slice(0, 5_500_000),
+      bilder,
+      typ: String(roh.typ || '').slice(0, 40),
+    }),
+    signal: AbortSignal.timeout(180_000),
+  })
+  const daten = await r.json().catch(() => ({ ok: false, message: 'Das Lesen hat nicht geantwortet.' }))
+  return json(res, 200, daten)
+}
+
+/** Einlese-Dienst (tools/einlesen, Docling + PaddleOCR). Adresse und Schlüssel aus der Umgebung, lokal aus data/planr-einlesen.env. */
+function einlesenZugang(): { url: string; token: string } {
+  const env: Record<string, string | undefined> = { ...process.env }
+  if (!env.PLANR_EINLESEN_TOKEN) {
+    try {
+      for (const zeile of readFileSync(`${ORDNER}/planr-einlesen.env`, 'utf8').split('\n')) {
+        const i = zeile.indexOf('=')
+        if (i > 0 && !zeile.trim().startsWith('#')) env[zeile.slice(0, i).trim()] ??= zeile.slice(i + 1).trim()
+      }
+    } catch { /* keine Datei: Dienst nicht eingerichtet */ }
+  }
+  let url = env.PLANR_EINLESEN_URL?.trim() || 'http://pickadoc1.tail22c4dd.ts.net:8214'
+  while (url.endsWith('/')) url = url.slice(0, -1)
+  return { url, token: env.PLANR_EINLESEN_TOKEN?.trim() ?? '' }
+}
+
+const EINLESEN_ARTEN: Record<string, string> = {
+  'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+}
+let einlesenLaeuft = 0
+
+/**
+ * Öffentliche Probe: PDF oder Foto an den Einlese-Dienst, ohne Speicherung.
+ * Zurück gehen nur die gelesenen Textstücke mit ihrer Lage; der Schlüssel bleibt auf dem Server.
+ */
+async function probeEinlesen(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  const endung = EINLESEN_ARTEN[String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase()]
+  if (!endung) return json(res, 415, { ok: false, message: 'Nur PDF, JPG, PNG oder WebP.' })
+  const { url, token } = einlesenZugang()
+  if (!token) return json(res, 503, { ok: false, message: 'Das Einlesen ist nicht eingerichtet.' })
+  if (einlesenLaeuft >= 2) return json(res, 429, { ok: false, message: 'Gerade wird schon gelesen. Bitte gleich noch einmal.' })
+  let roh: Buffer
+  try { roh = await lesenBytes(req, 12_000_000) } catch { return json(res, 413, { ok: false, message: 'Die Datei ist zu groß.' }) }
+  if (!roh.length) return json(res, 400, { ok: false, message: 'Die Datei ist leer.' })
+  einlesenLaeuft++
+  try {
+    const form = new FormData()
+    form.append('datei', new Blob([new Uint8Array(roh)]), `blatt.${endung}`)
+    const r = await fetch(`${url}/einlesen?ergaenzung=immer`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+      signal: AbortSignal.timeout(170_000),
+    })
+    const daten = await r.json().catch(() => null) as { ergaenzung?: { seiten?: unknown[]; fehler?: string } | null } | null
+    const seiten = daten?.ergaenzung?.seiten
+    if (!r.ok || !Array.isArray(seiten)) return json(res, 502, { ok: false, message: 'Das Einlesen hat nicht geantwortet.' })
+    return json(res, 200, { ok: true, ergaenzung: { seiten } })
+  } catch {
+    return json(res, 502, { ok: false, message: 'Das Einlesen ist gerade nicht erreichbar.' })
+  } finally {
+    einlesenLaeuft--
+  }
+}
+
 export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
   const [url, query = ''] = String(req.url ?? '').split('?')
   if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort' || url === '/api/pvs-agent/setup' ||
@@ -2547,6 +2839,8 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
+  if (url === '/api/probe/lesen') return void probeLesen(req, res).catch(fehler500(res))
+  if (url === '/api/probe/einlesen') return void probeEinlesen(req, res).catch(fehler500(res))
   if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog'
     || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen' || url === '/api/intern/befund/vorgang') {
     return void internPvs(req, res, url, query).catch(fehler500(res))
@@ -2573,6 +2867,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/bridge-paket') return void bridgePaket(req, res, w).catch(fehler500(res))
   if (url === '/api/bridge-setup') return void bridgeSetupLaden(req, res, w).catch(fehler500(res))
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
+  if (url === '/api/fallkatalog') return fallkatalog(req, res, w)
   if (url === '/api/praxisdaten' && req.method === 'GET') return void praxisdaten(res, w).catch(fehler500(res))
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/clara/text') return void claraText(req, res, w).catch(fehler500(res))
@@ -2581,9 +2876,10 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/termine' || url === '/api/termine/slots' || url === '/api/termine/buchen') return void termineEndpunkt(req, res, url, query, w).catch(fehler500(res))
   if (url === '/api/verbund' || url === '/api/verbund/code' || url === '/api/verbund/beitreten') return void verbundEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/rechnungen' || /^\/api\/rechnungen\/PR-\d{4}-\d{4}$/.test(url)) return void rechnungenEndpunkt(req, res, url, w).catch(fehler500(res))
+  if (url === '/api/goz-zuordnung') return void gozZuordnung(req, res, w).catch(fehler500(res))
   if (url === '/api/register' || url.startsWith('/api/register/')) return void registerEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/befund' || url.startsWith('/api/befund/')) return void befundEndpunkt(req, res, url, new URLSearchParams(query), w).catch(fehler500(res))
-  if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps' || url === '/api/pvs/patient') {
+  if (url === '/api/pvs/patienten' || url === '/api/pvs/hkps' || url === '/api/pvs/patient' || url === '/api/pvs/hkps-offen') {
     if (req.method !== 'GET' || !eigeneSeite(req)) return json(res, 403, { ok: false })
     return void pvsLesen(req, w, url.slice('/api/pvs/'.length), new URLSearchParams(query), res).catch(fehler500(res))
   }
@@ -2688,6 +2984,17 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
           const kennung = kennungVon((inhalte[schluessel(k.modul, k.nummer)]?.plan as { patient?: unknown } | undefined)?.patient)
           if (kennung) k.kennung = kennung
         }
+      }
+      return { liste, termine }
+    }).then(async ({ liste, termine }) => {
+      const abgeglichen = await termineAbgleichen(req, w, liste, termine)
+      if (abgeglichen) {
+        for (const k of liste) {
+          const termin = abgeglichen[schluessel(k.modul, k.nummer)]
+          if (termin?.iso) k.termin = termin.iso
+          else delete k.termin
+        }
+        await exklusiv(() => jsonSchreiben(ABLAGE(w.mandant, 'termine'), abgeglichen))
       }
       json(res, 200, { plaene: liste })
     }).catch(() => json(res, 500, { plaene: [] }))

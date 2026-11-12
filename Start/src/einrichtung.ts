@@ -38,6 +38,12 @@ const ANLEITUNGEN: Record<string, Anleitung> = {
     schritte: BRIDGE_SCHRITTE('den DENSoffice-Programmordner, z. B. <code>C:\\DENS</code>'),
     preise: 'PlanR liest aus DENSoffice die Laborpreise und eigenen Positionen; fertige HKPs gehen direkt in die Prothetik des Patienten.',
   },
+  'cgm-z1pro': {
+    rechner: 'Auf dem Rechner, auf dem die Z1-Datenbank liegt (Einzelplatz: der PC mit Z1.PRO, Praxis mit Server: der Server). Z1.PRO selbst bleibt unverändert.',
+    ordner: 'die Z1-Datenbank, z. B. <code>C:\\CGM\\Z1\\data\\z1.mdb</code>',
+    schritte: BRIDGE_SCHRITTE('die Z1-Datenbank, z. B. <code>C:\\CGM\\Z1\\data\\z1.mdb</code>'),
+    preise: 'PlanR liest aus Z1.PRO die GOZ-, Analog- und Laborpreise; der HKP geht direkt in den Plan des Patienten.',
+  },
 }
 
 export const anleitungVon = (pvs: string) => ANLEITUNGEN[pvs] ?? null
@@ -107,7 +113,7 @@ export function setupHtml(s: SetupStand): string {
 interface Stand { mandant: string; eingerichtet: boolean; verbunden: boolean; geprueft?: boolean; setup?: SetupStand; pvs?: string; version?: string; status?: string }
 interface Katalog { anzahl?: Record<string, number>; pvs?: string }
 
-const SCHRITTE = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & Positionen', 'Fertig'] as const
+const SCHRITTE_VOLL = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & Positionen', 'Fertig'] as const
 
 /**
  * Assistent als eigenes Fenster über der Planliste. `geaendert` meldet neue Einstellungen bzw. Katalog an die Übersicht,
@@ -122,6 +128,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   let code = ''
   let zipGeladen = false
   let katalog: Katalog | null = null
+  let bekannt = false
   let laeuft = false
   let meldung = ''
   let uhr = 0
@@ -138,6 +145,16 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   addEventListener('keydown', taste)
   schleier.addEventListener('click', (e) => { if (e.target === schleier) zu() })
 
+  const katalogLaden = async () => {
+    try {
+      const d = await (await fetch('/api/praxiskatalog?nur=info', { cache: 'no-store' })).json() as { info?: Katalog | null }
+      if (d.info) katalog = d.info
+    } catch { /* bleibt */ }
+  }
+
+  /** Praxis ist schon angebunden: Bridge liegt auf dem Server oder Preise sind schon übernommen. */
+  const steht = () => !!(einst.pvs && (katalog?.anzahl || stand?.eingerichtet || stand?.verbunden))
+
   const standLaden = async () => {
     try {
       const d = await (await fetch('/api/bridge-schluessel', { cache: 'no-store' })).json() as Stand & { ok: boolean }
@@ -151,21 +168,32 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
 
   const pvs = () => pvsVon(einst.pvs)
   const anbindbar = () => !!anleitungVon(einst.pvs)
+  /** Ohne fertige Anbindung entfallen die Bridge-Schritte. */
+  const schrittNamen = () => (!anbindbar() && einst.pvs) ? ['Praxissystem', 'Fertig'] : [...SCHRITTE_VOLL]
+  const schrittName = () => schrittNamen()[schritt] ?? 'Fertig'
   /** Ältere Bridges melden keinen Zustand – dann gilt verbunden als bereit. */
   const bridgeBereit = () => !!stand?.verbunden && (!stand.status || stand.status === 'bereit')
   const ENDE = '„Dienst \'PlanR-Bridge\' ist eingerichtet“'
 
   function inhalt(): string {
     const p = pvs()
-    switch (schritt) {
-      case 0: return `
+    switch (schrittName()) {
+      case 'Praxissystem': return `
         <h3>Welches Praxisverwaltungssystem nutzen Sie?</h3>
         <p class="ein-text">PlanR holt Patienten und HKPs von dort und gibt fertige Pläne zurück.</p>
         <div class="ein-pvs">${PVS_LISTE.map((x) => `<button type="button" class="ein-pvs-wahl${x.id === einst.pvs ? ' an' : ''}" data-pvs="${x.id}">
           <b>${esc(x.name)}</b><small>${esc(x.hersteller)}</small><i class="${x.bereit ? 'bereit' : 'bald'}">${x.bereit ? 'Anbindung verfügbar' : 'in Vorbereitung'}</i></button>`).join('')}</div>
         ${o.admin ? '' : '<p class="ein-hinweis">Das Praxissystem stellt der Praxis-Admin ein.</p>'}`
-      case 1: return !anbindbar() ? anleitungHtml(einst.pvs) : `<h3>Bridge auf dem Praxisserver installieren</h3>${anleitungHtml(einst.pvs, true)}`
-      case 2: return `
+      case 'Installieren': return (stand?.eingerichtet || stand?.verbunden)
+        ? `<h3>Bridge ist schon eingerichtet</h3>
+           <p class="ein-ok big">✓ ${stand?.verbunden
+             ? `PlanR ist mit ${esc(pvsVon(stand.pvs ?? '')?.name || stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.`
+             : 'Die Bridge ist auf dem Praxisserver eingerichtet. Sie ist gerade nicht verbunden.'}</p>
+           <p class="ein-klein">Ein neues Setup ist nicht nötig.${o.admin ? ' Nur wenn der Praxisserver neu aufgesetzt wurde: <button type="button" class="link-knopf" data-setup>Bridge erneut herunterladen</button>.' : ''}</p>
+           ${paketGeladen ? `<p class="ein-ok">✓ Heruntergeladen (Ordner „Downloads“) – jetzt die Datei öffnen.${code ? ` Fragt das Setup nach einem Code: <b class="ein-code">${esc(codeLesbar(code))}</b>` : ''}</p>` : ''}
+           ${stand?.setup && !stand.verbunden ? setupHtml(stand.setup) : ''}`
+        : `<h3>Bridge auf dem Praxisserver installieren</h3>${anleitungHtml(einst.pvs, true)}`
+      case 'Verbindung': return `
         <h3>Verbindung prüfen</h3>
         ${stand?.verbunden
           ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(pvsVon(stand.pvs ?? '')?.name || stand.pvs || p?.name || 'Ihrem Praxissystem')} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>
@@ -180,13 +208,16 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
                <p class="ein-klein">Hat die Installation mit einer roten Fehlermeldung geendet oder das Fenster geschlossen? Dann Installieren.cmd noch einmal starten. Protokoll: <code>C:\\ProgramData\\PlanR-Bridge\\agent.log</code> – wir helfen gern: 0211 3029 3035.</p>`
             : `<p class="ein-warte"><span class="ein-punkt"></span> Warte auf die Bridge … Sobald das Setup „Fertig“ meldet, geht es hier weiter.</p>
                <p class="ein-klein">Klappt es nicht? Läuft der Rechner, hat er Internet, und wurde das Setup geöffnet und mit „Ja“ bestätigt? Wir helfen gern: 0211 3029 3035.</p>`}`
-      case 3: return `
-        <h3>Preise &amp; Positionen übernehmen</h3>
-        <p class="ein-text">${esc(anleitungVon(einst.pvs)?.preise ?? '')} So rechnet PlanR von Anfang an mit Ihren eigenen Preisen.</p>
+      case 'Preise & Positionen': return `
+        <h3>${katalog?.anzahl ? 'Preise &amp; Positionen' : 'Preise &amp; Positionen übernehmen'}</h3>
+        <p class="ein-text">${katalog?.anzahl
+          ? `Aus ${esc(p?.name ?? 'dem Praxissystem')} schon übernommen. Ein neuer Abgleich ersetzt die vorhandenen Preise.`
+          : `${esc(anleitungVon(einst.pvs)?.preise ?? '')} So rechnet PlanR von Anfang an mit Ihren eigenen Preisen.`}</p>
         ${katalog?.anzahl
           ? `<p class="ein-ok">✓ Übernommen: ${Object.entries({ bel: 'BEL-Preise', eigenlabor: 'Eigenlabor-Preise', material: 'Materialien', goz: 'eigene GOZ-/Analogpositionen', kuerzel: 'Kürzel', komplexe: 'Komplexe' })
             .map(([k, n]) => `${katalog!.anzahl![k] ?? 0} ${n}`).join(', ')}.</p>
-             <p class="ein-klein">Preisliste und Preisspalte (Eigen- oder Fremdlabor) stellen Sie unter Einstellungen → Preise &amp; Positionen ein.</p>`
+             <p class="ein-klein">Preisliste und Preisspalte (Eigen- oder Fremdlabor) stellen Sie unter Einstellungen → Preise &amp; Positionen ein.</p>
+             <button type="button" class="import-knopf" data-katalog${laeuft || !stand?.verbunden || !bridgeBereit() ? ' disabled' : ''}>${laeuft ? 'Wird abgeglichen …' : 'Erneut abgleichen'}</button>`
           : katalogSeit
             ? `<div class="ein-fortschritt" role="status" aria-live="polite">
                  <span class="ein-spinner" aria-hidden="true"></span>
@@ -195,37 +226,52 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
                </div>`
             : `<button type="button" class="neu-knopf" data-katalog${laeuft || !stand?.verbunden || !bridgeBereit() ? ' disabled' : ''}>Jetzt übernehmen</button>
                <p class="ein-klein">Dauert ca. 5 Minuten.${!stand?.verbunden ? (stand?.geprueft ? ' Geht, sobald der Windows-Dienst „PlanR-Bridge“ läuft.' : ' Geht, sobald die Bridge verbunden ist.') : bridgeBereit() ? '' : ` Geht, sobald die Bridge bereit ist – sie meldet: ${esc(stand.status ?? '')}`}</p>`}`
-      default: return `
-        <h3>Fertig – PlanR ist eingerichtet.</h3>
-        <p class="ein-text">Holen Sie jetzt den ersten HKP aus ${esc(p?.name ?? 'Ihrem Praxissystem')}, ziehen Sie die Regler und sehen Sie, wie viel mehr Umsatz im selben Befund steckt.</p>
-        <div class="ein-fertig">
-          <button type="button" class="neu-knopf" data-importieren>Patienten suchen und ersten HKP erstellen</button>
-          <button type="button" class="import-knopf" data-zur-bridge>Bridge erneut herunterladen</button>
-        </div>`
+      default: return steht()
+        ? `<h3>Die Praxis ist eingerichtet.</h3>
+           <p class="ein-text">${esc(p?.name ?? 'Das Praxissystem')} ist angebunden${katalog?.anzahl ? ', Preise und Positionen sind übernommen' : ''}.</p>
+           <div class="ein-fertig">
+             <button type="button" class="neu-knopf" data-zu>Schließen</button>
+           </div>`
+        : `<h3>Fertig – PlanR ist eingerichtet.</h3>
+           <p class="ein-text">Holen Sie jetzt den ersten HKP aus ${esc(p?.name ?? 'Ihrem Praxissystem')}, ziehen Sie die Regler und sehen Sie, wie viel mehr Umsatz im selben Befund steckt.</p>
+           <div class="ein-fertig">
+             <button type="button" class="neu-knopf" data-importieren>Patienten suchen und ersten HKP erstellen</button>
+             <button type="button" class="import-knopf" data-zur-bridge>Bridge erneut herunterladen</button>
+           </div>`
     }
   }
 
   function weiterErlaubt(): boolean {
-    if (schritt === 0) return !!einst.pvs
-    if (!anbindbar() && schritt >= 1) return false
-    if (schritt === 1) return paketGeladen || !!stand?.eingerichtet
+    if (schrittName() === 'Praxissystem') return !!einst.pvs
+    if (schrittName() === 'Installieren') return paketGeladen || !!stand?.eingerichtet
     return true
   }
 
   function zeichnen() {
-    const fertigBis = !anbindbar() && einst.pvs ? 1 : SCHRITTE.length - 1
+    if (!bekannt) {
+      schleier.innerHTML = `
+        <div class="ein-karte" role="dialog" aria-modal="true" aria-label="Einrichtung">
+          <header class="ein-kopf"><div><h2>Einrichtung</h2><p>wird gelesen …</p></div>
+            <button type="button" class="ein-zu" data-zu aria-label="Schließen">×</button></header>
+          <div class="ein-inhalt"><p class="ein-warte"><span class="ein-punkt"></span> Die vorhandene Einrichtung wird gelesen.</p></div>
+        </div>`
+      schleier.querySelectorAll('[data-zu]').forEach((b) => b.addEventListener('click', zu))
+      return
+    }
+    const namen = schrittNamen()
+    if (schritt >= namen.length) schritt = namen.length - 1
     schleier.innerHTML = `
       <div class="ein-karte" role="dialog" aria-modal="true" aria-label="PlanR einrichten">
         <header class="ein-kopf">
-          <div><h2>PlanR einrichten</h2><p>${esc(pvs()?.name ?? 'Praxissystem verbinden')}</p></div>
+          <div><h2>${steht() ? 'Einrichtung' : 'PlanR einrichten'}</h2><p>${esc(pvs()?.name ?? 'Praxissystem verbinden')}</p></div>
           <button type="button" class="ein-zu" data-zu aria-label="Schließen">×</button>
         </header>
-        <ol class="ein-schritte">${SCHRITTE.slice(0, fertigBis + 1).map((s, i) => `<li class="${i < schritt ? 'erledigt' : i === schritt ? 'aktiv' : ''}"><span>${i + 1}</span>${s}</li>`).join('')}</ol>
+        <ol class="ein-schritte">${namen.map((s, i) => `<li class="${i < schritt ? 'erledigt' : i === schritt ? 'aktiv' : ''}"><span>${i + 1}</span>${s}</li>`).join('')}</ol>
         <div class="ein-inhalt">${inhalt()}</div>
         ${meldung ? `<p class="ein-meldung" role="status">${esc(meldung)}</p>` : ''}
         <footer class="ein-fuss">
           ${schritt > 0 ? `<button type="button" class="link-knopf" data-zurueck${katalogSeit ? ' disabled' : ''}>← Zurück</button>` : '<span></span>'}
-          ${schritt < fertigBis ? `<button type="button" class="neu-knopf" data-weiter${weiterErlaubt() && !katalogSeit ? '' : ' disabled'}>Weiter</button>` : '<button type="button" class="neu-knopf" data-zu>Schließen</button>'}
+          ${schritt < namen.length - 1 ? `<button type="button" class="neu-knopf" data-weiter${weiterErlaubt() && !katalogSeit ? '' : ' disabled'}>Weiter</button>` : '<button type="button" class="neu-knopf" data-zu>Schließen</button>'}
         </footer>
       </div>`
     const $ = <T extends Element = HTMLElement>(s: string) => schleier.querySelector<T>(s)
@@ -284,13 +330,19 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       zeichnen()
     })
     $('[data-importieren]')?.addEventListener('click', () => { zu(); o.importieren() })
-    $('[data-zur-bridge]')?.addEventListener('click', () => { schritt = 1; meldung = ''; zeichnen() })
+    $('[data-zur-bridge]')?.addEventListener('click', () => {
+      const i = schrittNamen().indexOf('Installieren')
+      schritt = i < 0 ? 0 : i
+      meldung = ''
+      zeichnen()
+    })
   }
 
   // Verbindung live verfolgen, solange der Assistent offen ist
   uhr = window.setInterval(async () => {
     if (!schleier.isConnected) return clearInterval(uhr)
-    if (schritt < 1 || schritt > 3) return
+    const name = schrittName()
+    if (name !== 'Installieren' && name !== 'Verbindung' && name !== 'Preise & Positionen') return
     const merkmal = () => `${stand?.verbunden}|${stand?.status}|${stand?.geprueft}|${JSON.stringify({ ...stand?.setup, vor: (stand?.setup?.vor ?? 0) > 300 })}`
     const vorher = merkmal()
     const warBereit = bridgeBereit()
@@ -298,12 +350,21 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
     await standLaden()
     if (laeuft || merkmal() === vorher) return
     // Meldet das Setup „fertig“ bzw. wird die Bridge jetzt bereit, geht es von selbst zur Verbindung.
-    if (schritt === 1 && ((!warFertig && stand?.setup?.fertig) || (!warBereit && bridgeBereit()))) { schritt = 2; meldung = '' }
+    if (name === 'Installieren' && ((!warFertig && stand?.setup?.fertig) || (!warBereit && bridgeBereit()))) {
+      schritt = schrittNamen().indexOf('Verbindung')
+      meldung = ''
+    }
     zeichnen()
   }, 4000)
 
-  void standLaden().then(() => {
-    if (einst.pvs) schritt = stand?.verbunden && !o.bridgeLaden ? 3 : 1
+  void Promise.all([standLaden(), katalogLaden()]).then(() => {
+    const namen = schrittNamen()
+    const idx = (name: string) => Math.max(0, namen.indexOf(name))
+    if (o.bridgeLaden && namen.includes('Installieren')) schritt = idx('Installieren')
+    else if (steht()) schritt = idx('Fertig')
+    else if (einst.pvs && namen.includes('Installieren')) schritt = idx('Installieren')
+    else if (einst.pvs) schritt = idx('Fertig')
+    bekannt = true
     zeichnen()
   })
   zeichnen()

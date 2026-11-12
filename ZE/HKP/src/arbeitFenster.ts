@@ -78,8 +78,8 @@ let leiste: Leiste | null = null
 /** Die Punkte der Planseite stehen in der PlanR-Kopfzeile. `versand` schaltet das Mail-Icon. */
 export function planrLeiste(punkte: PlanPunkt[], aktiv: string, wahl: (id: string) => void, versand = false): () => void {
   leiste = { punkte, aktiv, versand, wahl }
-  if (typeof window !== 'undefined' && window.parent !== window) {
-    window.parent.postMessage({ type: 'planr-leiste', punkte, aktiv, versand }, '*')
+  if (typeof window !== 'undefined' && window.parent !== window && new URLSearchParams(location.search).get('probe') !== '1') {
+    window.parent.postMessage({ type: 'planr-leiste', punkte, aktiv, versand, speichern: true }, '*')
   }
   return () => { if (leiste?.wahl === wahl) leiste = null }
 }
@@ -90,6 +90,10 @@ function empfangen(ev: MessageEvent) {
   if (!d) return
   if (d.type === 'planr-reiter' && leiste && typeof d.id === 'string') {
     leiste.wahl(d.id)
+    return
+  }
+  if (d.type === 'planr-speichern') {
+    window.dispatchEvent(new Event('planr-speichern'))
     return
   }
   if (d.type === 'planr-versand') {
@@ -116,11 +120,12 @@ function sicher() {
       const stil = document.createElement('style')
       stil.id = 'planr-eingebettet'
       stil.textContent = [
-        'html.planr-eingebettet .kopfleiste,',
-        'html.planr-eingebettet header.kopf,',
         'html.planr-eingebettet .reiter,',
         'html.planr-eingebettet nav.reiter,',
+        'html.planr-eingebettet .kopfleiste > nav,',
+        'html.planr-eingebettet header.kopf > nav,',
         'html.planr-eingebettet .drucken { display: none !important; }',
+        'html.planr-eingebettet .kopfleiste, html.planr-eingebettet header.kopf { display: flex !important; flex-wrap: wrap; align-items: center; gap: 12px; }',
         '@media (max-width: 840px) {',
         'html.planr-eingebettet, html.planr-eingebettet body { max-width: 100%; }',
         'html.planr-eingebettet .arbeitsflaeche { display: block !important; }',

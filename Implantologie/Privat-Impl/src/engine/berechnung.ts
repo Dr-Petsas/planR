@@ -10,6 +10,7 @@ import {
 } from './listen'
 import { eigenFinden } from './eigenlabor'
 import { implantatkoerper, type Teil } from '../data/implantatkoerper'
+import { gozEinfachsatz } from '../data/goz-sonderregeln'
 import { materialFinden } from '../data/material'
 
 export { GOZ, GOAE, GOZ_SCHWELLE, GOZ_HOECHSTSATZ }
@@ -104,8 +105,9 @@ export function kalkulieren(plan: Plan, einst: Einstellungen): Kalkulation {
         honorarGoz.push({ ...p, faktor: p.faktor, einzel: runden(p.preis), text: p.text || p.analogText || '–', betrag: runden(p.preis * p.anzahl) })
         continue
       }
-      let faktor = Math.min(Math.max(p.faktor ?? stdGoz, 1), gozMax)
-      if (p.preis !== undefined) faktor = p.faktor ?? 1 // feste Zuschläge (0110/0120)
+      // Zuschläge (0110, 0120, 0500–0530) nur mit dem einfachen Satz, nie mit dem Planfaktor.
+      let faktor = gozEinfachsatz(p.nr) ? 1 : Math.min(Math.max(p.faktor ?? stdGoz, 1), gozMax)
+      if (!gozEinfachsatz(p.nr) && p.preis !== undefined) faktor = p.faktor ?? 1
       const einzel = p.preis !== undefined ? runden(p.preis) : runden(gozEinzel(p.nr, faktor) * anteil)
       if (!eintrag && p.preis === undefined) hinweise.push(`GOZ ${p.nr} ist im Gebührenverzeichnis nicht vorhanden.`)
       if (faktor > gozMax) hinweise.push(`GOZ ${p.nr}: Faktor über ${gozMax.toFixed(1)} ist unzulässig.`)
@@ -123,7 +125,8 @@ export function kalkulieren(plan: Plan, einst: Einstellungen): Kalkulation {
         continue
       }
       const rahmen = goaeRahmen(p.nr)
-      const faktor = Math.min(Math.max(p.faktor ?? stdGoae, 1), rahmen.max)
+      const zuschlag = /^zuschlag/i.test(eintrag?.text ?? '')
+      const faktor = zuschlag ? 1 : Math.min(Math.max(p.faktor ?? stdGoae, 1), rahmen.max)
       const einzel = p.preis !== undefined ? runden(p.preis) : runden(goaeEinzel(p.nr, faktor) * anteil)
       if (!eintrag && p.preis === undefined) hinweise.push(`GOÄ ${p.nr} ist nicht in der geöffneten Liste vorhanden.`)
       honorarGoae.push({

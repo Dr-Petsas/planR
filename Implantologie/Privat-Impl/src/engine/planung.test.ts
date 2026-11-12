@@ -296,6 +296,17 @@ describe('Analogbewertung', () => {
   })
 })
 
+describe('Zuschläge nur einfacher Satz', () => {
+  it('OP-Zuschlag bleibt bei 1,0, auch wenn der Plan mit 3,5 rechnet', () => {
+    const p = plan({ zaehne: { '36': { B: 'f', TP: 'I' } }, regler: { gozFaktor: 3.5 } })
+    const k = kalkulieren(p, { ...E, gozFaktor: 3.5 })
+    const zuschlag = k.honorarGoz.find((z) => z.nr === '0530')!
+    expect(zuschlag.faktor).toBe(1)
+    const leistung = k.honorarGoz.find((z) => z.nr === '9010')!
+    expect(leistung.faktor).toBeCloseTo(3.5, 5)
+  })
+})
+
 describe('GOÄ-Faktorgrenzen', () => {
   it('Röntgen höchstens 2,5, Zuschlag 5377 fest 1,0', () => {
     expect(goaeRahmen('5000').max).toBe(2.5)

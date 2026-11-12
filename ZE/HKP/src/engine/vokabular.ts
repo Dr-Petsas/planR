@@ -77,7 +77,9 @@ export function prothetikIn(text: string): Prothetik {
     aus.sekundaer = sekundaer
   } else if (/br(?:ü|ue)cke/.test(t)) {
     aus.versorgung = 'bruecke'
-  } else if (/totalprothese|vollprothese|\btotale\b/.test(t)) {
+  } else if (/totalprothese|vollprothese|\btotale\b|interims?\s*prothese|interims?\s*p[oa]these/.test(t)) {
+    // „Interimsprothese“ und das Verhörer „Interimspothese“ (Live 11.11.2026):
+    // dasselbe wie Interimsvollprothese, das interim-Kennzeichen setzt einzelAuftrag.
     aus.versorgung = 'totalprothese'
   } else if (/prothese/.test(t) && /implantat/.test(t)) {
     aus.versorgung = 'locator'

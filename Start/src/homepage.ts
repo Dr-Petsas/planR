@@ -210,6 +210,7 @@ const HTML = `
       <a href="#anyconnect">AnyConnect</a>
       <a href="#connect">Brücke</a>
       <a href="#preise">Preise</a>
+      <a href="#probe">Ihr HKP</a>
       <a href="#produkte">Pickadoc</a>
       <a class="hp-nav-anmelden" href="#anmelden">Anmelden</a>
     </nav>

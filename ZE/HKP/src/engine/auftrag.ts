@@ -421,17 +421,28 @@ function einzelAuftrag(text: string, kiefer?: Kiefer): HkpAuftrag {
         auftrag.pfeiler.push(...zs.filter((z) => !auftrag.pfeiler.includes(z)))
       return
     }
+    const fortsetzen = listeDavor
     pfeilerDavor = false
     listeDavor = undefined
     const art = listenArt(teil)
+    let aufgezaehlt = false
     if (art) {
       auftrag[art].push(...zs)
       if (verbVorn(teil, art)) listeDavor = art
+    } else if (fortsetzen) {
+      // „… 21 und 22 und eine Interimsprothese“: das Komma hat die Zähne an die Prothese gehängt.
+      const schnitt = teil.search(/\b(?:interims?\s*p[oa]these|interims?\s*prothese|totalprothese|vollprothese|prothese)\b/i)
+      const kopf = schnitt > 0 ? teil.slice(0, schnitt) : ''
+      const weiter = kopf ? zaehneIn(kopf, auftrag.kiefer) : []
+      if (weiter.length) {
+        auftrag[fortsetzen].push(...weiter.filter((z) => !auftrag[fortsetzen].includes(z)))
+        aufgezaehlt = true
+      }
     }
-    else if (/teleskop|konus|doppelkrone|pfeiler|krone|anker|locator|locater|druckknopf|kugel(?:kopf|anker)|novaloc|equator|steg|inlay|onlay|tabletop|teilkrone|veneer|galvano|suprakonstruktion|abutment|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil)
+    if (!art && !aufgezaehlt && (/teleskop|konus|doppelkrone|pfeiler|krone|anker|locator|locater|druckknopf|kugel(?:kopf|anker)|novaloc|equator|steg|inlay|onlay|tabletop|teilkrone|veneer|galvano|suprakonstruktion|abutment|auf (den|dem|die)\b|\bauf [1-4][1-8]\b/.test(teil)
       // Einzelzahn: „Implantat am Zahn 26“, „in Region 26“ (Anruf 07.10.2026 19:36)
       || ((auftrag.versorgung === 'implantatkronen' || auftrag.versorgung === 'kronen' || auftrag.versorgung === 'inlay')
-        && /implantat|\b(?:am|an|bei|f(?:ü|ue)r) (?:zahn )?[1-4][1-8]\b|\bzahn [1-4][1-8]\b|\bregion?\b/.test(teil))) {
+        && /implantat|\b(?:am|an|bei|f(?:ü|ue)r) (?:zahn )?[1-4][1-8]\b|\bzahn [1-4][1-8]\b|\bregion?\b/.test(teil)))) {
       // „Teleskop auf 13 und 23 ersetzte Zähne 14 …“: ab dem Befund-Wort sind es keine Pfeiler mehr,
       // ebenso ab „und die Zähne 14 bis 17 ersetzen“ (Verb hinten)
       const vorBefund = teil.split(BEFUND_BEGINN)[0].split(ZAEHNE_NACHGESTELLT)[0]
@@ -890,6 +901,10 @@ function implantatPlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string,
   return undefined
 }
 
+function lueckeImPlan(z: string, a: HkpAuftrag): boolean {
+  return !a.erhalten.includes(z)
+}
+
 function kieferPlanen(auftrag: HkpAuftrag, kiefer: Kiefer, befund: Befund, tp: Record<string, string>, hinweise: string[]): Rueckfrage | undefined {
   const name = kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'
   {
@@ -938,6 +953,7 @@ function kieferPlanen(auftrag: HkpAuftrag, kiefer: Kiefer, befund: Befund, tp: R
     for (const z of reihe) {
       if (pfeiler.includes(z) || (!fehlt(befund, z) && !nackt.includes(z))) continue
       if (istWeisheitszahn(z) && !auftrag.mitAchtern) continue
+      if (!lueckeImPlan(z, auftrag)) continue
       const i = reihe.indexOf(z)
       tp[z] = auftrag.versorgung === 'steg' && i > von && i < bis ? 'SEO' : 'E'
     }
@@ -1158,7 +1174,11 @@ function planRechnen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, t
   const geplant = new Set<Kiefer>()
   for (const t of teile) if (t.kiefer) geplant.add(t.kiefer)
   if (!geplant.size) for (const z of Object.keys(tp)) geplant.add(kieferVon(z))
-  const regelOpt = { ...regelOptionen(plan), ...(geplant.size ? { nurKiefer: [...geplant] } : {}) }
+  const regelOpt = {
+    ...regelOptionen(plan),
+    ...(geplant.size ? { nurKiefer: [...geplant] } : {}),
+    ...(auftrag.erhalten.length ? { nichtErsetzen: auftrag.erhalten } : {}),
+  }
   const regel = therapieAnwenden(regelversorgungErmitteln(plan.zaehne, regelOpt), plan.zaehne, plan)
   let fertig = regelUebernehmen(plan, regel)
   hinweise.push(...regel.hinweise)

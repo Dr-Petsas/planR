@@ -36,6 +36,13 @@ export const GOZ_ERGAENZUNG: ListenEintrag[] = [
 /** Chirurgische OP-Zuschläge (nichtstationär), je Tag nur der höchste. */
 export const OP_ZUSCHLAEGE = ['0500', '0510', '0520', '0530'] as const
 
+/** Nur mit dem einfachen Gebührensatz: OP-Zuschläge 0500–0530, Mikroskop 0110, Laser 0120. */
+const EINFACHSATZ = new Set<string>(['0110', '0120', ...OP_ZUSCHLAEGE])
+
+export function gozEinfachsatz(nr: string): boolean {
+  return EINFACHSATZ.has(nr)
+}
+
 /** Chirurgische Leistungen des Planers (Sitzung mit Anästhesie, Kontrollröntgen, ggf. OP-Zuschlag). */
 export const OP_LEISTUNGEN = new Set([
   '3000', '3010', '3020', '3030', '3040', '3045', '3070', '3080', '3100', '3110', '3120', '3210', '3230', '3240',

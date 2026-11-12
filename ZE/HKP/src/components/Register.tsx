@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { HkpPlan } from '../types'
 import type { Ergebnis } from '../engine/berechnung'
 import { euro } from '../format'
@@ -36,6 +36,16 @@ export function RegisterLeiste({ r, plan, ergebnis, onStatus, onNeu }: {
   const istVerbunden = verbunden(useVerbindung())
   const [legtAn, setLegtAn] = useState(false)
   const ohneSchluessel = 'Zum Speichern im Register fehlt der MAS-Schlüssel (Einstellungen).'
+  const kopf = useRef({ aktiv, anlegen: (_frei: boolean) => {}, jetzt: () => {} })
+  kopf.current = { aktiv, anlegen: (frei) => void anlegen(frei), jetzt: () => r.jetztSpeichern() }
+  useEffect(() => {
+    const speichern = () => {
+      if (kopf.current.aktiv) kopf.current.jetzt()
+      else void kopf.current.anlegen(false)
+    }
+    window.addEventListener('planr-speichern', speichern)
+    return () => window.removeEventListener('planr-speichern', speichern)
+  }, [])
 
   async function anlegen(freigeben: boolean) {
     if (!plan.patient.name) { alert('Bitte zuerst den Patienten eintragen.'); return }

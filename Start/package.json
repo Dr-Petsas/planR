@@ -15,6 +15,7 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
-    "nodemailer": "^6.10.1"
+    "nodemailer": "^6.10.1",
+    "pdfjs-dist": "^6.4.299"
   }
 }

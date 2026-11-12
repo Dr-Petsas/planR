@@ -98,6 +98,8 @@ main { min-width: 0; }
   align-items: center; padding: 11px 0; position: relative;
   color: inherit; text-decoration: none; border-top: 1px solid var(--linie);
 }
+.zeile.fall-kopf { display: flex; justify-content: space-between; gap: 12px; background: #e8f1fb; color: #1d4f91; font-size: 13px; font-weight: 650; }
+.zeile.im-fall { box-shadow: inset 3px 0 0 #1d4f91; }
 /* Der Name ist der Link, seine Fläche deckt die ganze Zeile – die Tonne liegt darüber. */
 .zeile a.sp-patient { color: inherit; text-decoration: none; }
 .zeile a.sp-patient::after { content: ''; position: absolute; inset: 0; }
@@ -126,6 +128,7 @@ main { min-width: 0; }
 .termin-karte header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .termin-karte h2 { margin: 0; font-size: 20px; }
 .termin-karte header button { border: 0; background: transparent; font-size: 24px; line-height: 1; cursor: pointer; color: var(--grau); }
+.termin-karte header button:disabled { opacity: .35; cursor: default; }
 .termin-stamm { display: grid; grid-template-columns: 1.4fr 1fr 1.2fr; gap: 10px; margin: 14px 0; }
 .termin-stamm label, .termin-behandler { display: grid; gap: 4px; font-size: 12px; color: var(--grau); }
 .termin-stamm b { font-size: 15px; color: var(--text); font-weight: 650; }
@@ -148,6 +151,41 @@ main { min-width: 0; }
 .slot-badge span { font-size: 15px; font-weight: 750; }
 .slot-badge small { color: var(--grau); font-size: 12px; }
 .slot-badge:hover { border-color: var(--akzent); background: var(--akzent-hell); }
+.termin-karte.bucht .termin-wahl,
+.termin-karte.bucht .termin-behandler,
+.termin-karte.bucht .termin-dauer,
+.termin-karte.bucht .termin-motiv { opacity: .4; pointer-events: none; }
+.termin-buchen { display: grid; justify-items: center; margin-top: 16px; padding-top: 8px; }
+.uhr {
+  position: relative; width: 148px; height: 148px; border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff 0 78%, transparent 79%),
+    repeating-conic-gradient(from -0.6deg, var(--akzent) 0 1.2deg, transparent 1.2deg 30deg);
+  box-shadow: 0 0 0 8px var(--akzent-hell), 0 10px 24px rgba(47, 127, 143, .16);
+}
+.uhr-stunde, .uhr-minute, .uhr-sekunde {
+  position: absolute; left: 50%; border-radius: 4px; transform-origin: 50% 100%;
+}
+.uhr-stunde { width: 4px; height: 34px; margin-left: -2px; top: calc(50% - 34px); background: var(--text); transform: rotate(var(--h)); }
+.uhr-minute { width: 3px; height: 48px; margin-left: -1.5px; top: calc(50% - 48px); background: var(--text); transform: rotate(var(--m)); }
+.uhr-sekunde {
+  width: 2px; height: 54px; margin-left: -1px; top: calc(50% - 54px); background: var(--akzent);
+  animation: uhr-lauf 1.4s linear infinite;
+}
+.uhr-nabe {
+  position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+  border-radius: 50%; background: var(--akzent); z-index: 1;
+}
+.uhr-zeit { margin: 12px 0 0; font-size: 32px; font-weight: 750; letter-spacing: -.4px; }
+.uhr-meta { margin: 2px 0 0; color: var(--grau); font-size: 13px; text-align: center; }
+.uhr-status { margin: 8px 0 0; font-size: 14px; font-weight: 650; color: var(--akzent-dunkel); }
+.uhr-status::after { content: ''; animation: uhr-punkte 1.4s steps(1) infinite; }
+@keyframes uhr-lauf { to { transform: rotate(360deg); } }
+@keyframes uhr-punkte { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+@media (prefers-reduced-motion: reduce) {
+  .uhr-sekunde { animation: none; opacity: .35; }
+  .uhr-status::after { animation: none; content: ' …'; }
+}
 .termin-hinweis, .termin-fehler { font-size: 13px; margin: 8px 0 0; }
 .termin-fehler { color: #b3261e; }
 .termin-karte.gesperrt .termin-wahl,
@@ -200,6 +238,24 @@ main { min-width: 0; }
   box-shadow: 0 8px 28px rgba(20, 30, 40, .3); font-size: 14px;
 }
 .meldung button { border: 0; background: transparent; color: #8fd3df; font-weight: 700; cursor: pointer; padding: 4px 6px; font-size: 14px; }
+.erfolg {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center;
+  padding: 24px; background: rgba(18, 32, 28, .45);
+}
+.erfolg-karte {
+  width: min(560px, 100%); padding: 36px 32px 28px; border-radius: 18px; background: #fff;
+  box-shadow: 0 24px 70px rgba(12, 40, 32, .35); text-align: center;
+}
+.erfolg-karte b {
+  display: block; font-size: 32px; line-height: 1.15; font-weight: 750; color: #1a7f37;
+}
+.erfolg-karte b::before { content: '✓ '; }
+.erfolg-karte p { margin: 16px 0 24px; font-size: 18px; line-height: 1.45; color: var(--text); }
+.erfolg-karte button {
+  min-width: 180px; border: 0; border-radius: 999px; padding: 12px 22px;
+  background: #1a7f37; color: #fff; font: inherit; font-size: 18px; font-weight: 750; cursor: pointer;
+}
+.erfolg-karte button:hover { background: #146c2e; }
 .kopfzeile {
   border-top: 0; background: #f7f8f9; color: var(--grau);
   font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase;
@@ -307,6 +363,38 @@ main { min-width: 0; }
   .ps-liste span { display: none; }
 }
 .link-knopf { margin-left: auto; font: inherit; font-size: 13px; color: var(--akzent-dunkel); background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 4px; }
+
+.zu-schleier { position: fixed; inset: 0; z-index: 40; background: rgba(20, 28, 32, .45); display: flex; align-items: stretch; justify-content: center; padding: 24px; }
+.zu-karte { display: flex; flex-direction: column; width: min(1100px, 100%); background: #fff; border-radius: 16px; overflow: hidden; }
+.zu-kopf, .zu-fuss { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px 20px; }
+.zu-kopf h2 { margin: 0; font-size: 20px; }
+.zu-kopf p, .zu-hinweis { margin: 4px 0 0; color: var(--grau); font-size: 13px; }
+.zu-hinweis { margin: 0; padding: 0 20px 12px; }
+.zu-koerper { display: grid; grid-template-columns: 280px 1fr; min-height: 0; flex: 1; border-top: 1px solid var(--linie); }
+.zu-liste { overflow: auto; border-right: 1px solid var(--linie); padding: 8px; }
+.zu-planer { margin: 12px 8px 4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--grau); }
+.zu-klasse { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; width: 100%; text-align: left; font: inherit; font-size: 13px; background: none; border: 0; border-radius: 8px; padding: 6px 8px; cursor: pointer; }
+.zu-klasse.aktiv, .zu-klasse:hover { background: var(--akzent-hell); }
+.zu-klasse small { color: var(--grau); }
+.zu-detail { overflow: auto; padding: 16px 20px 24px; }
+.zu-detail h3 { margin: 0 0 12px; font-size: 16px; }
+.zu-positionen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.zu-positionen li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid var(--linie); border-radius: 10px; }
+.zu-positionen label { display: flex; gap: 8px; align-items: flex-start; }
+.zu-positionen button, .zu-add button { font: inherit; font-size: 13px; color: var(--rot); background: none; border: 0; cursor: pointer; }
+.zu-add button { color: var(--akzent-dunkel); }
+.zu-aktionen { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.zu-aktionen span { color: var(--grau); font-size: 13px; }
+.zu-add { margin-top: 16px; }
+.zu-add label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 650; }
+.zu-add input { font: inherit; font-weight: 400; padding: 8px 10px; border: 1px solid var(--linie); border-radius: 8px; }
+.zu-add details { margin-top: 10px; }
+.zu-add summary { cursor: pointer; font-weight: 650; }
+.zu-add ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.zu-add li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--linie); font-size: 13px; }
+.zu-add li span { margin-left: auto; color: var(--grau); white-space: nowrap; }
+.zu-leer { color: var(--grau); }
+@media (max-width: 800px) { .zu-koerper { grid-template-columns: 1fr; } .zu-liste { max-height: 220px; } }
 .wahl-spalten, .wahl-liste { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
 .wahl-spalten { padding: 0 8px; font-size: 12px; font-weight: 650; color: var(--akzent); }
 .bereich-name { margin: 12px 0 4px; font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--grau); }
@@ -315,6 +403,12 @@ main { min-width: 0; }
   padding: 8px; border-radius: 10px; color: inherit; text-decoration: none;
 }
 .wahl-liste a:hover { background: var(--akzent-hell); }
+.wahl-liste .wahl-bald { cursor: not-allowed; }
+.coming-soon {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  background: #fdf1dc; color: #8a5a00; font-size: 10px; font-style: normal; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase; vertical-align: 1px;
+}
 .wahl-liste b { display: block; font-weight: 600; }
 .wahl-liste small { display: block; color: var(--grau); font-size: 12px; }
 .neu-knopf.mit-symbol { display: inline-flex; align-items: center; gap: 6px; }
@@ -598,6 +692,11 @@ body.planr-app.plan-offen .kopf-aktionen { display: none; }
 }
 .plan-punkt.aktiv { color: var(--akzent-dunkel); border-bottom-color: var(--akzent); }
 .plan-mail { width: 40px; height: 40px; }
+.plan-speichern {
+  flex: 0 0 auto; border: 0; border-radius: 999px; padding: 8px 16px;
+  background: var(--akzent); color: #fff; font: inherit; font-weight: 750; cursor: pointer;
+}
+.plan-speichern:hover { background: var(--akzent-dunkel); }
 /* Fläche voll, KI-Zeile so breit wie auf der Startseite, Agent wächst von unten links nach oben. */
 body.planr-app.plan-offen .seite {
   grid-template-columns: var(--links) minmax(0, 1fr);
@@ -667,6 +766,7 @@ body.planr-app.plan-offen #clara-spalte.zieht { cursor: grabbing; user-select: n
     flex: 0 0 auto; justify-content: center; width: 36px; min-height: 36px; height: 36px; padding: 0; font-size: 0;
   }
   body.planr-app .kopf-aktionen .import-knopf[data-einrichtung]::before { content: '⚙'; font-size: 16px; }
+  body.planr-app .kopf-aktionen .import-knopf[data-training]::before { content: 'KI'; font-size: 11px; font-weight: 700; }
   body.planr-app .kopf-aktionen .chip-kurz,
   body.planr-app .kopf-aktionen .chip-lang,
   body.planr-app .kopf-aktionen span { display: none; }

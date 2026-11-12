@@ -85,6 +85,39 @@ export const MATERIAL: MaterialPosten[] = [
   m('kit-prp', 'PRP-Entnahme-/Aufbereitungs-Kit', 'kit', 'PRP-Kit', 'diverse', 'Set', 30, 1, 'geschaetzt'),
 ]
 
+/** Suchworte, unter denen die Praxis das Produkt nennt. */
+const SUCHALIAS: Record<string, string> = {
+  'kem-bio-oss': 'biooss bio oss',
+  'kem-bio-oss-collagen': 'biooss bio oss collagen',
+  'koll-micross': 'microoss micro oss micross mikrooss',
+  'mem-yxoss': 'titan mesh titangitter titanmesh mesh gitter',
+}
+
+export const MATERIAL_ABSCHNITT: { id: string; titel: string; rollen: MaterialRolle[] }[] = [
+  { id: 'knochen', titel: 'Knochenersatz', rollen: ['kem-autolog', 'kem-allogen', 'kem-xenogen', 'kem-synthetisch'] },
+  { id: 'membran', titel: 'Membran und Titan', rollen: ['membran-resorbierbar', 'membran-nichtresorbierbar', 'membran-titan', 'membran-vlies'] },
+  { id: 'weich', titel: 'Weichgewebe', rollen: ['weichgewebematrix'] },
+  { id: 'gewinnung', titel: 'Knochengewinnung', rollen: ['kollektor'] },
+  { id: 'fixierung', titel: 'Fixierung', rollen: ['fixierung-pin', 'fixierung-schraube'] },
+  { id: 'verbrauch', titel: 'Naht, Fräsen, Anästhesie', rollen: ['naht', 'fraese', 'anaesthetikum'] },
+  { id: 'blut', titel: 'PRF und Kits', rollen: ['roehrchen', 'kit'] },
+]
+
+export const materialSuchtext = (m: Pick<MaterialPosten, 'id' | 'titel' | 'produkt' | 'hersteller'>) =>
+  [m.titel, m.produkt, m.hersteller, m.id, SUCHALIAS[m.id] ?? ''].join(' ')
+
+export function materialAbschnitte(liste: MaterialPosten[] = MATERIAL) {
+  const gesehen = new Set<string>()
+  const gruppen = MATERIAL_ABSCHNITT.map((a) => {
+    const zeilen = liste.filter((x) => a.rollen.includes(x.rolle))
+    zeilen.forEach((z) => gesehen.add(z.id))
+    return { ...a, zeilen }
+  }).filter((a) => a.zeilen.length)
+  const rest = liste.filter((x) => !gesehen.has(x.id))
+  if (rest.length) gruppen.push({ id: 'sonst', titel: 'Weiteres', rollen: [], zeilen: rest })
+  return gruppen
+}
+
 export const materialFinden = (id: string) => MATERIAL.find((x) => x.id === id)
 export const materialDerRolle = (rolle: MaterialRolle) => MATERIAL.filter((x) => x.rolle === rolle)
 

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { Ebene, Plan, Position } from '../types'
 import { GOAE, GOZ, euro, type Kalkulation, type Zeile } from '../engine/berechnung'
-import { MATERIAL } from '../data/material'
+import { gozEinfachsatz } from '../data/goz-sonderregeln'
+import { MATERIAL, materialSuchtext } from '../data/material'
 
 interface Props {
   plan: Plan
@@ -46,6 +47,7 @@ export function Leistungen({ plan, einst, kalk, onChange }: Props) {
             {zeilen.map((z) => {
               const angepasst = z.auto && plan.anpassungen[z.id]
               const honorar = ebene === 'GOZ' || ebene === 'GOAE'
+              const einfacherSatz = (ebene === 'GOZ' && gozEinfachsatz(z.nr)) || (ebene === 'GOAE' && /^zuschlag/i.test(z.text))
               return (
                 <tr key={z.id} className={`${angepasst ? 'angepasst' : ''} ${z.zusatz ? 'zeile-zusatz' : ''}`} title={z.grund}>
                   <td className="mono">{ebene === 'MAT' ? '–' : z.nr}{z.gebuehrenanteil && z.gebuehrenanteil < 1 ? <span className="tag anteil" title="reduzierter Gebührenanteil">{z.gebuehrenanteil === 0.5 ? '½' : '⅓'}</span> : null}</td>
@@ -61,7 +63,7 @@ export function Leistungen({ plan, einst, kalk, onChange }: Props) {
                   </td>
                   <td className="r"><input className="klein r" type="number" min={0} step={z.material ? 1 : 1} value={z.anzahl} onChange={(e) => aendern(z, 'anzahl', e.target.value)} /></td>
                   {honorar && !z.analog && z.preis === undefined
-                    ? <td className="r"><input className="klein r" type="number" min={1} max={10} step={0.1} value={z.faktor} onChange={(e) => aendern(z, 'faktor', e.target.value)} /></td>
+                    ? <td className="r"><input className="klein r" type="number" min={1} max={10} step={0.1} value={einfacherSatz ? 1 : z.faktor} disabled={einfacherSatz} title={einfacherSatz ? 'Zuschlag nur mit dem einfachen Satz' : undefined} onChange={(e) => aendern(z, 'faktor', e.target.value)} /></td>
                     : <td className="r"><input className="mittel r" type="number" min={0} step={0.01} value={z.einzel} onChange={(e) => aendern(z, 'preis', e.target.value)} /></td>}
                   <td className="r mono">{euro(z.betrag)}</td>
                   <td><button className="x" title="Position entfernen" onClick={() => entfernen(z)}>×</button></td>
@@ -78,7 +80,7 @@ export function Leistungen({ plan, einst, kalk, onChange }: Props) {
   return (
     <div className="leistungen">
       <div className="leiste">
-        <p>Die Positionen entstehen aus Befund, Planung, Regionen-Boxen und Reglern. Anzahl, Faktor und Preise sind anpassbar; Änderungen bleiben erhalten.</p>
+        <p>Die Positionen entstehen aus Befund, Planung, Regionen-Boxen und Reglern. Anzahl, Faktor und Preise sind anpassbar. Speichern in der Kopfzeile behält sie.</p>
         {offeneAenderungen > 0 && <button className="sekundaer" onClick={zuruecksetzen}>Automatische Positionen zurücksetzen ({offeneAenderungen})</button>}
       </div>
       <Hinzufuegen einst={einst} onAdd={hinzufuegen} />
@@ -106,7 +108,7 @@ function Hinzufuegen({ einst, onAdd }: { einst: { gozFaktor: number; goaeFaktor:
     return [
       ...[...GOZ.values()].filter((e) => e.punkte && passt(e.nr, e.text)).map((e) => ({ ebene: 'GOZ' as const, ...e })),
       ...[...GOAE.values()].filter((e) => passt(e.nr, e.text)).map((e) => ({ ebene: 'GOAE' as const, ...e })),
-      ...MATERIAL.filter((e) => passt(e.id, e.titel + ' ' + e.produkt)).map((e) => ({ ebene: 'MAT' as const, nr: e.id, text: `${e.titel} – ${e.produkt}`, punkte: undefined, preis: e.preis })),
+      ...MATERIAL.filter((e) => passt(e.id, materialSuchtext(e))).map((e) => ({ ebene: 'MAT' as const, nr: e.id, text: `${e.titel} – ${e.produkt}`, punkte: undefined, preis: e.preis })),
     ].slice(0, 14)
   }, [suche])
 

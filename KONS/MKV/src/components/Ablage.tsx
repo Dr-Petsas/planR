@@ -30,11 +30,39 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
   const frei = eintrag?.status === 'freigegeben'
   const fenster = useRef<HTMLDialogElement>(null)
   const ziel = ablage.zuOeffnen
+  const stand = useRef(daten)
+  stand.current = daten
+  const anfang = useRef<string | null>(null)
+  const merkmal = JSON.stringify(daten.plan)
+  if (anfang.current === null) anfang.current = merkmal
   useEffect(() => {
     if (!ziel) return
     ablage.geoeffnet?.()
+    const jetzt = stand.current
+    const bearbeitet = JSON.stringify(jetzt.plan) !== anfang.current
+    // Später eintreffender Alter Stand darf Änderungen in dieser Sitzung nicht zurücksetzen.
+    if (bearbeitet && ziel.nummer === jetzt.nummer && JSON.stringify(ziel.plan) !== JSON.stringify(jetzt.plan)) return
     onLaden?.(ziel.plan)
   }, [ziel])
+  useEffect(() => {
+    if (!offen || eintrag?.status === 'freigegeben') return
+    const t = window.setTimeout(() => ablage.speichern(stand.current), 500)
+    const weg = () => ablage.speichern(stand.current)
+    window.addEventListener('pagehide', weg)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('pagehide', weg)
+    }
+  }, [offen, merkmal, eintrag?.status])
+  const freiRef = useRef(frei)
+  freiRef.current = frei
+  const tun = useRef(ablage.speichern)
+  tun.current = ablage.speichern
+  useEffect(() => {
+    const speichern = () => { if (!freiRef.current) tun.current(stand.current) }
+    window.addEventListener('planr-speichern', speichern)
+    return () => window.removeEventListener('planr-speichern', speichern)
+  }, [])
   const zu = () => fenster.current?.close()
   return (
     <div className="aktionen">
@@ -65,7 +93,7 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
         </button>
       ) : (
         <>
-          <button className="sekundaer" onClick={() => ablage.speichern(daten)} disabled={!offen}>Speichern</button>
+          <button className="primaer" type="button" onClick={() => ablage.speichern(daten)}>Speichern</button>
           <button className="sekundaer" onClick={() => confirm(`${daten.nummer} freigeben? Danach ist der Plan gesperrt.`) && ablage.freigeben(daten)}>Freigeben</button>
         </>
       )}

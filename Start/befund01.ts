@@ -6,6 +6,7 @@
 import type { ServerResponse } from 'node:http'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { PlanKarte } from './src/plaene.ts'
+import { implantKuerzel } from './src/pvs.ts'
 
 const OK = ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28']
 const UK = ['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38']
@@ -132,10 +133,10 @@ export const vorgangBeenden = (alt: Befund01): Befund01 => {
 /** Was angezeigt wird und für den nächsten Plan gilt: Praxisprogramm, darüber die offenen Änderungen. */
 export const zaehneAktuell = (b: Befund01) => ({ ...b.pvsZaehne, ...b.offen })
 
-/** Gesprochene Kürzel klein (eHKP), Kürzel aus dem Praxisprogramm unverändert */
+/** Gesprochene Kürzel klein (eHKP), Kürzel aus dem Praxisprogramm unverändert – Implantat-j wird i */
 const nurZaehne = (z: Record<string, unknown>, klein = true) =>
   Object.fromEntries(Object.entries(z).filter(([k, v]) => ALLE.has(k) && String(v ?? '').trim().length <= 6).map(([k, v]) => {
-    const c = String(v ?? '').trim().replace(/^-+|-+$/g, '')
+    const c = implantKuerzel(String(v ?? '').trim().replace(/^-+|-+$/g, ''))
     return [k, klein ? c.toLowerCase() : c]
   }))
 
@@ -200,11 +201,13 @@ export function ablageKuerzen(a: Record<string, Befund01>, max = BEFUNDE_MAX): R
   return Object.fromEntries(eintraege.sort(([, x], [, y]) => y.stand.localeCompare(x.stand)).slice(0, max))
 }
 
-/** Für Browser und Assistentin: aktueller Befund, offene Änderungen getrennt */
+/** Für Browser und Assistentin: aktueller Befund, offene Änderungen getrennt. Auch ein schon gemerkter Stand zeigt Implantate als i. */
+const zeigen = (z: Record<string, string>) => Object.fromEntries(Object.entries(z).map(([k, v]) => [k, implantKuerzel(v)]))
+
 export function befundAnsicht(b: Befund01) {
   return {
     patient: b.patient, label: b.label, geburt: b.geburt, pvs: b.pvs, pvsDatum: b.pvsDatum,
-    zaehne: zaehneAktuell(b), pvsZaehne: b.pvsZaehne, offen: b.offen, offenWer: b.offenWer,
+    zaehne: zeigen(zaehneAktuell(b)), pvsZaehne: zeigen(b.pvsZaehne), offen: zeigen(b.offen), offenWer: b.offenWer,
     gelesen: b.gelesen, geschrieben: b.geschrieben, stand: b.stand,
     vorgang: b.vorgang && vorgangLaeuft(b) ? b.vorgang : b.vorgang?.phase === 'angelegt' ? b.vorgang : null,
   }

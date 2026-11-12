@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { Einstellungen } from '../types'
-import { MATERIAL, materialPreis } from '../data/material'
+import { materialAbschnitte, materialPreis, materialSuchtext } from '../data/material'
 import { euro } from '../engine/berechnung'
 import { BEB, GENUTZTE_LISTEN, eigenKatalog } from '../engine/listen'
 import { eigenFinden } from '../engine/eigenlabor'
@@ -32,9 +32,9 @@ export function PraxisPreise({ einst, onChange }: Props) {
     else overrides[id] = n
     onChange({ ...einst, materialPreise: overrides })
   }
-  const liste = MATERIAL.filter((m) => {
+  const liste = materialAbschnitte().flatMap((a) => a.zeilen).filter((m) => {
     const s = suche.trim().toLowerCase()
-    return !s || m.titel.toLowerCase().includes(s) || m.produkt.toLowerCase().includes(s) || m.id.includes(s)
+    return !s || materialSuchtext(m).toLowerCase().includes(s)
   })
 
   return (
@@ -64,17 +64,22 @@ export function PraxisPreise({ einst, onChange }: Props) {
       <p className="hilfe">Leer lassen = Katalogpreis. Eigener Wert überschreibt den Standard-EK.</p>
       <input className="suche" placeholder="Material suchen …" value={suche} onChange={(e) => setSuche(e.target.value)} />
       <table className="edit-tabelle preisliste">
-        <thead><tr><th>Produkt</th><th>Rolle</th><th>Einheit</th><th className="r">Katalog</th><th className="r">Praxispreis</th><th>Quelle/Stand</th></tr></thead>
+        <thead><tr><th>Produkt</th><th>Hersteller</th><th>Einheit</th><th className="r">Katalog</th><th className="r">Praxispreis</th><th>Quelle/Stand</th></tr></thead>
         <tbody>
-          {liste.map((m) => (
-            <tr key={m.id}>
-              <td>{m.produkt} <small>({m.titel})</small></td>
-              <td className="mono">{m.rolle}</td>
-              <td>{m.einheit}</td>
-              <td className="r">{euro(m.preis)}</td>
-              <td className="r"><input className="mittel r" type="number" min={0} step={0.01} value={einst.materialPreise[m.id] ?? ''} placeholder={String(m.preis)} onChange={(e) => preisSetzen(m.id, e.target.value)} /></td>
-              <td><small>{m.genau} · {m.stand}</small></td>
-            </tr>
+          {materialAbschnitte(liste).map((a) => (
+            <Fragment key={a.id}>
+              <tr className="abschnitt"><td colSpan={6}>{a.titel}</td></tr>
+              {a.zeilen.map((m) => (
+                <tr key={m.id}>
+                  <td>{m.produkt} <small>({m.titel})</small></td>
+                  <td>{m.hersteller}</td>
+                  <td>{m.einheit}</td>
+                  <td className="r">{euro(m.preis)}</td>
+                  <td className="r"><input className="mittel r" type="number" min={0} step={0.01} value={einst.materialPreise[m.id] ?? ''} placeholder={String(m.preis)} onChange={(e) => preisSetzen(m.id, e.target.value)} /></td>
+                  <td><small>{m.genau} · {m.stand}</small></td>
+                </tr>
+              ))}
+            </Fragment>
           ))}
         </tbody>
       </table>

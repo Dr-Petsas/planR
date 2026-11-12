@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan, Preisliste } from './types'
-import { usePlan, leererPlan, planNormalisieren } from './store/plan'
+import { usePlan, leererPlan, planNormalisieren, probeAktiv } from './store/plan'
+import { planAusSchema, probeHoren } from './probeImport'
 import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, stichtag, usePreislisten, TYP_NAMEN } from './store/preislisten'
 import { getPraxis, usePraxis } from './store/praxis'
 import type { Praxis } from './stammdaten'
@@ -68,7 +69,7 @@ export default function App() {
   const e = plan.einstellungen
   const eigenlabor = useEigenlabor()
   const fremdlabor = useFremdlabor()
-  const praxiskatalog = usePraxiskatalog()
+  usePraxiskatalog()
   const katalog = usePraxisKatalogVoll()
   const praxisListen = useMemo(
     () => ({ preislisten: alle, eigen: eigenlabor, fremd: fremdlabor, katalog: katalog ?? undefined }),
@@ -190,6 +191,15 @@ export default function App() {
     planRef.current = plan
     registerRef.current = register
   })
+  useEffect(() => {
+    if (!probeAktiv()) return
+    return probeHoren((schema, gebuehren) => {
+      const { plan: neu, hinweise } = planAusSchema(planRef.current.einstellungen, schema, gebuehren)
+      setPlan(() => neu)
+      setEngineHinweise(hinweise)
+      setTab('teil1')
+    })
+  }, [setPlan])
   useEffect(() => hkpAnmelden(
     () => planRef.current,
     (neu, alt) => {
@@ -290,6 +300,9 @@ export default function App() {
   const setEinstellung = <K extends keyof Einstellungen>(k: K, v: Einstellungen[K]) =>
     setPlan((p) => ({ ...p, einstellungen: { ...p.einstellungen, [k]: v } }))
 
+  const probe = probeAktiv()
+  const reiter = ([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][])
+    .filter(([id]) => !probe || (id !== 'register' && id !== 'preislisten' && id !== 'einstellungen'))
   const fehler = ergebnis.hinweise.filter((h) => h.stufe === 'fehler').length
   const hkpAnsicht = tab === 'teil1' || tab === 'teil2' || tab === 'anlage' || tab === 'eigenlabor'
   const hatEigenlabor = ergebnis.positionen.some((p) => p.labor === 'eigen' && (p.ebene === 'BEL' || p.ebene === 'BEB'))
@@ -315,10 +328,10 @@ export default function App() {
   return (
     <div className="app">
       <PlanrLeiste
-        punkte={([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([id, text]) => ({ id, text }))}
+        punkte={reiter.map(([id, text]) => ({ id, text }))}
         aktiv={tab}
         onWahl={(id) => setTab(id as Tab)}
-        versand
+        versand={!probe}
       />
       <header className="kopfleiste">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -326,15 +339,15 @@ export default function App() {
           <h1>HKP-Planer <span>Zahnersatz · BEMA · GOZ · BEL II · BEB</span><MandantName /></h1>
         </div>
         <nav>
-          {([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][]).map(([t, n]) => (
+          {reiter.map(([t, n]) => (
             <button key={t} className={tab === t ? 'aktiv' : ''} onClick={() => setTab(t)}>{n}</button>
           ))}
         </nav>
       </header>
-      <VersandKnopf
+      {probe ? null : <VersandKnopf
         anschreiben={{ patient: plan.patient, praxis: getPraxis(), nummer: new URLSearchParams(window.location.search).get('hkp') || '', betrag: ergebnis.summen.eigenanteil, thema: 'Heil- und Kostenplan', modul: 'hkp' }}
         seiten={() => [...document.querySelectorAll<HTMLElement>('.hkp-blatt')]}
-      />
+      />}
 
       {liveAn && (
         <div className={`register-leiste live-leiste${live.an ? ' verbunden' : ''}${live.spielt ? ' spielt' : ''}`}>
@@ -348,7 +361,7 @@ export default function App() {
           </span>
         </div>
       )}
-      {hkpAnsicht && !linkEintrag && <RegisterLeiste r={register} plan={plan} ergebnis={ergebnis} onStatus={registerStatus} onNeu={() => neuAnfangen()} />}
+      {hkpAnsicht && !linkEintrag && !probe && <RegisterLeiste r={register} plan={plan} ergebnis={ergebnis} onStatus={registerStatus} onNeu={() => neuAnfangen()} />}
       {linkHinweis && (
         <div className="register-leiste">
           <span>{linkHinweis}</span>

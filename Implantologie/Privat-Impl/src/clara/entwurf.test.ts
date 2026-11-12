@@ -29,17 +29,20 @@ describe('Implantologie per Sprache', () => {
     expect(implVersorgungSatz(r.zusammenfassung)).toBe('Implantat an 26; dazu externer Sinuslift, Knochenaufbau und navigiert mit Bohrschablone')
   })
 
-  it('Sinuslift ohne Art: Rückfrage; Antwort "intern" ergänzt', () => {
+  it('Sinuslift ohne Art: Rückfrage; danach Material, dann interner Lift', () => {
     const f = implEntwurf('Implantat 16 mit Sinuslift')
     expect(f).toMatchObject({ status: 'rueckfrage', grund: 'sinus', frage: 'Interner oder externer Sinuslift?' })
-    const r = ok(implEntwurf('Implantat 16 mit Sinuslift. Intern.'))
-    expect(r.plan.regionen['OK-R']).toMatchObject({ sinusIntern: true })
+    expect(implEntwurf('Implantat 16 mit Sinuslift. Intern.')).toMatchObject({ grund: 'material', frage: 'Knochenersatzmaterial oder Eigenknochen?' })
+    const r = ok(implEntwurf('Implantat 16 mit Sinuslift. Intern. Xenogenes Knochenersatzmaterial.'))
+    expect(r.plan.regionen['OK-R']).toMatchObject({ sinusIntern: true, material: 'xenogen' })
     expect(r.plan.regionen['OK-R']?.membran).toBeUndefined()
     expect(goz(r)).toContain('9110@OK-R')
+    expect(goz(r)).toContain('0090@OK')
+    expect(goz(r)).not.toContain('9140@OK-R')
   })
 
   it('Sinuslift je Seite: extern rechts, intern links, Front ohne Sinus', () => {
-    const r = ok(implEntwurf('Implantate an 12, 14, 16, 22, 24 und 26, externer Sinuslift rechts, interner Sinuslift links'))
+    const r = ok(implEntwurf('Implantate an 12, 14, 16, 22, 24 und 26, externer Sinuslift rechts, interner Sinuslift links, xenogenes Knochenersatzmaterial'))
     expect(r.plan.regionen['OK-R']).toMatchObject({ sinusExtern: true })
     expect(r.plan.regionen['OK-R']?.sinusIntern).toBeUndefined()
     expect(r.plan.regionen['OK-L']).toMatchObject({ sinusIntern: true })
@@ -54,7 +57,7 @@ describe('Implantologie per Sprache', () => {
   })
 
   it('Sinuslift im Unterkiefer wird nicht angesetzt', () => {
-    const r = ok(implEntwurf('Implantat 36, Sinuslift extern'))
+    const r = ok(implEntwurf('Implantat 36, Sinuslift extern, xenogenes Knochenersatzmaterial'))
     expect(r.plan.regionen['UK-L']?.sinusExtern).toBeUndefined()
     expect(r.hinweise).toContain('Ein Sinuslift geht nur im Oberkiefer-Seitenzahnbereich, den habe ich nicht angesetzt.')
   })
@@ -83,14 +86,22 @@ describe('Implantologie per Sprache', () => {
     expect(implEntwurf('Implantat 45', { '36': 'f' })).toMatchObject({ grund: 'befund_konflikt', frage: expect.stringMatching(/ein eigener Zahn/) })
   })
 
-  it('Knochenaufbau ohne Material: xenogen und Membran angenommen, Regionen genannt', () => {
-    const r = ok(implEntwurf('Implantate 36 und 46 mit Knochenaufbau'))
-    expect(r.plan.regionen['UK-L']).toMatchObject({ augmentation: true, material: 'xenogen', membran: 'resorbierbar' })
-    expect(goz(r)).toEqual(expect.arrayContaining(['9100@UK-L', '9100@UK-R']))
-    expect(r.hinweise).toEqual(expect.arrayContaining([
-      'Den Knochenaufbau habe ich für Unterkiefer links und Unterkiefer rechts angesetzt.',
-      'Angenommen habe ich xenogenen Knochenersatz und eine resorbierbare Membran.',
-    ]))
+  it('Knochenaufbau ohne Material fragt; Eigenknochen ohne Region fragt; mit Region kommen 9140 und Anästhesie', () => {
+    expect(implEntwurf('Implantate 36 und 46 mit Knochenaufbau')).toMatchObject({
+      grund: 'material', frage: 'Knochenersatzmaterial oder Eigenknochen?',
+    })
+    expect(implEntwurf('Implantat 16, interner Sinuslift, Eigenknochen')).toMatchObject({
+      grund: 'entnahme', frage: 'Aus welcher Region soll ich den Eigenknochen entnehmen?',
+    })
+    const r = ok(implEntwurf('Implantat 16, interner Sinuslift, Eigenknochen aus Regio 15'))
+    expect(r.plan.regionen['OK-R']).toMatchObject({ sinusIntern: true, material: 'autolog', blockEntnahme: true })
+    expect(goz(r)).toEqual(expect.arrayContaining(['9110@OK-R', '9140@OK-R', '0090@OK']))
+    expect(r.hinweise.join(' ')).toMatch(/GOZ 9140/)
+    expect(r.hinweise.join(' ')).toMatch(/Region 15/)
+    const ersatz = ok(implEntwurf('Implantate 36 und 46 mit Knochenaufbau, xenogenes Knochenersatzmaterial'))
+    expect(ersatz.plan.regionen['UK-L']).toMatchObject({ augmentation: true, material: 'xenogen', membran: 'resorbierbar' })
+    expect(goz(ersatz)).toEqual(expect.arrayContaining(['9100@UK-L', '9100@UK-R', '0100@UK']))
+    expect(goz(ersatz).join(' ')).not.toMatch(/9140/)
   })
 
   it('globale Angaben: PRF, Lachgas, Straumann, einzeitig, DVT liegt vor', () => {

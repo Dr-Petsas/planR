@@ -1,4 +1,5 @@
 import { befundZeile, kostenvoranschlag, pvsArt, pvsZahn, r2, type PvsPlan, type PvsPosition } from '../pvsplan'
+import { GOAE_PUNKTWERT, GOZ_PUNKTWERT } from './listen'
 import type { Plan } from '../types'
 import type { Kalkulation, Zeile } from './berechnung'
 
@@ -11,7 +12,9 @@ export function pvsPlaene(plan: Plan, kalk: Kalkulation): PvsPlan[] {
   const honorar = (ebene: 'GOZ' | 'GOAE') => (z: Zeile): PvsPosition => ({
     ebene, nr: z.analog ? `${z.nr}a` : z.nr, zahn: pvsZahn(z.zahn), anzahl: z.anzahl, ...(z.faktor ? { faktor: z.faktor } : {}),
     einzelpreis: z.einzel, betrag: z.betrag, art: ebene === 'GOAE' ? 'IM' : pvsArt(z.nr, 'IM'),
-    ...(z.analog ? { bezeichnung: z.text.slice(0, 300) } : {}),
+    bezeichnung: z.text.slice(0, 300),
+    ...(z.punkte ? { punkte: z.punkte } : {}),
+    punktwert: ebene === 'GOAE' ? GOAE_PUNKTWERT : GOZ_PUNKTWERT,
     // Bei Analogleistungen ist `begruendung` die PKV-Einschätzung aus dem Katalog, keine Faktorbegründung.
     ...(!z.analog && z.begruendung?.trim() ? { begruendung: z.begruendung.trim() } : {}),
   })

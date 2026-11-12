@@ -159,7 +159,7 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
         {kalk.summeGoae > 0 && <div><span>Honorar GOÄ</span><span>{euro(kalk.summeGoae)}</span></div>}
         <div><span>Material + Labor netto</span><span>{euro(kalk.summeMaterialNetto + kalk.summeLaborNetto)}</span></div>
         <div><span>zzgl. {einst.mwst} % MwSt. auf Material/Labor</span><span>{euro(kalk.mwst)}</span></div>
-        <div className="gesamt"><span>Voraussichtliche Gesamtkosten</span><span>{euro(kalk.gesamt)}</span></div>
+        <div className="gesamt"><span>Endsumme</span><span>{euro(kalk.gesamt)}</span></div>
       </section>
 
       {plan.zeVerweis && (

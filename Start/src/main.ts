@@ -1,6 +1,6 @@
 import './style.css'
 import './thema'
-import { ersetzbar, loeschbar, nummerMitReihe, planDateiLesen, planFiltern, tagVon, type PatientKennung, type PlanDatei, type PlanKarte } from './plaene'
+import { ausDswin, ersetzbar, faelleZusammen, hkpOffenKarten, loeschbar, nummerMitReihe, planDateiLesen, planFiltern, tagVon, type PatientKennung, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
 import { PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich } from './pvs'
@@ -12,8 +12,10 @@ import { logo } from './logo'
 import { aboText, fotoZuschneiden, kontoMenu, persoenlichKarte } from './konto'
 import { abmelden, anmeldePopup, anmeldePopupEntfernen, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
 import { planArbeit, planGespraechVergessen, planNameGesucht } from './arbeitClient'
+import { zuordnungOeffnen } from './zuordnungSeite'
 import { kastenSatz, OK, schemaVon, UK, type Kasten, type KastenGruppe } from './kasten'
-import { DAUER_MIN, dauerText, geschlecht, kalenderErlaubt, motivPasst, slotBadge, terminKurz, type TerminGrund, type TerminMotiv } from './termin'
+import { dauerStufen, dauerText, geschlecht, kalenderErlaubt, motivFuerPlan, motivPasst, slotBadge, terminKurz, uhrZeiger, type TerminGrund, type TerminMotiv } from './termin'
+import { trainingOeffnen } from './training'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const STATUS: Record<string, string> = {
@@ -35,8 +37,12 @@ const WOCHEN = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 let plaene: PlanKarte[] = []
 let name = ''
 let tag = ''
-/** Gesetzte Plan-Sicht, noch ohne Praxisprogramm: genehmigt, nicht-genehmigt, abgerechnet, nicht-abgerechnet */
+/** Genehmigt, nicht abgerechnet: Zuschussdatum gesetzt und Abrechnungsdatum leer, aus DS-Win. */
 let planSicht = ''
+let offenKarten: PlanKarte[] = []
+let offenFehler = ''
+let offenLaeuft = false
+let offenLauf = 0
 let auswahl = false
 /** Patient, für den die Planauswahl gerade einen neuen Plan anlegt – ohne Patienten gibt es keinen Plan */
 let neuFuer: Stammdaten | null = null
@@ -67,6 +73,7 @@ let planBlick: { url: string; titel: string; nummer: string; modul: string } | n
 let planPunkte: { id: string; text: string }[] = []
 let planAktiv = ''
 let planVersand = false
+let planSpeichern = false
 let claraLaeuft = false
 /** Nach einem gespeicherten Plan den offenen Planer neu laden, damit die Änderung sichtbar ist. */
 let planFrischen = false
@@ -82,7 +89,8 @@ function ausUrl() {
   const q = new URLSearchParams(location.search)
   name = q.get('name') || ''
   tag = q.get('tag') || ''
-  planSicht = ['genehmigt', 'nicht-genehmigt', 'abgerechnet', 'nicht-abgerechnet'].includes(q.get('sicht') || '') ? (q.get('sicht') || '') : ''
+  const sicht = q.get('sicht') || ''
+  planSicht = sicht === 'offen' || ['genehmigt', 'nicht-genehmigt', 'abgerechnet', 'nicht-abgerechnet'].includes(sicht) ? 'offen' : ''
   auswahl = q.get('neu') === '1' && !!neuFuer
   const warAuf = einstellungAuf
   einstellungAuf = q.get('einstellungen') === '1' && !auswahl
@@ -163,6 +171,7 @@ function planLeisteLeeren() {
   planPunkte = []
   planAktiv = ''
   planVersand = false
+  planSpeichern = false
 }
 
 function planSchliessen() {
@@ -193,15 +202,18 @@ function auswahlSchliessen() {
   }
 }
 
+/** Wechseln, wenn die Planer neu gebaut wurden, damit der Browser nicht die alte Seite behält. */
+const PLANER_STAND = '20261110g'
+
 function planUrl(p: PlanKarte): string | null {
   const planer = planerZuModul(p.modul)
   if (!planer) return null
   const basis = adresse(planer, location)
   if (!basis) return null
   const url = new URL(basis, location.href)
+  url.searchParams.set('v', PLANER_STAND)
   if (p.oeffnen) new URLSearchParams(p.oeffnen).forEach((v, k) => url.searchParams.set(k, v))
   else if (p.modul !== 'hkp' && p.nummer) url.searchParams.set('plan', p.nummer)
-  else return basis
   return url.toString()
 }
 
@@ -285,6 +297,7 @@ interface TerminBlick {
   minuten: number
   slotsLaden: boolean
   fehler: string
+  buchen: { tag: string; uhrzeit: string; laenge: string; motiv: string; arzt: string } | null
 }
 let terminBlick: TerminBlick | null = null
 let stammLauf = 0
@@ -322,10 +335,20 @@ function terminPopup(): string {
         : b.slots.length
           ? ''
           : '<p class="termin-hinweis">Keine freien Slots in den nächsten Wochen.</p>'
+  const zeiger = b.buchen ? uhrZeiger(b.buchen.uhrzeit) : null
+  const uhr = b.buchen ? `<div class="termin-buchen" role="status" aria-live="polite">
+      <div class="uhr"${zeiger ? ` style="--h:${zeiger.stunde}deg;--m:${zeiger.minute}deg"` : ''} aria-hidden="true">
+        <span class="uhr-stunde"></span><span class="uhr-minute"></span><span class="uhr-sekunde"></span><i class="uhr-nabe"></i>
+      </div>
+      <p class="uhr-zeit">${esc(b.buchen.uhrzeit)}</p>
+      <p class="uhr-meta">${esc([b.buchen.tag, b.buchen.laenge, b.buchen.motiv, b.buchen.arzt].filter(Boolean).join(' · '))}</p>
+      <p class="uhr-status">Wird eingetragen</p>
+    </div>` : ''
   return `<div class="termin-popup" role="dialog" aria-modal="true" aria-label="Termin">
     <button type="button" class="termin-hg" data-termin-zu aria-label="Schließen"></button>
-    <div class="termin-karte${b.kalender ? '' : ' gesperrt'}">
-      <header><h2>Termin</h2><button type="button" data-termin-zu aria-label="Schließen">×</button></header>
+    <div class="termin-karte${b.kalender ? '' : ' gesperrt'}${b.buchen ? ' bucht' : ''}">
+      <header><h2>${b.buchen ? 'Termin wird eingetragen' : 'Termin'}</h2><button type="button" data-termin-zu aria-label="Schließen"${b.buchen ? ' disabled' : ''}>×</button></header>
+      ${uhr}
       <div class="termin-stamm">
         ${feld('Name', b.name)}
         ${feld('Telefon', b.telefon)}
@@ -340,10 +363,10 @@ function terminPopup(): string {
         <select data-behandler>${b.behandler.map((k) => `<option value="${esc(k.id)}"${k.id === b.calendarId ? ' selected' : ''}>${esc(k.name)}</option>`).join('') || '<option value="">Kein Kalender</option>'}</select>
       </label>
       <div class="termin-dauer" role="group" aria-label="Slotlänge">
-        ${DAUER_MIN.map((n) => `<button type="button" data-dauer="${n}" class="${n === b.dauer ? 'an' : ''}">${esc(dauerText(n))}</button>`).join('')}
+        ${dauerStufen(b.motive, b.grund).map((n) => `<button type="button" data-dauer="${n}" class="${n === b.dauer ? 'an' : ''}">${esc(dauerText(n))}</button>`).join('')}
       </div>
       ${treffer.length > 1 ? `<label class="termin-behandler">Besuchsgrund<select data-motiv>${treffer.map((m) => `<option value="${esc(m.id)}"${m.id === motiv?.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>` : motiv ? `<p class="termin-motiv">${esc(motiv.name)}</p>` : ''}
-      <div class="termin-slots">${badges}</div>
+      ${b.buchen ? '' : `<div class="termin-slots">${badges}</div>`}
       ${hinweis}
       ${b.fehler ? `<p class="termin-fehler">${esc(b.fehler)}</p>` : ''}
       ${b.laden ? '<p class="termin-hinweis">Stammdaten werden gelesen …</p>' : ''}
@@ -352,10 +375,11 @@ function terminPopup(): string {
   </div>`
 }
 
-function zeile(p: PlanKarte, i: number): string {
+function zeile(p: PlanKarte, i: number, imFall = false): string {
   if (p.vorgang) return vorgangZeile(p, i)
   const url = planUrl(p)
   const name = esc(p.patient || 'Ohne Namen')
+  const dswin = ausDswin(p)
   const hkp = p.modul === 'hkp'
   const tonne = loeschbar(p)
     ? `<button type="button" class="aktion tonne" data-loeschen="${i}" title="${hkp ? 'HKP verwerfen' : 'Plan löschen'}" aria-label="${hkp ? 'HKP verwerfen' : 'Plan löschen'}: ${name}">${TONNE}</button>`
@@ -373,25 +397,28 @@ function zeile(p: PlanKarte, i: number): string {
   const import_ = ersetzbar(p)
     ? `<button type="button" class="aktion" data-import="${i}" title="Plan aus JSON-Datei ersetzen" aria-label="Importieren: ${name}">${IMPORT}</button>`
     : `<span class="aktion aus" title="Wartet nicht mehr auf Freigabe – nur in PlanR änderbar">${IMPORT}</span>`
-  return `<div class="zeile${url ? ' mit-link' : ''}" role="row">
+  const wann = dswin
+    ? new Date(p.geaendert).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : zeit(p.geaendert)
+  return `<div class="zeile${imFall ? ' im-fall' : ''}${url ? ' mit-link' : ''}" role="row">
     <span class="sp-art"><span class="kuerzel">${esc(p.kuerzel)}</span></span>
     ${url ? `<a class="sp-patient" href="${esc(url)}" data-nummer="${esc(p.nummer)}" data-modul="${esc(p.modul)}">${name}</a>` : `<span class="sp-patient">${name}</span>`}
     <span class="sp-nr">${esc(planSchein(p))}</span>
     <span class="sp-status">${esc(STATUS[p.status] || p.status)}</span>
     <span class="sp-betrag">${p.betrag ? esc(euro(p.betrag)) : ''}</span>
-    <span class="sp-zeit">${esc(zeit(p.geaendert))}</span>
-    <span class="sp-termin">${terminZelle(p)}</span>
-    <span class="sp-aktionen">${befundKnopf(p, i)}${versand}${export_}${import_}${tonne}</span>
+    <span class="sp-zeit">${esc(wann)}</span>
+    <span class="sp-termin">${dswin ? '' : terminZelle(p)}</span>
+    <span class="sp-aktionen">${dswin ? befundKnopf(p, i) : `${befundKnopf(p, i)}${versand}${export_}${import_}${tonne}`}</span>
   </div>`
 }
 
-let meldung: { text: string; zurueck?: PlanKarte } | null = null
+let meldung: { text: string; zurueck?: PlanKarte; erfolg?: boolean } | null = null
 let meldungTimer = 0
 
-function melden(text: string, zurueck?: PlanKarte) {
-  meldung = { text, zurueck }
+function melden(text: string, zurueck?: PlanKarte, erfolg = false) {
+  meldung = { text, zurueck, erfolg }
   clearTimeout(meldungTimer)
-  meldungTimer = window.setTimeout(() => { meldung = null; zeichnen() }, zurueck ? 10000 : 6000)
+  if (!erfolg) meldungTimer = window.setTimeout(() => { meldung = null; zeichnen() }, zurueck ? 10000 : 6000)
   zeichnen()
 }
 
@@ -445,7 +472,8 @@ async function insPvs(p: PlanKarte, ziel: string) {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(kennung(p)),
     })
     if (r.ok) await laden()
-    melden(r.meldung || (r.ok ? `${art} in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`))
+    const text = r.meldung || (r.ok ? `${art} in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`)
+    melden(text, undefined, r.ok)
   } finally {
     pvsLaeuft = false
   }
@@ -595,38 +623,62 @@ function kalender(): string {
 }
 
 const PLAN_SICHT = [
-  { id: 'genehmigt', text: 'Genehmigte Pläne' },
-  { id: 'nicht-genehmigt', text: 'Nicht genehmigte Pläne' },
-  { id: 'abgerechnet', text: 'Abgerechnete Pläne' },
-  { id: 'nicht-abgerechnet', text: 'Nicht abgerechnete Pläne' },
+  { id: 'offen', text: 'Genehmigt, nicht abgerechnet', kurz: 'Offen' },
 ] as const
 
 function planSichtLeiste(zahl: string): string {
-  const kurz: Record<string, string> = {
-    genehmigt: 'Genehmigt',
-    'nicht-genehmigt': 'Offen',
-    abgerechnet: 'Abgerechnet',
-    'nicht-abgerechnet': 'Nicht abger.',
+  const knopf = (id: string, text: string, kurz: string) =>
+    `<button type="button" class="chip${planSicht === id ? ' an' : ''}" data-sicht="${id}"><span class="chip-lang">${esc(text)}</span><span class="chip-kurz">${esc(kurz)}</span></button>`
+  return `<div class="listen-leiste plan-sicht" role="group" aria-label="Pläne" title="Zuschussdatum gesetzt, Abrechnungsdatum leer – aus DS-Win.">${PLAN_SICHT.map((e) => knopf(e.id, e.text, e.kurz)).join('')}<span class="listen-zahl">${zahl}</span></div>`
+}
+
+async function offenLaden() {
+  const lauf = ++offenLauf
+  offenLaeuft = true
+  offenFehler = ''
+  zeichnen()
+  try {
+    const r = await fetch('/api/pvs/hkps-offen', { cache: 'no-store' })
+    const d = await r.json() as { ok?: boolean; meldung?: string; plaene?: Parameters<typeof hkpOffenKarten>[0] }
+    if (lauf !== offenLauf) return
+    if (planSicht !== 'offen') { offenLaeuft = false; return }
+    if (!r.ok || !d.ok) {
+      offenKarten = []
+      offenFehler = d.meldung || 'DS-Win ist gerade nicht erreichbar.'
+    } else {
+      offenKarten = hkpOffenKarten(d.plaene ?? [])
+      offenFehler = ''
+    }
+  } catch {
+    if (lauf !== offenLauf) return
+    if (planSicht !== 'offen') { offenLaeuft = false; return }
+    offenKarten = []
+    offenFehler = 'DS-Win ist gerade nicht erreichbar.'
   }
-  const knopf = (id: string, text: string) =>
-    `<button type="button" class="chip${planSicht === id ? ' an' : ''}" data-sicht="${id}"><span class="chip-lang">${esc(text)}</span><span class="chip-kurz">${esc(kurz[id] || text)}</span></button>`
-  return `<div class="listen-leiste plan-sicht" role="group" aria-label="Pläne" title="Genehmigung und Abrechnung kommen aus dem Praxisprogramm.">${PLAN_SICHT.map((e) => knopf(e.id, e.text)).join('')}<span class="listen-zahl">${zahl}</span></div>`
+  if (lauf !== offenLauf) return
+  offenLaeuft = false
+  if (planSicht === 'offen') zeichnen()
 }
 
 function auswahlKarte(patient: Stammdaten): string {
   const wer = [patient.vorname, patient.name].filter(Boolean).join(' ')
-  const eintrag = (p: (typeof BEREICHE)[number]['planer'][number] | undefined) => {
+  const eintrag = (p: (typeof BEREICHE)[number]['planer'][number] | undefined, bald: boolean) => {
     if (!p) return '<span class="wahl-leer"></span>'
     const basis = adresse(p, location)
-    const url = basis && neuUrl(basis, patient)
-    const inhalt = `<span class="kuerzel">${esc(p.kuerzel)}</span><span><b>${esc(p.titel)}</b><small>${esc(p.zweck)}</small></span>`
-    return url ? `<a href="${esc(url)}">${inhalt}</a>` : `<div>${inhalt}</div>`
+    const url = !bald && basis && neuUrl(basis, patient)
+    const badge = bald ? '<i class="coming-soon">Coming soon</i>' : ''
+    const inhalt = `<span class="kuerzel">${esc(p.kuerzel)}</span><span><b>${esc(p.titel)}${badge}</b><small>${esc(p.zweck)}</small></span>`
+    return url ? `<a href="${esc(url)}">${inhalt}</a>` : `<div class="${bald ? 'wahl-bald' : ''}"${bald ? ' aria-disabled="true"' : ''}>${inhalt}</div>`
   }
   const bloecke = `
     <div class="wahl-spalten"><span>Kasse</span><span>Privat</span></div>
-    ${BEREICHE.map((b) => `
+    ${BEREICHE.map((b) => {
+      const kasse = b.planer.find((p) => p.art === 'Kasse')
+      const privat = b.planer.find((p) => p.art === 'Privat')
+      return `
       <p class="bereich-name">${esc(b.name)}</p>
-      <div class="wahl-liste">${eintrag(b.planer.find((p) => p.art === 'Kasse'))}${eintrag(b.planer.find((p) => p.art === 'Privat'))}</div>`).join('')}`
+      <div class="wahl-liste">${eintrag(kasse, !!b.bald || !!kasse?.bald)}${eintrag(privat, !!b.bald || !!privat?.bald)}</div>`
+    }).join('')}`
   return `
     <div class="wahl" role="dialog" aria-modal="true" aria-label="Welchen Plan erstellen">
       <button type="button" class="wahl-grund" data-wahl-zu aria-label="Auswahl schließen"></button>
@@ -1489,7 +1541,18 @@ function planChrome(): boolean {
     mail.title = versendet || 'Per E-Mail versenden'
     mail.innerHTML = versendet ? BRIEF_GESENDET : BRIEF
   }
+  document.querySelector('[data-speichern]')?.remove()
   return true
+}
+
+function listeHtml(karten: PlanKarte[]): string {
+  const index = new Map(karten.map((p, i) => [p, i]))
+  return faelleZusammen(karten).map((block) => {
+    if (!block.fall || block.karten.length < 2) return block.karten.map((p) => zeile(p, index.get(p) ?? 0)).join('')
+    const summe = block.karten.reduce((s, p) => s + (Number(p.betrag) || 0), 0)
+    const kopf = `<div class="zeile fall-kopf" role="row"><span>${esc(block.titel || 'Ein Fall')}</span><span>${block.karten.length} Entwürfe · ${summe.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span></div>`
+    return kopf + block.karten.map((p) => zeile(p, index.get(p) ?? 0, true)).join('')
+  }).join('')
 }
 
 function zeichnen() {
@@ -1508,8 +1571,9 @@ function zeichnen() {
   const alterRahmen = document.querySelector<HTMLIFrameElement>('.plan-rahmen')
   const rahmenBleibt = !frisch && alterRahmen && planBlick && alterRahmen.dataset.url === planBlick.url ? alterRahmen : null
   if (rahmenBleibt) document.body.append(rahmenBleibt)
-  const sichtbar = planFiltern(plaene, name, tag)
-  const gesamt = plaene.filter((p) => p.status !== 'verworfen').length
+  const quelle = planSicht === 'offen' ? offenKarten : plaene
+  const sichtbar = planFiltern(quelle, name, planSicht === 'offen' ? '' : tag)
+  const gesamt = planSicht === 'offen' ? offenKarten.length : plaene.filter((p) => p.status !== 'verworfen').length
   const planZahl = sichtbar.length === gesamt
     ? `${gesamt} ${gesamt === 1 ? 'Plan' : 'Pläne'}`
     : `${sichtbar.length} von ${gesamt}`
@@ -1531,6 +1595,8 @@ function zeichnen() {
         ${planBlick ? `<nav class="plan-punkte">${punkte}</nav>${planVersand ? `<button type="button" class="aktion versand plan-mail${versendet ? ' versendet' : ''}" data-versand title="${esc(versendet || 'Per E-Mail versenden')}" aria-label="Per E-Mail versenden">${versendet ? BRIEF_GESENDET : BRIEF}</button>` : ''}` : ''}
         <div class="kopf-aktionen">
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
+        ${ich.konto.admin ? `<button type="button" class="import-knopf" data-zuordnung title="GOZ-Ziffern je Behandlung prüfen">Zuordnung</button>` : ''}
+        <button type="button" class="import-knopf" data-training title="HKPs hochladen, eigene GOZ-Analogpositionen, Labor- und Materialpreise"><span>KI-Training</span></button>
         ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
         <button type="button" class="neu-knopf mit-symbol" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen: Befund ansehen, neuen Plan erstellen oder HKP übernehmen` : 'Patient suchen und neuen Plan erstellen'} – jeder Plan gehört zu einem Patienten">${LUPE}<span class="chip-lang">Patientensuche</span><span class="chip-kurz">Suche</span></button>
         </div>
@@ -1566,17 +1632,19 @@ function zeichnen() {
                 <span class="sp-nr">Nummer</span>
                 <span class="sp-status">Status</span>
                 <span class="sp-betrag">Betrag</span>
-                <span class="sp-zeit">Geändert</span>
+                <span class="sp-zeit">${planSicht === 'offen' ? 'Genehmigt' : 'Geändert'}</span>
                 <span class="sp-termin">Termin</span>
                 <span class="sp-aktionen"></span>
               </div>
-              ${sichtbar.map(zeile).join('')}
+              ${listeHtml(sichtbar)}
             </div>`
-          : '<p class="leer">Keine Pläne für diese Auswahl. Gespeicherte Pläne aus HKP, PAR, KB und den anderen Planern erscheinen hier.</p>'}`}
+          : `<p class="leer">${esc(planSicht === 'offen'
+            ? (offenFehler || (offenLaeuft ? 'DS-Win wird gelesen.' : offenKarten.length ? 'Keine Pläne für diese Auswahl.' : 'In DS-Win gibt es keinen genehmigten Plan ohne Abrechnungsdatum.'))
+            : 'Keine Pläne für diese Auswahl. Gespeicherte Pläne aus HKP, PAR, KB und den anderen Planern erscheinen hier.')}</p>`}`}
   </main>
       <div id="clara-slot"></div>
     </div>
-    ${meldung ? `<div class="meldung" role="status"><span>${esc(meldung.text)}</span>${meldung.zurueck ? '<button type="button" data-zurueck>Rückgängig</button>' : ''}</div>` : ''}
+    ${meldung?.erfolg ? `<div class="erfolg" role="status"><div class="erfolg-karte"><b>Plan übertragen</b><p>${esc(meldung.text)}</p><button type="button" data-erfolg-zu>Verstanden</button></div></div>` : meldung ? `<div class="meldung" role="status"><span>${esc(meldung.text)}</span>${meldung.zurueck ? '<button type="button" data-zurueck>Rückgängig</button>' : ''}</div>` : ''}
     ${planBlick ? '' : terminPopup()}
     ${auswahl && neuFuer ? auswahlKarte(neuFuer) : ''}
     ${einstellungAuf ? einstellungKarte() : ''}
@@ -1686,6 +1754,11 @@ function zeichnen() {
     if (ich.konto.admin) void verbundLaden().then(() => { if (einstellungAuf) zeichnen() })
   })
   app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => void einrichtungZeigen())
+  app.querySelector<HTMLButtonElement>('[data-zuordnung]')?.addEventListener('click', () => {
+    history.replaceState(null, '', `${location.pathname}${location.search}#zuordnung`)
+    void zuordnungOeffnen()
+  })
+  app.querySelector<HTMLButtonElement>('[data-training]')?.addEventListener('click', () => trainingOeffnen({ admin: !!ich.konto.admin }))
   app.querySelector<HTMLButtonElement>('[data-clara-dialog]')?.addEventListener('click', () => void claraZeigen())
   app.querySelector<HTMLButtonElement>('[data-rechnungen]')?.addEventListener('click', () => void rechnungenZeigen())
   app.querySelector<HTMLButtonElement>('[data-abmelden]')!.addEventListener('click', () => {
@@ -1733,6 +1806,10 @@ function zeichnen() {
     const p = meldung?.zurueck
     if (p) void zurueckholen(p)
   })
+  app.querySelector('[data-erfolg-zu]')?.addEventListener('click', () => { meldung = null; zeichnen() })
+  app.querySelector('.erfolg')?.addEventListener('click', (ev) => {
+    if (ev.target === ev.currentTarget) { meldung = null; zeichnen() }
+  })
   const feld = document.getElementById('name') as HTMLInputElement
   feld.addEventListener('input', () => {
     name = feld.value
@@ -1761,34 +1838,43 @@ function zeichnen() {
     const id = b.dataset.sicht || ''
     planSicht = planSicht === id ? '' : id
     urlSetzen('replace')
-    zeichnen()
+    if (planSicht === 'offen') void offenLaden()
+    else zeichnen()
   }))
   app.querySelectorAll<HTMLButtonElement>('[data-termin]').forEach((b) => b.addEventListener('click', (ev) => {
     ev.preventDefault()
     ev.stopPropagation()
     void terminOeffnen(b.dataset.termin || '', b.dataset.nummer || '')
   }))
-  app.querySelectorAll<HTMLButtonElement>('[data-termin-zu]').forEach((b) => b.addEventListener('click', () => { terminBlick = null; stammLauf += 1; slotLauf += 1; zeichnen() }))
+  app.querySelectorAll<HTMLButtonElement>('[data-termin-zu]').forEach((b) => b.addEventListener('click', () => {
+    if (terminBlick?.buchen) return
+    terminBlick = null
+    stammLauf += 1
+    slotLauf += 1
+    zeichnen()
+  }))
   app.querySelectorAll<HTMLButtonElement>('[data-grund]').forEach((b) => b.addEventListener('click', () => {
-    if (!terminBlick?.kalender || terminBlick.laden) return
+    if (!terminBlick?.kalender || terminBlick.laden || terminBlick.buchen) return
     terminBlick.grund = b.dataset.grund === 'start' ? 'start' : 'besprechung'
-    terminBlick.motivId = ''
+    const vorrang = motivFuerPlan(terminBlick.modul, terminBlick.motive, terminBlick.grund)
+    terminBlick.motivId = vorrang?.id ?? ''
+    terminBlick.dauer = vorrang?.dauer ?? terminBlick.dauer
     void terminSlots()
   }))
   app.querySelectorAll<HTMLButtonElement>('[data-dauer]').forEach((b) => b.addEventListener('click', () => {
-    if (!terminBlick?.kalender || terminBlick.laden) return
+    if (!terminBlick?.kalender || terminBlick.laden || terminBlick.buchen) return
     terminBlick.dauer = Number(b.dataset.dauer) || 30
     terminBlick.motivId = ''
     void terminSlots()
   }))
   app.querySelector<HTMLSelectElement>('[data-behandler]')?.addEventListener('change', (ev) => {
-    if (!terminBlick?.kalender || terminBlick.laden) return
+    if (!terminBlick?.kalender || terminBlick.laden || terminBlick.buchen) return
     terminBlick.calendarId = (ev.target as HTMLSelectElement).value
     terminBlick.motivId = ''
     void terminSlots()
   })
   app.querySelector<HTMLSelectElement>('[data-motiv]')?.addEventListener('change', (ev) => {
-    if (!terminBlick?.kalender || terminBlick.laden) return
+    if (!terminBlick?.kalender || terminBlick.laden || terminBlick.buchen) return
     terminBlick.motivId = (ev.target as HTMLSelectElement).value
     void terminSlots()
   })
@@ -1804,7 +1890,7 @@ async function terminOeffnen(modul: string, nummer: string) {
   terminBlick = {
     modul, nummer, name: p.patient || 'Ohne Namen', laden: true, kalender: kalenderErlaubt(ich.abo, ich.clara),
     telefon: '', email: '', vorname: '', nachname: '', anrede: '', behandler: [], motive: [],
-    grund: 'besprechung', dauer: 30, calendarId: '', motivId: '', slots: [], minuten: 30, slotsLaden: false, fehler: '',
+    grund: 'besprechung', dauer: 30, calendarId: '', motivId: '', slots: [], minuten: 30, slotsLaden: false, fehler: '', buchen: null,
   }
   zeichnen()
   try {
@@ -1825,9 +1911,15 @@ async function terminOeffnen(modul: string, nummer: string) {
     terminBlick.vorname = d.stamm.vorname || ''
     terminBlick.nachname = d.stamm.nachname || ''
     terminBlick.anrede = d.stamm.anrede || ''
+    terminBlick.fehler = d.meldung || ''
     terminBlick.behandler = d.behandler ?? []
     terminBlick.motive = d.motive ?? []
     terminBlick.calendarId = terminBlick.behandler[0]?.id ?? ''
+    const vorrang = motivFuerPlan(modul, terminBlick.motive, terminBlick.grund)
+    if (vorrang) {
+      terminBlick.motivId = vorrang.id
+      terminBlick.dauer = vorrang.dauer
+    }
     zeichnen()
     if (terminBlick.kalender) void terminSlots()
   } catch {
@@ -1841,10 +1933,10 @@ async function terminOeffnen(modul: string, nummer: string) {
 async function terminSlots() {
   const b = terminBlick
   if (!b?.kalender) return
+  const patientenHinweis = b.fehler
   const motiv = gewaehltesMotiv(b)
   b.motivId = motiv?.id ?? ''
   b.slots = []
-  b.fehler = ''
   if (!motiv) { b.slotsLaden = false; zeichnen(); return }
   b.slotsLaden = true
   b.minuten = motiv.dauer
@@ -1860,12 +1952,12 @@ async function terminSlots() {
     terminBlick.slotsLaden = false
     terminBlick.slots = d.ok && Array.isArray(d.slots) ? d.slots : []
     terminBlick.minuten = d.minuten || motiv.dauer
-    if (!d.ok) terminBlick.fehler = d.meldung || 'Die freien Termine lassen sich gerade nicht aus CalendR lesen.'
+    terminBlick.fehler = !d.ok ? (d.meldung || 'Die freien Termine lassen sich gerade nicht aus CalendR lesen.') : patientenHinweis
     zeichnen()
   } catch {
     if (lauf !== slotLauf || !terminBlick) return
     terminBlick.slotsLaden = false
-    terminBlick.fehler = 'Die freien Termine lassen sich gerade nicht aus CalendR lesen.'
+    terminBlick.fehler = patientenHinweis || 'Die freien Termine lassen sich gerade nicht aus CalendR lesen.'
     zeichnen()
   }
 }
@@ -1877,10 +1969,14 @@ async function terminBuchen(iso: string) {
   const badge = slotBadge(iso, b.minuten)
   const arzt = b.behandler.find((k) => k.id === b.calendarId)?.name ?? ''
   if (!motiv || !badge) return
-  if (!b.vorname || !b.nachname) { b.fehler = 'In den Stammdaten fehlen Vor- und Nachname.'; zeichnen(); return }
-  if (b.telefon.replace(/\D/g, '').length < 6) { b.fehler = 'In den Stammdaten fehlt die Telefonnummer.'; zeichnen(); return }
-  if (!geschlecht(b.anrede)) { b.fehler = 'In den Stammdaten fehlt die Anrede.'; zeichnen(); return }
-  if (!confirm(`Termin am ${badge.tag} um ${badge.uhrzeit} (${badge.laenge}) bei ${arzt} eintragen?`)) return
+  if (!b.vorname || !b.nachname || b.telefon.replace(/\D/g, '').length < 6 || !geschlecht(b.anrede)) {
+    if (!b.fehler) b.fehler = 'Die Patientendaten reichen für einen Termin nicht.'
+    zeichnen()
+    return
+  }
+  if (b.buchen) return
+  if (!confirm(`Termin am ${badge.tag} um ${badge.uhrzeit} (${badge.laenge}, ${motiv.name}) bei ${arzt} eintragen?`)) return
+  b.buchen = { tag: badge.tag, uhrzeit: badge.uhrzeit, laenge: badge.laenge, motiv: motiv.name, arzt }
   b.fehler = ''
   zeichnen()
   try {
@@ -1890,7 +1986,10 @@ async function terminBuchen(iso: string) {
     })
     const d = await r.json() as { ok?: boolean; meldung?: string }
     if (!r.ok || !d.ok) {
-      if (terminBlick) terminBlick.fehler = d.meldung || 'Der Termin ließ sich in CalendR nicht eintragen.'
+      if (terminBlick) {
+        terminBlick.buchen = null
+        terminBlick.fehler = d.meldung || 'Der Termin ließ sich in CalendR nicht eintragen.'
+      }
       zeichnen()
       return
     }
@@ -1898,7 +1997,10 @@ async function terminBuchen(iso: string) {
     melden('Termin eingetragen.')
     await laden()
   } catch {
-    if (terminBlick) terminBlick.fehler = 'Keine Verbindung.'
+    if (terminBlick) {
+      terminBlick.buchen = null
+      terminBlick.fehler = 'Keine Verbindung.'
+    }
     zeichnen()
   }
 }
@@ -1909,10 +2011,13 @@ window.addEventListener('popstate', () => {
   verlaufJetzt = Number.isFinite(n) ? n : 0
   ausUrl()
   planAusAdresse()
-  if (ich?.konto) zeichnen()
+  if (!ich?.konto) return
+  if (planSicht === 'offen') void offenLaden()
+  else zeichnen()
 })
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return
+  if (terminBlick?.buchen) return
   if (terminBlick) { terminBlick = null; stammLauf += 1; slotLauf += 1; zeichnen(); return }
   if (auswahl || einstellungAuf) auswahlSchliessen()
 })
@@ -1922,6 +2027,7 @@ async function laden() {
   plaene = Array.isArray(d.plaene) ? d.plaene : []
   planAusAdresse()
   zeichnen()
+  if (planSicht === 'offen' && !offenLaeuft) void offenLaden()
 }
 
 async function vorgangEnde(p: PlanKarte) {
@@ -1940,7 +2046,7 @@ function vorgaengeLive() {
     clearTimeout(uhr)
     uhr = window.setTimeout(() => { if (!document.hidden) void laden().catch(() => {}) }, 1200)
   })
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) void laden().catch(() => {}) })
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !terminBlick) void laden().catch(() => {}) })
 }
 
 async function katalogLaden() {
@@ -1996,6 +2102,7 @@ function ohneAnmeldung() {
   let ansicht = ''
   const zeigen = async () => {
     const soll = ['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis ? 'anmelden'
+      : location.hash === '#probe' ? '#probe'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' ? location.hash : 'start'
     if (soll === ansicht) return
     const vorher = ansicht
@@ -2008,6 +2115,12 @@ function ohneAnmeldung() {
         sitzungHinweisLoeschen()
         history.replaceState(null, '', location.pathname + location.search)
       })
+    } else if (soll === '#probe') {
+      anmeldePopupEntfernen()
+      hp.homepageVerlassen()
+      const { probeSeite } = await import('./probe')
+      probeSeite(app)
+      scrollTo(0, 0)
     } else if (soll.startsWith('#buchen')) {
       anmeldePopupEntfernen()
       hp.homepageVerlassen()
@@ -2049,10 +2162,12 @@ window.addEventListener('message', (ev) => {
       : []
     const aktiv = String(neu.aktiv || '')
     const versand = neu.versand === true
-    const gleich = planVersand === versand && planAktiv === aktiv && planPunkte.length === punkte.length && planPunkte.every((p, i) => p.id === punkte[i].id && p.text === punkte[i].text)
+    const speichern = (neu as { speichern?: boolean }).speichern === true
+    const gleich = planVersand === versand && planSpeichern === speichern && planAktiv === aktiv && planPunkte.length === punkte.length && planPunkte.every((p, i) => p.id === punkte[i].id && p.text === punkte[i].text)
     planPunkte = punkte
     planAktiv = aktiv
     planVersand = versand
+    planSpeichern = speichern
     if (!gleich && !planChrome()) zeichnen()
     return
   }
@@ -2096,7 +2211,8 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   }
   // Neue Praxis ohne Praxissystem: Assistent startet von selbst (einmal je Tab), #einrichtung öffnet ihn jederzeit
   const neu = ich.konto.admin && !einstellungen.pvs && !sessionStorage.getItem('planr-einrichtung')
-  if (location.hash === '#rechnungen' && ich.konto.admin && ich.abo === 'planr') void rechnungenZeigen()
+  if (location.hash === '#zuordnung' && ich.konto.admin) void zuordnungOeffnen()
+  else if (location.hash === '#rechnungen' && ich.konto.admin && ich.abo === 'planr') void rechnungenZeigen()
   else if (location.hash === '#einrichtung' || location.hash === '#bridge' || neu) {
     sessionStorage.setItem('planr-einrichtung', '1')
     void einrichtungZeigen(location.hash === '#bridge')

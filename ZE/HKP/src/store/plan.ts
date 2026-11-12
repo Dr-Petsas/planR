@@ -101,8 +101,15 @@ function listenMigrieren(e: HkpPlan['einstellungen']): HkpPlan['einstellungen'] 
   return neu
 }
 
+/** Öffentliche Probe auf der Startseite. Eigener, leerer Plan, nichts in die Praxis-Ablage. */
+export function probeAktiv() {
+  return typeof location !== 'undefined' && new URLSearchParams(location.search).get('probe') === '1'
+}
+
 export function usePlan() {
+  const probe = probeAktiv()
   const [plan, setPlan] = useState<HkpPlan>(() => {
+    if (probe) return leererPlan()
     try {
       const s = localStorage.getItem(PLAN_KEY)
       return s ? planNormalisieren(JSON.parse(s)) : leererPlan()
@@ -111,7 +118,8 @@ export function usePlan() {
     }
   })
   useEffect(() => {
+    if (probe) return
     localStorage.setItem(PLAN_KEY, JSON.stringify(plan))
-  }, [plan])
+  }, [plan, probe])
   return [plan, setPlan] as const
 }

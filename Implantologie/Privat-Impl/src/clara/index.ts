@@ -19,7 +19,7 @@ export const ENGINE_STAND = typeof __IMPL_ENGINE_STAND__ === 'string' ? __IMPL_E
 
 export interface Rueckfrage {
   status: 'rueckfrage'
-  grund: 'zaehne' | 'befund_konflikt' | 'zeitpunkt' | 'sinus'
+  grund: 'zaehne' | 'befund_konflikt' | 'zeitpunkt' | 'sinus' | 'material' | 'entnahme'
   frage: string
   /** bei befund_konflikt und zeitpunkt: der betroffene Zahn */
   zahn?: string
@@ -70,6 +70,8 @@ export interface ImplAuftrag {
   /** Gesetzt, wenn rechts und links verschieden genannt sind. Sonst gilt `regionen` für alle Seiten. */
   sinusJe: Partial<Record<'OK-R' | 'OK-L', RegionOptionen>> | null
   materialAngenommen: boolean
+  /** Eigenknochen: genannte Entnahmestelle (Zahn oder retromolar/Kinn/Tuber), sonst leer */
+  entnahme: string
   membranAngenommen: boolean
   /** Sinuslift ohne ausdrückliches „ohne Aufbau“: Kammaufbau 9100 anteilig mit ansetzen */
   kammZumSinus: boolean
@@ -139,15 +141,13 @@ export function implAuftragVerstehen(roh: string): ImplAuftrag {
   if (/knochenring/.test(k)) o.ringEntnahme = true
   if (/kollektor|safe ?scraper|knochenfilter|knochenschaber/.test(k)) o.kollektor = true
   if (/pins?\b|osteosynthese|fixier/.test(k) && (o.augmentation || o.blockEntnahme || o.ringEntnahme)) o.fixierung = true
-  if (/eigen(?:e[mnrs]?)? knochen|autolog/.test(k)) o.material = 'autolog'
+  if (/eigenknochen|eigen(?:e[mnrs]?)? knochen|autolog/.test(k)) o.material = 'autolog'
   else if (/allogen|spender|maxgraft/.test(k)) o.material = 'allogen'
   else if (/xenogen|bio-? ?oss|rind|bovin|cerabone/.test(k)) o.material = 'xenogen'
   else if (/synthetisch|alloplast|\btcp\b|hydroxyl/.test(k)) o.material = 'synthetisch'
   const jeExtern = !!sinusJe && Object.values(sinusJe).some((x) => x?.sinusExtern)
-  const jeIntern = !!sinusJe && Object.values(sinusJe).some((x) => x?.sinusIntern)
-  const aufbau = !!(o.augmentation || o.sinusIntern || o.sinusExtern || jeExtern || jeIntern || sinusOffen || o.boneSplitting)
-  const materialAngenommen = aufbau && !o.material && !o.blockEntnahme && !o.ringEntnahme
-  if (materialAngenommen && !sinusJe) o.material = 'xenogen'
+  // Nicht still xenogen annehmen: Clara fragt Knochenersatz oder Eigenknochen.
+  const materialAngenommen = false
   if (/ohne membran|keine membran/.test(k)) o.membran = 'keine'
   else if (/titan/.test(k)) o.membran = 'titan'
   else if (/nicht[\s-]?resorb|ptfe/.test(k)) o.membran = 'nicht-resorbierbar'
@@ -184,7 +184,18 @@ export function implAuftragVerstehen(roh: string): ImplAuftrag {
     zaehne: zaehneFinden(t), sofort: SOFORT.test(t), spaet: SPAET.test(t), regionen: o, sinusOffen, sinusJe,
     materialAngenommen, membranAngenommen, kammZumSinus, global: g, deckung, system,
     prothetik: /krone|br(?:ü|ue)cke|prothese|teleskop|\bsteg\b|suprakonstruktion/.test(k),
+    entnahme: entnahmeVon(k),
   }
+}
+
+/** „aus der Regio 15“, „regio 1,5“, retromolar, Kinn, Tuber – nicht die Implantatstelle selbst. */
+function entnahmeVon(k: string): string {
+  const regio = /regio\s*([1-4])\s*[,.]?\s*([1-8])/.exec(k)
+  if (regio) return regio[1] + regio[2]
+  const aus = /(?:aus|von)\s+(?:der |dem |die )?(?:regio |region |zahn )?([1-4]\s*[1-8])/.exec(k)
+  if (aus) return aus[1].replace(/\s/g, '')
+  const ort = /(retromolar\w*|kieferwinkel|\bkinn\b|tuber\w*)/.exec(k)
+  return ort?.[1] ?? ''
 }
 
 const liste = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} und ${xs.at(-1)}`)
@@ -247,6 +258,14 @@ export function implEntwurf(auftragText: string, befund: Record<string, string> 
   if (a.sinusOffen && sinusRegionen.length) {
     return { status: 'rueckfrage', grund: 'sinus', frage: 'Interner oder externer Sinuslift?' }
   }
+  const brauchtMaterial = !!(a.regionen.augmentation || a.regionen.sinusIntern || a.regionen.sinusExtern || a.regionen.boneSplitting
+    || (a.sinusJe && Object.values(a.sinusJe).some((x) => x?.sinusIntern || x?.sinusExtern || x?.augmentation)))
+  if (brauchtMaterial && !a.regionen.material && !a.regionen.blockEntnahme && !a.regionen.ringEntnahme) {
+    return { status: 'rueckfrage', grund: 'material', frage: 'Knochenersatzmaterial oder Eigenknochen?' }
+  }
+  if (a.regionen.material === 'autolog' && !a.entnahme && !a.regionen.blockEntnahme && !a.regionen.ringEntnahme) {
+    return { status: 'rueckfrage', grund: 'entnahme', frage: 'Aus welcher Region soll ich den Eigenknochen entnehmen?' }
+  }
 
   const einst: Einstellungen = {
     ...STANDARD_EINSTELLUNGEN, ...optionen.einstellungen,
@@ -256,11 +275,16 @@ export function implEntwurf(auftragText: string, befund: Record<string, string> 
   const system = a.system !== 'durchschnitt' ? a.system : implantatkoerper(optionen.implantatSystem ?? '').id
   const { sinusIntern, sinusExtern, ...rest } = a.regionen
   const planRegionen: Plan['regionen'] = {}
+  let entnahmeAn = false
   for (const r of regionen) {
     const ro: RegionOptionen = { ...rest }
     if (a.sinusJe && IST_OK_SEITE(r)) Object.assign(ro, a.sinusJe[r] ?? {})
     else if (IST_OK_SEITE(r)) Object.assign(ro, sinusIntern ? { sinusIntern } : {}, sinusExtern ? { sinusExtern } : {})
     if ((ro.sinusIntern || ro.sinusExtern) && a.kammZumSinus && !ro.boneSplitting) ro.augmentation = true
+    if (!entnahmeAn && a.entnahme && a.regionen.material === 'autolog' && (ro.sinusIntern || ro.sinusExtern || ro.augmentation || ro.boneSplitting)) {
+      ro.blockEntnahme = true
+      entnahmeAn = true
+    }
     if (a.sinusJe) {
       if ((ro.sinusIntern || ro.sinusExtern || ro.augmentation) && a.materialAngenommen && !ro.material) ro.material = 'xenogen'
       if ((ro.augmentation || ro.sinusExtern) && a.membranAngenommen && !ro.membran) ro.membran = 'resorbierbar'
@@ -303,6 +327,11 @@ export function implEntwurf(auftragText: string, befund: Record<string, string> 
   if (plan.global.bildgebung === 'dvt' && !a.global.bildgebung) hinweise.push('Ein DVT zur Planung ist enthalten.')
   if (plan.global.sedierung === 'itn') hinweise.push('Die Vollnarkose rechnet der Anästhesist gesondert ab.')
   if (a.prothetik) hinweise.push('Die Versorgung auf den Implantaten plant der Planer Zahnersatz privat.')
+  const nummern = new Set(rechnung.honorarGoz.map((z) => z.nr))
+  if (nummern.has('9140')) {
+    const ort = /^\d\d$/.test(a.entnahme) ? `Region ${a.entnahme}` : a.entnahme
+    hinweise.unshift(`Anästhesie und die Entnahme des Eigenknochens${ort ? ` aus ${ort}` : ''} nach GOZ 9140 sind im Plan.`)
+  }
 
   const { regler: _, ...ablagePlan } = plan
   return {

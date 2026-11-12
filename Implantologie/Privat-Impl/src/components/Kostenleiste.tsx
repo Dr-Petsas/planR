@@ -97,7 +97,7 @@ export function Kostenleiste({ plan, einst, kalk, onChange }: Props) {
         <dl className="kl-werte">
           <dt>Honorar</dt><dd>{euro(kalk.summeGoz + kalk.summeGoae)}</dd>
           <dt>Material + Labor</dt><dd>{euro(kalk.summeMaterialNetto + kalk.summeLaborNetto + kalk.mwst)}</dd>
-          <dt className="kl-summe">Gesamt</dt><dd className="kl-summe">{euro(kalk.gesamt)} <i>{delta(kalk.gesamt - basis.gesamt)}</i></dd>
+          <dt className="kl-summe">Endsumme</dt><dd className="kl-summe">{euro(kalk.gesamt)} <i>{delta(kalk.gesamt - basis.gesamt)}</i></dd>
         </dl>
         {geaendert && <button className="sekundaer klein-btn" onClick={zuruecksetzen}>Regler zurücksetzen</button>}
       </section>

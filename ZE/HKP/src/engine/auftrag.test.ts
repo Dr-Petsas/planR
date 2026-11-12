@@ -188,6 +188,17 @@ describe('Auftrag verstehen', () => {
     expect(a.versorgung).toBe('teleskopprothese')
   })
 
+  it('Interimsprothese und das Verhörer Interimspothese sind eine Interimsvollprothese (11.11.2026)', () => {
+    for (const satz of [
+      'Entfernung der Zähne 12, 11, 21 und 22 und eine Interimsprothese',
+      'Entfernung der Zähne 12, 11, 21 und 22 und eine Interimspothese',
+    ]) {
+      const a = auftragVerstehen(satz)
+      expect(a).toMatchObject({ versorgung: 'totalprothese', kiefer: 'OK', interim: true })
+      expect(a.entfernen).toEqual(['12', '11', '21', '22'])
+    }
+  })
+
   it('Interims-Vollprothese nur Unterkiefer plant den Oberkiefer nicht (Zaharia 06.11.2026)', () => {
     const befund: Befund = {
       11: 'e', 12: 'e', 13: 'e', 14: 'e', 15: 'e', 16: 'e', 17: 'f', 18: 'f',
@@ -305,6 +316,15 @@ describe('Plan aus Auftrag', () => {
     const trotzSatz = planAusAuftrag(auftragVerstehen('Totalprothese im Unterkiefer, 46 und 44 und 43 und 33 und 34 und 36 werden entfernt'), befund)
     expect(trotzSatz.status).toBe('ok')
     if (trotzSatz.status === 'ok') expect(trotzSatz.plan.zaehne['46']).toMatchObject({ B: 'i', TP: 'E' })
+  })
+
+  it('Zähne in erhalten werden auch als Lücke nicht ersetzt', () => {
+    const befund = { ...fehlend('13', '14', '15', '16', '24', '25', '26', '27'), 17: '', 12: '', 11: '', 21: '', 22: '', 23: '', 28: '' }
+    const r = planAusAuftrag(auftragVerstehen('Interimsprothese im Oberkiefer mit ersetzten Zähnen 13 bis 16, die Zähne 17, 12, 11, 21, 22, 23, 24, 25, 26, 27 und 28 bleiben'), befund)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(['13', '14', '15', '16'].map((z) => r.plan.zaehne[z].TP)).toEqual(['E', 'E', 'E', 'E'])
+    expect(['24', '25', '26', '27'].map((z) => r.plan.zaehne[z].TP)).toEqual(['', '', '', ''])
   })
 
   it('Frontzähne stehen noch: Rückfrage erhalten oder entfernen – danach geplant', () => {

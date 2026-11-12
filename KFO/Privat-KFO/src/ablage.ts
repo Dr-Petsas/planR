@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ZENTRALE_PRAXIS_KEY } from './stammdaten'
 import { arztUebernehmen } from './arzt'
 
@@ -216,7 +216,10 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
     nummer: e.nummer, patient: e.patient, betrag: e.betrag, status: e.status, geaendert: e.geaendert,
     behandler: behandlerVon(key, e.plan), plan: e.plan, ...(e.pvs ? { pvs: e.pvs } : {}),
   }))
-  fetch(hub, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modul: basis, plaene, entfernt: weg }) }).catch(() => {})
+  const body = JSON.stringify({ modul: basis, plaene, entfernt: weg })
+  const init: RequestInit = { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body }
+  if (body.length < 60_000) init.keepalive = true
+  fetch(hub, init).catch(() => {})
 }
 
 function lesen<P>(key: string): AblageEintrag<P>[] {
@@ -245,6 +248,8 @@ export function beimAblegenAbo(f: () => void): () => void {
 
 export function useAblage<P>(key: string): Ablage<P> {
   const [liste, setListe] = useState<AblageEintrag<P>[]>(() => lesen<P>(key))
+  const listeRef = useRef(liste)
+  listeRef.current = liste
   const [anfrage, setAnfrage] = useState<{ nummer: string; bereit: boolean } | null>(
     () => (angefragt && HUB_MODUL[modulVon(key)] ? { nummer: angefragt, bereit: false } : null))
   useEffect(() => {
@@ -270,18 +275,21 @@ export function useAblage<P>(key: string): Ablage<P> {
 
   const ablegen = useCallback((d: AblageDaten<P>, status?: AblageStatus) => {
     beimAblegen.forEach((f) => f())
-    setListe((alt) => {
-      const vorher = alt.find((e) => e.nummer === d.nummer)
-      const neuStatus = status ?? vorher?.status ?? 'entwurf'
-      const eintrag: AblageEintrag<P> = {
-        ...d,
-        geaendert: new Date().toISOString(),
-        status: neuStatus,
-        freigegebenAm: neuStatus === 'freigegeben' ? (status ? new Date().toISOString() : vorher?.freigegebenAm) : undefined,
-      }
-      return [eintrag, ...alt.filter((e) => e.nummer !== d.nummer)].slice(0, HOECHSTENS)
-    })
-  }, [])
+    const alt = listeRef.current
+    const vorher = alt.find((e) => e.nummer === d.nummer)
+    const neuStatus = status ?? vorher?.status ?? 'entwurf'
+    const eintrag: AblageEintrag<P> = {
+      ...d,
+      geaendert: new Date().toISOString(),
+      status: neuStatus,
+      freigegebenAm: neuStatus === 'freigegeben' ? (status ? new Date().toISOString() : vorher?.freigegebenAm) : undefined,
+    }
+    const neu = [eintrag, ...alt.filter((e) => e.nummer !== d.nummer)].slice(0, HOECHSTENS)
+    listeRef.current = neu
+    try { localStorage.setItem(key, JSON.stringify(neu)) } catch { /* Der Browser lässt gerade nichts mehr ablegen. */ }
+    hubMelden(key, neu)
+    setListe(neu)
+  }, [key])
 
   const eintrag = useCallback((nummer: string) => liste.find((e) => e.nummer === nummer), [liste])
   const speichern = useCallback((d: AblageDaten<P>) => ablegen(d), [ablegen])

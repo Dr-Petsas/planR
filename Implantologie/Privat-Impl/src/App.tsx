@@ -60,9 +60,12 @@ export default function App() {
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
 
   const ablage = useImplAblage()
-  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan, pvs: pvsPlaene(plan, kalk) }
+  const fassung = pvsPlaene(plan, kalk)
+  const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan, pvs: fassung }
   const eintrag = ablage.eintrag(plan.nummer)
-  const offen = ungespeichert(plan, eintrag)
+  // Clara legt den Entwurf ohne die Fassung fürs Praxisprogramm ab. Ohne die bleibt „Speichern“ aus und der Plan geht nicht nach DS-Win.
+  const ohneFassung = hatInhalt(plan) && fassung.length > 0 && !(eintrag?.pvs && eintrag.pvs.length)
+  const offen = ungespeichert(plan, eintrag) || ohneFassung
   const gesperrt = eintrag?.status === 'freigegeben'
   const planRef = useRef(plan)
   const sperreRef = useRef(gesperrt)
@@ -71,7 +74,7 @@ export default function App() {
     () => ({ plan: planRef.current, gesperrt: sperreRef.current }),
     (neu) => setPlan(neu),
   ), [setPlan])
-  const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
+  const sichern = () => { if (!gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   useBefundMitPlan(!gesperrt)
   const neu = (patient?: Partial<Patient> | null) => {
     sichern()
@@ -118,12 +121,12 @@ export default function App() {
               <div className="sub">Kostenvoranschlag Implantologie · GOZ, GOÄ &amp; Analog</div>
             </div>
           </div>
+          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen}
+            extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: kalk.gesamt, thema: 'Implantologie' }} vorher={sichern} />} />
           <div className="kopf-summe">
             <span>{plan.nummer}</span>
             <b>{euro(kalk.gesamt)}</b>
           </div>
-          <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen}
-            extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: kalk.gesamt, thema: 'Implantologie' }} vorher={sichern} />} />
         </header>
         <ReglerKlappe>
           <fieldset className="sperre" disabled={gesperrt}>

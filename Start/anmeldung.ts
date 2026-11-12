@@ -123,6 +123,26 @@ export async function erneuern(refreshToken: string, schluessel = googleSchluess
   return { ok: true, wert: { konto, erneuern: String(r.daten.refresh_token ?? refreshToken) } }
 }
 
+const tokenCache = new Map<string, { token: string; bis: number }>()
+
+/** Firebase-ID-Token zur Sitzung, kurz im Speicher. Damit liest PlanR den Kalender des angemeldeten Kontos. */
+export async function idTokenHolen(refresh: string): Promise<string | null> {
+  if (!refresh) return null
+  const key = createHash('sha256').update(refresh).digest('hex')
+  const alt = tokenCache.get(key)
+  if (alt && alt.bis > Date.now() + 60_000) return alt.token
+  const r = await firebase('https://securetoken.googleapis.com/v1/token', { grant_type: 'refresh_token', refresh_token: refresh }, true).catch(() => null)
+  const token = String(r?.daten.id_token ?? '')
+  if (!r?.ok || token.split('.').length !== 3) return null
+  const sek = Number(r.daten.expires_in ?? 3600)
+  tokenCache.set(key, { token, bis: Date.now() + Math.min(Number.isFinite(sek) ? sek : 3600, 3600) * 1000 })
+  if (tokenCache.size > 50) {
+    const erstes = tokenCache.keys().next().value
+    if (erstes) tokenCache.delete(erstes)
+  }
+  return token
+}
+
 /** Pickadoc schickt die übliche Mail zum Zurücksetzen. Antwortet immer gleich, damit niemand Adressen abfragen kann. */
 export async function passwortVergessen(email: string): Promise<void> {
   await firebase('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode', { requestType: 'PASSWORD_RESET', email }).catch(() => undefined)

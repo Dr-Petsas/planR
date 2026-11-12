@@ -3,13 +3,13 @@
 // Kein MAS-Prozess, keine geratenen Zeiten.
 
 import { FIREBASE } from './anmeldung.ts'
-import { grundVon, type TerminGrund, type TerminMotiv } from './src/termin.ts'
+import { grundVon, patientGleich, type TerminFund, type TerminGrund, type TerminMotiv } from './src/termin.ts'
 
 const CF = 'https://europe-west3-docgenda.cloudfunctions.net'
 const BASIS = `https://firestore.googleapis.com/v1/projects/${FIREBASE.projekt}/databases/(default)/documents`
 const ID = /^[A-Za-z0-9_-]{1,128}$/
 
-export interface BehandlerKalender { id: string; name: string; locationId: string }
+export interface BehandlerKalender { id: string; name: string; locationId: string; userId: string }
 
 interface Dok { name?: string; fields?: Record<string, Feld> }
 interface Feld {
@@ -18,6 +18,8 @@ interface Feld {
   doubleValue?: number
   booleanValue?: boolean
   arrayValue?: { values?: Feld[] }
+  mapValue?: { fields?: Record<string, Feld> }
+  timestampValue?: string
 }
 
 const s = (d: Dok, k: string) => String(d.fields?.[k]?.stringValue ?? '').trim()
@@ -53,7 +55,7 @@ export interface KalenderStand { behandler: BehandlerKalender[]; motive: TerminM
 
 const cache = new Map<string, { bis: number; wert: KalenderStand }>()
 
-/** Behandler sind die Kalender. Besuchsgründe nur Besprechung und Behandlungsstart, ab 30 Minuten. */
+/** Behandler sind die Kalender. Besuchsgründe nur Besprechung und Behandlungsstart, ab 15 Minuten. */
 export async function kalenderStand(clientId: string): Promise<KalenderStand> {
   if (!ID.test(clientId)) return { behandler: [], motive: [] }
   const alt = cache.get(clientId)
@@ -72,14 +74,14 @@ export async function kalenderStand(clientId: string): Promise<KalenderStand> {
       const id = idVon(k)
       const name = s(k, 'name')
       if (!id || !name || ja(k, 'isDeleted') || ja(k, 'internal')) continue
-      behandler.push({ id, name: name.slice(0, 80), locationId })
+      behandler.push({ id, name: name.slice(0, 80), locationId, userId: s(k, 'userId') })
     }
     for (const g of gruende) {
       const id = idVon(g)
       const name = s(g, 'name')
       const grund = grundVon(name) as TerminGrund | ''
       const dauer = Math.round(zahl(g, 'duration'))
-      if (!id || !name || !grund || dauer < 30) continue
+      if (!id || !name || !grund || dauer < 15) continue
       motive.push({ id, name: name.slice(0, 80), dauer, locationId, calendarIds: liste(g, 'calendarIds'), grund })
     }
   }
@@ -138,4 +140,82 @@ export async function terminEintragen(body: {
   const appointmentId = String(daten?.appointmentId ?? '')
   if (!r.ok || daten?.status !== 'success' || !ID.test(appointmentId)) return { ok: false }
   return { ok: true, appointmentId }
+}
+
+const mapFelder = (f: Feld | undefined) => f?.mapValue?.fields ?? {}
+
+/** Ein CalendR-Termin, soweit PlanR ihn zum Abgleich braucht. Keine Telefonnummer. */
+export function terminDokument(doc: Dok, locationId: string): (TerminFund & { vorname: string; nachname: string; kalender: string }) | null {
+  const appointmentId = idVon(doc)
+  const start = String(doc.fields?.start?.timestampValue ?? '')
+  if (!appointmentId || !doc.fields || !start) return null
+  const patient = mapFelder(doc.fields.patient)
+  const kalender = mapFelder(doc.fields.calendar)
+  return {
+    appointmentId, locationId, iso: start,
+    geloescht: doc.fields.isDeleted?.booleanValue === true,
+    vorname: String(patient.firstName?.stringValue ?? ''),
+    nachname: String(patient.lastName?.stringValue ?? ''),
+    kalender: String(kalender.name?.stringValue ?? ''),
+  }
+}
+
+async function firestore(token: string, pfad: string, body?: unknown): Promise<Response> {
+  return fetch(`${BASIS}/${pfad}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(8000),
+  })
+}
+
+/** Ob der eingetragene Termin in CalendR noch steht. „unbekannt“ lässt den Vermerk in Ruhe. */
+export async function terminNachsehen(
+  token: string,
+  clientId: string,
+  v: { iso: string; appointmentId?: string; locationId?: string; behandler: string },
+  patient: string,
+  orte: string[],
+): Promise<TerminFund | 'weg' | 'unbekannt'> {
+  if (!ID.test(clientId) || !token) return 'unbekannt'
+  if (v.appointmentId && ID.test(v.appointmentId) && v.locationId && ID.test(v.locationId)) {
+    try {
+      const r = await firestore(token, `clients/${clientId}/locations/${v.locationId}/appointments/${v.appointmentId}`)
+      if (r.status === 404) return 'weg'
+      if (!r.ok) return 'unbekannt'
+      const doc = await r.json() as Dok
+      const fund = terminDokument(doc, v.locationId)
+      if (!fund || fund.geloescht) return 'weg'
+      return fund
+    } catch {
+      return 'unbekannt'
+    }
+  }
+  const start = new Date(v.iso)
+  if (Number.isNaN(start.getTime())) return 'unbekannt'
+  const ziele = [...new Set(v.locationId && ID.test(v.locationId) ? [v.locationId] : orte.filter((id) => ID.test(id)))].slice(0, 4)
+  if (!ziele.length) return 'unbekannt'
+  let gelesen = false
+  const treffer: ReturnType<typeof terminDokument>[] = []
+  for (const locationId of ziele) {
+    try {
+      const r = await firestore(token, `clients/${clientId}/locations/${locationId}:runQuery`, {
+        structuredQuery: {
+          from: [{ collectionId: 'appointments' }],
+          where: { fieldFilter: { field: { fieldPath: 'start' }, op: 'EQUAL', value: { timestampValue: start.toISOString() } } },
+          limit: 20,
+        },
+      })
+      if (!r.ok) continue
+      gelesen = true
+      const zeilen = await r.json() as { document?: Dok }[]
+      for (const zeile of zeilen) {
+        if (zeile.document) treffer.push(terminDokument({ ...zeile.document, fields: zeile.document.fields }, locationId))
+      }
+    } catch { /* nächster Standort */ }
+  }
+  if (!gelesen) return 'unbekannt'
+  const lebend = treffer.filter((t): t is NonNullable<typeof t> => !!t && !t.geloescht && patientGleich(patient, t.vorname, t.nachname))
+  const gleich = lebend.find((t) => !v.behandler || t.kalender.localeCompare(v.behandler, 'de', { sensitivity: 'accent' }) === 0)
+  return gleich ?? 'weg'
 }
