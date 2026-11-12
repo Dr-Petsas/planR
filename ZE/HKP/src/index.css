@@ -1026,10 +1026,8 @@ html.planr-eingebettet .summenkopf { top: 0; }
   main { padding: 8px 4px 40px; }
   .hinweise { margin: 8px 8px 0; }
   .register-leiste { margin: 0 8px 8px; }
-  .formular { padding: 12px 10px; overflow-x: auto; }
-  .hkp-arbeitsbereich { padding: 8px 10px 12px; overflow-x: auto; }
-  .pos-labore, .zwei, .drei, .zwei-spalten, .formular-kopf, .unterschriften { grid-template-columns: 1fr; }
-  .span2 { grid-column: auto; }
+  .formular { overflow-x: auto; }
+  .hkp-arbeitsbereich { overflow-x: auto; }
   .kl-block input[type=range] { min-height: 34px; }
   button, select { min-height: 36px; }
   .hkp-blatt button, .hkp-blatt select { min-height: 0; }
@@ -1037,16 +1035,18 @@ html.planr-eingebettet .summenkopf { top: 0; }
 
 /* ---------- Dunkel (Probe auf der Startseite): Flächen in den Farben der Seite ----------
    Die hellen Flächen werden umgekehrt und über den dunklen Seitengrund geblendet:
-   Weiß nimmt die Farbe der Seite an, Schrift und Linien werden hell. Der Druck bleibt hell. */
+   Weiß nimmt die Farbe der Seite an, Schrift und Linien werden hell. Der Druck bleibt hell.
+   Die Formulare (HKP-Blatt, Positionen, Teil 2, Anlagen) bleiben unverändert. */
 @media screen {
   html.planr-dunkel, html.planr-dunkel body { background: #071a1f; color: #e9f3f2; }
   html.planr-dunkel .kostenleiste { background: #071a1f; border-color: rgba(255, 255, 255, .09); }
-  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-blatt, .hkp-arbeitsbereich, .formular, .abschnitt.bildschirm, .befund-leiste) {
+  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .abschnitt.bildschirm, .befund-leiste):not(:is(.formular, .hkp-arbeitsbereich, .hkp-blatt) *) {
     filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen;
     box-shadow: none; border-color: rgba(0, 0, 0, .14);
   }
-  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-arbeitsbereich, .formular) { background: #e2f0f4; border: 1px solid rgba(0, 0, 0, .12); }
-  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-arbeitsbereich, .formular, .abschnitt.bildschirm, .befund-leiste) { color: #1f2328; }
+  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste):not(:is(.formular, .hkp-arbeitsbereich, .hkp-blatt) *) { background: #e2f0f4; border: 1px solid rgba(0, 0, 0, .12); }
+  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-arbeitsbereich, .formular, .abschnitt.bildschirm, .befund-leiste):not(:is(.formular, .hkp-arbeitsbereich, .hkp-blatt) *) { color: #1f2328; }
+  html.planr-dunkel :is(.formular, .hkp-arbeitsbereich) { color: #1f2328; }
   html.planr-dunkel .kl-berechnen { background: #e0407b; color: #fff; }
   html.planr-dunkel .kl-berechnen:disabled { background: #11313a; color: #9db3b4; }
   html.planr-dunkel .kopfleiste { background: #0d262c; border-bottom-color: #e0407b; }
@@ -1054,8 +1054,7 @@ html.planr-eingebettet .summenkopf { top: 0; }
   html.planr-dunkel .kopfleiste h1 span { color: #9db3b4; }
   html.planr-dunkel .kopfleiste nav button { background: transparent; color: #c9dcdc; }
   html.planr-dunkel .kopfleiste nav button.aktiv { color: #ff7aa8; border-bottom-color: #ff7aa8; }
-  html.planr-dunkel .hkp-blatt { --hb-flaeche: #e2f0f4; border: 1px solid rgba(0, 0, 0, .12); }
-  html.planr-dunkel .formular :is(.kl-block, .hinweise, .abschnitt.bildschirm), html.planr-dunkel .hkp-arbeitsbereich :is(.abschnitt.bildschirm, .hinweise) { filter: none; mix-blend-mode: normal; }
+  /* Formulare behalten Farbe und Maße, nur der Grund dahinter ist dunkel. */
   html.planr-dunkel .summenkopf {
     background: rgba(13, 38, 44, .92); backdrop-filter: blur(10px); color: #e9f3f2;
     border-bottom: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
