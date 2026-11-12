@@ -22,11 +22,21 @@ export interface ProbeGebuehr {
   zahn?: string
   anzahl?: number
   faktor?: number
+  /** GOZ: Betrag der Zeile. BEL/BEB: Einzelpreis. */
   betrag?: number
+  text?: string
 }
 
+/** Summen vom Blatt: Teil 2 und Eigenlaborbeleg */
 export interface ProbeSummen {
+  honorarGoz?: number
+  honorarBema?: number
+  labor?: number
+  gesamt?: number
   festzuschuss?: number
+  eigenanteil?: number
+  festzuschussVoll?: number
+  laborBeleg?: number
 }
 
 const BEMA_AM_ZAHN = new Set(['20a', '20b', '20c', '91a', '91b', '91d', '90'])

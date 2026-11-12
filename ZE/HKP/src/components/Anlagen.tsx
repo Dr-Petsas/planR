@@ -139,7 +139,7 @@ export function Eigenlaborbeleg({ plan, ergebnis, listen }: Props & { listen: Li
                 {s.eigenBeb !== 0 && <tr><td /><td>BEB (privat)</td><td className="r">{euro(s.eigenBeb)}</td></tr>}
                 {s.eigenMat !== 0 && <tr><td /><td>Legierungen und Rohlinge</td><td className="r">{euro(s.eigenMat)}</td></tr>}
                 <tr><td /><td>Summe netto</td><td className="r">{euro(s.eigenNetto)}</td></tr>
-                <tr><td /><td>MwSt. {zahlDe(e.mwstLabor)} %</td><td className="r">{euro(s.eigenMwst)}</td></tr>
+                {e.mwstLabor !== 0 && <tr><td /><td>MwSt. {zahlDe(e.mwstLabor)} %</td><td className="r">{euro(s.eigenMwst)}</td></tr>}
                 <tr className="summe"><td /><td>Material- und Laborkosten Praxislabor</td><td className="r">{euro(s.eigenNetto + s.eigenMwst)}</td></tr>
               </tbody>
             </table>

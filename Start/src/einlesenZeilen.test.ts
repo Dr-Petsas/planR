@@ -80,11 +80,12 @@ describe('Zeilen aus dem Einlese-Dienst', () => {
       t(100, 500, 'Summe der Positionen mit 7,00% MwSt'), t(1080, 500, 'EUR'), t(1240, 500, '256,00'), t(1400, 500, '17,92'), t(1500, 500, '273,92'),
       t(100, 560, 'Laborkosten gesamt'), t(1080, 560, 'EUR'), t(1500, 560, '354,29'),
     ]))
-    expect(blatt.positionen).toEqual([
+    expect(blatt.positionen.map(({ text: _t, ...p }) => p)).toEqual([
       { ebene: 'BEL', nr: '0010', zahn: '', anzahl: 1, betrag: 7.29 },
       { ebene: 'BEB', nr: '02281', zahn: '', anzahl: 2, betrag: 129 },
       { ebene: 'BEB', nr: 'SCAN', zahn: '', anzahl: 1, betrag: 89 },
     ])
+    expect(blatt.positionen[0].text).toBe('Modell')
     expect(blatt.summen).toEqual({ laborBeleg: 354.29 })
   })
 

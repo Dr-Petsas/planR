@@ -92,7 +92,7 @@ export function betragVon(wort: string): number | undefined {
   return Number(`${ganz}.${cent.padEnd(2, '0')}`)
 }
 
-export interface BlattPosition { ebene: 'GOZ' | 'BEL' | 'BEB'; nr: string; zahn: string; anzahl: number; betrag?: number }
+export interface BlattPosition { ebene: 'GOZ' | 'BEL' | 'BEB'; nr: string; zahn: string; anzahl: number; betrag?: number; text?: string }
 
 export interface BlattSummen {
   honorarGoz?: number
@@ -155,7 +155,8 @@ function laborZeilen(zeilen: PdfZeile[]): BlattPosition[] {
     if (Math.abs(preis * menge - summe) > 0.02) continue
     const kurz = roh.split('-').join('')
     const bel = roh.includes('-') && kurz.length === 4 && nurZiffern(kurz)
-    aus.push({ ebene: bel ? 'BEL' : 'BEB', nr: bel ? kurz : roh, zahn: '', anzahl: menge, betrag: preis })
+    const text = hinten.slice(0, -3).filter((w) => betragVon(w) === undefined).join(' ')
+    aus.push({ ebene: bel ? 'BEL' : 'BEB', nr: bel ? kurz : roh, zahn: '', anzahl: menge, betrag: preis, ...(text ? { text } : {}) })
   }
   return aus
 }
