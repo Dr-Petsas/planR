@@ -959,3 +959,36 @@ button.bf-zelle.b { cursor: pointer; }
 .bf-frage { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--rot-linie); border-radius: 10px; background: #fff; }
 .bf-frage p { margin: 0; font-size: 14px; }.b01-vorgang { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 .b01-vorgang > b:first-child { color: #9a5b12; }
+
+/* Flächen im iPad-Stil: abgerundete Karten mit weichem Schatten statt harter Rahmen.
+   Nur am Bildschirm; die gedruckten Formulare bleiben wie sie sind. */
+@media screen {
+  :root { --karte-radius: 18px; --karte-schatten: 0 1px 2px rgba(20, 20, 40, .05), 0 8px 24px rgba(20, 20, 40, .09); --knopf-radius: 11px; }
+  body { background: #f2f2f7; }
+  .kl-block, .hinweise, .hkp-arbeitsbereich, .ebene, .pl-detail, .preislisten aside, .eigenlabor-katalog, .es-block,
+  .regel-leiste, .mandant-karte, .pw-karte, .befund-leiste, .titel-block, .dialog, .es-ergebnis, .es-liste {
+    border-radius: var(--karte-radius); border-color: transparent; box-shadow: var(--karte-schatten);
+  }
+  .kl-block { border: 0; padding: 12px 14px 14px; position: relative; overflow: hidden; }
+  .kl-block::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--grau); }
+  .kl-zahnarzt::before { background: #8a2be2; }
+  .kl-eigen::before { background: #2f855a; }
+  .kl-fremd::before { background: var(--blau); }
+  .kl-summenblock::before { background: var(--rot); }
+  .kostenleiste .kl-summenblock { box-shadow: var(--karte-schatten); }
+  .kostenleiste { gap: 14px; }
+  .eigenlabor-katalog { border-left: 0; }
+  .es-block { border: 0; }
+  .regel-leiste { background: #eaf2fd; border: 0; }
+  .hkp-blatt { border-radius: 14px; box-shadow: 0 2px 4px rgba(20, 20, 40, .06), 0 14px 36px rgba(20, 20, 40, .14); }
+  .hinweis { border-radius: 10px; }
+  .dialog { padding: 22px 26px; box-shadow: 0 20px 60px rgba(0, 0, 0, .28); }
+  button:where(:not(.hkp-blatt *)) { border-radius: var(--knopf-radius); }
+  .kopfleiste nav button { border-radius: 0; }
+  .kopfleiste nav button.drucken, .kl-berechnen, .regel-planen, button.es-freigeben { border-radius: 14px; }
+  input, select, textarea { border-radius: 9px; }
+  .hkp-blatt input, .hkp-blatt select, .hkp-blatt textarea { border-radius: 0; }
+  .kl-laborwahl button, .zusatz-wieder { border-radius: 999px; }
+  .regler input[type=range] { height: 22px; }
+  .pl-tabelle-scroll, .el-scroll, .pos-treffer { border-radius: 12px; }
+}
