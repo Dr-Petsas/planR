@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import type { Einstellungen, HkpPlan } from '../types'
-import { BEB_AUFSCHLAG_MAX, GOZ_HOECHSTSATZ, GOZ_SCHWELLENWERT, berechnen, type Ergebnis, type Listen } from '../engine/berechnung'
+import { BEB_AUFSCHLAG_MAX, GOZ_HOECHSTSATZ, GOZ_SCHWELLENWERT, berechnen, laborVon, type Ergebnis, type Listen } from '../engine/berechnung'
 import { XML_VERSION, auftragsnummerErzeugen, laborXmlErstellen, laborXmlLesen, laborXmlUebernehmen } from '../engine/laborxml'
 import { ZUSATZ_STUFEN } from '../engine/zusatzleistungen'
 import { PRIVAT_STUFEN, PRIVAT_STUFE_MAX, privatKandidaten, privatProthesen, privatStufeAnwenden, privatStufeAufBlatt } from '../engine/aufwertung'
@@ -42,7 +42,7 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
   const prothesen = useMemo(() => privatProthesen(plan), [plan])
   const blatt = hatBlatt(plan)
   const blattZaehne = blatt ? Object.entries(plan.zaehne).filter(([, z]) => z.TP.trim()).map(([z]) => z).sort() : []
-  const blattEigen = plan.positionen.some((x) => (x.ebene === 'BEL' || x.ebene === 'BEB') && x.labor === 'eigen')
+  const blattEigen = plan.positionen.some((x) => (x.ebene === 'BEL' || x.ebene === 'BEB') && laborVon(x, plan) === 'eigen')
   const aufwertbar = blatt ? (blattZaehne.length && blattEigen ? [`Zahn ${blattZaehne.join(', ')}`] : []) : [
     ...(kandidaten.length ? [`Zahn ${kandidaten.join(', ')}`] : []),
     ...(['OK', 'UK'] as const).filter((k) => prothesen[k].length).map((k) => `Prothese ${k}`),
