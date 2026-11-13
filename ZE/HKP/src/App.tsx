@@ -115,6 +115,8 @@ export default function App() {
     const e = berechnen(plan, listen)
     return original && imOriginal ? originalErgebnis(e, original) : e
   }, [plan, listen, original, imOriginal])
+  // Probe: Summen des hochgeladenen Plans, bleiben als Vergleich oben stehen.
+  const blattSummen = useMemo(() => (original ? originalErgebnis(berechnen(original.plan, listen), original).summen : null), [original, listen])
   const register = useRegisterAbgleich(plan, ergebnis, setPlan)
   const linkAbgleich = useLinkAbgleich(plan, linkEintrag, setLinkEintrag)
   const [linkHinweis, setLinkHinweis] = useState('')
@@ -408,14 +410,30 @@ export default function App() {
           {imOriginal
             ? <span><b>Originalzustand:</b> alle Beträge stehen wie auf dem hochgeladenen Plan. PlanR rechnet erst neu, wenn Sie einen Regler bewegen oder etwas ändern.</span>
             : <span><b>Neu gerechnet</b> – die Beträge weichen jetzt vom hochgeladenen Plan ab.</span>}
-          {!imOriginal && <button onClick={() => setPlan(() => original.plan)}>Original wiederherstellen</button>}
         </div>
       )}
       {hkpAnsicht && (
         <AktuellerBefundLeiste plan={plan} setPlan={setPlan} frei={!register.aktiv && !linkEintrag && !liveAn} />
       )}
 
-      {hkpAnsicht && (
+      {hkpAnsicht && blattSummen && (
+        <div className="summenkopf sk-vergleich bildschirm" aria-live="polite">
+          <div className="sv-block">
+            <span>Ihr Plan (Original)</span>
+            <p><small>Gesamt</small> <b>{euro(blattSummen.gesamt)}</b> <small>Eigenanteil</small> <b>{euro(blattSummen.eigenanteil)}</b></p>
+          </div>
+          <div className="sv-block sv-planr">
+            <span>Mit PlanR</span>
+            <p><small>Gesamt</small> <b>{euro(ergebnis.summen.gesamt)}</b> <small>Eigenanteil</small> <b>{euro(ergebnis.summen.eigenanteil)}</b></p>
+          </div>
+          <div className={`sv-block sv-diff${Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt) < 0.005 ? ' sv-gleich' : ''}`}>
+            <span>Unterschied</span>
+            <p><b>{imOriginal || Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt) < 0.005 ? '± 0,00 €' : `${ergebnis.summen.gesamt > blattSummen.gesamt ? '+' : '−'} ${euro(Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt))}`}</b></p>
+          </div>
+          {!imOriginal && original && <button onClick={() => setPlan(() => original.plan)}>Original wiederherstellen</button>}
+        </div>
+      )}
+      {hkpAnsicht && !blattSummen && (
         <div className="summenkopf bildschirm" aria-live="polite">
           <div className="sk-haupt">
             <span>Gesamtkosten</span>

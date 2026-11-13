@@ -1011,6 +1011,21 @@ html.planr-eingebettet .summenkopf { top: 0; }
 .summenkopf .sk-haupt { margin-right: auto; }
 .summenkopf .sk-haupt b { font-size: 34px; font-weight: 800; letter-spacing: -.01em; }
 .summenkopf .sk-eigen b { font-size: 22px; color: var(--rot); }
+/* Probe: hochgeladener Plan und PlanR-Stand nebeneinander, bleibt oben stehen */
+.summenkopf.sk-vergleich { justify-content: flex-start; gap: 6px 14px; background: #fff7fb; border-bottom: 3px solid var(--rot); min-height: 62px; box-sizing: border-box; }
+.sk-vergleich .sv-block { padding: 4px 14px; border: 1px solid var(--linie); border-radius: 8px; background: #fff; }
+.sk-vergleich .sv-block p { margin: 0; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.sk-vergleich .sv-block small { font-size: 11px; color: var(--grau); }
+.sk-vergleich .sv-block small + b + small { margin-left: 10px; }
+.sk-vergleich .sv-block b { font-size: 19px; }
+.sk-vergleich .sv-planr { border-color: var(--rot); }
+.sk-vergleich .sv-planr span, .sk-vergleich .sv-planr b { color: var(--rot); }
+.sk-vergleich .sv-diff { background: #2f855a; border-color: #2f855a; }
+.sk-vergleich .sv-diff span { color: #fff; }
+.sk-vergleich .sv-diff b { color: #fff; font-size: 24px; font-weight: 800; }
+.sk-vergleich .sv-diff.sv-gleich { background: #f0f1f3; border-color: var(--linie); }
+.sk-vergleich .sv-diff.sv-gleich span, .sk-vergleich .sv-diff.sv-gleich b { color: var(--grau); }
+.sk-vergleich > button { margin-left: auto; }
 .kostenleiste { top: calc(var(--kopf-hoehe, 50px) + 62px); max-height: calc(100vh - var(--kopf-hoehe, 50px) - 62px); }
 
 /* ---------- Handy ---------- */
@@ -1023,6 +1038,10 @@ html.planr-eingebettet .summenkopf { top: 0; }
   .summenkopf .sk-haupt b { font-size: 28px; }
   .summenkopf .sk-neben { flex: 1 1 0; flex-direction: row; align-items: baseline; gap: 6px; }
   .summenkopf .sk-eigen { justify-content: flex-end; }
+  .sk-vergleich .sv-block { flex: 1 1 100%; padding: 3px 10px; }
+  .sk-vergleich .sv-block { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .sk-vergleich .sv-block b, .sk-vergleich .sv-diff b { font-size: 15px; }
+  .sk-vergleich > button { margin: 0; width: 100%; }
   .summenkopf span { font-size: 10px; }
   .summenkopf b { font-size: 14px; }
   .summenkopf .sk-eigen b { font-size: 16px; }
@@ -1066,5 +1085,14 @@ html.planr-eingebettet .summenkopf { top: 0; }
   html.planr-dunkel .summenkopf span { color: #9db3b4; }
   html.planr-dunkel .summenkopf .sk-haupt b { color: #3fd8b5; }
   html.planr-dunkel .summenkopf .sk-eigen b { color: #ff7aa8; }
+  html.planr-dunkel .summenkopf.sk-vergleich { border-bottom: 3px solid #ff7aa8; }
+  html.planr-dunkel .sk-vergleich .sv-block { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); }
+  html.planr-dunkel .sk-vergleich .sv-block small { color: #9db3b4; }
+  html.planr-dunkel .sk-vergleich .sv-planr { border-color: #ff7aa8; }
+  html.planr-dunkel .sk-vergleich .sv-planr span, html.planr-dunkel .sk-vergleich .sv-planr b { color: #ff7aa8; }
+  html.planr-dunkel .sk-vergleich .sv-diff { background: #2f855a; border-color: #2f855a; }
+  html.planr-dunkel .sk-vergleich .sv-diff span, html.planr-dunkel .sk-vergleich .sv-diff b { color: #fff; }
+  html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); }
+  html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich span, html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich b { color: #9db3b4; }
   html.planr-dunkel .regler-knopf { background: #e0407b; border-color: #e0407b; }
 }
