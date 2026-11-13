@@ -1038,3 +1038,10 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
   #funktionen .hp-karten article::before { transform: none; }
   #funktionen .hp-karten article::after { animation: none; transform: none; }
 }
+
+/* Scrollbalken der Startseite in Pink */
+html.hp-html { scrollbar-color: #ff7aa8 #071a1f; }
+html.hp-html::-webkit-scrollbar { width: 12px; height: 12px; }
+html.hp-html::-webkit-scrollbar-track { background: #071a1f; }
+html.hp-html::-webkit-scrollbar-thumb { background: #ff7aa8; border-radius: 6px; border: 3px solid #071a1f; }
+html.hp-html::-webkit-scrollbar-thumb:hover { background: #e0407b; }

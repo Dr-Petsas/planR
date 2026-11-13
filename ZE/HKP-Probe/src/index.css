@@ -1100,3 +1100,10 @@ html.planr-eingebettet .summenkopf { top: 0; }
   html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich span, html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich b { color: #9db3b4; }
   html.planr-dunkel .regler-knopf { background: #e0407b; border-color: #e0407b; }
 }
+
+/* Scrollbalken der Probe in Pink (wie die Startseite) */
+html.planr-dunkel, html.planr-dunkel * { scrollbar-color: #ff7aa8 #071a1f; }
+html.planr-dunkel ::-webkit-scrollbar, html.planr-dunkel::-webkit-scrollbar { width: 12px; height: 12px; }
+html.planr-dunkel ::-webkit-scrollbar-track, html.planr-dunkel::-webkit-scrollbar-track { background: #071a1f; }
+html.planr-dunkel ::-webkit-scrollbar-thumb, html.planr-dunkel::-webkit-scrollbar-thumb { background: #ff7aa8; border-radius: 6px; border: 3px solid #071a1f; }
+html.planr-dunkel ::-webkit-scrollbar-thumb:hover, html.planr-dunkel::-webkit-scrollbar-thumb:hover { background: #e0407b; }
