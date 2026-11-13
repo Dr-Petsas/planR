@@ -25,16 +25,23 @@ function hat(blatt: Blatt) {
 function vereinen(teile: Blatt[]): Blatt {
   const schema: ZahnSchema = { B: {}, R: {}, TP: {} }
   const positionen: ProbePosition[] = []
-  const da = new Set<string>()
+  const da = new Map<string, ProbePosition & { text?: string }>()
   for (const teil of teile) {
     dazu(schema.B, teil.schema.B)
     dazu(schema.R, teil.schema.R)
     dazu(schema.TP, teil.schema.TP)
     for (const p of teil.positionen) {
       const key = `${p.ebene}|${p.nr}|${p.zahn}`
-      if (da.has(key)) continue
-      da.add(key)
-      positionen.push(p)
+      const schon = da.get(key)
+      if (schon) {
+        // Dieselbe Zeile aus einer zweiten Datei: die Bezeichnung nachtragen, wenn sie der ersten fehlte.
+        const text = (p as { text?: string }).text
+        if (!schon.text && text) schon.text = text
+        continue
+      }
+      const eigen = { ...p }
+      da.set(key, eigen)
+      positionen.push(eigen)
     }
   }
   const summen: BlattSummen = {}

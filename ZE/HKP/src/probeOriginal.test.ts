@@ -29,6 +29,19 @@ describe('Originalzustand vom Blatt', () => {
     expect(e.summen.eigenanteil).toBe(670)
   })
 
+  it('nimmt die Bezeichnung vom Beleg, ohne Text die der Liste (fünfstellige BEB-Nummer)', () => {
+    const zeilen: ProbeGebuehr[] = [
+      { ebene: 'BEB', nr: '00001', zahn: '', anzahl: 1, betrag: 10.4, text: 'Modell vom Beleg' },
+      { ebene: 'BEB', nr: '00021', zahn: '', anzahl: 1, betrag: 23 },
+      { ebene: 'BEB', nr: 'SCAN', zahn: '', anzahl: 1, betrag: 89 },
+    ]
+    const b = blattUebernehmen(leererPlan(), LISTEN, zeilen, { laborBeleg: 122.4 })
+    const texte = b.plan.positionen.filter((p) => p.ebene === 'BEB').map((p) => p.text)
+    expect(texte[0]).toBe('Modell vom Beleg')
+    expect(texte[1]).toBe(LISTEN.beb!.eintraege.find((e) => e.nr.trim().padStart(4, '0') === '0021')!.text)
+    expect(texte[2]).toBe('Laborleistung laut Beleg')
+  })
+
   it('rechnet nach einer Änderung dicht am Blatt weiter, Labor nicht doppelt', () => {
     const b = blattUebernehmen(leererPlan(), LISTEN, GEBUEHREN, SUMMEN)
     const e = berechnen(b.plan, LISTEN)

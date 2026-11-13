@@ -64,7 +64,11 @@ function laborVomBlatt(plan: HkpPlan, listen: Listen, zeilen: ProbeGebuehr[], la
     // Steht der Preis so in der Liste, bleibt die Zeile an den Reglern; sonst gilt der Preis vom Blatt fest.
     const liste = positionBerechnen(basis, listen, plan)
     if (!liste.fehler && gleich(liste.einzelpreis, z.betrag)) return basis
-    return { ...basis, preis: z.betrag, reglerPreis: true, ...(basis.text ? {} : { text: liste.bezeichnung || 'Laborleistung laut Beleg' }) }
+    if (basis.text) return { ...basis, preis: z.betrag, reglerPreis: true }
+    // Kam vom Beleg kein Text mit: Bezeichnung aus der Liste. Belege führen BEB-Nummern oft fünfstellig (00216 = 0216).
+    const kurz = Number.isFinite(Number(basis.nr)) ? String(Number(basis.nr)).padStart(4, '0') : basis.nr
+    const name = liste.bezeichnung || (kurz !== basis.nr ? positionBerechnen({ ...basis, nr: kurz }, listen, plan).bezeichnung : '')
+    return { ...basis, preis: z.betrag, reglerPreis: true, text: name || 'Laborleistung laut Beleg' }
   })
 }
 
