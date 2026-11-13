@@ -24,6 +24,8 @@ $planer = [ordered]@{
   'hkp' = 'ZE\HKP'; 'privat-hkp' = 'ZE\Privat-HKP'; 'implantologie' = 'Implantologie\Privat-Impl'; 'mkv' = 'KONS\MKV'
   'kons' = 'KONS\Privat-Kons'; 'par' = 'PAR\Kassen-PAR'; 'privat-par' = 'PAR\Privat-PAR'; 'kb' = 'KB\Kassen-KB'
   'privat-kb' = 'KB\Privat-KB'; 'kfo' = 'KFO\Kassen-KFO'; 'privat-kfo' = 'KFO\Privat-KFO'
+  # Oberfläche der Probe auf der Landingpage: eigener Stand, teilt mit 'hkp' nur den Rechenkern (ZE\HKP\src\engine, data, clara, types)
+  'probe-hkp' = 'ZE\HKP-Probe'
 }
 
 Remove-Item $bau -Recurse -Force -ErrorAction SilentlyContinue

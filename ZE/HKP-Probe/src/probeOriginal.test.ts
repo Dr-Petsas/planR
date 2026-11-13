@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { leererPlan } from './store/plan'
-import { berechnen, type Listen } from './engine/berechnung'
+import { berechnen, type Listen } from '@kern/engine/berechnung'
 import { STANDARD_LISTEN } from './store/preislisten'
 import { blattUebernehmen, ohneBlatt, originalErgebnis, planSchluessel, vomBlatt } from './probeOriginal'
 import type { ProbeGebuehr } from './probeImport'
-import { privatStufeAufBlatt } from './engine/aufwertung'
-import type { HkpPlan } from './types'
+import { privatStufeAufBlatt } from '@kern/engine/aufwertung'
+import type { HkpPlan } from '@kern/types'
 
 const l = (typ: string, id: string) => STANDARD_LISTEN.find((x) => x.typ === typ && x.id === id) as never
 const LISTEN: Listen = { bema: l('bema', 'bema-2026'), goz: l('goz', 'goz-2012'), bel: l('bel2', 'bel2-bayern-2026'), beb: l('beb', 'beb-itz-2024'), fz: l('festzuschuss', 'fz-2026') }

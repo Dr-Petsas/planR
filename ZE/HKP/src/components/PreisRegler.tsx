@@ -19,8 +19,6 @@ interface Props {
   onNeuRechnen?: (plan: HkpPlan) => void
   /** Handy: nur Regler und Summen (kein Berechnen, kein Labor-XML) */
   mobil?: boolean
-  /** Probe im Originalzustand: Summen stehen wie auf dem Blatt, keine Abweichung anzeigen */
-  original?: boolean
 }
 
 const delta = (n: number) => (n > 0.004 ? `+${euro(n)}` : n < -0.004 ? `−${euro(-n)}` : '±0,00 €')
@@ -32,7 +30,7 @@ const ausPvs = (x: HkpPlan['positionen'][number]) => !!x.auto && /^(dens|dswin)-
 const hatBlatt = (p: HkpPlan) => p.positionen.some((x) => x.id.startsWith('blatt-'))
 const privatSetzen = (p: HkpPlan, stufe: number) => (hatBlatt(p) ? privatStufeAufBlatt(p, stufe) : privatStufeAnwenden(p, stufe))
 
-export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, onNeuRechnen, mobil = false, original = false }: Props) {
+export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, onMeldungen, onBerechnen, onNeuRechnen, mobil = false }: Props) {
   const e = plan.einstellungen
   const mitPraxisBel = Object.keys(listen.belPraxis ?? {}).length > 0
   const hatBefund = Object.values(plan.zaehne).some((z) => z.B.trim()) || plan.reparaturen.length > 0
@@ -52,7 +50,7 @@ export function PreisRegler({ plan, setPlan, ergebnis, listen, setEinstellung, o
     return berechnen(pStufe > 0 ? privatSetzen(ohne, 0).plan : ohne, listen).summen
   }, [plan, e, listen, pStufe])
   const s = ergebnis.summen
-  const basis = original ? s : gerechnet
+  const basis = gerechnet
   const anzahl = (f: (p: Ergebnis['positionen'][number]) => boolean) => ergebnis.positionen.filter(f).length
   const nGoz = anzahl((p) => p.ebene === 'GOZ')
   const nEigenBel = anzahl((p) => p.ebene === 'BEL' && p.labor === 'eigen')

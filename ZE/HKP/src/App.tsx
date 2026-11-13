@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan, Preisliste } from './types'
-import { usePlan, leererPlan, planNormalisieren, probeAktiv } from './store/plan'
-import { planAusSchema, probeHoren, zuschussAbgleich } from './probeImport'
-import { blattUebernehmen, ohneBlatt, originalErgebnis, planSchluessel, type BlattStand } from './probeOriginal'
+import { usePlan, leererPlan, planNormalisieren } from './store/plan'
 import { AUTO, GENUTZTE_LISTEN, kzvBereich, LISTEN_ORDNER, stichtag, usePreislisten, TYP_NAMEN } from './store/preislisten'
 import { getPraxis, usePraxis } from './store/praxis'
 import type { Praxis } from './stammdaten'
@@ -82,7 +80,7 @@ export default function App() {
     [plan.verwaltung, plan.einstellungen, praxisListen],
   )
   useEffect(() => {
-    if (!katalog || probeAktiv()) return
+    if (!katalog) return
     setPlan((p) => {
       const n = planMitKatalog(p, praxisListen)
       return n.einstellungen.labor === p.einstellungen.labor && n.positionen === p.positionen ? p : n
@@ -108,15 +106,7 @@ export default function App() {
   useEffect(() => { if (verknuepft) { setLinkListen(null); setLinkEintrag(null) } }, [verknuepft])
   const listen = linkListen && !verknuepft && linkListen.wahl === listenWahl(plan) ? linkListen.listen : lokaleListen
 
-  // Probe: Solange der hochgeladene Plan unverändert ist, stehen die Zahlen wie auf dem Blatt.
-  const [original, setOriginal] = useState<BlattStand | null>(null)
-  const imOriginal = useMemo(() => !!original && planSchluessel(plan) === original.schluessel, [plan, original])
-  const ergebnis = useMemo(() => {
-    const e = berechnen(plan, listen)
-    return original && imOriginal ? originalErgebnis(e, original) : e
-  }, [plan, listen, original, imOriginal])
-  // Probe: Summen des hochgeladenen Plans, bleiben als Vergleich oben stehen.
-  const blattSummen = useMemo(() => (original ? originalErgebnis(berechnen(original.plan, listen), original).summen : null), [original, listen])
+  const ergebnis = useMemo(() => berechnen(plan, listen), [plan, listen])
   const register = useRegisterAbgleich(plan, ergebnis, setPlan)
   const linkAbgleich = useLinkAbgleich(plan, linkEintrag, setLinkEintrag)
   const [linkHinweis, setLinkHinweis] = useState('')
@@ -197,24 +187,10 @@ export default function App() {
   const [live, setLive] = useState<{ an: boolean; stand: LiveStand | null; spielt: boolean }>({ an: false, stand: null, spielt: false })
   const planRef = useRef(plan)
   const registerRef = useRef(register)
-  const listenRef = useRef(listen)
   useEffect(() => {
-    listenRef.current = listen
     planRef.current = plan
     registerRef.current = register
   })
-  useEffect(() => {
-    if (!probeAktiv()) return
-    return probeHoren((schema, gebuehren, summen) => {
-      const gelesen = planAusSchema(planRef.current.einstellungen, schema, gebuehren)
-      const zuschuss = zuschussAbgleich(gelesen.plan, listenRef.current, summen)
-      const blatt = blattUebernehmen(zuschuss.plan, listenRef.current, gebuehren, summen)
-      setOriginal(blatt.original)
-      setPlan(() => blatt.plan)
-      setEngineHinweise([...blatt.hinweise, ...zuschuss.hinweise, ...gelesen.hinweise])
-      setTab('teil1')
-    })
-  }, [setPlan])
   useEffect(() => hkpAnmelden(
     () => planRef.current,
     (neu, alt) => {
@@ -295,13 +271,12 @@ export default function App() {
   }
 
   function regelengine(aenderung: Partial<HkpPlan> = {}) {
-    const q = { ...ohneBlatt(plan, original), ...aenderung }
+    const q = { ...plan, ...aenderung }
     const stufe = q.einstellungen.eigenPrivatStufe ?? 0
     const privat = stufe > 0 ? privatStufeAnwenden(q, stufe) : undefined
     const zaehne = privat?.plan.zaehne ?? q.zaehne
     const regel = therapieAnwenden(regelversorgungErmitteln(zaehne, regelOptionen(q)), zaehne, q)
-    setPlan((roh) => {
-      const p = ohneBlatt(roh, original)
+    setPlan((p) => {
       return stufe > 0 ? privatStufeAnwenden({ ...p, ...aenderung }, stufe).plan : regelUebernehmen({ ...p, ...aenderung }, regel)
     })
     setEngineHinweise([...regel.hinweise, ...(privat?.hinweise ?? [])])
@@ -318,19 +293,9 @@ export default function App() {
   const setEinstellung = <K extends keyof Einstellungen>(k: K, v: Einstellungen[K]) =>
     setPlan((p) => ({ ...p, einstellungen: { ...p.einstellungen, [k]: v } }))
 
-  const probe = probeAktiv()
   const reiter = ([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][])
-    .filter(([id]) => !probe || (id !== 'register' && id !== 'preislisten' && id !== 'einstellungen'))
   const fehler = ergebnis.hinweise.filter((h) => h.stufe === 'fehler').length
   const hkpAnsicht = tab === 'teil1' || tab === 'teil2' || tab === 'anlage' || tab === 'eigenlabor'
-  // Probe: Teil 1, Teil 2 und Eigenlaborbeleg stehen untereinander auf einer Seite, die Reiter springen hin.
-  const blaetterZusammen = probe && (tab === 'teil1' || tab === 'teil2' || tab === 'eigenlabor')
-  const ersterTab = useRef(true)
-  useEffect(() => {
-    if (ersterTab.current) { ersterTab.current = false; return }
-    if (!blaetterZusammen) return
-    document.getElementById(`blatt-${tab}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [tab, blaetterZusammen])
   const hatEigenlabor = ergebnis.positionen.some((p) => p.labor === 'eigen' && (p.ebene === 'BEL' || p.ebene === 'BEB'))
 
   const hauptRef = useRef<HTMLDivElement>(null)
@@ -357,7 +322,7 @@ export default function App() {
         punkte={reiter.map(([id, text]) => ({ id, text }))}
         aktiv={tab}
         onWahl={(id) => setTab(id as Tab)}
-        versand={!probe}
+        versand
       />
       <header className="kopfleiste">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -370,7 +335,7 @@ export default function App() {
           ))}
         </nav>
       </header>
-      {probe ? null : <VersandKnopf
+      {<VersandKnopf
         anschreiben={{ patient: plan.patient, praxis: getPraxis(), nummer: new URLSearchParams(window.location.search).get('hkp') || '', betrag: ergebnis.summen.eigenanteil, thema: 'Heil- und Kostenplan', modul: 'hkp' }}
         seiten={() => [...document.querySelectorAll<HTMLElement>('.hkp-blatt')]}
       />}
@@ -387,7 +352,7 @@ export default function App() {
           </span>
         </div>
       )}
-      {hkpAnsicht && !linkEintrag && !probe && <RegisterLeiste r={register} plan={plan} ergebnis={ergebnis} onStatus={registerStatus} onNeu={() => neuAnfangen()} />}
+      {hkpAnsicht && !linkEintrag && <RegisterLeiste r={register} plan={plan} ergebnis={ergebnis} onStatus={registerStatus} onNeu={() => neuAnfangen()} />}
       {linkHinweis && (
         <div className="register-leiste">
           <span>{linkHinweis}</span>
@@ -405,35 +370,11 @@ export default function App() {
           {linkAbgleich.abgleich.art === 'konflikt' && <button onClick={linkAbgleich.ueberschreiben}>Meinen Stand speichern</button>}
         </div>
       )}
-      {hkpAnsicht && original && (
-        <div className="register-leiste">
-          {imOriginal
-            ? <span><b>Originalzustand:</b> alle Beträge stehen wie auf dem hochgeladenen Plan. PlanR rechnet erst neu, wenn Sie einen Regler bewegen oder etwas ändern.</span>
-            : <span><b>Neu gerechnet</b> – die Beträge weichen jetzt vom hochgeladenen Plan ab.</span>}
-        </div>
-      )}
       {hkpAnsicht && (
         <AktuellerBefundLeiste plan={plan} setPlan={setPlan} frei={!register.aktiv && !linkEintrag && !liveAn} />
       )}
 
-      {hkpAnsicht && blattSummen && (
-        <div className="summenkopf sk-vergleich bildschirm" aria-live="polite">
-          <div className="sv-block">
-            <span>Ihr Plan (Original)</span>
-            <p><small>Gesamt</small> <b>{euro(blattSummen.gesamt)}</b> <small>Eigenanteil</small> <b>{euro(blattSummen.eigenanteil)}</b></p>
-          </div>
-          <div className="sv-block sv-planr">
-            <span>Mit PlanR</span>
-            <p><small>Gesamt</small> <b>{euro(ergebnis.summen.gesamt)}</b> <small>Eigenanteil</small> <b>{euro(ergebnis.summen.eigenanteil)}</b></p>
-          </div>
-          <div className={`sv-block sv-diff${Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt) < 0.005 ? ' sv-gleich' : ''}`}>
-            <span>Unterschied</span>
-            <p><b>{imOriginal || Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt) < 0.005 ? '± 0,00 €' : `${ergebnis.summen.gesamt > blattSummen.gesamt ? '+' : '−'} ${euro(Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt))}`}</b></p>
-          </div>
-          {!imOriginal && original && <button onClick={() => setPlan(() => original.plan)}>Original wiederherstellen</button>}
-        </div>
-      )}
-      {hkpAnsicht && !blattSummen && (
+      {hkpAnsicht && (
         <div className="summenkopf bildschirm" aria-live="polite">
           <div className="sk-haupt">
             <span>Gesamtkosten</span>
@@ -456,7 +397,7 @@ export default function App() {
         </button>
       )}
       {hkpAnsicht && reglerOffen && (
-        <PreisRegler plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen} setEinstellung={setEinstellung} onMeldungen={setEngineHinweise} onBerechnen={berechnenKlick} onNeuRechnen={regelengine} original={imOriginal} />
+        <PreisRegler plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen} setEinstellung={setEinstellung} onMeldungen={setEngineHinweise} onBerechnen={berechnenKlick} onNeuRechnen={regelengine} />
       )}
 
       <div className="hauptspalte" ref={hauptRef}>
@@ -469,13 +410,13 @@ export default function App() {
       )}
 
       <main>
-        <div id="blatt-teil1" className={tab === 'teil1' || blaetterZusammen ? '' : 'nur-druck'}>
+        <div id="blatt-teil1" className={tab === 'teil1' ? '' : 'nur-druck'}>
           <Teil1 plan={plan} setPlan={setPlan} ergebnis={ergebnis} listen={listen}
             onAbformung={(wahl) => (plan.positionen.some((p) => p.auto) ? regelengine(wahl) : setPlan((p) => ({ ...p, ...wahl })))}
             onRegelversorgung={regelversorgungKlick} />
         </div>
-        <div id="blatt-teil2" className={tab === 'teil2' || blaetterZusammen ? '' : 'nur-druck'}>
-          {(tab === 'teil2' || blaetterZusammen || ergebnis.versorgungsart !== 'regel') && <Teil2 plan={plan} ergebnis={ergebnis} />}
+        <div id="blatt-teil2" className={tab === 'teil2' ? '' : 'nur-druck'}>
+          {(tab === 'teil2' || ergebnis.versorgungsart !== 'regel') && <Teil2 plan={plan} ergebnis={ergebnis} />}
         </div>
         <div className={tab === 'anlage' ? '' : 'nur-druck'}>
           <Anlage plan={plan} ergebnis={ergebnis} />
@@ -496,8 +437,8 @@ export default function App() {
             />
           </section>
         )}
-        <div id="blatt-eigenlabor" className={tab === 'eigenlabor' || blaetterZusammen ? '' : 'nur-druck'}>
-          {(tab === 'eigenlabor' || blaetterZusammen || hatEigenlabor) && <Eigenlaborbeleg plan={plan} ergebnis={ergebnis} listen={listen} />}
+        <div id="blatt-eigenlabor" className={tab === 'eigenlabor' ? '' : 'nur-druck'}>
+          {(tab === 'eigenlabor' || hatEigenlabor) && <Eigenlaborbeleg plan={plan} ergebnis={ergebnis} listen={listen} />}
         </div>
         {tab === 'preislisten' && (
           <>

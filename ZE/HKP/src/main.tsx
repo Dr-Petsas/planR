@@ -10,7 +10,6 @@ import { linkZugang, mobilGewuenscht } from './store/mobilLink'
 import { befundLinkAus } from './store/befund01'
 
 const suche = window.location.search
-if (new URLSearchParams(suche).get('probe') === '1') document.documentElement.classList.add('planr-dunkel')
 const schmal = window.matchMedia?.('(max-width: 760px)').matches ?? false
 const zugang = mobilGewuenscht(suche, schmal, window.parent !== window) ? linkZugang(suche) : null
 const befundLink = zugang ? null : befundLinkAus(suche)

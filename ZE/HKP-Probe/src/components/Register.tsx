@@ -1,0 +1,274 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { HkpPlan } from '@kern/types'
+import type { Ergebnis } from '@kern/engine/berechnung'
+import { euro } from '../format'
+import {
+  RegisterFehler, STATUS_TEXT, aktivSetzen, planStand, registerAnlegen, registerDatei, registerListe, registerStatusSetzen, schluesselSetzen, useVerbindung, verbunden,
+  type HkpStatus, type RegisterDateiKopf, type RegisterKopf,
+} from '../store/register'
+import type { RegisterAbgleich } from '../store/registerAbgleich'
+import { befundMitPlanSchreiben } from '../store/befund01'
+
+const datum = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('de-DE') : '')
+const zeit = (iso?: string) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '')
+const QUELLE: Record<string, string> = { lena01: 'Lena-Erstuntersuchung', gesprochen: 'neu aufgenommen', 'gesprochen+lena01': 'gesprochen + Lena', 'gesprochen+pvs': 'gesprochen + Praxisprogramm', pvs: 'Praxisprogramm', planr: 'PlanR', auftrag: 'aus dem Auftrag (Totalprothese: zahnlos)', keiner: 'aus dem Auftrag (Totalprothese: zahnlos)' }
+const quelleText = (q: NonNullable<RegisterKopf['befundQuelle']>) =>
+  `${q.art === 'pvs' && q.pvs ? `aus ${q.pvs}` : QUELLE[q.art] ?? q.art}${q.datum ? ` vom ${datum(q.datum)}` : ''}${q.uebertragen ? `, in ${q.uebertragen} übernommen` : ''}`
+
+async function dateiHerunterladen(hkpId: string, d: RegisterDateiKopf) {
+  try {
+    const datei = await registerDatei(hkpId, d.id)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([datei.inhalt], { type: datei.typ || 'application/json' }))
+    a.download = datei.name || d.name
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : String(e))
+  }
+}
+
+/** Zeile über dem Formular: Speichern · Freigeben · Neu wie in den anderen Planern, dazu Status und Konflikte */
+export function RegisterLeiste({ r, plan, ergebnis, onStatus, onNeu }: {
+  r: RegisterAbgleich; plan: HkpPlan; ergebnis: Ergebnis; onStatus: (s: HkpStatus) => void; onNeu: () => void
+}) {
+  const { aktiv, abgleich, geaendert } = r
+  const istVerbunden = verbunden(useVerbindung())
+  const [legtAn, setLegtAn] = useState(false)
+  const ohneSchluessel = 'Zum Speichern im Register fehlt der MAS-Schlüssel (Einstellungen).'
+  const kopf = useRef({ aktiv, anlegen: (_frei: boolean) => {}, jetzt: () => {} })
+  kopf.current = { aktiv, anlegen: (frei) => void anlegen(frei), jetzt: () => r.jetztSpeichern() }
+  useEffect(() => {
+    const speichern = () => {
+      if (kopf.current.aktiv) kopf.current.jetzt()
+      else void kopf.current.anlegen(false)
+    }
+    window.addEventListener('planr-speichern', speichern)
+    return () => window.removeEventListener('planr-speichern', speichern)
+  }, [])
+
+  async function anlegen(freigeben: boolean) {
+    if (!plan.patient.name) { alert('Bitte zuerst den Patienten eintragen.'); return }
+    if (freigeben && !confirm('HKP speichern und freigeben?')) return
+    setLegtAn(true)
+    try {
+      await befundMitPlanSchreiben().catch((e) => alert(`Befund nicht ins Praxisprogramm übernommen: ${e instanceof Error ? e.message : String(e)}`))
+      const h = await registerAnlegen(plan, ergebnis)
+      aktivSetzen({ id: h.id, version: h.version, status: h.status, label: h.patient.label, stand: planStand(plan) })
+      if (freigeben) {
+        const f = await registerStatusSetzen(h.id, h.version, 'freigegeben')
+        aktivSetzen({ id: h.id, version: f.version, status: f.status, label: h.patient.label, stand: planStand(plan) })
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLegtAn(false)
+    }
+  }
+
+  if (!aktiv) {
+    return (
+      <div className="register-leiste">
+        <span className="ablage-stand ungespeichert">nicht gespeichert</span>
+        <span className="klein">{istVerbunden ? 'Plan ist noch nicht im Register.' : ohneSchluessel}</span>
+        <span className="aktionen">
+          <button onClick={() => anlegen(false)} disabled={!istVerbunden || legtAn} title={istVerbunden ? 'Plan im Register speichern' : ohneSchluessel}>
+            {legtAn ? 'speichert …' : 'Speichern'}
+          </button>
+          <button onClick={() => anlegen(true)} disabled={!istVerbunden || legtAn} title={istVerbunden ? 'Speichern und freigeben' : ohneSchluessel}>Freigeben</button>
+          <button className="primaer" onClick={onNeu}>Neuer Plan</button>
+        </span>
+      </div>
+    )
+  }
+
+  const stand = abgleich.art === 'speichert' ? 'speichert …' : abgleich.art === 'fehler' ? `⚠ ${abgleich.text}` : abgleich.art === 'neu_geladen' ? abgleich.text : geaendert ? 'Änderungen werden gespeichert …' : 'gespeichert'
+  return (
+    <div className={`register-leiste ${abgleich.art === 'konflikt' ? 'konflikt' : ''}`}>
+      <span>Register: <strong>{aktiv.label}</strong> · <span className={`status status-${aktiv.status}`}>{STATUS_TEXT[aktiv.status]}</span></span>
+      <span className={`ablage-stand ${aktiv.status === 'freigegeben' ? 'frei' : geaendert ? 'ungespeichert' : ''}`}>{stand}</span>
+      {abgleich.art === 'konflikt' && (
+        <>
+          <span>⚠ Im Register geändert ({abgleich.aktuell.verlauf?.at(-1)?.wer}: {abgleich.aktuell.verlauf?.at(-1)?.was}), hier ebenfalls.</span>
+          <button onClick={() => r.registerStandLaden()}>Register-Stand laden</button>
+          <button onClick={() => r.ueberschreiben()}>Meinen Stand speichern</button>
+        </>
+      )}
+      <span className="aktionen">
+        {abgleich.art !== 'konflikt' && (
+          <button onClick={() => r.jetztSpeichern()} disabled={!geaendert || abgleich.art === 'speichert'} title="Sofort im Register speichern (sonst automatisch nach 1,5 s)">Speichern</button>
+        )}
+        {aktiv.status === 'wartet_auf_freigabe' && abgleich.art !== 'konflikt' && (
+          <button onClick={() => onStatus('freigegeben')} title="Nur hier – Clara kann nicht freigeben">✓ Freigeben</button>
+        )}
+        <button className="klein" onClick={r.loesen} title="Plan bleibt in PlanR, wird aber nicht mehr abgeglichen">Verknüpfung lösen</button>
+        <button className="primaer" onClick={onNeu}>Neuer Plan</button>
+      </span>
+    </div>
+  )
+}
+
+/** Schlüssel direkt hier eingeben – einmal pro Gerät, danach erscheinen Claras HKPs */
+function SchluesselEingabe({ onEinstellungen }: { onEinstellungen: () => void }) {
+  const [wert, setWert] = useState('')
+  const [fehler, setFehler] = useState('')
+  const [prueft, setPrueft] = useState(false)
+
+  async function verbinden() {
+    if (!wert.trim()) return
+    setPrueft(true)
+    schluesselSetzen(wert)
+    try {
+      await registerListe()
+      setFehler('')
+    } catch (e) {
+      schluesselSetzen('')
+      setFehler(e instanceof RegisterFehler && e.status === 401 ? 'Der Schlüssel stimmt nicht.' : e instanceof Error ? e.message : String(e))
+    } finally {
+      setPrueft(false)
+    }
+  }
+
+  return (
+    <section className="abschnitt">
+      <h3>HKP-Register</h3>
+      <p>Hier erscheinen alle erstellten HKPs (auch die von Clara). Einmal auf diesem Gerät den MAS-Schlüssel eingeben:</p>
+      <form className="schluessel-eingabe" onSubmit={(ev) => { ev.preventDefault(); verbinden() }}>
+        <input type="password" autoComplete="current-password" placeholder="MAS-Schlüssel" value={wert} onChange={(ev) => setWert(ev.target.value)} />
+        <button className="primaer" type="submit" disabled={prueft || !wert.trim()}>{prueft ? 'prüft …' : 'Verbinden'}</button>
+        <button type="button" onClick={onEinstellungen}>Einstellungen</button>
+      </form>
+      {fehler && <p className="fehler">⚠ {fehler}</p>}
+    </section>
+  )
+}
+
+export function RegisterSeite({ plan, ergebnis, r, onGeoeffnet, onEinstellungen }: {
+  plan: HkpPlan
+  ergebnis: Ergebnis
+  r: RegisterAbgleich
+  onGeoeffnet: () => void
+  onEinstellungen: () => void
+}) {
+  const istVerbunden = verbunden(useVerbindung())
+  const [liste, setListe] = useState<RegisterKopf[] | null>(null)
+  const [fehler, setFehler] = useState('')
+  const [alle, setAlle] = useState(false)
+  const [offen, setOffen] = useState<string | null>(null)
+
+  const neuLaden = useCallback(async () => {
+    try { setListe(await registerListe()); setFehler('') } catch (e) { setFehler(e instanceof Error ? e.message : String(e)) }
+  }, [])
+  useEffect(() => { if (istVerbunden) neuLaden() }, [istVerbunden, neuLaden])
+
+  if (!istVerbunden) return <SchluesselEingabe onEinstellungen={onEinstellungen} />
+
+
+  async function status(h: RegisterKopf, s: HkpStatus) {
+    try {
+      const neu = await registerStatusSetzen(h.id, h.version, s)
+      if (r.aktiv?.id === h.id) aktivSetzen({ ...r.aktiv, version: neu.version, status: neu.status })
+      await neuLaden()
+    } catch (e) {
+      alert(e instanceof RegisterFehler && e.status === 409 ? 'Der HKP wurde inzwischen geändert – Liste neu geladen.' : String(e instanceof Error ? e.message : e))
+      await neuLaden()
+    }
+  }
+
+  async function oeffnen(h: RegisterKopf) {
+    if (!r.aktiv && plan.positionen.length && !confirm('Der aktuelle Plan ist nicht im Register und wird ersetzt. Fortfahren?')) return
+    try { await r.laden(h.id); onGeoeffnet() } catch (e) { alert(e instanceof Error ? e.message : String(e)) }
+  }
+
+  async function aktuellenAnlegen() {
+    try {
+      const h = await registerAnlegen(plan, ergebnis)
+      aktivSetzen({ id: h.id, version: h.version, status: h.status, label: h.patient.label, stand: planStand(plan) })
+      await neuLaden()
+    } catch (e) { alert(e instanceof Error ? e.message : String(e)) }
+  }
+
+  const sichtbar = (liste ?? []).filter((h) => alle || !['verworfen', 'abgerechnet', 'abgelehnt'].includes(h.status))
+  const warten = (liste ?? []).filter((h) => h.status === 'wartet_auf_freigabe').length
+
+  return (
+    <section className="abschnitt register">
+      <h3>HKP-Register {warten > 0 && <span className="badge-warten">{warten} warten auf Freigabe</span>}</h3>
+      <div className="werkzeuge-zeile">
+        <button onClick={neuLaden}>↻ Aktualisieren</button>
+        {!r.aktiv && <button onClick={aktuellenAnlegen} disabled={!plan.patient.name}>Aktuellen Plan ins Register</button>}
+        <label className="klein"><input type="checkbox" checked={alle} onChange={(e) => setAlle(e.target.checked)} /> auch verworfene, abgelehnte und abgerechnete</label>
+      </div>
+      {fehler && <p className="hinweis fehler">{fehler}</p>}
+      {liste && !sichtbar.length && <p>Keine HKPs.</p>}
+      {sichtbar.length > 0 && (
+        <table className="register-tabelle">
+          <thead><tr><th>Patient</th><th>HKP</th><th>erstellt</th><th>Status</th><th className="zahl">Gesamt</th><th className="zahl">Eigenanteil</th><th /></tr></thead>
+          <tbody>
+            {sichtbar.map((h) => (
+              <RegisterZeile key={h.id} h={h} geoeffnet={r.aktiv?.id === h.id} offen={offen === h.id}
+                onToggle={() => setOffen(offen === h.id ? null : h.id)} onOeffnen={() => oeffnen(h)} onStatus={(s) => status(h, s)} />
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="klein">
+        Clara legt HKPs nur als Entwurf an („wartet auf Freigabe“). Freigeben geht ausschließlich hier. Positionen ändert Clara nur,
+        solange der HKP auf Freigabe wartet – jede Änderung steht im Verlauf.
+      </p>
+    </section>
+  )
+}
+
+function RegisterZeile({ h, geoeffnet, offen, onToggle, onOeffnen, onStatus }: {
+  h: RegisterKopf; geoeffnet: boolean; offen: boolean; onToggle: () => void; onOeffnen: () => void; onStatus: (s: HkpStatus) => void
+}) {
+  return (
+    <>
+      <tr className={geoeffnet ? 'geoeffnet' : ''}>
+        <td><button className="link" onClick={onToggle}>{offen ? '▾' : '▸'} {h.patient.label}</button></td>
+        <td>
+          {h.versorgungText ?? 'HKP'}{h.kiefer ? ` ${h.kiefer}` : ''}{h.erstelltVon === 'clara' && <span className="badge-clara" title="per Sprache von Clara angelegt">Clara</span>}
+          {h.dateien?.filter((d) => d.art === 'befund').map((d) => (
+            <button key={d.id} type="button" className="badge-datei" onClick={() => dateiHerunterladen(h.id, d)} title="Befund mit KZBV-Kürzeln als JSON herunterladen">⤓ Befund</button>
+          ))}
+        </td>
+        <td>{datum(h.erstellt)}</td>
+        <td>
+          <select className={`status status-${h.status}`} value={h.status} onChange={(e) => onStatus(e.target.value as HkpStatus)}>
+            {(Object.keys(STATUS_TEXT) as HkpStatus[]).map((s) => <option key={s} value={s}>{STATUS_TEXT[s]}</option>)}
+          </select>
+        </td>
+        <td className="zahl">{h.summen ? euro(h.summen.gesamt) : ''}</td>
+        <td className="zahl">{h.summen ? euro(h.summen.eigenanteil) : ''}</td>
+        <td className="aktionen">
+          {h.status === 'wartet_auf_freigabe' && <button className="primaer" onClick={() => onStatus('freigegeben')}>✓ Freigeben</button>}
+          <button onClick={onOeffnen} disabled={geoeffnet}>{geoeffnet ? 'geöffnet' : 'Öffnen'}</button>
+        </td>
+      </tr>
+      {offen && (
+        <tr className="register-details">
+          <td colSpan={7}>
+            {h.auftragText && <p><strong>Eingesprochen:</strong> „{h.auftragText}“</p>}
+            {h.befundQuelle && <p><strong>Befund:</strong> {quelleText(h.befundQuelle)}</p>}
+            {!!h.dateien?.length && (
+              <p><strong>Dateien:</strong>{' '}
+                {h.dateien.map((d) => (
+                  <button key={d.id} className="link" onClick={() => dateiHerunterladen(h.id, d)} title="Befund mit KZBV-Kürzeln als JSON herunterladen">⤓ {d.name}</button>
+                ))}
+              </p>
+            )}
+            {h.summen && <p><strong>Festzuschuss</strong> {euro(h.summen.festzuschuss)} · <strong>Material</strong> {euro(h.summen.material)}</p>}
+            {!!h.hinweise?.length && <ul className="klein">{h.hinweise.map((x) => <li key={x}>{x}</li>)}</ul>}
+            {h.offeneAenderung && <p className="hinweis warnung">Clara hat eine Änderung vorgeschlagen, die noch nicht bestätigt ist.</p>}
+            {!!h.verlauf?.length && (
+              <details><summary>Verlauf ({h.verlauf.length})</summary>
+                <ul className="klein">{h.verlauf.map((v, i) => <li key={i}>{zeit(v.at)} · {v.wer}: {v.was}</li>)}</ul>
+              </details>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}

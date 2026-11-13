@@ -2,12 +2,12 @@
  * Öffentliche Probe: Befund, Regelversorgung, Therapieplanung und die Gebührenzeilen
  * in einen leeren HKP. Nichts davon geht ins Register.
  */
-import type { Ebene, HkpPlan, Position, ZahnZeilen } from './types'
-import { BEFUND_KUERZEL, THERAPIE_KUERZEL, ALLE_ZAEHNE, kieferVon } from './engine/zahnschema'
-import { befundOhneStrich, markeLesen } from './engine/bruecken'
-import { regelOptionen, regelversorgungErmitteln, therapieAnwenden, type RegelOptionen } from './engine/regeln'
-import { regelUebernehmen } from './engine/aufwertung'
-import { berechnen, type Listen } from './engine/berechnung'
+import type { Ebene, HkpPlan, Position, ZahnZeilen } from '@kern/types'
+import { BEFUND_KUERZEL, THERAPIE_KUERZEL, ALLE_ZAEHNE, kieferVon } from '@kern/engine/zahnschema'
+import { befundOhneStrich, markeLesen } from '@kern/engine/bruecken'
+import { regelOptionen, regelversorgungErmitteln, therapieAnwenden, type RegelOptionen } from '@kern/engine/regeln'
+import { regelUebernehmen } from '@kern/engine/aufwertung'
+import { berechnen, type Listen } from '@kern/engine/berechnung'
 import { leererPlan } from './store/plan'
 
 export interface ProbeSchema {

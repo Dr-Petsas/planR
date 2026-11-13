@@ -1011,25 +1011,6 @@ html.planr-eingebettet .summenkopf { top: 0; }
 .summenkopf .sk-haupt { margin-right: auto; }
 .summenkopf .sk-haupt b { font-size: 34px; font-weight: 800; letter-spacing: -.01em; }
 .summenkopf .sk-eigen b { font-size: 22px; color: var(--rot); }
-/* Probe: hochgeladener Plan und PlanR-Stand nebeneinander, bleibt oben stehen */
-.summenkopf.sk-vergleich { justify-content: flex-start; gap: 6px 14px; background: #fff7fb; border-bottom: 3px solid var(--rot); min-height: 62px; box-sizing: border-box; }
-.sk-vergleich .sv-block { padding: 4px 14px; border: 1px solid var(--linie); border-radius: 8px; background: #fff; }
-.sk-vergleich .sv-block p { margin: 0; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
-.sk-vergleich .sv-block small { font-size: 11px; color: var(--grau); }
-.sk-vergleich .sv-block small + b + small { margin-left: 10px; }
-.sk-vergleich .sv-block b { font-size: 19px; }
-.sk-vergleich .sv-planr { border-color: var(--rot); }
-.sk-vergleich .sv-planr span, .sk-vergleich .sv-planr b { color: var(--rot); }
-.sk-vergleich .sv-diff { background: #2f855a; border-color: #2f855a; }
-.sk-vergleich .sv-diff span { color: #fff; }
-.sk-vergleich .sv-diff b { color: #fff; font-size: 24px; font-weight: 800; }
-.sk-vergleich .sv-diff.sv-gleich { background: #f0f1f3; border-color: var(--linie); }
-.sk-vergleich .sv-diff.sv-gleich span, .sk-vergleich .sv-diff.sv-gleich b { color: var(--grau); }
-.sk-vergleich > button, html.planr-dunkel .sk-vergleich > button {
-  margin-left: auto; padding: 9px 16px; border-radius: 8px; border: 2px solid #e0407b; background: #e0407b; color: #fff;
-  font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap;
-}
-.sk-vergleich > button:hover, html.planr-dunkel .sk-vergleich > button:hover { background: #c22f66; border-color: #c22f66; color: #fff; }
 .kostenleiste { top: calc(var(--kopf-hoehe, 50px) + 62px); max-height: calc(100vh - var(--kopf-hoehe, 50px) - 62px); }
 
 /* ---------- Handy ---------- */
@@ -1042,10 +1023,6 @@ html.planr-eingebettet .summenkopf { top: 0; }
   .summenkopf .sk-haupt b { font-size: 28px; }
   .summenkopf .sk-neben { flex: 1 1 0; flex-direction: row; align-items: baseline; gap: 6px; }
   .summenkopf .sk-eigen { justify-content: flex-end; }
-  .sk-vergleich .sv-block { flex: 1 1 100%; padding: 3px 10px; }
-  .sk-vergleich .sv-block { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .sk-vergleich .sv-block b, .sk-vergleich .sv-diff b { font-size: 15px; }
-  .sk-vergleich > button { margin: 0; width: 100%; }
   .summenkopf span { font-size: 10px; }
   .summenkopf b { font-size: 14px; }
   .summenkopf .sk-eigen b { font-size: 16px; }
@@ -1058,45 +1035,4 @@ html.planr-eingebettet .summenkopf { top: 0; }
   .kl-block input[type=range] { min-height: 34px; }
   button, select { min-height: 36px; }
   .hkp-blatt button, .hkp-blatt select { min-height: 0; }
-}
-
-/* ---------- Dunkel (Probe auf der Startseite): Flächen in den Farben der Seite ----------
-   Die hellen Flächen werden umgekehrt und über den dunklen Seitengrund geblendet:
-   Weiß nimmt die Farbe der Seite an, Schrift und Linien werden hell. Der Druck bleibt hell.
-   Die Formulare (HKP-Blatt, Positionen, Teil 2, Anlagen) bleiben unverändert. */
-@media screen {
-  html.planr-dunkel, html.planr-dunkel body { background: #071a1f; color: #e9f3f2; }
-  html.planr-dunkel .kostenleiste { background: #071a1f; border-color: rgba(255, 255, 255, .09); }
-  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .abschnitt.bildschirm, .befund-leiste):not(:is(.formular, .hkp-arbeitsbereich, .hkp-blatt) *) {
-    filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen;
-    box-shadow: none; border-color: rgba(0, 0, 0, .14);
-  }
-  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste):not(:is(.formular, .hkp-arbeitsbereich, .hkp-blatt) *) { background: #e2f0f4; border: 1px solid rgba(0, 0, 0, .12); }
-  html.planr-dunkel :is(.kl-block, .hinweise, .register-leiste, .hkp-arbeitsbereich, .formular, .abschnitt.bildschirm, .befund-leiste):not(:is(.formular, .hkp-arbeitsbereich, .hkp-blatt) *) { color: #1f2328; }
-  html.planr-dunkel :is(.formular, .hkp-arbeitsbereich) { color: #1f2328; }
-  html.planr-dunkel .kl-berechnen { background: #e0407b; color: #fff; }
-  html.planr-dunkel .kl-berechnen:disabled { background: #11313a; color: #9db3b4; }
-  html.planr-dunkel .kopfleiste { background: #0d262c; border-bottom-color: #e0407b; }
-  html.planr-dunkel .kopfleiste h1 { color: #ff7aa8; }
-  html.planr-dunkel .kopfleiste h1 span { color: #9db3b4; }
-  html.planr-dunkel .kopfleiste nav button { background: transparent; color: #c9dcdc; }
-  html.planr-dunkel .kopfleiste nav button.aktiv { color: #ff7aa8; border-bottom-color: #ff7aa8; }
-  /* Formulare behalten Farbe und Maße, nur der Grund dahinter ist dunkel. */
-  html.planr-dunkel .summenkopf {
-    background: rgba(13, 38, 44, .92); backdrop-filter: blur(10px); color: #e9f3f2;
-    border-bottom: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
-  }
-  html.planr-dunkel .summenkopf span { color: #9db3b4; }
-  html.planr-dunkel .summenkopf .sk-haupt b { color: #3fd8b5; }
-  html.planr-dunkel .summenkopf .sk-eigen b { color: #ff7aa8; }
-  html.planr-dunkel .summenkopf.sk-vergleich { border-bottom: 3px solid #ff7aa8; }
-  html.planr-dunkel .sk-vergleich .sv-block { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); }
-  html.planr-dunkel .sk-vergleich .sv-block small { color: #9db3b4; }
-  html.planr-dunkel .sk-vergleich .sv-planr { border-color: #ff7aa8; }
-  html.planr-dunkel .sk-vergleich .sv-planr span, html.planr-dunkel .sk-vergleich .sv-planr b { color: #ff7aa8; }
-  html.planr-dunkel .sk-vergleich .sv-diff { background: #2f855a; border-color: #2f855a; }
-  html.planr-dunkel .sk-vergleich .sv-diff span, html.planr-dunkel .sk-vergleich .sv-diff b { color: #fff; }
-  html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); }
-  html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich span, html.planr-dunkel .sk-vergleich .sv-diff.sv-gleich b { color: #9db3b4; }
-  html.planr-dunkel .regler-knopf { background: #e0407b; border-color: #e0407b; }
 }

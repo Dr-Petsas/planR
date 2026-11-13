@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { leererPlan } from './store/plan'
 import { planAusSchema, zuschussAbgleich } from './probeImport'
-import { berechnen, type Listen } from './engine/berechnung'
+import { berechnen, type Listen } from '@kern/engine/berechnung'
 import { STANDARD_LISTEN } from './store/preislisten'
-import type { HkpPlan, Preisliste } from './types'
+import type { HkpPlan, Preisliste } from '@kern/types'
 
 describe('Probe-Import in den HKP-Planer', () => {
   it('setzt Befund und Therapie und rechnet Positionen', () => {

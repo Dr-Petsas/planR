@@ -78,7 +78,7 @@ let leiste: Leiste | null = null
 /** Die Punkte der Planseite stehen in der PlanR-Kopfzeile. `versand` schaltet das Mail-Icon. */
 export function planrLeiste(punkte: PlanPunkt[], aktiv: string, wahl: (id: string) => void, versand = false): () => void {
   leiste = { punkte, aktiv, versand, wahl }
-  if (typeof window !== 'undefined' && window.parent !== window && new URLSearchParams(location.search).get('probe') !== '1') {
+  if (typeof window !== 'undefined' && window.parent !== window) {
     window.parent.postMessage({ type: 'planr-leiste', punkte, aktiv, versand, speichern: true }, '*')
   }
   return () => { if (leiste?.wahl === wahl) leiste = null }

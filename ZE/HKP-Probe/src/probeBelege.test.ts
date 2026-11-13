@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { blattAusEinlesen, type BlattPosition, type BlattSummen } from '../../../Start/src/einlesenZeilen'
 import { BELEGE } from '../../../Start/src/testdaten/belege'
-import { berechnen, type Listen } from './engine/berechnung'
+import { berechnen, type Listen } from '@kern/engine/berechnung'
 import { planAusSchema, zuschussAbgleich } from './probeImport'
 import { blattUebernehmen, originalErgebnis } from './probeOriginal'
 import { leererPlan } from './store/plan'

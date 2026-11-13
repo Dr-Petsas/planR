@@ -3,8 +3,8 @@
  * GOZ- und Laborzeilen kommen vom Blatt statt aus der Regelengine, die Summen stehen wie auf dem Blatt.
  * Solange am Plan nichts geändert ist, zeigt die Oberfläche genau diese Zahlen. Danach rechnet PlanR.
  */
-import type { HkpPlan, Labor, Position } from './types'
-import { positionBerechnen, type Ergebnis, type Listen } from './engine/berechnung'
+import type { HkpPlan, Labor, Position } from '@kern/types'
+import { positionBerechnen, type Ergebnis, type Listen } from '@kern/engine/berechnung'
 import type { ProbeGebuehr, ProbeSummen } from './probeImport'
 
 export interface BlattStand {

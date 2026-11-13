@@ -1,0 +1,107 @@
+/* Gemeinsame Bausteine aller Planer (Quelle: F:\PlanR\_gemeinsam). Farben über die Planer-Variablen mit Rückfallwerten. */
+
+/* In Sophie eingebettet (thema.ts): html.thema-sophie schlägt :root der Planer */
+html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: #e7f0fd; --stahl: #3b76c9; }
+
+/* Mandant */
+.mandant-chip { display: inline-block; font-style: normal; letter-spacing: 0; text-transform: none; line-height: 1.5; margin-left: 8px; padding: 1px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); border: 1px solid #c4dfe2; vertical-align: middle; white-space: nowrap; }
+.mandant-karte { background: #fff; border: 1px solid var(--linie, #e3ddd3); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.mandant-karte h3 { margin: 0 0 4px; font-size: 15px; }
+.mandant-hilfe { margin: 0 0 10px; font-size: 12.5px; color: var(--grau, #6b767d); }
+.mandant-hilfe code { font-size: 12px; background: #f3f1ec; padding: 0 4px; border-radius: 4px; }
+.mandant-zeile { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 8px; }
+.mandant-feld { display: flex; flex-direction: column; gap: 3px; flex: 1 1 220px; font-size: 12px; color: var(--grau, #6b767d); }
+.mandant-feld input, .mandant-feld select { font: inherit; font-size: 13.5px; color: #1f2a30; padding: 6px 8px; border: 1px solid var(--linie, #d8d2c6); border-radius: 6px; background: #fff; }
+.mandant-karte button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--akzent, #2f7f8f); background: #fff; color: var(--akzent-dunkel, #266a78); cursor: pointer; }
+.mandant-karte button:hover:not(:disabled) { background: var(--akzent-hell, #e4f0f1); }
+.mandant-karte button:disabled { opacity: .45; cursor: default; }
+.mandant-karte button.mandant-loeschen { color: var(--rot, #b0413a); border-color: #e7b9b5; }
+.mandant-karte button.mandant-loeschen:hover { background: var(--rot-hell, #fbeceb); }
+
+/* Anmeldedaten (Patient, Praxis) */
+.sd-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 12px; }
+.sd-feld { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 12px; color: var(--grau, #6b767d); }
+.sd-feld.sd-breit { grid-column: span 2; }
+.sd-feld input, .sd-feld select { font: inherit; font-size: 13.5px; color: #1f2a30; padding: 6px 8px; border: 1px solid var(--linie, #d8d2c6); border-radius: 6px; background: #fff; min-width: 0; width: 100%; }
+.sd-feld input:focus, .sd-feld select:focus { outline: 2px solid var(--akzent-hell, #e4f0f1); border-color: var(--akzent, #2f7f8f); }
+@media (max-width: 520px) { .sd-feld.sd-breit { grid-column: auto; } }
+
+/* Punktwerte und Preislisten */
+.pw-karte { background: #fff; border: 1px solid var(--linie, #e3ddd3); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; color: #1f2a30; }
+.pw-karte h3 { margin: 0 0 4px; font-size: 15px; }
+.pw-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.pw-hilfe { margin: 0 0 8px; font-size: 12.5px; color: var(--grau, #6b767d); }
+.pw-hilfe code { font-size: 12px; background: #f3f1ec; padding: 0 4px; border-radius: 4px; }
+.pw-knopf { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--akzent, #2f7f8f); background: var(--akzent, #2f7f8f); color: #fff; cursor: pointer; white-space: nowrap; }
+.pw-knopf:hover:not(:disabled) { background: var(--akzent-dunkel, #266a78); }
+.pw-knopf:disabled { opacity: .55; cursor: default; }
+.pw-meldung { margin: 0 0 10px; padding: 7px 10px; border-radius: 7px; font-size: 12.5px; }
+.pw-ok { background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); }
+.pw-fehler { background: var(--rot-hell, #fbeceb); color: var(--rot, #b0413a); }
+.pw-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 12px; margin-bottom: 10px; }
+.pw-tabelle { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 6px; }
+.pw-tabelle caption { text-align: left; font-weight: 600; font-size: 12.5px; padding: 8px 0 4px; }
+.pw-tabelle th { text-align: left; font-weight: 600; font-size: 11.5px; color: var(--grau, #6b767d); border-bottom: 1px solid var(--linie, #e3ddd3); padding: 5px 6px; }
+.pw-tabelle td { border-bottom: 1px solid #f0ece5; padding: 5px 6px; vertical-align: middle; }
+.pw-tabelle .r { text-align: right; white-space: nowrap; }
+.pw-tabelle input { font: inherit; font-size: 13px; width: 92px; padding: 4px 6px; border: 1px solid var(--linie, #d8d2c6); border-radius: 6px; text-align: right; }
+.pw-tabelle tr.pw-aktiv td { background: var(--akzent-hell, #e4f0f1); font-weight: 600; }
+.pw-klein { font-size: 12px; }
+.pw-warn { color: var(--warn, #9a5b00); }
+.pw-klapp { font: inherit; font-size: 12.5px; border: 0; background: none; color: var(--akzent-dunkel, #266a78); padding: 4px 0; cursor: pointer; }
+.pw-details { margin-top: 6px; }
+.pw-csv textarea { width: 100%; font-family: Consolas, 'Cascadia Mono', monospace; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--linie, #d8d2c6); border-radius: 6px; }
+.pw-zeile { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.pw-zeile select, .pw-zeile button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--akzent, #2f7f8f); background: #fff; color: var(--akzent-dunkel, #266a78); cursor: pointer; }
+.pw-zeile button:disabled { opacity: .45; cursor: default; }
+.pw-zeile .pw-weg { color: var(--rot, #b0413a); border-color: #e7b9b5; }
+
+/* Befund (01) als erster Schritt */
+.befund-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 16px 8px; padding: 6px 10px; background: #fff; border: 1px solid var(--linie, #e3ddd3); border-radius: 6px; font-size: 13px; }
+.befund-leiste .klein { font-size: 11px; }
+.befund-leiste .aktionen { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.befund-leiste button { font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--akzent, #2f7f8f); background: #fff; color: var(--akzent-dunkel, #266a78); cursor: pointer; }
+.befund-leiste button:disabled { opacity: .45; cursor: default; }
+.befund-leiste .live-punkt { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #b9a3ad; flex: none; }
+.befund-leiste .live-punkt.an { background: #2e8b57; }
+.b01-offen-text { color: var(--rot, #b0413a); font-weight: 600; }
+.b01-schema { display: inline-flex; flex-direction: column; gap: 2px; }
+.b01-reihe { display: grid; grid-template-columns: repeat(16, 26px); gap: 1px; }
+.b01-reihe > :nth-child(8) { margin-right: 4px; }
+.b01-reihe.uk { border-top: 1px solid var(--linie, #e3ddd3); padding-top: 2px; }
+.b01-zahn { display: flex; flex-direction: column; align-items: center; border: 1px solid transparent; border-radius: 3px; padding: 1px 0; line-height: 1.1; }
+.b01-zahn .b01-code { font-size: 11px; font-weight: 600; min-height: 12px; }
+.b01-zahn .b01-nr { font-size: 9px; color: var(--grau, #6b767d); }
+.b01-zahn.fehlt .b01-code { color: var(--grau, #6b767d); }
+.b01-zahn.offen { background: var(--rot-hell, #fbeceb); border-color: #e7b9b5; }
+.b01-zahn.weicht { outline: 1px dashed var(--akzent, #2f7f8f); outline-offset: -1px; }
+.b01-warnung { color: var(--warn, #9a5b00); font-size: 11.5px; }
+@media print { .befund-leiste { display: none; } }
+
+/* Unterschrift Zahnarzt: blauer Praxisstempel, die Unterschrift aus Pickadoc liegt darüber */
+.arzt-unterschrift { position: relative; height: 24mm; border-bottom: 1px solid #555; margin-bottom: 3px; }
+.arzt-stempel { position: absolute; left: 1mm; bottom: 1.5mm; white-space: nowrap; padding: 1.2mm 2.6mm; border: 1.4px solid #1c3f94; border-radius: 2.5mm; color: #1c3f94; font: 8px/1.3 Arial, Helvetica, sans-serif; text-align: left; opacity: .88; transform: rotate(-1.2deg); transform-origin: left bottom; }
+.arzt-stempel b { display: block; font-size: 8.5px; letter-spacing: .2px; }
+.arzt-signatur { position: absolute; left: 10mm; bottom: 3mm; height: 17mm; max-width: 62mm; object-fit: contain; z-index: 1; }
+.arzt-fehlt { position: absolute; right: 0; top: 0; max-width: 46mm; font-size: 9px; line-height: 1.25; color: #b45309; text-align: right; }
+.kv-unterschriften:has(.arzt-unterschrift) { align-items: end; }
+@media print { .arzt-fehlt { display: none; } }
+
+/* Begründungen der Faktoren über dem Schwellenwert (§ 10 Abs. 3 GOZ) im Kostenvoranschlag */
+.kv-begruendung { margin-top: 14px; break-inside: avoid; }
+.kv-begruendung h2 { font-size: 12px; margin: 0 0 4px; }
+.kv-begruendung p { margin: 3px 0; font-size: 11px; }
+
+/* Handy (components/Handy.tsx) wie im Kassen-HKP: Regler hinter dem Knopf, Blatt bleibt A4 und wird verkleinert */
+.regler-knopf { display: none; }
+@media (max-width: 840px) {
+  html, body { overflow-x: hidden; }
+  .regler-knopf {
+    display: block; width: calc(100% - 16px); margin: 8px; min-height: 44px; padding: 5px 10px;
+    border: 1px solid #d63384; border-radius: 12px; background: #d63384; color: #fff;
+    font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .kv-blatt, .ef2, .a4 { width: 210mm; max-width: none; flex: 0 0 auto; zoom: var(--handy-zoom, 1); }
+  .vorschau, .druck-bereich { min-width: 0; max-width: 100%; }
+  select, .pos-neu select { max-width: 100%; }
+}

@@ -160,7 +160,7 @@ export function probeSeite(app: HTMLElement) {
 
   const oeffnen = () => {
     ergebnis.hidden = false
-    if (!rahmen.getAttribute('src')) rahmen.src = '/planer/hkp/?probe=1'
+    if (!rahmen.getAttribute('src')) rahmen.src = '/planer/probe-hkp/'
     else schicken()
     ergebnis.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
