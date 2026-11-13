@@ -151,19 +151,23 @@ function laborZeilen(zeilen: PdfZeile[]): BlattPosition[] {
     const vorher = letzte
     letzte = undefined
     if (kopfMit(z, 'nr.', 'leistungsbezeichnung', 'einzelpreis')) {
+      // Die Nummer beginnt in der Spalte Nr.: links von der Mitte zwischen den Anfängen von Nr. und Leistungsbezeichnung.
+      const links = (t: PdfTeil) => t.x - (t.w ?? 0) / 2
+      const nr = z.teile.find((t) => t.text.toLowerCase().startsWith('nr.'))!
       const text = z.teile.find((t) => t.text.toLowerCase().startsWith('leistungsbezeichnung'))!
-      grenze = text.x - (text.w ?? 0) / 2 - 2
+      grenze = (links(nr) + links(text)) / 2
       continue
     }
     if (grenze < 0) continue
-    const vorn = z.teile.filter((t) => t.x <= grenze).filter((t) => !istDatum(t.text))
-    const hinten = z.teile.filter((t) => !vorn.includes(t) && !istDatum(t.text) && !t.text.endsWith('%')).map((t) => t.text)
+    const worte = z.teile.filter((t) => !istDatum(t.text))
+    const vorn = worte.length && worte[0].x - (worte[0].w ?? 0) / 2 < grenze ? [worte[0]] : []
+    const hinten = worte.slice(vorn.length).filter((t) => !t.text.endsWith('%')).map((t) => t.text)
     if (!vorn.length && vorher && hinten.length && hinten.every((w) => hatBuchstabe(w) && !w.endsWith(':'))) {
       vorher.text = [vorher.text, ...hinten].filter(Boolean).join(' ')
       letzte = vorher
       continue
     }
-    if (hinten.length < 4) continue
+    if (hinten.length < 3) continue
     const [preis, menge, summe] = hinten.slice(-3).map(betragVon)
     if (preis === undefined || menge === undefined || summe === undefined || menge <= 0) continue
     if (Math.abs(preis * menge - summe) > 0.02) continue

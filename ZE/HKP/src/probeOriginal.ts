@@ -90,6 +90,26 @@ function bemaVomBlatt(plan: HkpPlan, listen: Listen, positionen: Position[], zie
   return [...neu, ...positionen.filter((p) => p.ebene !== 'BEMA')]
 }
 
+const euro = (n: number) => `${n.toFixed(2).replace('.', ',')} €`
+
+/** Gegenrechnung: Die gelesenen Zeilen und Summen müssen untereinander aufgehen, sonst ist etwas falsch gelesen. */
+function summenPruefen(goz: ProbeGebuehr[], s: ProbeSummen): string[] {
+  const aus: string[] = []
+  if (goz.length && s.honorarGoz !== undefined) {
+    const gelesen = runden(goz.reduce((n, p) => n + (p.betrag ?? 0), 0))
+    if (Math.abs(gelesen - s.honorarGoz) > 0.5) aus.push(`Die gelesenen GOZ-Zeilen ergeben ${euro(gelesen)}, auf Teil 2 steht als GOZ-Honorar ${euro(s.honorarGoz)}. Bitte die GOZ-Zeilen gegenlesen.`)
+  }
+  if (s.gesamt !== undefined && s.honorarGoz !== undefined && s.labor !== undefined) {
+    const teile = runden((s.honorarBema ?? 0) + s.honorarGoz + s.labor)
+    if (Math.abs(teile - s.gesamt) > 1) aus.push(`Honorar und Labor ergeben ${euro(teile)}, als Gesamtkosten sind ${euro(s.gesamt)} gelesen. Bitte die Summen von Teil 2 gegenlesen.`)
+  }
+  if (s.gesamt !== undefined && s.festzuschuss !== undefined && s.eigenanteil !== undefined && s.eigenanteil > 0) {
+    const eigen = runden(s.gesamt - s.festzuschuss)
+    if (Math.abs(eigen - s.eigenanteil) > 0.02) aus.push(`Gesamtkosten abzüglich Festzuschuss ergeben ${euro(eigen)}, als Eigenanteil sind ${euro(s.eigenanteil)} gelesen. Bitte die Summen von Teil 2 gegenlesen.`)
+  }
+  return aus
+}
+
 /** Legt die Zeilen und Summen des Blatts in den Plan und merkt sich den Stand als Original. */
 export function blattUebernehmen(
   plan: HkpPlan, listen: Listen, gebuehren: ProbeGebuehr[], summen: ProbeSummen,
@@ -157,6 +177,8 @@ export function blattUebernehmen(
       hinweise.push('Teil 2 weist mehr Laborkosten aus als der Eigenlaborbeleg. Der Rest steht als Fremdlabor in einer Summe.')
     }
   }
+
+  hinweise.push(...summenPruefen(goz, summen))
 
   const mitEinstellungen = { ...plan, einstellungen }
   if (summen.honorarBema !== undefined) positionen = bemaVomBlatt(mitEinstellungen, listen, positionen, summen.honorarBema)
