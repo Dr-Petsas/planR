@@ -109,11 +109,16 @@ export function probeSeite(app: HTMLElement) {
     </header>
     <section class="hp-hero hp-probe" id="top">
       <div class="hp-glow"></div>
-      <div class="hp-probe-kopf">
+      <div class="hp-hero-text">
         <p class="hp-eyebrow">Für Zahnärzte · am eigenen HKP</p>
         <h1>Legen Sie einen HKP hier ab. <span class="hp-verlauf">PlanR optimiert Ihren Umsatz.</span></h1>
+        <p class="hp-lead">Bitte den kompletten HKP hochladen, inklusive:</p>
+        <ul class="hp-probe-teile">
+          <li>HKP (Kasse)</li>
+          <li>GOZ-KVA</li>
+          <li>Labor-KVA (Eigenbeleg)</li>
+        </ul>
       </div>
-      <p class="hp-lead">PlanR liest Befund, Regelversorgung, Therapieplanung, GOZ und Labor und setzt sie in den HKP-Planer. Dort stehen Teil 1, Teil 2, die Anlagen und die Regler.</p>
       <form class="hp-probe-ablage">
         <p class="hp-probe-pflicht">Patientendaten unkenntlich machen, bevor Sie etwas hier ablegen: Name, Geburtsdatum, Adresse, Telefon und Versichertennummer dürfen auf dem Blatt nicht mehr lesbar sein.</p>
         <label class="hp-probe-haken"><input type="checkbox" data-frei> Ich habe die Patientendaten unkenntlich gemacht.</label>

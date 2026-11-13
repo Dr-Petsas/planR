@@ -202,8 +202,16 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 .hp-hero h1 { font-size: clamp(40px, 6.2vw, 78px); font-weight: 800; }
 .hp-verlauf { background: linear-gradient(100deg, var(--hp-mint), var(--hp-pink) 60%, var(--hp-gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hp-probe { align-items: start; }
-.hp-probe-kopf { grid-column: 1 / -1; container-type: inline-size; }
-.hp-probe h1 .hp-verlauf { display: block; white-space: nowrap; font-size: clamp(18px, 5.1cqi, 64px); line-height: 1.08; }
+.hp-probe h1 .hp-verlauf { display: block; }
+.hp-probe-teile { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.hp-probe-teile li {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px 8px 12px; border-radius: 999px;
+  background: rgba(63, 216, 181, 0.14); border: 1px solid rgba(63, 216, 181, 0.55); color: #e8f4f4; font-weight: 650; font-size: 16px;
+}
+.hp-probe-teile li::before {
+  content: "\2713"; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--hp-mint); color: #042026; font-size: 13px; font-weight: 800;
+}
 .hp-lead { font-size: clamp(17px, 1.6vw, 20px); color: #c9dcdc; max-width: 40em; margin: 22px 0 14px; }
 .hp-gestern { font-size: 18px; font-weight: 650; margin: 0 0 30px; }
 .hp-gestern s { color: #d6e4e4; text-decoration-color: rgba(255, 122, 107, 0.7); text-decoration-thickness: 1.5px; }
