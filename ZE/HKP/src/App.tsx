@@ -443,8 +443,8 @@ export default function App() {
 
       <div className="hauptspalte" ref={hauptRef}>
       {hkpAnsicht && (engineHinweise.length > 0 || ergebnis.hinweise.length > 0) && (
-        <details className="hinweise" open={fehler > 0 || engineHinweise.length > 0}>
-          <summary>Prüfhinweise ({ergebnis.hinweise.length + engineHinweise.length}{fehler ? `, davon ${fehler} Fehler` : ''})</summary>
+        <details className="hinweise">
+          <summary>{fehler > 0 && <span className="hinweis-achtung" title="Fehler – bitte öffnen" aria-label="Fehler">!</span>}Prüfhinweise ({ergebnis.hinweise.length + engineHinweise.length}{fehler ? `, davon ${fehler} Fehler` : ''})</summary>
           {engineHinweise.map((h) => <p key={h} className="hinweis info">{h}</p>)}
           {ergebnis.hinweise.map((h, i) => <p key={i} className={`hinweis ${h.stufe}`}>{h.text}</p>)}
         </details>
