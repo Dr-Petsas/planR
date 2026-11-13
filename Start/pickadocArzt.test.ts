@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arztWaehlen } from './pickadocArzt.ts'
+import { arztWaehlen, arztZumNamen, selberArzt, signaturVonVerknuepft } from './pickadocArzt.ts'
 
 const SIG = `data:image/png;base64,${'A'.repeat(200)}`
 const dok = (id: string, f: Record<string, string | boolean>) => ({
@@ -27,4 +27,22 @@ describe('Arzt für die Unterschrift', () => {
   it('nur echte Bild-Data-URLs gelten als Unterschrift', () => {
     expect(arztWaehlen(dok('z', { firstName: 'Z', lastName: 'Z', role: 'doctor', signature: 'javascript:alert(1)' }), [])?.signatur).toBe('')
   })
+
+  it('verknüpfte Praxis: derselbe Arzt, auch wenn der Titel anders geschrieben ist', () => {
+    expect(selberArzt('Dr.med.dent. Michael Petsas', 'Dr. Michael Petsas')).toBe(true)
+    expect(selberArzt('Dr. Michael Petsas', 'Dr. Anna Berg')).toBe(false)
+    const eigen = { uid: 'solo', name: 'Dr.med.dent. Michael Petsas', signatur: '' }
+    const verknuepft = { uid: 'praxis', name: 'Dr. Michael Petsas', signatur: SIG }
+    const kollegin = { uid: 'k', name: 'Dr. Anna Berg', signatur: SIG }
+    expect(signaturVonVerknuepft(eigen, verknuepft)).toEqual({ ...eigen, signatur: SIG })
+    expect(signaturVonVerknuepft(eigen, kollegin)).toEqual(eigen)
+    expect(signaturVonVerknuepft({ ...eigen, signatur: 'data:image/png;base64,eigen' }, verknuepft)?.signatur).toBe('data:image/png;base64,eigen')
+    expect(arztZumNamen([kolleginDok(kollegin), petsas], 'Dr.med.dent. Michael Petsas')?.uid).toBe('p')
+    expect(arztZumNamen([kolleginDok(kollegin)], 'Dr.med.dent. Michael Petsas')).toBeNull()
+  })
 })
+
+function kolleginDok(a: { uid: string; name: string; signatur: string }) {
+  const [title, firstName, lastName] = a.name.split(' ')
+  return dok(a.uid, { title, firstName, lastName, role: 'doctor', signature: a.signatur })
+}

@@ -17,7 +17,7 @@ import {
   setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe, type AgentStand,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
-import { arztAusPickadoc, avatarHolen } from './pickadocArzt.ts'
+import { arztAusPickadoc, arztDerPraxis, avatarHolen, signaturVonVerknuepft } from './pickadocArzt.ts'
 import { freieSlots, kalenderStand, terminEintragen, terminNachsehen } from './terminKalender.ts'
 import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patientAbgleichen, stammAus, vermerkNachKalender, type Akte, type Stamm } from './src/termin.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
@@ -254,12 +254,21 @@ function lesenBytes(req: IncomingMessage, hoechstens: number): Promise<Buffer> {
 
 const pickadocFoto = new Map<string, { art: string; daten: Buffer | null; bis: number }>()
 
-/** Eigenes Foto, sonst das Porträt aus dem Pickadoc-Profil. */
+/** Porträt der verknüpften Pickadoc-Praxis, nur wenn es dieselbe Person ist. */
+async function portraetVerknuepft(w: Wer): Promise<{ art: string; daten: Buffer } | null> {
+  if (!w.register || w.register === w.konto.clientId) return null
+  const eigen = await arztAusPickadoc(w.konto.clientId, w.konto.uid).catch(() => null)
+  if (!eigen?.name) return null
+  const fremd = await arztDerPraxis(w.register, eigen.name).catch(() => null)
+  return fremd?.uid ? avatarHolen(w.register, fremd.uid).catch(() => null) : null
+}
+
+/** Eigenes Foto, sonst das Porträt aus dem eigenen Pickadoc-Profil, sonst das der verknüpften Praxis. */
 async function profilAusPickadoc(w: Wer): Promise<{ art: string; daten: Buffer } | null> {
   const key = `${w.konto.clientId}|${w.konto.uid}`
   const alt = pickadocFoto.get(key)
   if (alt && alt.bis > Date.now()) return alt.daten ? { art: alt.art, daten: alt.daten } : null
-  const bild = await avatarHolen(w.konto.clientId, w.konto.uid).catch(() => null)
+  const bild = await avatarHolen(w.konto.clientId, w.konto.uid).catch(() => null) ?? await portraetVerknuepft(w)
   pickadocFoto.set(key, { art: bild?.art ?? '', daten: bild?.daten ?? null, bis: Date.now() + (bild ? 10 : 1) * 60_000 })
   return bild
 }
@@ -677,7 +686,12 @@ async function praxisdaten(res: ServerResponse, w: Wer) {
     ...gepflegt,
   }
   const praxis = Object.fromEntries(PRAXIS_FELDER.map((k) => [k, typeof roh[k] === 'string' ? (roh[k] as string).trim() : '']).filter(([, v]) => v))
-  const arzt = await arztAusPickadoc(w.konto.clientId, w.konto.uid, String(praxis.zahnarzt ?? '')).catch(() => null)
+  const kopf = String(praxis.zahnarzt ?? '')
+  let arzt = await arztAusPickadoc(w.konto.clientId, w.konto.uid, kopf).catch(() => null)
+  if (!arzt?.signatur && w.register && w.register !== w.konto.clientId) {
+    const fremd = await arztDerPraxis(w.register, arzt?.name || kopf).catch(() => null)
+    arzt = signaturVonVerknuepft(arzt, fremd)
+  }
   json(res, 200, { ok: true, nummer: nr, praxis, ...(arzt ? { arzt: { name: arzt.name, signatur: arzt.signatur } } : {}) })
 }
 

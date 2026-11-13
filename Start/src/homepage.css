@@ -207,11 +207,20 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 .hp-ctas { display: flex; flex-wrap: wrap; gap: 12px; }
 .hp-klein { margin-top: 18px; font-size: 14px; color: var(--hp-grau); }
 .hp-probe-ablage, .hp-probe-liste { margin: 0; }
+.hp-probe-ablage { display: flex; flex-direction: column; gap: 14px; }
 .hp-probe-feld {
-  display: flex; flex-direction: column; gap: 8px; padding: 22px; border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06); border: 1px dashed var(--hp-linie); color: #e8f4f4; cursor: pointer;
+  position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+  padding: 26px 22px; border-radius: 18px; border: 0; cursor: pointer; color: #042026;
+  background: linear-gradient(135deg, var(--hp-mint), #7cf0d2);
+  box-shadow: 0 18px 44px -14px rgba(63, 216, 181, 0.85);
+  transition: transform 0.15s, filter 0.15s;
 }
-.hp-probe-feld span, .hp-probe-status { color: var(--hp-grau); font-size: 14px; }
+.hp-probe-feld b { font-size: 26px; letter-spacing: -0.03em; }
+.hp-probe-feld span { color: #0c3d38; font-size: 15px; font-weight: 600; }
+.hp-probe-feld:hover { transform: translateY(-2px); filter: brightness(1.06); }
+.hp-probe-feld:has(input:disabled) { opacity: 0.42; filter: grayscale(0.55); cursor: not-allowed; box-shadow: none; }
+.hp-probe-feld:has(input:disabled):hover { transform: none; filter: grayscale(0.55); }
+.hp-probe-status { color: var(--hp-grau); font-size: 14px; margin: 0; }
 .hp-probe-plan { padding: 0 0 28px; background: var(--hp-tief, #071a1f); }
 .hp-probe-rahmen { display: block; width: 100%; height: min(1100px, calc(100vh - 12px)); height: min(1100px, calc(100dvh - 12px)); border: 0; background: #071a1f; color-scheme: dark; }
 @media (max-width: 700px) {
@@ -229,9 +238,12 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
   animation: hp-dreh .7s linear infinite;
 }
 @keyframes hp-dreh { to { transform: rotate(360deg); } }
-.hp-probe-feld input { font: inherit; color: inherit; }
-.hp-probe-pflicht { margin: 14px 0 0; padding: 12px 14px; border-radius: 12px; background: rgba(255, 196, 120, 0.16); color: #ffe7c2; font-weight: 650; max-width: 40em; }
-.hp-probe-haken { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; color: #ffe7c2; font-weight: 650; }
+.hp-probe-feld input {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.hp-probe-pflicht { margin: 0; padding: 14px 16px; border-radius: 14px; background: rgba(255, 196, 120, 0.16); color: #ffe7c2; font-weight: 650; }
+.hp-probe-haken { display: flex; gap: 10px; align-items: flex-start; margin: 0; color: #ffe7c2; font-weight: 650; }
 .hp-planer { background: #f4f7f7; color: #1c2b2e; }
 .hp-blatt { background: #fff; border: 1px solid #d7e0e0; border-radius: 16px; padding: 18px 16px 8px; margin-bottom: 22px; overflow-x: auto; }
 .hp-blatt-kopf { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; margin-bottom: 12px; }

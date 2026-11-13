@@ -111,7 +111,7 @@ export function probeSeite(app: HTMLElement) {
       <div class="hp-glow"></div>
       <div class="hp-hero-text">
         <p class="hp-eyebrow">Für Zahnärzte · am eigenen HKP</p>
-        <h1>Legen Sie einen HKP hier ab. <span class="hp-verlauf">Danach maximieren Sie Ihren Umsatz.</span></h1>
+        <h1>Legen Sie einen HKP hier ab. <span class="hp-verlauf">PlanR optimiert Ihren Umsatz.</span></h1>
         <p class="hp-lead">PlanR liest Befund, Regelversorgung, Therapieplanung, GOZ und Labor und setzt sie in den HKP-Planer. Dort stehen Teil 1, Teil 2, die Anlagen und die Regler.</p>
       </div>
       <form class="hp-probe-ablage">
