@@ -42,6 +42,21 @@ describe('Originalzustand vom Blatt', () => {
     expect(texte[2]).toBe('Laborleistung laut Beleg')
   })
 
+  it('führt Material und MwSt. des Belegs als eigene Zeilen, ohne Restposten', () => {
+    const zeilen: ProbeGebuehr[] = [
+      { ebene: 'BEB', nr: 'SCAN', zahn: '', anzahl: 1, betrag: 89, text: '3D- Modellscan' },
+      { ebene: 'MAT', nr: '', zahn: '', anzahl: 2, betrag: 39, text: 'Zirkon' },
+    ]
+    const b = blattUebernehmen(leererPlan(), LISTEN, zeilen, { laborBeleg: 178.69, laborMwst: [{ satz: 7, netto: 167, betrag: 11.69 }] })
+    const mat = berechnen(b.plan, LISTEN).positionen.filter((p) => p.ebene === 'MAT')
+    expect(mat.map((p) => [p.bezeichnung, p.anzahl, p.betrag])).toEqual([['Zirkon', 2, 78], ['MwSt. 7 % auf 167,00 € laut Beleg', 1, 11.69]])
+    expect(b.hinweise).toEqual([])
+    expect(berechnen(b.plan, LISTEN).summen.materialUndLabor).toBeCloseTo(178.69, 2)
+    const luecke = blattUebernehmen(leererPlan(), LISTEN, zeilen, { laborBeleg: 200 })
+    expect(luecke.plan.positionen.some((p) => p.text === 'Nicht gelesene Posten laut Beleg')).toBe(true)
+    expect(luecke.hinweise[0]).toContain('nicht vollständig gelesen')
+  })
+
   it('rechnet nach einer Änderung dicht am Blatt weiter, Labor nicht doppelt', () => {
     const b = blattUebernehmen(leererPlan(), LISTEN, GEBUEHREN, SUMMEN)
     const e = berechnen(b.plan, LISTEN)

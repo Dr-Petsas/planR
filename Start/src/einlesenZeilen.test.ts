@@ -70,13 +70,14 @@ describe('Zeilen aus dem Einlese-Dienst', () => {
     expect(blatt.summen).toEqual({ honorarGoz: 678, labor: 1163, festzuschuss: 571.29, eigenanteil: 1269.71 })
   })
 
-  it('liest den Eigenbeleg: BEL mit Strich, BEB, keine Summenzeilen', () => {
+  it('liest den Eigenbeleg: BEL mit Strich, BEB, Material ohne Nummer, MwSt., keine Summenzeilen', () => {
     const blatt = blattAusEinlesen(antwort([
       t(260, 300, 'Nr.'), t(340, 300, 'Leistungsbezeichnung'), t(900, 300, 'Einzelpreis'), t(1080, 300, 'Anzahl'), t(1240, 300, 'Betrag'), t(1400, 300, 'MwSt'),
       t(100, 340, '05.11.2026'), t(250, 340, '001-0'), t(340, 340, 'Modell'), t(960, 340, '7,29'), t(1120, 340, '1'), t(1260, 340, '7,29'),
       t(250, 380, '02281'), t(340, 380, 'Krone aus Keramik gefräst (Anatomisch'), t(940, 380, '129,00'), t(1120, 380, '2'), t(1240, 380, '258,00'),
       t(340, 410, 'Vollzirkon)'),
       t(250, 450, 'SCAN'), t(340, 450, '3D- Modellscan'), t(950, 450, '89,00'), t(1120, 450, '1'), t(1250, 450, '89,00'), t(1400, 450, '7,00%'),
+      t(100, 470, '05.11.2026'), t(340, 470, 'Zirkon'), t(950, 470, '39,00'), t(1100, 470, '2,00g'), t(1250, 470, '78,00'), t(1400, 470, '7,00%'),
       t(100, 500, 'Summe der Positionen mit 7,00% MwSt'), t(1080, 500, 'EUR'), t(1240, 500, '256,00'), t(1400, 500, '17,92'), t(1500, 500, '273,92'),
       t(100, 560, 'Laborkosten gesamt'), t(1080, 560, 'EUR'), t(1500, 560, '354,29'),
     ]))
@@ -84,9 +85,10 @@ describe('Zeilen aus dem Einlese-Dienst', () => {
       { ebene: 'BEL', nr: '0010', zahn: '', anzahl: 1, betrag: 7.29 },
       { ebene: 'BEB', nr: '02281', zahn: '', anzahl: 2, betrag: 129 },
       { ebene: 'BEB', nr: 'SCAN', zahn: '', anzahl: 1, betrag: 89 },
+      { ebene: 'MAT', nr: '', zahn: '', anzahl: 2, betrag: 39 },
     ])
-    expect(blatt.positionen[0].text).toBe('Modell')
-    expect(blatt.summen).toEqual({ laborBeleg: 354.29 })
+    expect(blatt.positionen.map((p) => p.text)).toEqual(['Modell', 'Krone aus Keramik gefräst (Anatomisch Vollzirkon)', '3D- Modellscan', 'Zirkon'])
+    expect(blatt.summen).toEqual({ laborBeleg: 354.29, laborMwst: [{ satz: 7, netto: 256, betrag: 17.92 }] })
   })
 
   it('gibt ohne Ergänzung ein leeres Blatt zurück', () => {

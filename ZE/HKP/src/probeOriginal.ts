@@ -55,6 +55,12 @@ function gozVomBlatt(plan: HkpPlan, listen: Listen, zeilen: ProbeGebuehr[], betr
 function laborVomBlatt(plan: HkpPlan, listen: Listen, zeilen: ProbeGebuehr[], labor: Labor, betraege: Record<string, number>): Position[] {
   return zeilen.map((z, i) => {
     const anzahl = z.anzahl && z.anzahl > 0 ? z.anzahl : 1
+    if (z.ebene === 'MAT') {
+      // Material ohne Nummer (Zirkon, Legierung): Menge und Einzelpreis stehen fest wie auf dem Beleg.
+      const id = `${BLATT}MAT-${i}`
+      betraege[id] = runden((z.betrag ?? 0) * anzahl)
+      return { id, ebene: 'MAT', nr: '', zahn: '', anzahl, preis: z.betrag ?? 0, text: z.text?.trim() || 'Material laut Beleg', labor, auto: false }
+    }
     const basis: Position = {
       id: `${BLATT}${z.ebene}-${i}`, ebene: z.ebene as 'BEL' | 'BEB', nr: z.nr.trim().toLowerCase(), zahn: (z.zahn ?? '').trim(), anzahl, auto: false, labor,
       ...(z.text?.trim() ? { text: z.text.trim() } : {}),
@@ -90,7 +96,7 @@ export function blattUebernehmen(
 ): { plan: HkpPlan; original: BlattStand | null; hinweise: string[] } {
   const hinweise: string[] = []
   const goz = gebuehren.filter((p) => p.ebene === 'GOZ' && p.nr.trim())
-  const labor = gebuehren.filter((p) => (p.ebene === 'BEL' || p.ebene === 'BEB') && p.nr.trim())
+  const labor = gebuehren.filter((p) => ((p.ebene === 'BEL' || p.ebene === 'BEB') && p.nr.trim()) || (p.ebene === 'MAT' && p.text?.trim() && (p.betrag ?? 0) > 0))
   const laborZiel = summen.laborBeleg ?? summen.labor
   const hatSummen = [summen.honorarGoz, summen.gesamt, summen.eigenanteil, laborZiel].some((n) => n !== undefined)
   if (!goz.length && !labor.length && !hatSummen) {
@@ -112,11 +118,20 @@ export function blattUebernehmen(
     positionen = [...positionen.filter((p) => !istLabor(p)), ...zeilen]
     if (laborZiel !== undefined) {
       einstellungen = { ...einstellungen, mwstLabor: 0 }
-      const rest = runden(laborZiel - labor.reduce((s, z) => s + (z.betrag ?? 0) * (z.anzahl && z.anzahl > 0 ? z.anzahl : 1), 0))
+      // Die MwSt. steht auf dem Beleg je Satz in einer eigenen Summenzeile.
+      const steuern = (summen.laborMwst ?? []).filter((m) => m.betrag > 0)
+      steuern.forEach((m, i) => {
+        const id = `${BLATT}MAT-mwst-${i}`
+        betraege[id] = m.betrag
+        positionen = [...positionen, { id, ebene: 'MAT', nr: '', zahn: '', anzahl: 1, preis: m.betrag, text: `MwSt. ${String(m.satz).replace('.', ',')} % auf ${m.netto.toFixed(2).replace('.', ',')} € laut Beleg`, labor: art, auto: false }]
+      })
+      const gelesen = labor.reduce((s, z) => s + (z.betrag ?? 0) * (z.anzahl && z.anzahl > 0 ? z.anzahl : 1), 0) + steuern.reduce((s, m) => s + m.betrag, 0)
+      const rest = runden(laborZiel - gelesen)
       if (rest > 0.005) {
         const id = `${BLATT}MAT-rest`
         betraege[id] = rest
-        positionen = [...positionen, { id, ebene: 'MAT', nr: '', zahn: '', anzahl: 1, preis: rest, text: 'Übrige Posten laut Beleg (Material, MwSt.)', labor: art, auto: false }]
+        positionen = [...positionen, { id, ebene: 'MAT', nr: '', zahn: '', anzahl: 1, preis: rest, text: 'Nicht gelesene Posten laut Beleg', labor: art, auto: false }]
+        hinweise.push(`Der Laborbeleg ist nicht vollständig gelesen: ${rest.toFixed(2).replace('.', ',')} € stehen als eine Summe. Bitte den Beleg gegenlesen.`)
       } else if (rest < -0.005) {
         hinweise.push('Die gelesenen Laborzeilen ergeben mehr als die Summe auf dem Beleg. Bitte die Laborzeilen gegenlesen.')
       }

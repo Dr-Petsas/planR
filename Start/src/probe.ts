@@ -4,10 +4,11 @@
  */
 import './homepage.css'
 import { logo, wortmarke } from './logo'
-import { blattAusEinlesen, type BlattSummen, type EinleseAntwort } from './einlesenZeilen'
+import { blattAusEinlesen, type BlattPosition, type BlattSummen, type EinleseAntwort } from './einlesenZeilen'
 import { blattAusZeilen, textSchichtenAusPdf, zeilenAusPdf, zeilenAusText, type ProbePosition, type ZahnSchema } from './hkpPdf'
 
-interface Blatt { schema: ZahnSchema; positionen: ProbePosition[]; summen?: BlattSummen }
+type Zeile = ProbePosition | BlattPosition
+interface Blatt { schema: ZahnSchema; positionen: Zeile[]; summen?: BlattSummen }
 const LEER: Blatt = { schema: { B: {}, R: {}, TP: {} }, positionen: [] }
 
 function zaehlt(schema: ZahnSchema) {
@@ -24,14 +25,15 @@ function hat(blatt: Blatt) {
 
 function vereinen(teile: Blatt[]): Blatt {
   const schema: ZahnSchema = { B: {}, R: {}, TP: {} }
-  const positionen: ProbePosition[] = []
-  const da = new Map<string, ProbePosition & { text?: string }>()
+  const positionen: Zeile[] = []
+  const da = new Map<string, Zeile & { text?: string }>()
   for (const teil of teile) {
     dazu(schema.B, teil.schema.B)
     dazu(schema.R, teil.schema.R)
     dazu(schema.TP, teil.schema.TP)
     for (const p of teil.positionen) {
-      const key = `${p.ebene}|${p.nr}|${p.zahn}`
+      // Material hat keine Nummer: dort unterscheidet die Bezeichnung.
+      const key = `${p.ebene}|${p.nr || (p as { text?: string }).text || ''}|${p.zahn}`
       const schon = da.get(key)
       if (schon) {
         // Dieselbe Zeile aus einer zweiten Datei: die Bezeichnung nachtragen, wenn sie der ersten fehlte.
@@ -109,15 +111,15 @@ export function probeSeite(app: HTMLElement) {
       <div class="hp-glow"></div>
       <div class="hp-hero-text">
         <p class="hp-eyebrow">Für Zahnärzte · am eigenen HKP</p>
-        <h1>Legen Sie einen HKP hier ab. <span class="hp-verlauf">Der Planer übernimmt ihn.</span></h1>
+        <h1>Legen Sie einen HKP hier ab. <span class="hp-verlauf">Danach maximieren Sie Ihren Umsatz.</span></h1>
         <p class="hp-lead">PlanR liest Befund, Regelversorgung, Therapieplanung, GOZ und Labor und setzt sie in den HKP-Planer. Dort stehen Teil 1, Teil 2, die Anlagen und die Regler.</p>
-        <p class="hp-probe-pflicht">Patientendaten unkenntlich machen, bevor Sie etwas hier ablegen: Name, Geburtsdatum, Adresse, Telefon und Versichertennummer dürfen auf dem Blatt nicht mehr lesbar sein.</p>
       </div>
       <form class="hp-probe-ablage">
+        <p class="hp-probe-pflicht">Patientendaten unkenntlich machen, bevor Sie etwas hier ablegen: Name, Geburtsdatum, Adresse, Telefon und Versichertennummer dürfen auf dem Blatt nicht mehr lesbar sein.</p>
         <label class="hp-probe-haken"><input type="checkbox" data-frei> Ich habe die Patientendaten unkenntlich gemacht.</label>
         <label class="hp-probe-feld">
-          <b>HKP, Anlage, Foto oder Text</b>
-          <span>PDF, Foto (JPG, PNG) oder Textdatei. Mehrere Dateien auf einmal. Erst nach dem Haken.</span>
+          <b>Dateien hochladen</b>
+          <span>PDF, Foto oder Text. Mehrere Dateien auf einmal.</span>
           <input type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.txt,text/plain" multiple data-dateien disabled>
         </label>
         <p class="hp-probe-status" data-status>Noch nichts gelesen.</p>

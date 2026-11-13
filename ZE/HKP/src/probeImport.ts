@@ -22,7 +22,7 @@ export interface ProbeGebuehr {
   zahn?: string
   anzahl?: number
   faktor?: number
-  /** GOZ: Betrag der Zeile. BEL/BEB: Einzelpreis. */
+  /** GOZ: Betrag der Zeile. BEL/BEB/MAT: Einzelpreis. */
   betrag?: number
   text?: string
 }
@@ -37,6 +37,8 @@ export interface ProbeSummen {
   eigenanteil?: number
   festzuschussVoll?: number
   laborBeleg?: number
+  /** MwSt.-Blöcke des Laborbelegs */
+  laborMwst?: { satz: number; netto: number; betrag: number }[]
 }
 
 const BEMA_AM_ZAHN = new Set(['20a', '20b', '20c', '91a', '91b', '91d', '90'])

@@ -92,7 +92,7 @@ export function betragVon(wort: string): number | undefined {
   return Number(`${ganz}.${cent.padEnd(2, '0')}`)
 }
 
-export interface BlattPosition { ebene: 'GOZ' | 'BEL' | 'BEB'; nr: string; zahn: string; anzahl: number; betrag?: number; text?: string }
+export interface BlattPosition { ebene: 'GOZ' | 'BEL' | 'BEB' | 'MAT'; nr: string; zahn: string; anzahl: number; betrag?: number; text?: string }
 
 export interface BlattSummen {
   honorarGoz?: number
@@ -103,6 +103,8 @@ export interface BlattSummen {
   eigenanteil?: number
   festzuschussVoll?: number
   laborBeleg?: number
+  /** MwSt.-Blöcke des Laborbelegs: Satz in Prozent, Netto und Steuerbetrag */
+  laborMwst?: { satz: number; netto: number; betrag: number }[]
 }
 
 const kopfMit = (z: PdfZeile, ...worte: string[]) => worte.every((w) => z.teile.some((t) => t.text.toLowerCase().startsWith(w)))
@@ -134,34 +136,68 @@ function gozZeilen(zeilen: PdfZeile[]): BlattPosition[] {
   return aus
 }
 
-/** Eigenbeleg oder Laborrechnung: Nummer, Einzelpreis, Anzahl. Der Betrag ist hier der Einzelpreis. */
+const hatBuchstabe = (w: string) => [...w].some((c) => c.toLowerCase() !== c.toUpperCase())
+const istDatum = (w: string) => w.length === 10 && w.split('.').length === 3
+
+/**
+ * Eigenbeleg oder Laborrechnung: Nummer, Einzelpreis, Anzahl. Der Betrag ist hier der Einzelpreis.
+ * Zeilen ohne Nummer (Zirkon, Legierung) sind Material. Läuft die Bezeichnung in die nächste Zeile, gehört sie dazu.
+ */
 function laborZeilen(zeilen: PdfZeile[]): BlattPosition[] {
   const aus: BlattPosition[] = []
   let grenze = -1
+  let letzte: BlattPosition | undefined
   for (const z of zeilen) {
+    const vorher = letzte
+    letzte = undefined
     if (kopfMit(z, 'nr.', 'leistungsbezeichnung', 'einzelpreis')) {
       const text = z.teile.find((t) => t.text.toLowerCase().startsWith('leistungsbezeichnung'))!
       grenze = text.x - (text.w ?? 0) / 2 - 2
       continue
     }
     if (grenze < 0) continue
-    const vorn = z.teile.filter((t) => t.x + (t.w ?? 0) / 2 <= grenze + 4)
-    const hinten = z.teile.filter((t) => !vorn.includes(t) && !t.text.endsWith('%')).map((t) => t.text)
-    if (!vorn.length || hinten.length < 4) continue
-    const roh = vorn[vorn.length - 1].text
-    if (roh.split('.').length === 3 && roh.length === 10) continue
+    const vorn = z.teile.filter((t) => t.x <= grenze).filter((t) => !istDatum(t.text))
+    const hinten = z.teile.filter((t) => !vorn.includes(t) && !istDatum(t.text) && !t.text.endsWith('%')).map((t) => t.text)
+    if (!vorn.length && vorher && hinten.length && hinten.every((w) => hatBuchstabe(w) && !w.endsWith(':'))) {
+      vorher.text = [vorher.text, ...hinten].filter(Boolean).join(' ')
+      letzte = vorher
+      continue
+    }
+    if (hinten.length < 4) continue
     const [preis, menge, summe] = hinten.slice(-3).map(betragVon)
     if (preis === undefined || menge === undefined || summe === undefined || menge <= 0) continue
     if (Math.abs(preis * menge - summe) > 0.02) continue
-    const kurz = roh.split('-').join('')
-    const bel = roh.includes('-') && kurz.length === 4 && nurZiffern(kurz)
-    const text = hinten.slice(0, -3).filter((w) => betragVon(w) === undefined).join(' ')
-    aus.push({ ebene: bel ? 'BEL' : 'BEB', nr: bel ? kurz : roh, zahn: '', anzahl: menge, betrag: preis, ...(text ? { text } : {}) })
+    const text = hinten.slice(0, -3).filter((w) => hatBuchstabe(w) || betragVon(w) === undefined).join(' ')
+    if (!vorn.length) {
+      if (!text) continue
+      letzte = { ebene: 'MAT', nr: '', zahn: '', anzahl: menge, betrag: preis, text }
+    } else {
+      const roh = vorn[vorn.length - 1].text
+      const kurz = roh.split('-').join('')
+      const bel = roh.includes('-') && kurz.length === 4 && nurZiffern(kurz)
+      letzte = { ebene: bel ? 'BEL' : 'BEB', nr: bel ? kurz : roh, zahn: '', anzahl: menge, betrag: preis, ...(text ? { text } : {}) }
+    }
+    aus.push(letzte)
   }
   return aus
 }
 
-const MARKEN: [keyof BlattSummen, string][] = [
+/** Summe der Positionen mit 7,00% MwSt EUR 256,00 17,92 273,92 */
+function mwstAus(zeilen: PdfZeile[]): NonNullable<BlattSummen['laborMwst']> {
+  const aus: NonNullable<BlattSummen['laborMwst']> = []
+  for (const z of zeilen) {
+    const t = z.teile.map((e) => e.text)
+    if (!t.join(' ').toLowerCase().startsWith('summe der positionen mit')) continue
+    const satz = betragVon(t.find((w) => w.endsWith('%')) ?? '')
+    const [netto, betrag, brutto] = t.slice(-3).map(betragVon)
+    if (satz === undefined || netto === undefined || betrag === undefined || brutto === undefined) continue
+    if (Math.abs(netto + betrag - brutto) > 0.02) continue
+    aus.push({ satz, netto, betrag })
+  }
+  return aus
+}
+
+const MARKEN: [Exclude<keyof BlattSummen, 'laborMwst'>, string][] = [
   ['honorarGoz', 'zahnärztliches honorar goz ('],
   ['honorarBema', 'zahnärztliches honorar bema ('],
   ['labor', 'material und laborkosten ('],
@@ -181,6 +217,8 @@ function summenAus(zeilen: PdfZeile[]): BlattSummen {
     const wert = betragVon(z.teile[z.teile.length - 1].text)
     if (wert !== undefined) aus[marke[0]] = wert
   }
+  const mwst = mwstAus(zeilen)
+  if (mwst.length) aus.laborMwst = mwst
   return aus
 }
 
