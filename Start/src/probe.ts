@@ -102,7 +102,7 @@ export function probeSeite(app: HTMLElement) {
     <header class="hp-nav">
       <a class="hp-marke" href="/"><span class="hp-logo">${logo()}</span>${wortmarke()}<small>by Pickadoc</small></a>
       <nav>
-        <a href="/#spielwiese">Regler</a>
+        <a href="/#spielwiese">Kalkulator</a>
         <a href="/#preise">Preise</a>
         <a class="hp-nav-anmelden" href="#anmelden">Anmelden</a>
       </nav>

@@ -203,14 +203,14 @@ const HTML = `
       <a href="#hkp">HKP</a>
       <a href="#plaene">Alle Pläne</a>
       <a href="#sprach-ki">Sprach-KI</a>
-      <a href="#spielwiese">Regler</a>
+      <a href="#spielwiese">Kalkulator</a>
       <a href="#pvs">Ins PVS</a>
       <a href="#doku">Doku</a>
       <a href="#kette">Kette</a>
       <a href="#anyconnect">AnyConnect</a>
       <a href="#connect">Brücke</a>
       <a href="#preise">Preise</a>
-      <a href="#probe">Ihr HKP</a>
+      <a href="#probe">HKP DEMO</a>
       <a href="#produkte">Pickadoc</a>
       <a class="hp-nav-anmelden" href="#anmelden">Anmelden</a>
     </nav>
