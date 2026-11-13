@@ -201,6 +201,9 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 .hp-eyebrow { margin: 0 0 14px; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--hp-mint); font-weight: 650; }
 .hp-hero h1 { font-size: clamp(40px, 6.2vw, 78px); font-weight: 800; }
 .hp-verlauf { background: linear-gradient(100deg, var(--hp-mint), var(--hp-pink) 60%, var(--hp-gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hp-probe { align-items: start; }
+.hp-probe-kopf { grid-column: 1 / -1; container-type: inline-size; }
+.hp-probe h1 .hp-verlauf { display: block; white-space: nowrap; font-size: clamp(18px, 5.1cqi, 64px); line-height: 1.08; }
 .hp-lead { font-size: clamp(17px, 1.6vw, 20px); color: #c9dcdc; max-width: 40em; margin: 22px 0 14px; }
 .hp-gestern { font-size: 18px; font-weight: 650; margin: 0 0 30px; }
 .hp-gestern s { color: #d6e4e4; text-decoration-color: rgba(255, 122, 107, 0.7); text-decoration-thickness: 1.5px; }
