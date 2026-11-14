@@ -147,7 +147,15 @@ const gleich = (a: Record<string, string>, b: Record<string, string>) =>
   [...ALLE].every((z) => (a[z] ?? '') === (b[z] ?? ''))
 
 /** Nach dem Lesen aus dem Praxisprogramm: offene Änderungen, die dort inzwischen genauso stehen, sind erledigt. */
+/**
+ * Dieselbe Nummer in einem anderen Praxisprogramm ist ein anderer Patient (Live 14.11.2026: Nummer 3 war in
+ * einem Programm Michael Petsas, in DENSoffice Helga Appler – das Handy zeigte den alten Namen).
+ */
+export const gleichesPvs = (alt: Befund01 | undefined, pvs: string) => !alt?.pvs || !pvs || alt.pvs === pvs
+
 export function nachLesen(alt: Befund01 | undefined, l: { patient: string; label?: string; geburt?: string; pvs: string; zaehne: Record<string, string>; datum: string }, jetzt = new Date().toISOString()): Befund01 {
+  // Eintrag aus einem anderen Praxisprogramm: Name, offene Änderungen und Vorgang gehören zu jemand anderem
+  if (!gleichesPvs(alt, l.pvs)) alt = undefined
   const pvsZaehne = nurZaehne(l.zaehne, false)
   const offen = Object.fromEntries(Object.entries(alt?.offen ?? {}).filter(([z, c]) => !wieImPvs(pvsZaehne, z, c)))
   const vorher = alt ? zaehneAktuell(alt) : null

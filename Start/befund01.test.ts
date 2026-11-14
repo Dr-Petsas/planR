@@ -18,6 +18,20 @@ describe('aktueller 01-Befund', () => {
     expect(befundAnsicht(gesagt).zaehne['16']).toBe('k')
   })
 
+  it('gleiche Nummer in einem anderen Praxisprogramm ist ein anderer Patient (Live 14.11.2026)', () => {
+    const petsas = nachAenderung(nachLesen(undefined, { ...gelesen({ '16': 'k' }), patient: '3', label: 'Petsas, Michael', geburt: '1972-05-12' }, T1), { '46': 'f' }, 'Eva', T1)
+    // Lesen per Nummer bringt keinen Namen mit – der alte darf nicht stehen bleiben
+    const appler = nachLesen(petsas, { patient: '3', pvs: 'DENSoffice', zaehne: { '16': 'f' }, datum: '2026-11-14' }, T2)
+    expect(appler.label).toBe('')
+    expect(appler.geburt).toBe('')
+    expect(appler.offen).toEqual({})
+    expect(befundAnsicht(appler).zaehne['46'] ?? '').toBe('')
+    // dasselbe Programm: Name und offene Änderungen bleiben
+    const wieder = nachLesen(petsas, { patient: '3', pvs: 'DS-Win', zaehne: { '16': 'k' }, datum: '2026-11-14' }, T2)
+    expect(wieder.label).toBe('Petsas, Michael')
+    expect(wieder.offen).toEqual({ '46': 'f' })
+  })
+
   it('Kürzel aus dem Praxisprogramm bleiben, eine offene Krone gewinnt in der Anzeige', () => {
     const b = nachLesen(undefined, gelesen({ '46': 'f', '16': 'k' }), T1)
     expect(b.pvsZaehne).toMatchObject({ '46': 'f', '16': 'k' })

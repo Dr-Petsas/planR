@@ -42,7 +42,7 @@ import type { Paket } from './src/paket.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
 import { fallAnsicht, fallAufnehmen, fallEntfernen, regelnAus, type Fall, type Praxisregel } from './src/fallkatalog.ts'
 import {
-  ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, befundOhnePvs, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
+  ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, befundOhnePvs, gleichesPvs, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
   vorgangBeenden, vorgangKarten, vorgangLaeuft, vorgangMelden, zaehneAktuell, type Befund01,
 } from './befund01.ts'
 import {
@@ -2482,7 +2482,8 @@ function befundAendern(mandant: string, patient: string, f: (alt: Befund01 | und
 async function befundGelesen(w: Wer, l: BefundGelesen): Promise<Befund01> {
   let { label, geburt } = l
   if (!label) {
-    const alt = (await befundeLesen(w.mandant))[l.nummer]
+    const gemerkt = (await befundeLesen(w.mandant))[l.nummer]
+    const alt = gleichesPvs(gemerkt, l.c.name ?? '') ? gemerkt : undefined
     label = alt?.label ?? ''
     geburt = alt?.geburt ?? ''
     if (!label) {
