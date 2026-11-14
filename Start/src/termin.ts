@@ -250,20 +250,20 @@ export interface Abgleich { stamm: Stamm; meldung: string }
  * `null` heißt: diese Quelle war nötig und gerade nicht erreichbar. Eine leere Liste heißt: niemand gefunden.
  * Ohne drittes Argument gibt es kein DS-Win, dann entscheidet Pickadoc allein.
  */
-export function patientAbgleichen(plan: Stamm, pickadoc: Akte[] | null, dampsoft?: Akte[] | null): Abgleich {
+export function patientAbgleichen(plan: Stamm, pickadoc: Akte[] | null, dampsoft?: Akte[] | null, pvs = 'DS-Win'): Abgleich {
   if (!plan.vorname || !plan.nachname) return { stamm: plan, meldung: 'In den Stammdaten fehlen Vor- und Nachname.' }
   if (pickadoc === null) return { stamm: plan, meldung: 'Pickadoc ist gerade nicht erreichbar. Ohne Abgleich trage ich keinen Termin ein.' }
   const mitDs = dampsoft !== undefined
-  if (mitDs && dampsoft === null) return { stamm: plan, meldung: 'DS-Win ist gerade nicht erreichbar. Ohne Abgleich trage ich keinen Termin ein.' }
+  if (mitDs && dampsoft === null) return { stamm: plan, meldung: `${pvs} ist gerade nicht erreichbar. Ohne Abgleich trage ich keinen Termin ein.` }
   const links = eineAkte(plan, pickadoc)
   const rechts = mitDs ? eineAkte(plan, dampsoft ?? []) : null
   if (links === 'mehrere' || rechts === 'mehrere') {
     return { stamm: plan, meldung: 'Zu diesem Namen gibt es mehrere Patienten. Ohne eindeutiges Geburtsdatum trage ich keinen Termin ein.' }
   }
   if (!links) return { stamm: plan, meldung: 'Pickadoc hat keinen Patienten mit diesem Namen. Ich trage keinen Termin ein.' }
-  if (mitDs && !rechts) return { stamm: plan, meldung: 'DS-Win hat keinen Patienten mit diesem Namen. Ich trage keinen Termin ein.' }
+  if (mitDs && !rechts) return { stamm: plan, meldung: `${pvs} hat keinen Patienten mit diesem Namen. Ich trage keinen Termin ein.` }
   if (rechts && links.geburt && rechts.geburt && !datumNah(links.geburt, rechts.geburt)) {
-    return { stamm: plan, meldung: 'Pickadoc und DS-Win haben zu diesem Namen unterschiedliche Geburtsdaten. Ich trage keinen Termin ein.' }
+    return { stamm: plan, meldung: `Pickadoc und ${pvs} haben zu diesem Namen unterschiedliche Geburtsdaten. Ich trage keinen Termin ein.` }
   }
   const vorname = rechts && rechts.vorname.length > links.vorname.length ? rechts.vorname : links.vorname
   const geburt = links.geburt || rechts?.geburt || plan.geburt
@@ -279,7 +279,7 @@ export function patientAbgleichen(plan: Stamm, pickadoc: Akte[] | null, dampsoft
     email: plan.email || links.email || rechts?.email || '',
     anrede,
   }
-  if (!telefon) return { stamm, meldung: mitDs ? 'Weder Pickadoc noch DS-Win hat eine Telefonnummer für diesen Patienten.' : 'Pickadoc hat keine Telefonnummer für diesen Patienten.' }
+  if (!telefon) return { stamm, meldung: mitDs ? `Weder Pickadoc noch ${pvs} hat eine Telefonnummer für diesen Patienten.` : 'Pickadoc hat keine Telefonnummer für diesen Patienten.' }
   if (!geschlecht(anrede)) return { stamm, meldung: 'Weder der Plan noch Pickadoc nennt die Anrede dieses Patienten.' }
   return { stamm, meldung: '' }
 }

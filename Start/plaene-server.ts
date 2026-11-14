@@ -10,7 +10,7 @@ import { planerZuModul } from './src/planer.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import {
-  PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, bridgeSollPvs, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
+  PVS_BEFUND, PVS_OFFEN, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, bridgeSollPvs, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
@@ -967,14 +967,14 @@ async function pvsLesen(req: IncomingMessage, w: Wer, art: string, q: URLSearchP
       return json(res, 200, { ok: true, pvs: c.name, patienten })
     }
     if (art === 'hkps-offen') {
-      if (!dampsoft) return json(res, 422, { ok: false, meldung: 'Diese Liste liest PlanR aus DS-Win. In den Einstellungen ist ein anderes Praxisprogramm gewählt.' })
+      if (!PVS_OFFEN.has(c.id!)) return json(res, 422, { ok: false, meldung: `Diese Liste liest PlanR aus ${c.name} noch nicht.` })
       const r = await c.rufen<{ items?: Record<string, unknown>[] }>('/hkps/offen', { ms: 60_000 })
       if (!r.ok) {
         const alt = r.status === 403 || r.status === 404
         return json(res, 502, {
           ok: false,
           meldung: alt
-            ? 'Die PlanR-Bridge an DS-Win kennt diese Abfrage noch nicht. Sie holt das Update selbst; sonst unter Einrichtung die Bridge erneut laden.'
+            ? `Die PlanR-Bridge an ${c.name} kennt diese Abfrage noch nicht. Sie holt das Update selbst; sonst unter Einrichtung die Bridge erneut laden.`
             : `${c.name}: ${String(r.daten.error ?? `HTTP ${r.status}`)}`,
         })
       }
@@ -2646,9 +2646,15 @@ async function pickadocAkten(clientId: string, orte: string[], nachname: string)
   return [...gesehen.values()]
 }
 
-async function dampsoftAkten(req: IncomingMessage, w: Wer, nachname: string): Promise<Akte[] | null | undefined> {
+/** Akten aus dem gewählten Praxisprogramm für den Terminabgleich; undefined = kein angebundenes PVS, null = nicht erreichbar */
+async function pvsAkten(req: IncomingMessage, w: Wer, nachname: string): Promise<{ akten: Akte[] | null | undefined; name: string }> {
   const c = await pvsConnector(req, w, 'suche')
-  if (c.id !== 'dampsoft') return undefined
+  const name = c.name ?? 'Praxisprogramm'
+  return { akten: await pvsAktenLesen(c, nachname), name }
+}
+
+async function pvsAktenLesen(c: PvsWeg, nachname: string): Promise<Akte[] | null | undefined> {
+  if (!c.id || !PVS_SUCHE[c.id]) return undefined
   if (!c.rufen) return null
   try {
     const r = await c.rufen<{ items?: Record<string, unknown>[] }>(`/patients?${new URLSearchParams({ q: nachname, limit: '100' })}`, { ms: 45_000 })
@@ -2656,7 +2662,7 @@ async function dampsoftAkten(req: IncomingMessage, w: Wer, nachname: string): Pr
     return (r.daten.items ?? []).map((p) => ({
       vorname: String(p.firstName ?? ''), nachname: String(p.lastName ?? ''),
       geburt: String(p.birthDate ?? '').slice(0, 10),
-      telefone: [p.mobile, p.phone].map((x) => String(x ?? '').trim()).filter(Boolean),
+      telefone: [p.mobile, p.phone, p.phone2].map((x) => String(x ?? '').trim()).filter(Boolean),
       anrede: '', email: String(p.email ?? ''),
     }))
   } catch {
@@ -2694,7 +2700,8 @@ async function termineEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     const behandler = eigeneKalender(stand.behandler, w.konto.uid, w.konto.name)
     const motive = motiveDerKalender(stand.motive, behandler)
     if (!behandler.length) return json(res, 200, { ok: true, kalender: true, stamm: roh, behandler, motive, meldung: 'Für Ihr Konto ist kein eigener Kalender hinterlegt.' })
-    const ab = patientAbgleichen(roh, await pickadocAkten(w.konto.clientId, behandler.map((k) => k.locationId), roh.nachname), await dampsoftAkten(req, w, roh.nachname))
+    const dort = await pvsAkten(req, w, roh.nachname)
+    const ab = patientAbgleichen(roh, await pickadocAkten(w.konto.clientId, behandler.map((k) => k.locationId), roh.nachname), dort.akten, dort.name)
     console.log('[planr] Termin', roh.nachname, ab.meldung || 'daten vollständig')
     return json(res, 200, { ok: true, kalender: true, stamm: ab.stamm, behandler, motive, ...(ab.meldung ? { meldung: ab.meldung } : {}) })
   }
@@ -2734,7 +2741,8 @@ async function termineEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     if (!roh || !kalender || !motiv || (motiv.calendarIds.length && !motiv.calendarIds.includes(calendarId))) {
       return json(res, 404, { ok: false, meldung: 'Plan oder Kalender nicht gefunden.' })
     }
-    const ab = patientAbgleichen(roh, await pickadocAkten(w.konto.clientId, [locationId], roh.nachname), await dampsoftAkten(req, w, roh.nachname))
+    const dort = await pvsAkten(req, w, roh.nachname)
+    const ab = patientAbgleichen(roh, await pickadocAkten(w.konto.clientId, [locationId], roh.nachname), dort.akten, dort.name)
     if (ab.meldung) return json(res, 409, { ok: false, meldung: ab.meldung })
     const stamm = ab.stamm
     const gender = geschlecht(stamm.anrede)

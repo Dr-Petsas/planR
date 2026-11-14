@@ -11,6 +11,8 @@ export const PVS_CONNECTOR: Record<string, string> = {
 export const PVS_SUCHE: Record<string, string> = { ...PVS_CONNECTOR }
 /** PVS, deren 01-Befund PlanR lesen und als geänderten Befund zurückschreiben kann */
 export const PVS_BEFUND = new Set(['dampsoft', 'dens'])
+/** PVS, aus denen PlanR die genehmigten, noch nicht abgerechneten Pläne liest (Kontrollbuch) */
+export const PVS_OFFEN = new Set(['dampsoft', 'dens'])
 
 export interface PvsTreffer {
   id: string

@@ -449,6 +449,11 @@ function exportZiel(p: PlanKarte): string {
   return planInsPvsMoeglich(einstellungen.pvs, p.modul) ? pvsZiel() : ''
 }
 
+/** Name des gewählten Praxisprogramms für Meldungen */
+function pvsName(): string {
+  return pvsVon(einstellungen.pvs)?.name || 'Praxisprogramm'
+}
+
 /** Name des PVS, in dem die Patientensuche sucht */
 function pvsQuelle(): string {
   const p = pvsVon(einstellungen.pvs)
@@ -629,7 +634,7 @@ const PLAN_SICHT = [
 function planSichtLeiste(zahl: string): string {
   const knopf = (id: string, text: string, kurz: string) =>
     `<button type="button" class="chip${planSicht === id ? ' an' : ''}" data-sicht="${id}"><span class="chip-lang">${esc(text)}</span><span class="chip-kurz">${esc(kurz)}</span></button>`
-  return `<div class="listen-leiste plan-sicht" role="group" aria-label="Pläne" title="Zuschussdatum gesetzt, Abrechnungsdatum leer – aus DS-Win.">${PLAN_SICHT.map((e) => knopf(e.id, e.text, e.kurz)).join('')}<span class="listen-zahl">${zahl}</span></div>`
+  return `<div class="listen-leiste plan-sicht" role="group" aria-label="Pläne" title="Zuschussdatum gesetzt, Abrechnungsdatum leer – aus ${esc(pvsName())}.">${PLAN_SICHT.map((e) => knopf(e.id, e.text, e.kurz)).join('')}<span class="listen-zahl">${zahl}</span></div>`
 }
 
 async function offenLaden() {
@@ -644,7 +649,7 @@ async function offenLaden() {
     if (planSicht !== 'offen') { offenLaeuft = false; return }
     if (!r.ok || !d.ok) {
       offenKarten = []
-      offenFehler = d.meldung || 'DS-Win ist gerade nicht erreichbar.'
+      offenFehler = d.meldung || `${pvsName()} ist gerade nicht erreichbar.`
     } else {
       offenKarten = hkpOffenKarten(d.plaene ?? [])
       offenFehler = ''
@@ -653,7 +658,7 @@ async function offenLaden() {
     if (lauf !== offenLauf) return
     if (planSicht !== 'offen') { offenLaeuft = false; return }
     offenKarten = []
-    offenFehler = 'DS-Win ist gerade nicht erreichbar.'
+    offenFehler = `${pvsName()} ist gerade nicht erreichbar.`
   }
   if (lauf !== offenLauf) return
   offenLaeuft = false
@@ -1657,7 +1662,7 @@ function zeichnen() {
               ${listeHtml(sichtbar)}
             </div>`
           : `<p class="leer">${esc(planSicht === 'offen'
-            ? (offenFehler || (offenLaeuft ? 'DS-Win wird gelesen.' : offenKarten.length ? 'Keine Pläne für diese Auswahl.' : 'In DS-Win gibt es keinen genehmigten Plan ohne Abrechnungsdatum.'))
+            ? (offenFehler || (offenLaeuft ? `${pvsName()} wird gelesen.` : offenKarten.length ? 'Keine Pläne für diese Auswahl.' : `In ${pvsName()} gibt es keinen genehmigten Plan ohne Abrechnungsdatum.`))
             : 'Keine Pläne für diese Auswahl. Gespeicherte Pläne aus HKP, PAR, KB und den anderen Planern erscheinen hier.')}</p>`}`}
   </main>
       <div id="clara-slot"></div>
