@@ -76,7 +76,7 @@ describe('Agenten-Schlüssel', () => {
     const e = setupCodeSetzen(undefined, c, 'Praxis Müller', jetzt)
     expect(schluesselPasst({ praxis: e }, 'praxis', '')).toBe(false)
     const l: AgentListe = { ...liste, andere: e }
-    expect(setupCodeFinden(l, c.toLowerCase(), jetzt + 60_000)).toEqual({ mandant: 'andere', praxis: 'Praxis Müller' })
+    expect(setupCodeFinden(l, c.toLowerCase(), jetzt + 60_000)).toEqual({ mandant: 'andere', praxis: 'Praxis Müller', lokal: false })
     expect(setupCodeFinden(l, neuerSetupCode(), jetzt)).toBeNull()
     expect(setupCodeFinden(l, '', jetzt)).toBeNull()
     expect(setupCodeFinden(l, c, jetzt + (SETUP_TAGE + 1) * 86_400_000)).toBeNull()
@@ -226,5 +226,46 @@ describe('erlaubte Connector-Aufrufe', () => {
     expect(auftragErlaubt('POST', '/patients/12/befunde/01/dummy')).toBe(false)
     expect(auftragErlaubt('POST', '/patients/12/befunde/01/import')).toBe(false)
     expect(auftragErlaubt('GET', '/patients/12/befunde/01?alle=1')).toBe(false)
+  })
+})
+
+describe('Bridge am einzelnen PC', () => {
+  it('Code für einzelne PCs wird als solcher gefunden und nicht verdrängt', async () => {
+    const m = await import('./pvs-agent-server.ts')
+    let e = m.setupCodeSetzen(undefined, 'AAAA2222', 'Demo', 1000, true)
+    for (let i = 0; i < 6; i++) e = m.setupCodeSetzen(e, `BBBB222${i + 2}`, 'Praxis', 1000)
+    expect(m.setupCodeFinden({ standard: e }, 'AAAA2222', 2000)).toEqual({ mandant: 'standard', praxis: 'Demo', lokal: true })
+    expect(m.setupCodeFinden({ standard: e }, 'BBBB2227', 2000)?.lokal).toBe(false)
+    expect(m.setupCodeFinden({ standard: e }, 'BBBB2222', 2000)).toBeNull()
+  })
+
+  it('Kennung passt als Mandant und gilt nur für die eigene Praxis', async () => {
+    const m = await import('./pvs-agent-server.ts')
+    const ort = m.neueOrtKennung()
+    expect(ort).toMatch(/^[a-z0-9-]{1,40}$/)
+    const liste = { [ort]: { hash: 'x', emails: [], geraete: [], lokalVon: 'standard' } }
+    expect(m.ortGueltig(liste, 'standard', ort)).toBe(true)
+    expect(m.ortGueltig(liste, 'andere', ort)).toBe(false)
+    expect(m.ortGueltig(liste, 'standard', '')).toBe(false)
+  })
+
+  it('Clara folgt dem Browser, an dem zuletzt gearbeitet wurde', async () => {
+    const { Anwesenheit, ANWESEND_MS } = await import('./pvs-agent-server.ts')
+    const a = new Anwesenheit()
+    expect(a.ort('praxis', 0)).toBeUndefined()
+    a.melden('praxis', 'server-browser', '', true, 1000)
+    a.melden('praxis', 'demo-browser', 'pc-1', true, 2000)
+    expect(a.ort('praxis', 3000)).toBe('pc-1')
+    // Der Puls allein (aktiv=false) macht einen Browser nicht zum aktiven
+    a.melden('praxis', 'server-browser', '', false, 4000)
+    expect(a.ort('praxis', 5000)).toBe('pc-1')
+    a.melden('praxis', 'server-browser', '', true, 6000)
+    expect(a.ort('praxis', 7000)).toBe('')
+    // Meldet sich der Demo-Browser nicht mehr, zählt er nicht; ist keiner mehr da, gilt der Praxisserver
+    a.melden('praxis', 'demo-browser', 'pc-1', true, 8000)
+    a.melden('praxis', 'server-browser', '', false, 8000 + ANWESEND_MS - 1)
+    expect(a.ort('praxis', 8000 + ANWESEND_MS)).toBe('')
+    expect(a.ort('praxis', 8000 + 3 * ANWESEND_MS)).toBeUndefined()
+    expect(a.ort('fremd', 3000)).toBeUndefined()
   })
 })

@@ -303,6 +303,8 @@ main { min-width: 0; }
 .marke-bridge { font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 99px; }
 .marke-bridge.bereit { background: #e3f4e8; color: #1e6b35; }
 .marke-bridge.bald { background: #fdf1dc; color: #8a5a00; }
+.ort-marke { align-self: center; font-size: 12px; font-weight: 650; padding: 4px 10px; border-radius: 99px; background: #e3f4e8; color: #1e6b35; white-space: nowrap; }
+.ort-marke.aus { background: #fdf1dc; color: #8a5a00; }
 .schalter { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--linie); border-radius: 10px; cursor: pointer; }
 .schalter input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--akzent); }
 .schalter b { display: block; font-weight: 600; }

@@ -14,7 +14,7 @@ import {
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
-  setupCodeFinden, setupCodeSetzen, type AccessEinstellung, type AgentListe, type AgentStand,
+  setupCodeFinden, setupCodeSetzen, Anwesenheit, neueOrtKennung, ortGueltig, type AccessEinstellung, type AgentListe, type AgentStand,
 } from './pvs-agent-server.ts'
 import { PAKETE, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, type Buchung } from './buchung.ts'
 import { arztAusPickadoc, arztDerPraxis, avatarHolen, signaturVonVerknuepft } from './pickadocArzt.ts'
@@ -156,7 +156,13 @@ const eingangLesen = async (m: string) => {
 // ---------- Anmeldung und Sitzung ----------
 
 /** Wer fragt: Pickadoc-Konto, sein PlanR-Mandant und die DS-Win-Praxen, die er sieht (null = alle) */
-interface Wer { konto: Konto; mandant: string; register: string; praxen: number[] | null; haupt: number }
+interface Wer { konto: Konto; mandant: string; register: string; praxen: number[] | null; haupt: number; ort?: string }
+
+/** Der Browser merkt sich hier die Bridge, die auf seinem PC läuft (Demo-PC, Einzelplatz) */
+const ORT_COOKIE = 'planr_ort'
+/** Unter diesem Schlüssel liegen PVS-Einstellung und Bridge des Fragers: die Bridge an seinem PC, sonst die der Praxis */
+const pvsOrt = (w: Wer) => w.ort ?? w.mandant
+const anwesenheit = new Anwesenheit()
 
 const zugaengeLesen = async () => zugaengePruefen(await jsonLesen<unknown>(ZUGAENGE, {}))
 
@@ -206,7 +212,10 @@ async function werIst(req: IncomingMessage): Promise<Wer | null> {
     abgelehnt.add(req)
     return null
   }
-  return werAus(await zugaengeLesen(), s.konto)
+  const w = werAus(await zugaengeLesen(), s.konto)
+  const ort = cookieWert(req.headers.cookie, ORT_COOKIE)
+  if (ort && MANDANT_RE.test(ort) && ortGueltig(await agentenLesen(), w.mandant, ort)) w.ort = ort
+  return w
 }
 /** Anfragen mit gültiger Sitzung, deren Praxis PlanR nicht (mehr) gebucht hat */
 const abgelehnt = new WeakSet<IncomingMessage>()
@@ -935,15 +944,17 @@ async function einstellungenImVerbund(mandant: string) {
  * `suche` reicht für Patientensuche und HKP-Liste.
  */
 async function pvsConnector(req: IncomingMessage, w: Wer, zweck: 'suche' | 'hkp' = 'hkp'): Promise<PvsWeg> {
-  const { mandant, praxen } = w
+  const { praxen } = w
   if (praxen?.length === 0) return { status: 403, fehler: 'Sie sind noch keiner Praxis zugeordnet. Bitte vom Praxis-Admin in PlanR (Einstellungen → Benutzer) freischalten lassen.' }
-  const e = await einstellungenImVerbund(mandant)
+  const ort = pvsOrt(w)
+  const e = await einstellungenImVerbund(ort)
   const pvs = pvsVon(e.pvs)
   if (!pvs || !e.bridge) return { fehler: 'Kein Praxisprogramm eingestellt bzw. die Verbindung dorthin ist aus (Einstellungen).' }
   const basis = (zweck === 'suche' ? PVS_SUCHE : PVS_CONNECTOR)[pvs.id]
   if (!basis) return { name: pvs.name, fehler: zweck === 'suche' ? `Für ${pvs.name} gibt es noch keine Patientensuche.` : `HKPs aus ${pvs.name} kann PlanR noch nicht übernehmen.` }
-  const bridge = await bridgeFuer(mandant)
+  const bridge = await bridgeFuer(ort)
   const stand = bridge?.stand ?? null
+  if (w.ort && !stand) return { status: 503, name: pvs.name, fehler: 'Die PlanR-Bridge auf diesem PC ist nicht verbunden – läuft der Dienst „PlanR-Bridge“ hier?' }
   if (stand?.pvs && stand.pvs !== pvs.id) {
     const fehler = bridgeFolgtEinstellung(stand.version)
       ? `Die PlanR-Bridge stellt gerade auf ${pvs.name} um. Bitte in einer Minute erneut versuchen.`
@@ -1047,9 +1058,9 @@ async function ausPvs(req: IncomingMessage, w: Wer, patient: string, planNr: str
   }
   if (!r.ok || !r.daten.plan) return json(res, r.status === 404 ? 404 : 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? 'HKP ließ sich nicht lesen.'}` })
   const hinweise = [...(r.daten.hinweise ?? [])]
-  const fehlen = unbekannte(r.daten.plan, bekannteListen(), (await katalogLesen(mandant))?.katalog)
+  const fehlen = unbekannte(r.daten.plan, bekannteListen(), (await katalogLesen(mandant, pvsOrt(w)))?.katalog)
   if (fehlen.length) {
-    const k = await katalogAbgleichen(c, mandant)
+    const k = await katalogAbgleichen(c, mandant, pvsOrt(w))
     if (k.ok) praxisWissenMelden(w)
     const rest = k.ok ? unbekannte(r.daten.plan, bekannteListen(), k.ablage.katalog) : fehlen
     if (!k.ok) hinweise.push(`Unbekannte Positionen (${fehlen.join(', ')}); Abgleich der Leistungsverzeichnisse mit ${c.name} hat nicht geklappt: ${k.meldung}`)
@@ -1068,8 +1079,8 @@ const katalogDatei = (mandant: string, pvs?: string) => `${ORDNER}/praxiskatalog
 const KATALOG_PVS: Record<string, string> = { dampsoft: 'DS-Win', dens: 'DENSoffice', 'cgm-z1pro': 'Z1.PRO' }
 
 /** Praxiskatalog des eingestellten Praxisprogramms; ein Katalog aus einem anderen PVS gilt nicht. */
-async function katalogLesen(mandant: string): Promise<Ablage | null> {
-  const pvs = (await einstellungenImVerbund(mandant)).pvs
+async function katalogLesen(mandant: string, ort = mandant): Promise<Ablage | null> {
+  const pvs = (await einstellungenImVerbund(ort)).pvs
   if (!pvs) return null
   const eigen = await jsonLesen<Ablage | null>(katalogDatei(mandant, pvs), null)
   if (eigen?.katalog && eigen.roh) return eigen
@@ -1097,7 +1108,7 @@ type KatalogErgebnis = { ok: true; ablage: Ablage } | { ok: false; status: numbe
 const abgleichLaeuft = new Map<string, Promise<KatalogErgebnis>>()
 
 /** Leistungsverzeichnisse aus dem PVS lesen und als Praxiskatalog ablegen; die Wahl (Liste/Spalte) bleibt erhalten. */
-function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis> {
+function katalogAbgleichen(c: PvsWeg, mandant: string, ort = mandant): Promise<KatalogErgebnis> {
   const laeuft = abgleichLaeuft.get(mandant)
   if (laeuft) return laeuft
   const p = (async (): Promise<KatalogErgebnis> => {
@@ -1112,7 +1123,7 @@ function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis>
     const roh = rohPruefen(r.daten)
     if (!roh) return { ok: false, status: 502, meldung: `${c.name}: Antwort unvollständig.` }
     return exklusiv(async () => {
-      const alt = await katalogLesen(mandant)
+      const alt = await katalogLesen(mandant, ort)
       const katalog = katalogBilden(roh, wahlPruefen(null, roh, alt?.wahl))
       const ablage: Ablage = { roh, wahl: katalog.wahl, katalog, aenderungen: aenderungen(alt?.katalog, katalog) }
       await jsonSchreiben(katalogDatei(mandant, c.id), ablage)
@@ -1215,7 +1226,7 @@ function praxiskatalog(req: IncomingMessage, res: ServerResponse, query: string,
   const q = new URLSearchParams(query)
   const mandant = w.mandant
   if (req.method === 'GET') {
-    katalogLesen(mandant)
+    katalogLesen(mandant, pvsOrt(w))
       .then((a) => json(res, 200, { ok: true, info: katalogInfo(a), ...(q.get('nur') === 'info' ? {} : { katalog: a?.katalog ?? null }) }))
       .catch(() => json(res, 500, { ok: false }))
     return
@@ -1226,16 +1237,16 @@ function praxiskatalog(req: IncomingMessage, res: ServerResponse, query: string,
     if (b.abgleich === true) {
       const c = await pvsConnector(req, w)
       if (!c.rufen) return wegFehler(res, c)
-      const k = await katalogAbgleichen(c, mandant)
+      const k = await katalogAbgleichen(c, mandant, pvsOrt(w))
       if (k.ok) praxisWissenMelden(w)
       return k.ok ? json(res, 200, { ok: true, info: katalogInfo(k.ablage) }) : json(res, k.status, { ok: false, meldung: k.meldung })
     }
     return exklusiv(async () => {
-      const alt = await katalogLesen(mandant)
+      const alt = await katalogLesen(mandant, pvsOrt(w))
       if (!alt) return json(res, 404, { ok: false, meldung: 'Noch keine Preise & Positionen aus dem PVS übernommen.' })
       const katalog = katalogBilden(alt.roh, wahlPruefen(b.wahl, alt.roh, alt.wahl), alt.katalog.stand)
       const ablage: Ablage = { roh: alt.roh, wahl: katalog.wahl, katalog, aenderungen: aenderungen(alt.katalog, katalog) }
-      await jsonSchreiben(katalogDatei(mandant, (await einstellungenImVerbund(mandant)).pvs), ablage)
+      await jsonSchreiben(katalogDatei(mandant, (await einstellungenImVerbund(pvsOrt(w))).pvs), ablage)
       praxisWissenMelden(w)
       json(res, 200, { ok: true, info: katalogInfo(ablage) })
     })
@@ -1460,10 +1471,10 @@ const eigeneSeite = (req: IncomingMessage) =>
 function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
   const mandant = w.mandant
   if (req.method === 'GET') {
-    Promise.all([einstellungenImVerbund(mandant), bridgeFuer(mandant)])
+    Promise.all([einstellungenImVerbund(pvsOrt(w)), bridgeFuer(pvsOrt(w))])
       .then(([e, bridge]) => {
         const stand = bridge?.stand
-        const agent = bridge ? { verbunden: !!stand, pvs: stand?.pvs, version: stand?.version } : null
+        const agent = bridge ? { verbunden: !!stand, pvs: stand?.pvs, version: stand?.version, lokal: !!w.ort } : null
         json(res, 200, { ok: true, mandant, einstellungen: e, agent, admin: w.konto.admin })
       })
       .catch(() => json(res, 500, { ok: false }))
@@ -1474,7 +1485,7 @@ function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
   lesenBody(req, 20_000).then((text) => exklusiv(async () => {
     const neu = { ...einstellungenPruefen(JSON.parse(text)), geaendert: new Date().toISOString() }
     const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
-    await jsonSchreiben(EINSTELLUNGEN, { ...alle, [mandant]: neu })
+    await jsonSchreiben(EINSTELLUNGEN, { ...alle, [pvsOrt(w)]: neu })
     json(res, 200, { ok: true, mandant, einstellungen: neu })
   })).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Speichern hat nicht geklappt.' }) })
 }
@@ -1517,6 +1528,7 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
       bridgeStatus.set(mandant, status)
       console.log('[planr] Bridge', mandant, 'Zustand:', status ?? '(ohne Angabe)')
     }
+    if (status === 'bereit') await ortEinstellungAnlegen(mandant, q.get('pvs') ?? '')
     // Solange der Connector noch startet, kurz warten: „bereit“ soll Setup und Assistent sofort erreichen.
     const ms = status && status !== 'bereit' ? 5_000 : 25_000
     const auftrag = await hub.abholen(mandant, ms, { pvs, version, status }, (weg) => res.on('close', weg))
@@ -1548,6 +1560,35 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     }
   }
   json(res, 405, { ok: false })
+}
+
+/** Eine Bridge am einzelnen PC bringt ihre Einstellung mit: Beim ersten Melden gilt das PVS, das sie dort gefunden hat. */
+const ortOhneEinstellung = new Set<string>()
+async function ortEinstellungAnlegen(ort: string, pvs: string) {
+  if (ortOhneEinstellung.has(ort)) return
+  ortOhneEinstellung.add(ort)
+  if (!(await agentenLesen())[ort]?.lokalVon || !pvsVon(pvs)) return
+  await exklusiv(async () => {
+    const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
+    if (alle[ort]) return
+    await jsonSchreiben(EINSTELLUNGEN, { ...alle, [ort]: { ...einstellungenPruefen({ pvs, bridge: true }), geaendert: new Date().toISOString() } })
+    console.log('[planr] Bridge', ort, 'am PC: Einstellung angelegt mit', pvs)
+  })
+}
+
+/**
+ * POST { browser, aktiv }: Der Browser meldet sich (alle paar Sekunden und bei jeder Bedienung). Die Antwort sagt ihm,
+ * mit welchem PVS er verbunden ist; Clara nimmt das PVS des Browsers, an dem zuletzt gearbeitet wurde.
+ */
+async function ortEndpunkt(req: IncomingMessage, res: ServerResponse, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
+  const b = JSON.parse(await lesenBody(req, 500) || '{}') as { browser?: unknown; aktiv?: unknown }
+  const browser = String(b.browser ?? '')
+  if (!/^[A-Za-z0-9_-]{8,40}$/.test(browser)) return json(res, 400, { ok: false })
+  anwesenheit.melden(w.konto.clientId, browser, w.ort ?? '', b.aktiv === true)
+  const [e, bridge] = await Promise.all([einstellungenImVerbund(pvsOrt(w)), bridgeFuer(pvsOrt(w))])
+  json(res, 200, { ok: true, lokal: !!w.ort, pvs: e.pvs, name: pvsVon(e.pvs)?.name ?? '', verbunden: !!bridge?.stand })
 }
 
 const bridgeGemeldet = new Map<string, number>()
@@ -1829,7 +1870,7 @@ async function bridgePaket(req: IncomingMessage, res: ServerResponse, w: Wer) {
  * POST: Bridge-Setup für die eigene Praxis (nur Admin). Die Datei ist für alle gleich (und bleibt so signierbar);
  * der Einrichtungscode steht im Dateinamen, das Setup tauscht ihn bei /api/bridge-setup/einloesen gegen den Zugang.
  */
-async function bridgeSetupLaden(req: IncomingMessage, res: ServerResponse, w: Wer) {
+async function bridgeSetupLaden(req: IncomingMessage, res: ServerResponse, w: Wer, lokal = false) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
   if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Bridge laden nur Praxis-Admins herunter.' })
@@ -1842,7 +1883,7 @@ async function bridgeSetupLaden(req: IncomingMessage, res: ServerResponse, w: We
   const code = neuerSetupCode()
   await exklusiv(async () => {
     const liste = await agentenLesen()
-    liste[m] = setupCodeSetzen(liste[m], code, praxis)
+    liste[m] = setupCodeSetzen(liste[m], code, praxis, Date.now(), lokal)
     await jsonSchreiben(AGENTEN, liste)
   })
   console.log('[planr] Bridge-Setup für', m, 'von', w.konto.email)
@@ -1866,6 +1907,13 @@ async function bridgeSetupEinloesen(req: IncomingMessage, res: ServerResponse) {
     const liste = await agentenLesen()
     const t = setupCodeFinden(liste, String(b.code ?? ''))
     if (!t) return null
+    if (t.lokal) {
+      // Jeder PC bekommt seine eigene Bridge-Kennung: dieselbe Datei läuft auf mehreren PCs, ohne dass sie sich Aufträge wegnehmen.
+      const ort = neueOrtKennung()
+      liste[ort] = { hash: schluesselHash(schluesselNeu), emails: [], geraete: [], lokalVon: t.mandant, name: t.praxis, angelegt: new Date().toISOString() }
+      await jsonSchreiben(AGENTEN, liste)
+      return { ...t, mandant: ort }
+    }
     liste[t.mandant] = paketSchluesselSetzen(liste[t.mandant], schluesselHash(schluesselNeu))
     await jsonSchreiben(AGENTEN, liste)
     return t
@@ -1874,7 +1922,7 @@ async function bridgeSetupEinloesen(req: IncomingMessage, res: ServerResponse) {
     setupBremse.fehler(ip(req))
     return json(res, 404, { ok: false, meldung: 'Dieser Einrichtungscode ist ungültig oder abgelaufen. Bitte die Bridge in PlanR unter „Einrichtung“ neu herunterladen und die neue Datei öffnen.' })
   }
-  const pvs = einstellungenPruefen((await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {}))[treffer.mandant] ?? LEER).pvs
+  const pvs = treffer.lokal ? '' : einstellungenPruefen((await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {}))[treffer.mandant] ?? LEER).pvs
   const host = /^[a-z0-9.-]+(:\d+)?$/i.test(req.headers.host ?? '') ? req.headers.host! : 'planr.pickadoc.de'
   const planr = `${/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host) ? 'http' : 'https'}://${host}`
   console.log('[planr] Bridge-Setup eingelöst für', treffer.mandant, `(${pvs || 'PVS offen'})`)
@@ -1914,6 +1962,8 @@ async function claraText(req: IncomingMessage, res: ServerResponse, w: Wer) {
   const text = String(daten.text ?? '').trim().slice(0, 2000)
   const sitzung = String(daten.sitzung ?? '')
   if (!text || !/^[A-Za-z0-9_-]{6,40}$/.test(sitzung)) return json(res, 400, { ok: false })
+  // Wer im Chat schreibt, arbeitet gerade an diesem Browser: Claras Rückfragen ans PVS gehen an dessen Praxisprogramm.
+  anwesenheit.melden(w.konto.clientId, `chat-${sitzung}`, w.ort ?? '', true)
   const roh = daten.plan && typeof daten.plan === 'object' ? daten.plan as Record<string, unknown> : null
   const plan = roh ? {
     patient: String(roh.patient ?? '').slice(0, 80),
@@ -2268,7 +2318,7 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   const w = await werFuerClient(q.get('clientId') ?? '')
   if (!w) return json(res, 404, { ok: false, meldung: 'Praxis unbekannt.' })
   if (url === '/api/intern/praxiskatalog') {
-    const a = await katalogLesen(w.mandant)
+    const a = await katalogLesen(w.mandant, pvsOrt(w))
     return json(res, 200, { ok: true, katalog: a?.katalog ?? null })
   }
   if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
@@ -2283,7 +2333,13 @@ async function werFuerClient(clientId: string): Promise<Wer | null> {
   const z = await zugaengeLesen()
   if (!/^[A-Za-z0-9_-]{2,64}$/.test(clientId) || !(clientId in z.mandanten || Object.values(z.benutzer).some((b) => b.clientId === clientId))) return null
   const konto = { clientId } as Konto
-  return { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
+  const mandant = mandantVon(z, konto)
+  // Clara hat keinen Browser: Sie nimmt das PVS des Browsers der Praxis, an dem zuletzt gearbeitet wurde.
+  const ort = anwesenheit.ort(clientId)
+  return {
+    konto, mandant, register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto),
+    ...(ort && ortGueltig(await agentenLesen(), mandant, ort) ? { ort } : {}),
+  }
 }
 
 /**
@@ -3068,7 +3124,8 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/einstellungen') return einstellungen(req, res, w)
   if (url === '/api/bridge-schluessel') return void bridgeSchluessel(req, res, w).catch(fehler500(res))
   if (url === '/api/bridge-paket') return void bridgePaket(req, res, w).catch(fehler500(res))
-  if (url === '/api/bridge-setup') return void bridgeSetupLaden(req, res, w).catch(fehler500(res))
+  if (url === '/api/bridge-setup') return void bridgeSetupLaden(req, res, w, new URLSearchParams(query).get('lokal') === '1').catch(fehler500(res))
+  if (url === '/api/ort') return void ortEndpunkt(req, res, w).catch(() => { if (!res.headersSent) json(res, 400, { ok: false }) })
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/fallkatalog') return fallkatalog(req, res, w)
   if (url === '/api/praxisdaten' && req.method === 'GET') return void praxisdaten(res, w).catch(fehler500(res))

@@ -88,6 +88,8 @@ async function herunterladen(url: string, name: string): Promise<Download> {
 
 /** Bridge-Setup der eigenen Praxis; der Einrichtungscode steht im Dateinamen. status 401/403: nicht (als Admin) angemeldet. */
 export const bridgeSetupLaden = () => herunterladen('/api/bridge-setup', 'PlanR-Bridge-Setup.exe')
+/** Setup für einen einzelnen PC (Demo, Einzelplatz): Jeder PC, auf dem es läuft, bekommt seine eigene Bridge. */
+export const bridgeSetupPcLaden = () => herunterladen('/api/bridge-setup?lokal=1', 'PlanR-Bridge-Setup.exe')
 /** ZIP-Paket mit Installieren.cmd für IT-Dienstleister (Zugang liegt im Paket) */
 export const bridgePaketLaden = () => herunterladen('/api/bridge-paket', 'PlanR-Bridge.zip')
 

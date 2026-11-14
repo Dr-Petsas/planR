@@ -16,8 +16,11 @@ export interface AgentEintrag {
   /** Freigegebene PCs: Hash ihres Geräte-Cookies */
   geraete?: { hash: string; name: string; am: string }[]
   /** Einrichtungscodes aus dem Dateinamen des Setups (PlanR-Bridge-Setup-<CODE>.exe) */
-  setup?: { hash: string; bis: string; praxis: string }[]
+  setup?: { hash: string; bis: string; praxis: string; lokal?: boolean }[]
   angelegt?: string
+  /** Bridge an einem einzelnen PC (Demo, Einzelplatz): gehört zu diesem Mandanten und bedient nur Browser auf demselben PC */
+  lokalVon?: string
+  name?: string
 }
 export type AgentListe = Record<string, AgentEintrag>
 
@@ -59,20 +62,56 @@ export const codePasst = (liste: AgentListe, mandant: string, code: string) => g
 export const SETUP_TAGE = 7
 export const neuerSetupCode = () => [...randomBytes(8)].map((b) => CODE_ZEICHEN[b % CODE_ZEICHEN.length]).join('')
 
-export function setupCodeSetzen(alt: AgentEintrag | undefined, code: string, praxis: string, jetzt = Date.now()): AgentEintrag {
-  const neu = { hash: codeHash(code), bis: new Date(jetzt + SETUP_TAGE * 86_400_000).toISOString(), praxis }
-  const setup = [neu, ...(alt?.setup ?? [])].filter((s) => Date.parse(s.bis) > jetzt).slice(0, 5)
+/** Das Setup für einzelne PCs wird weitergegeben (Demo auf einem anderen Rechner) und gilt deshalb länger */
+export const SETUP_TAGE_PC = 90
+export function setupCodeSetzen(alt: AgentEintrag | undefined, code: string, praxis: string, jetzt = Date.now(), lokal = false): AgentEintrag {
+  const neu = { hash: codeHash(code), bis: new Date(jetzt + (lokal ? SETUP_TAGE_PC : SETUP_TAGE) * 86_400_000).toISOString(), praxis, ...(lokal ? { lokal } : {}) }
+  // Codes für einzelne PCs gelten für viele Installationen und dürfen von späteren Downloads nicht verdrängt werden.
+  const gueltig = [neu, ...(alt?.setup ?? [])].filter((s) => Date.parse(s.bis) > jetzt)
+  const setup = [...gueltig.filter((s) => !s.lokal).slice(0, 5), ...gueltig.filter((s) => s.lokal).slice(0, 5)]
   return { hash: '', emails: [], geraete: [], ...alt, setup }
 }
 
-export function setupCodeFinden(liste: AgentListe, code: string, jetzt = Date.now()): { mandant: string; praxis: string } | null {
+export function setupCodeFinden(liste: AgentListe, code: string, jetzt = Date.now()): { mandant: string; praxis: string; lokal: boolean } | null {
   const c = codeNorm(code)
   if (c.length !== 8) return null
   for (const [mandant, e] of Object.entries(liste)) {
     const s = (e.setup ?? []).find((x) => Date.parse(x.bis) > jetzt && gleich(x.hash, c))
-    if (s) return { mandant, praxis: s.praxis }
+    if (s) return { mandant, praxis: s.praxis, lokal: s.lokal === true }
   }
   return null
+}
+
+/** Kennung einer Bridge am einzelnen PC – passt auf MANDANT_RE, damit sie sich wie jede Bridge anmeldet */
+export const neueOrtKennung = () => `pc-${randomBytes(6).toString('hex')}`
+
+/** Die Bridge am PC des Browsers, wenn sie zur Praxis gehört */
+export const ortGueltig = (liste: AgentListe, mandant: string, ort: string) => !!ort && liste[ort]?.lokalVon === mandant
+
+/**
+ * Welcher Browser der Praxis ist gerade in Benutzung? Clara (Telefon, Chat) kommt ohne Browser an und nimmt das PVS
+ * des Browsers, an dem zuletzt gearbeitet wurde. Ein Browser zählt, solange er sich alle paar Sekunden meldet.
+ */
+export const ANWESEND_MS = 3 * 60_000
+export class Anwesenheit {
+  private praxen = new Map<string, Map<string, { ort: string; aktiv: number; lebt: number }>>()
+
+  melden(praxis: string, browser: string, ort: string, aktiv: boolean, jetzt = Date.now()) {
+    const liste = this.praxen.get(praxis) ?? new Map<string, { ort: string; aktiv: number; lebt: number }>()
+    for (const [k, b] of liste) if (jetzt - b.lebt >= ANWESEND_MS) liste.delete(k)
+    const alt = liste.get(browser)
+    liste.set(browser, { ort, aktiv: aktiv || !alt ? jetzt : alt.aktiv, lebt: jetzt })
+    this.praxen.set(praxis, liste)
+  }
+
+  /** Bridge-Kennung des zuletzt benutzten Browsers; '' = er hat keine Bridge am PC; undefined = kein Browser offen */
+  ort(praxis: string, jetzt = Date.now()): string | undefined {
+    let bester: { ort: string; aktiv: number } | undefined
+    for (const b of this.praxen.get(praxis)?.values() ?? []) {
+      if (jetzt - b.lebt < ANWESEND_MS && (!bester || b.aktiv > bester.aktiv)) bester = b
+    }
+    return bester?.ort
+  }
 }
 
 export const GERAET_COOKIE = (mandant: string) => `planr_pvs_${mandant}`

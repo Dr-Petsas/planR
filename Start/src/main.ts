@@ -1,3 +1,4 @@
+import { ortStarten, ortVergessen } from './ort'
 import './style.css'
 import './thema'
 import { ausDswin, ersetzbar, faelleZusammen, hkpOffenKarten, loeschbar, nummerMitReihe, planDateiLesen, planFiltern, tagVon, type PatientKennung, type PlanDatei, type PlanKarte } from './plaene'
@@ -54,7 +55,7 @@ let einstellungen: Einstellungen = LEER
 /** Bearbeitungsstand im offenen Dialog */
 let entwurf: Einstellungen = LEER
 /** PlanR-Bridge auf dem Praxisserver (null = für diesen Mandanten keine eingerichtet) */
-let agent: { verbunden: boolean; pvs?: string; version?: string } | null = null
+let agent: { verbunden: boolean; pvs?: string; version?: string; lokal?: boolean } | null = null
 interface KatalogInfo {
   pvs: string; stand: string; listeName: string; belListeName: string
   wahl: { liste: number; spalte: number; faktoren: boolean; belListe?: number; belSpalte?: number }
@@ -734,8 +735,10 @@ function einstellungKarte(): string {
           <input type="text" data-ordner value="${esc(e.ordner)}" placeholder="z. B. C:\\DENS\\Import" autocomplete="off" spellcheck="false">
         </label>` : ''}
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Anbindung an dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
-        ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(bridgeStand(agent, einstellungen.pvs))})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
+        ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge ${agent?.lokal ? 'auf diesem PC' : 'auf dem Praxisserver'}: ${agent ? (agent.verbunden ? `verbunden (${esc(bridgeStand(agent, einstellungen.pvs))})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
           ${ich.konto.admin ? ' · <button type="button" class="link-knopf" data-bridge-laden>Bridge herunterladen</button>' : ' · Herunterladen kann sie der Praxis-Admin.'}</p>` : ''}
+        ${agent?.lokal ? '<p class="pvs-info">Dieser Browser arbeitet mit der Bridge auf diesem PC; die Wahl oben gilt nur hier. <button type="button" class="link-knopf" data-ort-vergessen>Stattdessen den Praxisserver verwenden</button></p>'
+          : ich.konto.admin ? '<p class="pvs-info">Demo-PC oder Einzelplatz: <button type="button" class="link-knopf" data-bridge-pc>Bridge für einen einzelnen PC herunterladen</button> – Browser auf diesem PC arbeiten dann mit dem Praxisprogramm dort.</p>' : ''}
         ${katalogBlock()}
         ${benutzerBlock(benutzer)}
         ${ich.konto.admin ? verbundBlock() : ''}
@@ -1617,6 +1620,7 @@ function zeichnen() {
       <div class="kopf-rechts">
         ${planBlick ? `<nav class="plan-punkte">${punkte}</nav>${planVersand ? `<button type="button" class="aktion versand plan-mail${versendet ? ' versendet' : ''}" data-versand title="${esc(versendet || 'Per E-Mail versenden')}" aria-label="Per E-Mail versenden">${versendet ? BRIEF_GESENDET : BRIEF}</button>` : ''}` : ''}
         <div class="kopf-aktionen">
+        ${agent?.lokal ? `<span class="ort-marke${agent.verbunden ? '' : ' aus'}" title="Auf diesem PC läuft eine eigene PlanR-Bridge. Dieser Browser und ${esc(assistentin)} arbeiten mit dem Praxisprogramm dieses PCs.">Dieser PC · ${esc(pvsVon(einstellungen.pvs)?.name || 'Praxisprogramm')}${agent.verbunden ? '' : ' – nicht verbunden'}</span>` : ''}
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         ${ich.konto.admin ? `<button type="button" class="import-knopf" data-zuordnung title="GOZ-Ziffern je Behandlung prüfen">Zuordnung</button>` : ''}
         <button type="button" class="import-knopf" data-training title="HKPs hochladen, eigene GOZ-Analogpositionen, Labor- und Materialpreise"><span>KI-Training</span></button>
@@ -1906,6 +1910,14 @@ function zeichnen() {
   app.querySelectorAll<HTMLButtonElement>('[data-slot]').forEach((b) => b.addEventListener('click', () => { void terminBuchen(b.dataset.slot || '') }))
   app.querySelectorAll<HTMLButtonElement>('[data-wahl-zu]').forEach((b) => b.addEventListener('click', auswahlSchliessen))
   app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', () => { auswahlSchliessen(); void einrichtungZeigen(true) })
+  app.querySelector<HTMLButtonElement>('[data-ort-vergessen]')?.addEventListener('click', () => { ortVergessen(); location.reload() })
+  app.querySelector<HTMLButtonElement>('[data-bridge-pc]')?.addEventListener('click', async (ev) => {
+    const knopf = ev.currentTarget as HTMLButtonElement
+    knopf.disabled = true
+    const r = await (await import('./einrichtung')).bridgeSetupPcLaden()
+    knopf.disabled = false
+    if (!r.ok) alert(r.meldung)
+  })
 }
 
 async function terminOeffnen(modul: string, nummer: string) {
@@ -2249,6 +2261,8 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   if (location.hash === '#probe-eingang') return probeEingangOeffnen()
   ich = wer
   sitzungBewachen()
+  // Erst klären, welche Bridge zu diesem Browser gehört – davon hängen Einstellungen und Katalog ab.
+  await ortStarten(() => void einstellungenLaden().then(zeichnen)).catch(() => undefined)
   await einstellungenLaden()
   await laden()
   if (ich.praxen?.length !== 0) vorgaengeLive()
