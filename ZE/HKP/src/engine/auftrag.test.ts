@@ -463,4 +463,15 @@ describe('Plan aus Auftrag', () => {
     expect(r.plan.werkstoffe).toEqual({ 16: 'zirkon', 26: 'zirkon' })
     expect(berechnen(r.plan, LISTEN).positionen.filter((p) => p.material).map((p) => p.betrag)).toEqual([15, 15])
   })
+
+  it('eine Brücke bestellt: eine andere Lücke im Kiefer wird nicht mitgeplant (Live 14.11.2026, Appler)', () => {
+    const befund: Befund = { ...Object.fromEntries(['17', '15', '14', '13', '12', '11', '21', '22', '23', '25', '27'].map((z) => [z, ''])), 16: 'f', 18: 'f', 28: 'f', 24: 'k', 26: 'x' }
+    const r = planAusAuftrag(auftragVerstehen('Brücke von 17 auf 15 mit 16 Brückenglied in Zirkon, Eigenlabor, Intraoralscan'), befund)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.plan.befunde.map((b) => `${b.nr} ${b.zahnGebiet}`)).toEqual(['2.1 17-15', '2.7 15'])
+    for (const z of ['25', '26', '27']) expect(r.plan.zaehne[z].R).toBe('')
+    expect(r.plan.positionen.some((p) => /2[567]/.test(p.zahn))).toBe(false)
+    expect(r.hinweise.join(' ')).toContain('26 fehlt ebenfalls')
+  })
 })

@@ -101,7 +101,7 @@ export interface RegelOptionen {
   interimUK?: boolean
   /** Nur diese Kiefer rechnen. Der andere Kiefer bleibt Befund, ohne Regelversorgung und ohne Positionen. */
   nurKiefer?: ('OK' | 'UK')[]
-  /** Zähne aus dem Werkzeugfeld erhalten: auch fehlende bleiben ohne Ersatz. */
+  /** Zähne aus dem Werkzeugfeld erhalten und Lücken außerhalb eines Auftrags auf einzelne Zähne: auch fehlende bleiben ohne Ersatz. */
   nichtErsetzen?: string[]
   klinisch?: Partial<KlinischeAngaben>
   reparaturen?: Reparatur[]
@@ -218,7 +218,7 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
     const kieferName = kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'
     const versorgungsLuecken = a.luecken.filter((l) => l.zaehne.some((z) => VERSORGUNG_NOETIG.has(kuerzel(zaehne[z]))))
     const neuVersorgung = versorgungsLuecken.length > 0 || a.freiendSeiten.some((f) => f.bedarf)
-    for (const z of a.sitz) if (kuerzel(zaehne[z]) === 'x') hinweise.push(`Zahn ${z} ist nicht erhaltungswürdig (x) und wird als fehlend geplant.`)
+    for (const z of a.sitz) if (kuerzel(zaehne[z]) === 'x' && lueckeErsetzen(z, optionen)) hinweise.push(`Zahn ${z} ist nicht erhaltungswürdig (x) und wird als fehlend geplant.`)
 
     // ---- Befundklasse 5: Interimsversorgung ----
     if (kiefer === 'OK' ? optionen.interimOK : optionen.interimUK) {
@@ -299,6 +299,8 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
       festsitzend = true
       let vorherige: Luecke | undefined
       for (const l of versorgungsLuecken) {
+        // Lücke außerhalb des Auftrags: bleibt Befund, ohne Regelversorgung und ohne Festzuschuss
+        if (!l.zaehne.some((z) => lueckeErsetzen(z, optionen))) continue
         const n = l.zaehne.length
         let nr = n === 1 ? '2.1' : n === 2 ? '2.2' : n === 3 ? '2.3' : '2.4'
         if (n === 1 && vorherige && vorherige.nach === l.vor) nr = '2.5'

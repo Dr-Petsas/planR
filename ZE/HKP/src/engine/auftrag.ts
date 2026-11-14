@@ -1174,10 +1174,18 @@ function planRechnen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, t
   const geplant = new Set<Kiefer>()
   for (const t of teile) if (t.kiefer) geplant.add(t.kiefer)
   if (!geplant.size) for (const z of Object.keys(tp)) geplant.add(kieferVon(z))
+  // Brücke, Kronen, Implantatkronen, Inlays: der Auftrag nennt seine Zähne. Andere Lücken im Kiefer plant er nicht mit.
+  const aufZaehne = teile.every((t) => ['bruecke', 'kronen', 'implantatkronen', 'inlay'].includes(t.versorgung ?? ''))
+  const imAuftrag = new Set(teile.flatMap((t) => [...t.pfeiler, ...(t.glieder ?? []), ...t.entfernen]))
+  const andereLuecken = aufZaehne ? Object.keys(befund).filter((z) => geplant.has(kieferVon(z)) && fehlt(befund, z) && !imAuftrag.has(z)) : []
+  const nichtErsetzen = [...new Set([...auftrag.erhalten, ...andereLuecken])]
+  const unversorgt = andereLuecken.filter((z) => !/8$/.test(z) && (befund[z] === 'f' || befund[z] === 'x'))
+  if (unversorgt.length)
+    hinweise.push(`${liste(unversorgt)} ${unversorgt.length > 1 ? 'fehlen' : 'fehlt'} ebenfalls, ${unversorgt.length > 1 ? 'gehören' : 'gehört'} aber nicht zum Auftrag und ${unversorgt.length > 1 ? 'bleiben' : 'bleibt'} ohne Ersatz.`)
   const regelOpt = {
     ...regelOptionen(plan),
     ...(geplant.size ? { nurKiefer: [...geplant] } : {}),
-    ...(auftrag.erhalten.length ? { nichtErsetzen: auftrag.erhalten } : {}),
+    ...(nichtErsetzen.length ? { nichtErsetzen } : {}),
   }
   const regel = therapieAnwenden(regelversorgungErmitteln(plan.zaehne, regelOpt), plan.zaehne, plan)
   let fertig = regelUebernehmen(plan, regel)
