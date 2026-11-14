@@ -474,4 +474,50 @@ describe('Plan aus Auftrag', () => {
     expect(r.plan.positionen.some((p) => /2[567]/.test(p.zahn))).toBe(false)
     expect(r.hinweise.join(' ')).toContain('26 fehlt ebenfalls')
   })
+
+  describe('im Gespräch: weitere Lücke wird erklärt und gefragt', () => {
+    const befund: Befund = { ...Object.fromEntries(['17', '15', '14', '13', '12', '11', '21', '22', '23', '25', '27'].map((z) => [z, ''])), 16: 'f', 18: 'f', 28: 'f', 24: 'k', 26: 'x' }
+    const satz = 'Brücke von 17 auf 15 mit 16 Brückenglied in Zirkon, Eigenlabor, Intraoralscan'
+
+    it('fragt nach der zweiten Brücke, statt sie still zu planen oder wegzulassen', () => {
+      const r = planAusAuftrag(auftragVerstehen(satz), befund, { lueckenFragen: true })
+      expect(r.status).toBe('rueckfrage')
+      if (r.status !== 'rueckfrage') return
+      expect(r.grund).toBe('weitere_luecke')
+      expect(r.zaehne).toEqual(['26'])
+      expect(r.vorschlag).toBe('Brücke von 25 auf 27')
+      expect(r.frage).toBe('Ich habe noch eine Unklarheit: Laut Befund ist Zahn 26 nicht erhaltungswürdig und muss entfernt werden. Dort wäre ebenfalls eine Brücke von 25 auf 27 zu planen. Soll ich die gleich mit planen, oder bleibt die Lücke ohne Ersatz?')
+    })
+
+    it('Nein: die Lücke steht in erhalten, es wird ohne sie gerechnet und nicht wieder gefragt', () => {
+      const r = planAusAuftrag(auftragVerstehen(`${satz}, die Zähne 26 bleiben`), befund, { lueckenFragen: true })
+      expect(r.status).toBe('ok')
+      if (r.status !== 'ok') return
+      expect(r.plan.befunde.map((b) => `${b.nr} ${b.zahnGebiet}`)).toEqual(['2.1 17-15', '2.7 15'])
+    })
+
+    it('Ja: die zweite Brücke steht im Auftrag, beide werden geplant', () => {
+      const r = planAusAuftrag(auftragVerstehen(`${satz} und Brücke von 25 auf 27`), befund, { lueckenFragen: true })
+      expect(r.status).toBe('ok')
+      if (r.status !== 'ok') return
+      expect(r.plan.zaehne['26'].TP).toBe('BM')
+      expect(r.plan.zaehne['16'].TP).toBe('BM')
+      expect(r.plan.befunde.some((b) => /2[57]/.test(b.zahnGebiet))).toBe(true)
+    })
+
+    it('fehlender Zahn und Freiend: allgemeine Frage ohne Brückenvorschlag', () => {
+      const b2: Befund = { ...befund, 26: 'f', 27: 'f' }
+      const r = planAusAuftrag(auftragVerstehen(satz), b2, { lueckenFragen: true })
+      expect(r.status).toBe('rueckfrage')
+      if (r.status !== 'rueckfrage') return
+      expect(r.zaehne).toEqual(['26', '27'])
+      expect(r.vorschlag).toBeUndefined()
+      expect(r.frage).toContain('fehlen die Zähne 26 und 27')
+    })
+
+    it('keine weitere Lücke: keine Frage', () => {
+      const r = planAusAuftrag(auftragVerstehen(satz), { ...befund, 26: '' }, { lueckenFragen: true })
+      expect(r.status).toBe('ok')
+    })
+  })
 })

@@ -67,9 +67,11 @@ export type Befund = Record<string, string>
 
 export interface Rueckfrage {
   status: 'rueckfrage'
-  grund: 'versorgung' | 'kiefer' | 'pfeiler' | 'befund_fehlt' | 'pfeiler_fehlt' | 'restzaehne' | 'krone_befund' | 'nicht_unterstuetzt' | 'glied_vorhanden' | 'zahn_vorhanden'
+  grund: 'versorgung' | 'kiefer' | 'pfeiler' | 'befund_fehlt' | 'pfeiler_fehlt' | 'restzaehne' | 'krone_befund' | 'nicht_unterstuetzt' | 'glied_vorhanden' | 'zahn_vorhanden' | 'weitere_luecke'
   frage: string
   zaehne?: string[]
+  /** weitere_luecke: Versorgung, die bei Ja an den Auftrag kommt, z. B. 'Brücke von 25 auf 27' */
+  vorschlag?: string
 }
 
 export interface PlanOptionen {
@@ -85,6 +87,8 @@ export interface PlanOptionen {
   praxisPlz?: string
   /** Praxis-Standard aus PlanR (Labor, PLZ, KZV, GOZ-Faktor …) */
   einstellungen?: Partial<HkpPlan['einstellungen']>
+  /** Im Gespräch: andere Lücken im Kiefer nicht still übergehen, sondern einmal fragen, ob sie mitgeplant werden */
+  lueckenFragen?: boolean
 }
 
 export interface PlanErgebnis {
@@ -827,7 +831,55 @@ export function planAusAuftrag(auftrag: HkpAuftrag, befundRoh: Befund, optionen:
               : kieferPlanen(teil, teil.kiefer!, befund, tp, hinweise)
     if (r) return r
   }
+  if (optionen.lueckenFragen) {
+    const frage = weitereLueckeFragen(auftrag, teile, befund, tp)
+    if (frage) return frage
+  }
   return planRechnen(auftrag, teile, befund, tp, hinweise, optionen)
+}
+
+/** Brücke, Kronen, Implantatkronen, Inlays nennen ihre Zähne: die übrigen Lücken der geplanten Kiefer. */
+function lueckenAusserhalb(teile: HkpAuftrag[], befund: Befund, tp: Record<string, string>): string[] {
+  const geplant = new Set<Kiefer>()
+  for (const t of teile) if (t.kiefer) geplant.add(t.kiefer)
+  if (!geplant.size) for (const z of Object.keys(tp)) geplant.add(kieferVon(z))
+  const aufZaehne = teile.every((t) => ['bruecke', 'kronen', 'implantatkronen', 'inlay'].includes(t.versorgung ?? ''))
+  const imAuftrag = new Set(teile.flatMap((t) => [...t.pfeiler, ...(t.glieder ?? []), ...t.entfernen]))
+  return aufZaehne ? Object.keys(befund).filter((z) => geplant.has(kieferVon(z)) && fehlt(befund, z) && !imAuftrag.has(z)) : []
+}
+
+/** Lücken, die laut Befund Zahnersatz brauchen, im Auftrag aber fehlen: erklären und fragen statt still planen oder still weglassen. */
+function weitereLueckeFragen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, tp: Record<string, string>): Rueckfrage | undefined {
+  const entschieden = new Set([auftrag.erhalten, ...teile.map((t) => t.erhalten)].flat())
+  const offen = new Set(lueckenAusserhalb(teile, befund, tp).filter((z) => !istWeisheitszahn(z) && (befund[z] === 'f' || befund[z] === 'x') && !entschieden.has(z)))
+  if (!offen.size) return undefined
+  const gruppen: { zaehne: string[]; vor?: string; nach?: string }[] = []
+  for (const reihe of [OBERKIEFER, UNTERKIEFER]) {
+    const sitz = reihe.filter((z) => z in befund && befund[z] !== ')(')
+    let start = -1
+    for (let i = 0; i <= sitz.length; i++) {
+      if (i < sitz.length && fehlt(befund, sitz[i])) { if (start < 0) start = i; continue }
+      if (start >= 0) {
+        const zs = sitz.slice(start, i).filter((z) => !istWeisheitszahn(z))
+        if (zs.some((z) => offen.has(z))) gruppen.push({ zaehne: zs, vor: sitz[start - 1], nach: sitz[i] })
+        start = -1
+      }
+    }
+  }
+  if (!gruppen.length) return undefined
+  const zaehne = gruppen.flatMap((g) => g.zaehne)
+  const raus = zaehne.filter((z) => befund[z] === 'x')
+  const weg = zaehne.filter((z) => befund[z] !== 'x')
+  const lage = [
+    raus.length ? `${raus.length > 1 ? 'sind die Zähne' : 'ist Zahn'} ${liste(raus)} nicht erhaltungswürdig und ${raus.length > 1 ? 'müssen' : 'muss'} entfernt werden` : '',
+    weg.length ? `${weg.length > 1 ? 'fehlen die Zähne' : 'fehlt Zahn'} ${liste(weg)}` : '',
+  ].filter(Boolean).join(', außerdem ')
+  const bruecken = gruppen.every((g) => g.vor && g.nach && g.zaehne.length <= 3)
+  const vorschlag = bruecken ? gruppen.map((g) => `Brücke von ${g.vor} auf ${g.nach}`).join(' und ') : ''
+  const frage = bruecken
+    ? `Ich habe noch eine Unklarheit: Laut Befund ${lage}. Dort wäre ebenfalls eine ${vorschlag} zu planen. Soll ich die gleich mit planen, oder bleibt die Lücke ohne Ersatz?`
+    : `Ich habe noch eine Unklarheit: Laut Befund ${lage}. Dort wäre ebenfalls Zahnersatz zu planen. Soll ich das gleich mit planen, oder bleiben die Lücken ohne Ersatz?`
+  return { status: 'rueckfrage', grund: 'weitere_luecke', zaehne, frage, ...(vorschlag ? { vorschlag } : {}) }
 }
 
 function brueckePlanen(auftrag: HkpAuftrag, befund: Befund, tp: Record<string, string>, hinweise: string[]): Rueckfrage | undefined {
@@ -1175,9 +1227,7 @@ function planRechnen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, t
   for (const t of teile) if (t.kiefer) geplant.add(t.kiefer)
   if (!geplant.size) for (const z of Object.keys(tp)) geplant.add(kieferVon(z))
   // Brücke, Kronen, Implantatkronen, Inlays: der Auftrag nennt seine Zähne. Andere Lücken im Kiefer plant er nicht mit.
-  const aufZaehne = teile.every((t) => ['bruecke', 'kronen', 'implantatkronen', 'inlay'].includes(t.versorgung ?? ''))
-  const imAuftrag = new Set(teile.flatMap((t) => [...t.pfeiler, ...(t.glieder ?? []), ...t.entfernen]))
-  const andereLuecken = aufZaehne ? Object.keys(befund).filter((z) => geplant.has(kieferVon(z)) && fehlt(befund, z) && !imAuftrag.has(z)) : []
+  const andereLuecken = lueckenAusserhalb(teile, befund, tp)
   const nichtErsetzen = [...new Set([...auftrag.erhalten, ...andereLuecken])]
   const unversorgt = andereLuecken.filter((z) => !/8$/.test(z) && (befund[z] === 'f' || befund[z] === 'x'))
   if (unversorgt.length)
