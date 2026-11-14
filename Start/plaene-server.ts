@@ -767,6 +767,21 @@ async function connector<T>(basis: string, pfad: string, init: { method?: string
   return { ok: r.ok, status: r.status, daten: await r.json().catch(() => ({})) as T & { error?: string } }
 }
 
+/**
+ * Jede Übergabe ans Praxisprogramm als eigene Datei: was genau gesendet wurde und was das PVS geantwortet hat.
+ * Liegt neben den Plänen (data/pvs-ablage/<Praxis>/), wird nie überschrieben und geht mit in die Datensicherung.
+ */
+async function pvsAblegen(w: Wer, c: PvsWeg, art: string, patientId: string, gesendet: unknown, antwort: unknown, bezug?: string) {
+  const am = new Date().toISOString()
+  const datei = `${ORDNER}/pvs-ablage/${w.mandant}/${am.replace(/[:.]/g, '-')}-${art}-${patientId}.json`
+  try {
+    await mkdir(dirname(datei), { recursive: true })
+    await writeFile(datei, JSON.stringify({ am, von: w.konto.name, pvs: c.id, art, patientId, bezug, gesendet, antwort }, null, 1), { flag: 'wx' })
+  } catch (e) {
+    console.error('[planr] PVS-Ablage nicht geschrieben', datei, e instanceof Error ? e.message : e)
+  }
+}
+
 /** Holt das PVS-Fenster nach vorn, damit der Plan dort gleich geöffnet werden kann. */
 function pvsNachVorn(pvs: string) {
   const prozess = ({ dens: 'DensOffice', dampsoft: 'dswin', 'cgm-z1pro': 'z1men' } as Record<string, string>)[pvs]
@@ -818,6 +833,7 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
         return json(res, 422, { ok: false, meldung: `${c.name} hat den ${art} nicht übernommen: ${anlage.daten.error ?? `HTTP ${anlage.status}`}.${schon}` })
       }
       angelegt.push(anlage.daten.number)
+      await pvsAblegen(w, c, 'plan', wahl.id, plan, anlage.daten, schluessel(modul, nummer))
       hinweise.push(...(anlage.daten.hinweise ?? []).map((h) => `${anlage.daten.label ?? 'Plan'} ${anlage.daten.number}: ${h}`))
     }
     const vermerk: PvsVermerk = { pvs: c.id, patientId: wahl.id, planNr: angelegt[0], ...(angelegt.length > 1 ? { plaene: angelegt } : {}), am: new Date().toISOString() }
@@ -853,13 +869,15 @@ async function insPvs(req: IncomingMessage, w: Wer, modul: string, nummer: strin
     if (!wahl.id) return json(res, wahl.status ?? 409, { ok: false, meldung: wahl.meldung })
 
     // DS-Win nimmt HKPs nur über den Import-Endpunkt mit Schreibfreigabe an (Connector mit --enable-write).
+    const gesendet = hkpFuerPvs(plan, r.daten.ergebnis as Record<string, unknown>)
     const anlage = await c.rufen<{ number?: number; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/hkps${dampsoft ? '/import' : ''}`, {
-      method: 'POST', body: { json: hkpFuerPvs(plan, r.daten.ergebnis as Record<string, unknown>) }, ms: 70_000,
+      method: 'POST', body: { json: gesendet }, ms: 70_000,
       headers: dampsoft ? { 'X-DSWIN-EDIT': '1' } : undefined,
     })
     if (!anlage.ok || typeof anlage.daten.number !== 'number') {
       return json(res, 422, { ok: false, meldung: `${pvs.name} hat den HKP nicht übernommen: ${anlage.daten.error ?? `HTTP ${anlage.status}`}` })
     }
+    await pvsAblegen(w, c, 'hkp', wahl.id, JSON.parse(gesendet), anlage.daten, `hkp|${nummer}`)
     const vermerk: PvsVermerk = { pvs: pvs.id, patientId: wahl.id, planNr: anlage.daten.number, am: new Date().toISOString() }
     await jsonSchreiben(PVS_VERMERKE, { ...await vermerkeLesen(), [`hkp|${nummer}`]: vermerk })
     if (!c.agent) pvsNachVorn(pvs.id)
@@ -2393,6 +2411,7 @@ async function befundSchreiben(w: Wer, l: BefundGelesen, kiefer: unknown[], zaeh
       if (v) s = await schreiben(v.version)
     }
     if (!s.ok) return pvsFehlt(c, s)
+    await pvsAblegen(w, c, 'befund', nummer, { kiefer, teeth, vorher: l.befund.zaehne }, s.daten, wo)
     console.log('[planr] Befund ins PVS geschrieben', w.mandant, `${(s.daten.selectedTeeth ?? []).length} Zähne`)
     const k = kiefer.map(String)
     const lesen = { patient: nummer, label: l.label, geburt: l.geburt, pvs: c.name ?? '', zaehne: l.befund.zaehne, datum: l.befund.datum }
