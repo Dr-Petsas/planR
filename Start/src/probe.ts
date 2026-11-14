@@ -185,6 +185,17 @@ export function probeSeite(app: HTMLElement) {
     </section>
   </div>`
   werbungStarten()
+  const nav = app.querySelector('.hp-nav nav')
+  void fetch('/api/probe/eingang', { cache: 'no-store' }).then((r) => {
+    if (!r.ok || !nav || nav.querySelector('[data-eingang]')) return
+    const link = document.createElement('a')
+    link.href = '#probe-eingang'
+    link.dataset.eingang = '1'
+    link.textContent = 'Eingegangene Pläne'
+    const anmelden = nav.querySelector('.hp-nav-anmelden')
+    if (anmelden) nav.insertBefore(link, anmelden)
+    else nav.append(link)
+  }).catch(() => undefined)
 
   const wurzel = app.querySelector<HTMLElement>('.hp')!
   const status = wurzel.querySelector<HTMLElement>('[data-status]')!

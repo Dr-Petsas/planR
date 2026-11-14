@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { darfEingangSehen, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangText, kontaktAusText } from './probeEingang'
+import { darfEingangSehen, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangSichtbar, eingangText, kontaktAusText } from './probeEingang'
 
 const STEMPEL = `
 Zahnarztpraxis Dr. Anna Berg
@@ -75,5 +75,8 @@ describe('Ablage', () => {
     expect(await eingangText(wurzel, 'kein-gueltiger-id', STEMPEL)).toBeNull()
     expect((await eingangEinmalMelden(wurzel, karte.id))?.id).toBe(karte.id)
     expect(await eingangEinmalMelden(wurzel, karte.id)).toBeNull()
+    const sichtbar = eingangSichtbar((await eingangListe(wurzel))[0])
+    expect(sichtbar.kontakt.anschrift).toBe('Luise-Rainer-Str. 12, 40235 Düsseldorf')
+    expect(sichtbar).not.toHaveProperty('gemeldet')
   })
 })

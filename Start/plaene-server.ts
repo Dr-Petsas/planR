@@ -10,7 +10,7 @@ import { planerZuModul } from './src/planer.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import {
-  PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
+  PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
@@ -22,7 +22,7 @@ import { freieSlots, kalenderStand, terminEintragen, terminNachsehen } from './t
 import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patientAbgleichen, stammAus, vermerkNachKalender, type Akte, type Stamm } from './src/termin.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
-  artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangText,
+  artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangSichtbar, eingangText,
   type ProbeKarte,
 } from './probeEingang.ts'
 import {
@@ -347,7 +347,8 @@ async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   const { konto, erneuern: refresh } = r.wert
   const frei = await berechtigung(konto.clientId)
   if (!frei) return json(res, 503, { ok: false, meldung: 'Die Freischaltung lässt sich gerade nicht prüfen. Bitte in ein paar Minuten erneut versuchen.' })
-  if (!frei.erlaubt) return json(res, 403, { ok: false, meldung: NICHT_GEBUCHT })
+  // Der Probe-Eingang ist kein Kunden-Backend: der Betreiber kommt auch ohne gebuchtes PlanR hinein.
+  if (!frei.erlaubt && !darfEingangSehen(konto.email, konto.role)) return json(res, 403, { ok: false, meldung: NICHT_GEBUCHT })
   const z = await sitzungStarten(req, res, konto, refresh)
   json(res, 200, werInfo(werAus(z, konto), z))
 }
@@ -2294,7 +2295,7 @@ const pvsFehlt = (c: PvsWeg, r: { status: number; daten: { error?: string } }): 
 async function pvsBefundLesen(req: IncomingMessage, w: Wer, angabe: (k: string) => string): Promise<BefundGelesen | BefundFehler> {
   const c = await pvsConnector(req, w, 'suche')
   if (!c.rufen) return { status: c.status ?? 409, daten: { ok: false, pvs: c.name, meldung: c.fehler } }
-  if (c.id !== 'dampsoft') return { status: 501, daten: { ok: false, pvs: c.name, meldung: `Den Befund aus ${c.name} kann PlanR noch nicht lesen.` } }
+  if (!PVS_BEFUND.has(c.id ?? '')) return { status: 501, daten: { ok: false, pvs: c.name, meldung: `Den Befund aus ${c.name} kann PlanR noch nicht lesen.` } }
   const rufen = c.rufen
   try {
     let nummer = angabe('patient'), label = '', geburt = ''
@@ -2863,7 +2864,7 @@ function probeHinweis(karte: ProbeKarte) {
     k.anschrift ? `Anschrift: ${k.anschrift}` : '',
     k.name || k.telefon || k.email ? '' : 'Im HKP war kein Praxisstempel lesbar.',
     '',
-    'Alle Pläne: https://planr.pickadoc.de/probe-eingang',
+    'Alle Pläne: https://planr.pickadoc.de/#probe-eingang',
   ]
   return mailSenden(ORDNER, { an: 'dr.petsas@pickadoc.de', betreff: 'Neuer HKP in der PlanR-Probe', text: zeilen.filter((z) => z !== '').join('\n') })
 }
@@ -2895,57 +2896,51 @@ async function probeNachtragen(req: IncomingMessage, res: ServerResponse, id: st
   return json(res, 200, { ok: true })
 }
 
-function probeHtml(s: string) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+/** Sitzung des Betreibers, auch wenn die Praxis selbst kein PlanR gebucht hat. Kunden kommen hier nicht durch. */
+async function betreiberDerProbe(req: IncomingMessage): Promise<{ konto: Konto } | { status: 401 | 403 }> {
+  const token = cookieWert(req.headers.cookie, SITZUNG_COOKIE)
+  const w = await werIst(req)
+  if (w) return darfEingangSehen(w.konto.email, w.konto.role) ? { konto: w.konto } : { status: 403 }
+  if (!token) return { status: 401 }
+  const s = await sitzungExklusiv(async (liste) => sitzungFinden(liste, token))
+  if (!s) return { status: 401 }
+  return darfEingangSehen(s.konto.email, s.konto.role) ? { konto: s.konto } : { status: 403 }
+}
+
+async function probeEingangJson(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) return json(res, wer.status, { ok: false })
+  const liste = await eingangListe(ORDNER)
+  return json(res, 200, { ok: true, plaene: liste.map(eingangSichtbar) })
 }
 
 async function probeEingangSeite(req: IncomingMessage, res: ServerResponse, id = '') {
   if (req.method !== 'GET') return json(res, 405, { ok: false })
-  const w = await werIst(req)
-  if (!w) {
-    res.statusCode = 401
+  if (!id) {
+    res.statusCode = 302
+    res.setHeader('Location', '/#probe-eingang')
+    res.end()
+    return
+  }
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) {
+    res.statusCode = wer.status
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    res.end('<!DOCTYPE html><meta charset="utf-8"><title>PlanR Eingang</title><p>Bitte mit dem Pickadoc-Konto anmelden.</p><p><a href="/#anmelden">Anmelden</a></p>')
+    const text = wer.status === 401
+      ? 'Bitte mit dem Pickadoc-Konto anmelden.'
+      : 'Dieser Eingang ist nur für den Betreiber der Probe.'
+    res.end(`<!DOCTYPE html><meta charset="utf-8"><title>PlanR Eingang</title><p>${text}</p><p><a href="/#probe-eingang">Zum Eingang</a></p>`)
     return
   }
-  if (!darfEingangSehen(w.konto.email, w.konto.role)) {
-    res.statusCode = 403
-    res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    res.end('<!DOCTYPE html><meta charset="utf-8"><title>PlanR Eingang</title><p>Dieser Eingang gehört zu Pickadoc.</p>')
-    return
-  }
-  if (id) {
-    const fund = await eingangDatei(ORDNER, id)
-    if (!fund) return json(res, 404, { ok: false, message: 'Der Plan liegt hier nicht.' })
-    res.statusCode = 200
-    res.setHeader('Content-Type', fund.karte.art || 'application/octet-stream')
-    res.setHeader('Content-Disposition', `attachment; filename="${fund.karte.dateiname.replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(fund.karte.dateiname)}`)
-    res.end(fund.bytes)
-    return
-  }
-  const liste = await eingangListe(ORDNER)
-  const zeilen = liste.map((k) => {
-    const zeit = new Date(k.zeit).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' })
-    const kontakt = [k.kontakt.name, k.kontakt.telefon, k.kontakt.email, k.kontakt.anschrift].filter(Boolean).join(' · ') || 'kein Praxisstempel lesbar'
-    return `<tr><td>${probeHtml(zeit)}</td><td><a href="/probe-eingang/${probeHtml(k.id)}">${probeHtml(k.dateiname)}</a></td><td>${probeHtml(kontakt)}</td></tr>`
-  }).join('')
+  const fund = await eingangDatei(ORDNER, id)
+  if (!fund) return json(res, 404, { ok: false, message: 'Der Plan liegt hier nicht.' })
+  const art = fund.karte.art || 'application/octet-stream'
+  const ansehen = art === 'application/pdf' || art === 'text/plain' || art.startsWith('image/')
   res.statusCode = 200
-  res.setHeader('Content-Type', 'text/html; charset=utf-8')
-  res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PlanR · abgelegte Pläne</title>
-<style>
-  body { margin: 0; background: #071a1f; color: #e9f3f2; font: 16px/1.5 "Segoe UI", sans-serif; }
-  main { max-width: 980px; margin: 0 auto; padding: 32px 18px 64px; }
-  h1 { font-size: 28px; letter-spacing: -0.03em; }
-  a { color: #3fd8b5; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; vertical-align: top; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
-  th { color: #9db3b4; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
-</style></head><body><main>
-<h1>Abgelegte Pläne</h1>
-<p>${liste.length} ${liste.length === 1 ? 'Plan' : 'Pläne'} aus der Probe. Der Kontakt kommt aus dem Praxisstempel, nicht aus dem Versichertenblock.</p>
-<table><thead><tr><th>Zeit</th><th>Datei</th><th>Zahnarzt</th></tr></thead><tbody>
-${zeilen || '<tr><td colspan="3">Noch kein Plan abgelegt.</td></tr>'}
-</tbody></table></main></body></html>`)
+  res.setHeader('Content-Type', art)
+  res.setHeader('Content-Disposition', `${ansehen ? 'inline' : 'attachment'}; filename="${fund.karte.dateiname.replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(fund.karte.dateiname)}`)
+  res.end(fund.bytes)
 }
 
 export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
@@ -2961,6 +2956,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/einlesen') return void probeEinlesen(req, res).catch(fehler500(res))
   if (url === '/api/probe/ablegen') return void probeAblegen(req, res).catch(fehler500(res))
   if (url.startsWith('/api/probe/ablegen/')) return void probeNachtragen(req, res, url.slice('/api/probe/ablegen/'.length)).catch(fehler500(res))
+  if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
   if (url.startsWith('/probe-eingang/')) return void probeEingangSeite(req, res, url.slice('/probe-eingang/'.length)).catch(fehler500(res))
   if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog'

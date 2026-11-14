@@ -275,6 +275,25 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 .hp-pos td { text-align: left; padding: 7px 8px; }
 .hp-pos td:last-child, .hp-pos th:last-child, .hp-pos tfoot td { text-align: right; font-weight: 650; }
 .hp-pos tfoot td { background: #f3faf8; }
+.pe-haupt { max-width: 880px; margin: 0 auto; padding: 36px 18px 80px; }
+.pe-haupt h1 { font-size: clamp(32px, 5vw, 46px); margin: 8px 0 12px; }
+.pe-lead { color: var(--hp-grau); margin: 0 0 22px; }
+.pe-liste { display: flex; flex-direction: column; gap: 14px; }
+.pe-karte { background: var(--hp-karte); border: 1px solid var(--hp-linie); border-radius: 16px; padding: 16px 18px 18px; }
+.pe-kopf { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.pe-zeit { color: var(--hp-grau); font-size: 13px; white-space: nowrap; }
+.pe-datei { font-size: 15px; }
+.pe-name { margin: 12px 0 0; font-weight: 700; }
+.pe-adresse { margin: 6px 0 0; font-size: 20px; font-weight: 750; letter-spacing: -0.02em; }
+.pe-meta { margin: 4px 0 0; color: #d7ebe8; }
+.pe-fehl { margin: 12px 0 0; color: var(--hp-grau); }
+.pe-oeffnen { display: inline-block; margin-top: 14px; color: #071a1f; text-decoration: none; background: var(--hp-mint); font-weight: 700; border-radius: 999px; padding: 8px 16px; }
+.pe-tor { min-height: calc(100dvh - 72px); display: grid; place-items: center; padding: 24px 18px 48px; }
+.pe-anmelden { display: flex; flex-direction: column; gap: 12px; width: min(100%, 380px); }
+.pe-anmelden label { display: flex; flex-direction: column; gap: 4px; font-weight: 650; }
+.pe-anmelden input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--hp-linie); background: #071a1f; color: var(--hp-text); font: inherit; }
+.pe-anmelden button { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--hp-pink-tief), var(--hp-pink)); }
+.pe-hinweis { min-height: 1.4em; margin: 0; color: var(--hp-gold); }
 .hp-probe-liste { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
 .hp-probe-liste li { display: grid; grid-template-columns: 72px 1fr; gap: 12px; padding: 10px 12px; border: 1px solid var(--hp-linie); border-radius: 12px; }
 .hp-spielwiese .hp-probe-liste { color: var(--hp-text, inherit); }
@@ -530,6 +549,10 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 
 /* ---------- Hero-Handy (clara-handy.css) ---------- */
 .hp-handy { display: flex; justify-content: center; }
+.hp-foto { display: block; width: min(100%, 720px); height: auto; }
+.hp-foto-handy { width: min(100%, 420px); }
+.hp-foto-clara { width: min(100%, 520px); }
+.hp-buehne-bild:has(.hp-foto) { min-height: 0; }
 .hp-handy .cc-phone { width: min(100%, 320px); }
 .hp-handy .cc-flip-labels { position: relative; z-index: 3; }
 .hp-handy .cc-flip__inner { animation: none; transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1); }

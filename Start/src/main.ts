@@ -2101,7 +2101,8 @@ function ohneAnmeldung() {
   }
   let ansicht = ''
   const zeigen = async () => {
-    const soll = ['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis ? 'anmelden'
+    const soll = location.hash === '#probe-eingang' ? '#probe-eingang'
+      : (['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
       : location.hash === '#probe' ? '#probe'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' ? location.hash : 'start'
     if (soll === ansicht) return
@@ -2120,6 +2121,12 @@ function ohneAnmeldung() {
       hp.homepageVerlassen()
       const { probeSeite } = await import('./probe')
       probeSeite(app)
+      scrollTo(0, 0)
+    } else if (soll === '#probe-eingang') {
+      anmeldePopupEntfernen()
+      hp.homepageVerlassen()
+      const { probeEingangSeite } = await import('./probeEingangSeite')
+      probeEingangSeite(app)
       scrollTo(0, 0)
     } else if (soll.startsWith('#buchen')) {
       anmeldePopupEntfernen()
@@ -2202,10 +2209,19 @@ function probeOeffnen() {
   return import('./probe').then(({ probeSeite }) => probeSeite(app))
 }
 
+function probeEingangOeffnen() {
+  document.body.classList.remove('planr-app', 'plan-offen')
+  return import('./probeEingangSeite').then(({ probeEingangSeite }) => probeEingangSeite(app))
+}
+
 ausPickadoc().then(ichLaden).then(async (wer) => {
   if (!wer) return ohneAnmeldung()
-  addEventListener('hashchange', () => { if (location.hash === '#probe') void probeOeffnen() })
+  addEventListener('hashchange', () => {
+    if (location.hash === '#probe') void probeOeffnen()
+    if (location.hash === '#probe-eingang') void probeEingangOeffnen()
+  })
   if (location.hash === '#probe') return probeOeffnen()
+  if (location.hash === '#probe-eingang') return probeEingangOeffnen()
   ich = wer
   sitzungBewachen()
   await einstellungenLaden()

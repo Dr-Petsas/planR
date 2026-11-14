@@ -238,6 +238,24 @@ export async function eingangListe(wurzel: string): Promise<ProbeKarte[]> {
   return liste.sort((a, b) => (a.zeit < b.zeit ? 1 : -1))
 }
 
+/** Was der Betreiber sieht. Ob schon eine Hinweis-Mail raus ist, bleibt intern. */
+export function eingangSichtbar(karte: ProbeKarte) {
+  const k = karte.kontakt ?? LEER
+  return {
+    id: karte.id,
+    zeit: karte.zeit,
+    dateiname: karte.dateiname,
+    art: karte.art,
+    kontakt: {
+      name: k.name ?? '',
+      praxis: k.praxis ?? '',
+      telefon: k.telefon ?? '',
+      email: k.email ?? '',
+      anschrift: k.anschrift ?? '',
+    },
+  }
+}
+
 export async function eingangDatei(wurzel: string, id: string): Promise<{ karte: ProbeKarte; bytes: Buffer } | null> {
   if (!idGueltig(id)) return null
   const karte = (await indexLesen(wurzel)).find((e) => e.id === id)
