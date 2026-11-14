@@ -2,6 +2,7 @@ import './homepage.css'
 import './clara-handy.css'
 import { logo, wortmarke } from './logo'
 import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN } from './paket'
+import { einwilligungAendern, werbungAktiv, werbungStarten } from './werbung'
 
 /** Öffentliche Startseite von PlanR für Besucher ohne Anmeldung. */
 
@@ -759,6 +760,7 @@ const HTML = `
       <a href="https://pickadoc.ai/impressum.html" target="_blank" rel="noopener">Impressum</a>
       <a href="https://pickadoc.ai/datenschutz.html" target="_blank" rel="noopener">Datenschutz</a>
       <a href="https://pickadoc.ai/agb.html" target="_blank" rel="noopener">AGB</a>
+      <a href="#" data-einwilligung hidden>Cookie-Einstellungen</a>
       <a href="#kontakt">Kontakt</a>
       <a href="#anmelden">Anmelden</a>
     </nav>
@@ -1198,6 +1200,12 @@ export function homepage(app: HTMLElement) {
   rueckStarten(wurzel)
   spielwieseStarten(wurzel)
   dokuWahlStarten(wurzel)
+  const einwilligung = wurzel.querySelector<HTMLAnchorElement>('[data-einwilligung]')
+  if (einwilligung && werbungAktiv()) {
+    einwilligung.hidden = false
+    einwilligung.addEventListener('click', (ev) => { ev.preventDefault(); einwilligungAendern() })
+  }
+  werbungStarten()
   const ziel = /^#[a-z-]+$/.test(location.hash) && location.hash !== '#top' ? wurzel.querySelector(location.hash) : null
   ziel?.scrollIntoView()
 }

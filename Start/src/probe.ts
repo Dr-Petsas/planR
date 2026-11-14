@@ -1,11 +1,12 @@
 /**
  * Öffentliche Seite: HKP und Anlagen lesen, dann im echten HKP-Planer anzeigen.
- * Nichts wird gespeichert. Der Planer rechnet Befund und Therapie selbst.
+ * Jede Datei geht zusätzlich in den Probe-Eingang. Der Planer rechnet Befund und Therapie selbst.
  */
 import './homepage.css'
 import { logo, wortmarke } from './logo'
-import { blattAusEinlesen, type BlattPosition, type BlattSummen, type EinleseAntwort } from './einlesenZeilen'
+import { blattAusEinlesen, type BlattPosition, type BlattSummen, type EinleseAntwort, type EinleseSeite } from './einlesenZeilen'
 import { blattAusZeilen, textSchichtenAusPdf, zeilenAusPdf, zeilenAusText, type ProbePosition, type ZahnSchema } from './hkpPdf'
+import { werbungStarten, zielErreicht } from './werbung'
 
 type Zeile = ProbePosition | BlattPosition
 interface Blatt { schema: ZahnSchema; positionen: Zeile[]; summen?: BlattSummen }
@@ -49,6 +50,50 @@ function vereinen(teile: Blatt[]): Blatt {
   const summen: BlattSummen = {}
   for (const teil of [...teile].reverse()) Object.assign(summen, teil.summen)
   return { schema, positionen, summen }
+}
+
+function textAusSeiten(seiten: EinleseSeite[] | undefined) {
+  const zeilen: string[] = []
+  for (const seite of seiten ?? []) {
+    const teile = [...seite.teile].filter((t) => t.text.trim()).sort((a, b) => a.y - b.y || a.x - b.x)
+    let y = -1
+    let zeile: string[] = []
+    for (const t of teile) {
+      if (y >= 0 && Math.abs(t.y - y) > Math.max(8, (t.h || 12) * 0.7)) {
+        zeilen.push(zeile.join(' '))
+        zeile = []
+      }
+      zeile.push(t.text.trim())
+      y = t.y
+    }
+    if (zeile.length) zeilen.push(zeile.join(' '))
+  }
+  return zeilen.join('\n')
+}
+
+async function probeAblegen(datei: File, daten: ArrayBuffer) {
+  try {
+    const art = datei.type || (datei.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : datei.name.toLowerCase().endsWith('.txt') ? 'text/plain' : '')
+    if (!art) return ''
+    const r = await fetch('/api/probe/ablegen', {
+      method: 'POST',
+      headers: { 'Content-Type': art, 'X-Datei-Name': encodeURIComponent(datei.name) },
+      body: daten,
+    })
+    const d = await r.json() as { id?: string }
+    return d.id ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function probeKontakt(id: string, text: string) {
+  if (!id) return Promise.resolve()
+  return fetch(`/api/probe/ablegen/${id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text.slice(0, 40_000) }),
+  }).then(() => undefined, () => undefined)
 }
 
 function alsBase64(buf: ArrayBuffer) {
@@ -112,12 +157,7 @@ export function probeSeite(app: HTMLElement) {
       <div class="hp-hero-text">
         <p class="hp-eyebrow">Für Zahnärzte · am eigenen HKP</p>
         <h1>Legen Sie einen HKP hier ab. <span class="hp-verlauf">PlanR optimiert Ihren Umsatz.</span></h1>
-        <p class="hp-lead">Bitte den kompletten HKP hochladen, inklusive:</p>
-        <ul class="hp-probe-teile">
-          <li>HKP (Kasse)</li>
-          <li>GOZ-KVA</li>
-          <li>Labor-KVA (Eigenbeleg)</li>
-        </ul>
+        <p class="hp-lead">PlanR liest Befund, Regelversorgung, Therapieplanung, GOZ und Labor und setzt sie in den HKP-Planer. Dort stehen Teil 1, Teil 2, die Anlagen und die Regler.</p>
       </div>
       <form class="hp-probe-ablage">
         <p class="hp-probe-pflicht">Patientendaten unkenntlich machen, bevor Sie etwas hier ablegen: Name, Geburtsdatum, Adresse, Telefon und Versichertennummer dürfen auf dem Blatt nicht mehr lesbar sein.</p>
@@ -127,6 +167,15 @@ export function probeSeite(app: HTMLElement) {
           <span>PDF, Foto oder Text. Mehrere Dateien auf einmal.</span>
           <input type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.txt,text/plain" multiple data-dateien disabled>
         </label>
+        <div class="hp-probe-komplett">
+          <p>Bitte den kompletten HKP hochladen, inklusive:</p>
+          <ul class="hp-probe-teile">
+            <li>HKP (Kasse)</li>
+            <li>GOZ-KVA</li>
+            <li>Labor-KVA (Eigenbeleg)</li>
+          </ul>
+          <p class="hp-probe-bleibt">Der Plan bleibt bei Pickadoc, damit Dr. Petsas ihn mit Ihnen ansehen kann.</p>
+        </div>
         <p class="hp-probe-status" data-status>Noch nichts gelesen.</p>
         <div class="hp-spin" data-spin hidden><i></i><span>Wird gelesen</span></div>
       </form>
@@ -135,6 +184,7 @@ export function probeSeite(app: HTMLElement) {
       <iframe class="hp-probe-rahmen" title="HKP-Planer" data-rahmen></iframe>
     </section>
   </div>`
+  werbungStarten()
 
   const wurzel = app.querySelector<HTMLElement>('.hp')!
   const status = wurzel.querySelector<HTMLElement>('[data-status]')!
@@ -190,20 +240,21 @@ export function probeSeite(app: HTMLElement) {
   }
 
   /** PDF oder Foto über den Einlese-Dienst. Kommt nichts Brauchbares, greift der bisherige Weg. */
-  const ausEinlesen = async (datei: File, daten: ArrayBuffer, hinweise: string[]): Promise<Blatt | null> => {
+  const ausEinlesen = async (datei: File, daten: ArrayBuffer, hinweise: string[]): Promise<{ blatt: Blatt | null; text: string }> => {
     const art = datei.type || (datei.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : '')
-    if (!art || daten.byteLength > 12_000_000) return null
+    if (!art || daten.byteLength > 12_000_000) return { blatt: null, text: '' }
     try {
       const r = await fetch('/api/probe/einlesen', { method: 'POST', headers: { 'Content-Type': art }, body: daten })
       const d = await r.json() as { ok?: boolean; ergaenzung?: EinleseAntwort['ergaenzung'] }
-      if (!d.ok || !d.ergaenzung) return null
+      const text = textAusSeiten(d.ergaenzung?.seiten)
+      if (!d.ok || !d.ergaenzung) return { blatt: null, text }
       const gelesen = blattAusEinlesen({ seiten: [], tabellen: [], ergaenzung: d.ergaenzung })
       const fund: Blatt = { schema: gelesen.schema, positionen: gelesen.positionen, summen: gelesen.summen }
-      if (!hat(fund)) return null
+      if (!hat(fund)) return { blatt: null, text }
       if (gelesen.pruefen.length) hinweise.push(`${datei.name}: Bitte gegenlesen, unsicher gelesen: ${gelesen.pruefen.join(', ')}.`)
-      return fund
+      return { blatt: fund, text }
     } catch {
-      return null
+      return { blatt: null, text: '' }
     }
   }
 
@@ -228,42 +279,57 @@ export function probeSeite(app: HTMLElement) {
     warten(true)
     const teile: Blatt[] = []
     const hinweise: string[] = []
+    let abgelegt = false
     for (const datei of dateien) {
+      let id = ''
+      let text = ''
       try {
         const art = datei.type
+        const puff = await datei.arrayBuffer()
+        id = await probeAblegen(datei, puff)
+        if (id && !abgelegt) {
+          abgelegt = true
+          zielErreicht('probe')
+        }
         if (art.startsWith('text') || datei.name.toLowerCase().endsWith('.txt')) {
-          const plan = await ausText(datei.name, await datei.text(), hinweise)
+          text = new TextDecoder().decode(puff)
+          const plan = await ausText(datei.name, text, hinweise)
           if (plan) teile.push(plan)
         } else if (art.startsWith('image')) {
           warten(true)
-          const bild = await datei.arrayBuffer()
-          const fund = await ausEinlesen(datei, bild, hinweise)
-          if (fund) { teile.push(fund); continue }
-          const d = await anLesen({ bild: alsBase64(bild), typ: art || 'image/jpeg' })
-          const erkannt = d.ok ? ausAntwort(d) : null
-          if (erkannt) teile.push(erkannt)
-          else hinweise.push(`${datei.name}: ${d.message || 'nicht gelesen'}`)
+          const gelesen = await ausEinlesen(datei, puff, hinweise)
+          text = gelesen.text
+          if (gelesen.blatt) teile.push(gelesen.blatt)
+          else {
+            const d = await anLesen({ bild: alsBase64(puff), typ: art || 'image/jpeg' })
+            const erkannt = d.ok ? ausAntwort(d) : null
+            if (erkannt) teile.push(erkannt)
+            else hinweise.push(`${datei.name}: ${d.message || 'nicht gelesen'}`)
+          }
         } else {
-          const puff = await datei.arrayBuffer()
           warten(true)
-          const fund = await ausEinlesen(datei, puff.slice(0), hinweise)
-          if (fund) { teile.push(fund); continue }
-          const schichten = await textSchichtenAusPdf(puff.slice(0))
-          const seiten = await fotosAusPdf(puff.slice(0))
-          const d = await anLesen({
-            text: schichten.join('\n\n').slice(0, 16000),
-            bilder: seiten.map((seite) => seite.replace(/^data:[^;]+;base64,/, '')),
-            typ: 'image/jpeg',
-          })
-          const erkannt = d.ok ? ausAntwort(d) : null
-          const lokal = blattAusZeilen(await zeilenAusPdf(puff.slice(0)))
-          const plan = erkannt ?? (hat(lokal) ? lokal : null)
-          if (plan) teile.push(plan)
-          else hinweise.push(`${datei.name}: ${d.message || 'Darin wurde kein Zahnschema erkannt.'}`)
+          const gelesen = await ausEinlesen(datei, puff.slice(0), hinweise)
+          text = gelesen.text
+          if (!gelesen.blatt) {
+            const schichten = await textSchichtenAusPdf(puff.slice(0))
+            if (!text) text = schichten.join('\n\n')
+            const seiten = await fotosAusPdf(puff.slice(0))
+            const d = await anLesen({
+              text: schichten.join('\n\n').slice(0, 16000),
+              bilder: seiten.map((seite) => seite.replace(/^data:[^;]+;base64,/, '')),
+              typ: 'image/jpeg',
+            })
+            const erkannt = d.ok ? ausAntwort(d) : null
+            const lokal = blattAusZeilen(await zeilenAusPdf(puff.slice(0)))
+            const plan = erkannt ?? (hat(lokal) ? lokal : null)
+            if (plan) teile.push(plan)
+            else hinweise.push(`${datei.name}: ${d.message || 'Darin wurde kein Zahnschema erkannt.'}`)
+          } else teile.push(gelesen.blatt)
         }
       } catch {
         hinweise.push(`${datei.name}: Das ließ sich nicht lesen.`)
       }
+      await probeKontakt(id, text)
     }
     warten(false)
     blatt = vereinen(teile)

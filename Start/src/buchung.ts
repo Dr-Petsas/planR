@@ -5,6 +5,7 @@ import { PVS_LISTE, pvsVon } from './einstellungen'
 import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './paket'
 import { anleitungHtml, anleitungVon, bridgeSetupLaden, codeLesbar } from './einrichtung'
 import { logo } from './logo'
+import { werbungStarten, zielErreicht } from './werbung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
@@ -43,6 +44,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
   let sendet = false
   const w: Werte = { paket: 'planr_clara', doku: dokuAn, 'praxis.rechtsform': 'Einzelpraxis', 'kzv.praxen': '1', 'kzv.zahnaerzte': '1', 'pvs.server': 'server' }
   document.title = 'PlanR buchen'
+  werbungStarten()
 
   const paket = (): Paket => 'planr_clara'
 
@@ -275,7 +277,10 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
       const r = await fetch('/api/buchung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten()) })
       const d = await r.json() as { ok: boolean; id?: string; email?: string; pvs?: string; konto?: string; angemeldet?: boolean; fehler?: Record<string, string>; meldung?: string }
       sendet = false
-      if (d.ok) return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']), String(d.konto ?? 'manuell'), d.angemeldet === true)
+      if (d.ok) {
+        zielErreicht('buchung')
+        return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']), String(d.konto ?? 'manuell'), d.angemeldet === true)
+      }
       fehler = d.fehler ?? {}
       const erster = Object.keys(fehler)[0]
       if (erster) schritt = SCHRITT_VON.find(([re]) => re.test(erster))?.[1] ?? schritt
