@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { befundAuftrag, befundAusPvs, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, vermerkText } from './pvs'
+import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgeSollPvs, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, vermerkText } from './pvs'
 
 describe('PVS-Vermerk', () => {
   it('ein Plan bzw. MKV und Privatvereinbarung als zwei DS-Win-Pläne', () => {
@@ -15,6 +15,19 @@ describe('PVS-Vermerk', () => {
     expect(planInsPvsMoeglich('cgm-z1pro', 'privat-kv')).toBe(false)
     expect(planInsPvsMoeglich('evident', 'kons-mkv')).toBe(false)
     expect(planInsPvsMoeglich(undefined, 'kons-mkv')).toBe(false)
+  })
+
+  it('die Einstellung in PlanR ist der Schalter für die Bridge', () => {
+    expect(bridgeSollPvs('dens', 'dampsoft')).toBe('dens')
+    expect(bridgeSollPvs('dampsoft', 'dens')).toBe('dampsoft')
+    expect(bridgeSollPvs('dampsoft', 'dampsoft')).toBeUndefined()
+    expect(bridgeSollPvs('charly', 'dampsoft')).toBeUndefined()
+    expect(bridgeSollPvs('', 'dampsoft')).toBeUndefined()
+    expect(bridgeSollPvs('dens')).toBe('dens')
+    expect(bridgeFolgtEinstellung('1.18')).toBe(true)
+    expect(bridgeFolgtEinstellung('2.0')).toBe(true)
+    expect(bridgeFolgtEinstellung('1.17')).toBe(false)
+    expect(bridgeFolgtEinstellung(undefined)).toBe(false)
   })
 })
 

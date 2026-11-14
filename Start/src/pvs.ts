@@ -135,6 +135,21 @@ const PLAN_PVS: Record<string, string[]> = {
 
 export const planInsPvsMoeglich = (pvs: string | undefined, modul: string) => !!pvs && (PLAN_PVS[pvs] ?? []).includes(modul)
 
+/**
+ * Praxisprogramm, das die Bridge starten soll, wenn es von dem abweicht, mit dem sie sich meldet.
+ * Leer, wenn die Einstellung kein angebundener Connector ist oder schon übereinstimmt.
+ */
+export function bridgeSollPvs(eingestellt: string, gemeldet?: string): string | undefined {
+  if (!PVS_CONNECTOR[eingestellt] || eingestellt === gemeldet) return undefined
+  return eingestellt
+}
+
+/** Ab Bridge 1.18 folgt sie dieser Einstellung und stellt den Connector um. */
+export function bridgeFolgtEinstellung(version: string | undefined): boolean {
+  const [haupt, neben] = (version ?? '').split('.').map((teil) => Number(teil) || 0)
+  return haupt > 1 || (haupt === 1 && neben >= 18)
+}
+
 /** Vermerk, dass ein Plan schon im PVS liegt */
 export interface PvsVermerk {
   pvs: string

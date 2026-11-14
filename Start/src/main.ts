@@ -3,7 +3,7 @@ import './thema'
 import { ausDswin, ersetzbar, faelleZusammen, hkpOffenKarten, loeschbar, nummerMitReihe, planDateiLesen, planFiltern, tagVon, type PatientKennung, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
-import { PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich } from './pvs'
+import { PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, planInsPvsMoeglich } from './pvs'
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { befundZeigen } from './befund'
 import { apiJson } from './api'
@@ -692,6 +692,15 @@ function auswahlKarte(patient: Stammdaten): string {
     </div>`
 }
 
+function bridgeStand(a: NonNullable<typeof agent>, gewaehlt: string): string {
+  const laufend = pvsVon(a.pvs ?? '')?.name || a.pvs || ''
+  const version = a.version ?? '?'
+  if (a.pvs && gewaehlt && a.pvs !== gewaehlt && bridgeFolgtEinstellung(a.version)) {
+    return `${laufend}, Version ${version} – übernimmt ${pvsVon(gewaehlt)?.name || gewaehlt}`
+  }
+  return `${laufend}, Version ${version}`
+}
+
 function einstellungKarte(): string {
   const e = entwurf
   const p = pvsVon(e.pvs)
@@ -720,7 +729,7 @@ function einstellungKarte(): string {
           <input type="text" data-ordner value="${esc(e.ordner)}" placeholder="z. B. C:\\DENS\\Import" autocomplete="off" spellcheck="false">
         </label>` : ''}
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Anbindung an dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
-        ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(agent.pvs ?? '')}, Version ${esc(agent.version ?? '?')})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
+        ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge auf dem Praxisserver: ${agent ? (agent.verbunden ? `verbunden (${esc(bridgeStand(agent, einstellungen.pvs))})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
           ${ich.konto.admin ? ' · <button type="button" class="link-knopf" data-bridge-laden>Bridge herunterladen</button>' : ' · Herunterladen kann sie der Praxis-Admin.'}</p>` : ''}
         ${katalogBlock()}
         ${benutzerBlock(benutzer)}
@@ -792,16 +801,25 @@ async function katalogSenden(body: Record<string, unknown>) {
   zeichnen()
 }
 
-async function einstellungenSpeichern() {
+/** `offen`: Maske bleibt stehen – die PVS-Wahl gilt sofort, ohne eigenen Speichern-Klick. */
+async function einstellungenSpeichern(offen = false) {
   try {
     const r = await fetch('/api/einstellungen', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entwurf),
     })
     const d = await r.json() as { ok: boolean; einstellungen?: Einstellungen; meldung?: string }
-    if (!d.ok || !d.einstellungen) return melden(d.meldung || 'Speichern hat nicht geklappt.')
+    if (!d.ok || !d.einstellungen) {
+      if (offen) { entwurf = einstellungen; zeichnen() }
+      return melden(d.meldung || 'Speichern hat nicht geklappt.')
+    }
     einstellungen = entwurf = d.einstellungen
-    auswahlSchliessen()
     const p = pvsVon(einstellungen.pvs)
+    if (offen) {
+      await katalogLaden()
+      zeichnen()
+      return melden(p ? `Praxisprogramm umgestellt: ${p.name}. Alles in PlanR arbeitet jetzt damit.` : 'Kein Praxisprogramm gewählt.')
+    }
+    auswahlSchliessen()
     melden(p ? `Gespeichert: ${p.name}, Verbindung ${einstellungen.bridge ? 'an' : 'aus'}.` : 'Gespeichert: kein PVS gewählt.')
   } catch {
     melden('Keine Verbindung.')
@@ -1771,6 +1789,8 @@ function zeichnen() {
       const pvs = (ev.target as HTMLSelectElement).value
       entwurf = { ...entwurf, pvs, bridge: pvs ? entwurf.bridge : false }
       zeichnen()
+      // Globaler Schalter: gilt sofort für Suche, Übernahme, Übergabe, Preise und die Bridge auf dem Praxisserver
+      if (ich.konto.admin) void einstellungenSpeichern(true)
     })
     form.querySelector<HTMLInputElement>('[data-bridge]')!.addEventListener('change', (ev) => {
       entwurf = { ...entwurf, bridge: (ev.target as HTMLInputElement).checked }

@@ -10,7 +10,7 @@ import { planerZuModul } from './src/planer.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import {
-  PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
+  PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, bridgeSollPvs, planInsPvsMoeglich, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk,
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
@@ -926,7 +926,12 @@ async function pvsConnector(req: IncomingMessage, w: Wer, zweck: 'suche' | 'hkp'
   if (!basis) return { name: pvs.name, fehler: zweck === 'suche' ? `Für ${pvs.name} gibt es noch keine Patientensuche.` : `HKPs aus ${pvs.name} kann PlanR noch nicht übernehmen.` }
   const bridge = await bridgeFuer(mandant)
   const stand = bridge?.stand ?? null
-  if (stand?.pvs && stand.pvs !== pvs.id) return { status: 409, name: pvs.name, fehler: `Die PlanR-Bridge der Praxis arbeitet mit ${stand.pvs}, eingestellt ist ${pvs.name}.` }
+  if (stand?.pvs && stand.pvs !== pvs.id) {
+    const fehler = bridgeFolgtEinstellung(stand.version)
+      ? `Die PlanR-Bridge stellt gerade auf ${pvs.name} um. Bitte in einer Minute erneut versuchen.`
+      : `Die PlanR-Bridge der Praxis arbeitet mit ${stand.pvs}, eingestellt ist ${pvs.name}.`
+    return { status: 409, name: pvs.name, fehler }
+  }
   if (bridge && stand) return { id: pvs.id, name: pvs.name, agent: true, rufen: agentRufer(bridge.m, praxen) }
   if (bridge) {
     const zuletzt = hub.zuletzt(bridge.m)
@@ -1039,11 +1044,19 @@ async function ausPvs(req: IncomingMessage, w: Wer, patient: string, planNr: str
   json(res, 200, { ok: true, nummer: neu.id, hinweise })
 }
 
-const katalogDatei = (mandant: string) => `${ORDNER}/praxiskatalog/${mandant}.json`
+/** Je Praxisprogramm eine eigene Ablage: Wer das PVS umstellt, rechnet nicht mit den Preisen des vorigen weiter. */
+const katalogDatei = (mandant: string, pvs?: string) => `${ORDNER}/praxiskatalog/${mandant}${pvs ? `.${pvs}` : ''}.json`
+/** So nennen sich die Connectoren im Katalog – daran ist die frühere Ablage ohne PVS im Dateinamen zuzuordnen. */
+const KATALOG_PVS: Record<string, string> = { dampsoft: 'DS-Win', dens: 'DENSoffice', 'cgm-z1pro': 'Z1.PRO' }
 
+/** Praxiskatalog des eingestellten Praxisprogramms; ein Katalog aus einem anderen PVS gilt nicht. */
 async function katalogLesen(mandant: string): Promise<Ablage | null> {
-  const a = await jsonLesen<Ablage | null>(katalogDatei(mandant), null)
-  return a?.katalog && a.roh ? a : null
+  const pvs = (await einstellungenImVerbund(mandant)).pvs
+  if (!pvs) return null
+  const eigen = await jsonLesen<Ablage | null>(katalogDatei(mandant, pvs), null)
+  if (eigen?.katalog && eigen.roh) return eigen
+  const frueher = await jsonLesen<Ablage | null>(katalogDatei(mandant), null)
+  return frueher?.katalog && frueher.roh && frueher.katalog.pvs === KATALOG_PVS[pvs] ? frueher : null
 }
 
 let bekannt: Bekannt | null = null
@@ -1084,7 +1097,7 @@ function katalogAbgleichen(c: PvsWeg, mandant: string): Promise<KatalogErgebnis>
       const alt = await katalogLesen(mandant)
       const katalog = katalogBilden(roh, wahlPruefen(null, roh, alt?.wahl))
       const ablage: Ablage = { roh, wahl: katalog.wahl, katalog, aenderungen: aenderungen(alt?.katalog, katalog) }
-      await jsonSchreiben(katalogDatei(mandant), ablage)
+      await jsonSchreiben(katalogDatei(mandant, c.id), ablage)
       return { ok: true as const, ablage }
     })
   })().finally(() => abgleichLaeuft.delete(mandant))
@@ -1204,7 +1217,7 @@ function praxiskatalog(req: IncomingMessage, res: ServerResponse, query: string,
       if (!alt) return json(res, 404, { ok: false, meldung: 'Noch keine Preise & Positionen aus dem PVS übernommen.' })
       const katalog = katalogBilden(alt.roh, wahlPruefen(b.wahl, alt.roh, alt.wahl), alt.katalog.stand)
       const ablage: Ablage = { roh: alt.roh, wahl: katalog.wahl, katalog, aenderungen: aenderungen(alt.katalog, katalog) }
-      await jsonSchreiben(katalogDatei(mandant), ablage)
+      await jsonSchreiben(katalogDatei(mandant, (await einstellungenImVerbund(mandant)).pvs), ablage)
       praxisWissenMelden(w)
       json(res, 200, { ok: true, info: katalogInfo(ablage) })
     })
@@ -1493,13 +1506,16 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
       if (auftrag) hub.zurueckstellen(mandant, auftrag)
     return
   }
+    // Die Einstellung in PlanR ist der Schalter: weicht die Bridge ab, nennt die Antwort das Praxisprogramm.
+    const soll = bridgeSollPvs((await einstellungenImVerbund(mandant)).pvs, pvs)
     if (!auftrag) {
+      if (soll) return json(res, 200, { pvs: soll })
       res.statusCode = 204
       res.end()
       return
     }
     if (auftrag.ms > 30_000) console.log('[planr] Bridge', mandant, 'holt', auftrag.method, auftrag.pfad.split('?')[0])
-    return json(res, 200, { auftrag })
+    return json(res, 200, soll ? { auftrag, pvs: soll } : { auftrag })
   }
   if (url === '/api/pvs-agent/antwort' && req.method === 'POST') {
     try {
