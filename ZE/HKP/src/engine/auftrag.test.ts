@@ -515,6 +515,16 @@ describe('Plan aus Auftrag', () => {
       expect(r.frage).toContain('fehlen die Zähne 26 und 27')
     })
 
+    it('zwei weitere Lücken: beide Brücken in einem Satz', () => {
+      const r = planAusAuftrag(auftragVerstehen(satz), { ...befund, 12: 'x' }, { lueckenFragen: true })
+      expect(r.status).toBe('rueckfrage')
+      if (r.status !== 'rueckfrage') return
+      expect(r.vorschlag).toBe('Brücke von 13 auf 11 und Brücke von 25 auf 27')
+      expect(r.frage).toContain('Dort wären ebenfalls Brücken zu planen: von 13 auf 11 und von 25 auf 27. Soll ich die gleich mit planen, oder bleiben die Lücken ohne Ersatz?')
+      const ja = planAusAuftrag(auftragVerstehen(`${satz} und ${r.vorschlag}`), { ...befund, 12: 'x' }, { lueckenFragen: true })
+      expect(ja.status).toBe('ok')
+    })
+
     it('keine weitere Lücke: keine Frage', () => {
       const r = planAusAuftrag(auftragVerstehen(satz), { ...befund, 26: '' }, { lueckenFragen: true })
       expect(r.status).toBe('ok')

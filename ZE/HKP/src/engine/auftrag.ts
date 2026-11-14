@@ -877,7 +877,9 @@ function weitereLueckeFragen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: B
   const bruecken = gruppen.every((g) => g.vor && g.nach && g.zaehne.length <= 3)
   const vorschlag = bruecken ? gruppen.map((g) => `Brücke von ${g.vor} auf ${g.nach}`).join(' und ') : ''
   const frage = bruecken
-    ? `Ich habe noch eine Unklarheit: Laut Befund ${lage}. Dort wäre ebenfalls eine ${vorschlag} zu planen. Soll ich die gleich mit planen, oder bleibt die Lücke ohne Ersatz?`
+    ? gruppen.length > 1
+      ? `Ich habe noch eine Unklarheit: Laut Befund ${lage}. Dort wären ebenfalls Brücken zu planen: ${gruppen.map((g) => `von ${g.vor} auf ${g.nach}`).join(' und ')}. Soll ich die gleich mit planen, oder bleiben die Lücken ohne Ersatz?`
+      : `Ich habe noch eine Unklarheit: Laut Befund ${lage}. Dort wäre ebenfalls eine ${vorschlag} zu planen. Soll ich die gleich mit planen, oder bleibt die Lücke ohne Ersatz?`
     : `Ich habe noch eine Unklarheit: Laut Befund ${lage}. Dort wäre ebenfalls Zahnersatz zu planen. Soll ich das gleich mit planen, oder bleiben die Lücken ohne Ersatz?`
   return { status: 'rueckfrage', grund: 'weitere_luecke', zaehne, frage, ...(vorschlag ? { vorschlag } : {}) }
 }
