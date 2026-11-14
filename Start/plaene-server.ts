@@ -2260,9 +2260,10 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   const soll = Buffer.from(masSchluessel())
   const ist = Buffer.from(String(req.headers['x-planr-key'] ?? ''))
   if (!soll.length || soll.length !== ist.length || !timingSafeEqual(soll, ist)) return json(res, 401, { ok: false })
-  const schreibt = url === '/api/intern/pvs/befund' || url.startsWith('/api/intern/befund/')
+  const nurPost = url === '/api/intern/pvs/doku' || url.startsWith('/api/intern/befund/')
+  const schreibt = url === '/api/intern/pvs/befund' || nurPost
   if (req.method !== 'GET' && !(req.method === 'POST' && schreibt)) return json(res, 405, { ok: false })
-  if (req.method === 'GET' && url.startsWith('/api/intern/befund/')) return json(res, 405, { ok: false })
+  if (req.method === 'GET' && nurPost) return json(res, 405, { ok: false })
   const q = new URLSearchParams(query)
   const w = await werFuerClient(q.get('clientId') ?? '')
   if (!w) return json(res, 404, { ok: false, meldung: 'Praxis unbekannt.' })
@@ -2272,6 +2273,7 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   }
   if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
   if (url === '/api/intern/pvs/befund') return internBefund(req, w, q, res)
+  if (url === '/api/intern/pvs/doku') return internDoku(req, w, res)
   if (url.startsWith('/api/intern/befund/')) return internBefundAendern(req, w, url, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
 }
@@ -2309,6 +2311,46 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
   const s = await befundSchreiben(w, l, Array.isArray(body.kiefer) ? body.kiefer : [], (body.zaehne ?? {}) as Record<string, unknown>, 'Gespräch')
   if (!('geschrieben' in s)) return json(res, s.status, s.daten)
   return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, geschrieben: s.geschrieben })
+}
+
+/**
+ * POST /api/intern/pvs/doku { patient | vorname, name, geburt; text; wer }: Freitext in die Karteikarte des Patienten
+ * im eingestellten Praxisprogramm (Memo aus dem Gespräch oder dem Chat). MAS ruft erst nach dem Ja.
+ */
+async function internDoku(req: IncomingMessage, w: Wer, res: ServerResponse) {
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(await lesenBody(req, 16_000)) as Record<string, unknown>
+  } catch {
+    return json(res, 400, { ok: false, meldung: 'Ungültiger Karteieintrag.' })
+  }
+  const angabe = (k: string) => String(body[k] ?? '').trim()
+  const text = angabe('text').replace(/\s+/g, ' ')
+  if (!text) return json(res, 400, { ok: false, meldung: 'Der Karteieintrag ist leer.' })
+  const c = await pvsConnector(req, w, 'suche')
+  if (!c.rufen) return json(res, c.status ?? 409, { ok: false, pvs: c.name, meldung: c.fehler })
+  try {
+    let nummer = angabe('patient'), label = ''
+    if (nummer && !/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Die Patientennummer besteht nur aus Ziffern.' })
+    if (!nummer) {
+      const p: PlanPatient = { vorname: angabe('vorname'), name: angabe('name'), geburtsdatum: angabe('geburt') }
+      const s = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: p.name || p.vorname || '', limit: '100' })}`, { ms: 30_000 })
+      if (!s.ok) { const f = pvsFehlt(c, s); return json(res, f.status, f.daten) }
+      const treffer = (s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
+      const wahl = patientWaehlen(treffer, p, c.name!)
+      if (!wahl.id) return json(res, 409, { ok: false, pvs: c.name, meldung: (wahl.fehler ?? '').replace(/im Plan/g, 'dazu') })
+      nummer = wahl.id
+      const t = treffer.find((x) => x.id === nummer)
+      label = [t?.lastName, t?.firstName].filter(Boolean).join(', ')
+    }
+    const s = await c.rufen<Record<string, unknown>>(`/patients/${nummer}/dokumentation`, { method: 'POST', body: { text }, headers: { 'X-DSWIN-EDIT': '1' }, ms: 60_000 })
+    if (!s.ok) { const f = pvsFehlt(c, s); return json(res, f.status, f.daten) }
+    await pvsAblegen(w, c, 'doku', nummer, { text }, s.daten, angabe('wer') || 'Gespräch')
+    console.log('[planr] Karteieintrag ins PVS geschrieben', w.mandant, `${text.length} Zeichen`)
+    return json(res, 200, { ok: true, pvs: c.name, patient: nummer, label, text })
+  } catch (e) {
+    return json(res, 503, { ok: false, pvs: c.name, meldung: stumm(c, e) })
+  }
 }
 
 // ---------- Aktueller 01-Befund je Patient (befund01.ts) ----------
@@ -3003,7 +3045,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
   if (url.startsWith('/probe-eingang/')) return void probeEingangSeite(req, res, url.slice('/probe-eingang/'.length)).catch(fehler500(res))
   if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog'
-    || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen' || url === '/api/intern/befund/vorgang') {
+    || url === '/api/intern/pvs/doku' || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen' || url === '/api/intern/befund/vorgang') {
     return void internPvs(req, res, url, query).catch(fehler500(res))
   }
   if (url === '/api/befund/link' || url.startsWith('/api/befund/link/')) return void befundLinkEndpunkt(req, res, url, query).catch(fehler500(res))

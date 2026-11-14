@@ -302,6 +302,8 @@ const PFADE: [Auftrag['method'], RegExp][] = [
   ['POST', /^\/patients\/\d{1,9}\/plaene\/import$/],
   ['GET', /^\/patients\/\d{1,9}\/befunde\/01$/],
   ['POST', /^\/patients\/\d{1,9}\/befunde\/01$/],
+  // Karteieintrag (Memo aus Gespräch oder Chat)
+  ['POST', /^\/patients\/\d{1,9}\/dokumentation$/],
   ['GET', /^\/praxis\/katalog$/],
   ['GET', /^\/praxen$/],
   // Kontrollbuch: Zuschussdatum gesetzt, Abrechnungsdatum leer

@@ -221,6 +221,8 @@ describe('erlaubte Connector-Aufrufe', () => {
   it('Befund: aktuellen lesen und neuen schreiben, keine Test- und Importwege', () => {
     expect(auftragErlaubt('GET', '/patients/12/befunde/01')).toBe(true)
     expect(auftragErlaubt('POST', '/patients/12/befunde/01')).toBe(true)
+    expect(auftragErlaubt('POST', '/patients/12/dokumentation')).toBe(true)
+    expect(auftragErlaubt('GET', '/patients/12/dokumentation')).toBe(false)
     expect(auftragErlaubt('POST', '/patients/12/befunde/01/dummy')).toBe(false)
     expect(auftragErlaubt('POST', '/patients/12/befunde/01/import')).toBe(false)
     expect(auftragErlaubt('GET', '/patients/12/befunde/01?alle=1')).toBe(false)
