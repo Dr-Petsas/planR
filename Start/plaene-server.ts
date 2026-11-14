@@ -214,7 +214,7 @@ async function werIst(req: IncomingMessage): Promise<Wer | null> {
   }
   const w = werAus(await zugaengeLesen(), s.konto)
   const ort = cookieWert(req.headers.cookie, ORT_COOKIE)
-  if (ort && MANDANT_RE.test(ort) && ortGueltig(await agentenLesen(), w.mandant, ort)) w.ort = ort
+  if (ort && MANDANT_RE.test(ort) && await ortErlaubt(w.mandant, ort)) w.ort = ort
   return w
 }
 /** Anfragen mit gültiger Sitzung, deren Praxis PlanR nicht (mehr) gebucht hat */
@@ -926,6 +926,12 @@ async function bridgeFuer(mandant: string): Promise<{ m: string; stand: AgentSta
   return { m, stand: hub.verbunden(m) }
 }
 
+/** Bridge am einzelnen PC gilt für die Praxis, für die sie eingerichtet wurde, und für die mit ihr gekoppelten */
+async function ortErlaubt(mandant: string, ort: string) {
+  const [z, agenten] = await Promise.all([zugaengeLesen(), agentenLesen()])
+  return bridgeMandanten(z, mandant).some((m) => ortGueltig(agenten, m, ort))
+}
+
 /** PVS-Einstellung des Mandanten; hat die Haupt-Praxis noch keine, gilt die einer gekoppelten Praxis */
 async function einstellungenImVerbund(mandant: string) {
   const [alle, z] = await Promise.all([jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {}), zugaengeLesen()])
@@ -1586,7 +1592,7 @@ async function ortEndpunkt(req: IncomingMessage, res: ServerResponse, w: Wer) {
   const b = JSON.parse(await lesenBody(req, 500) || '{}') as { browser?: unknown; aktiv?: unknown }
   const browser = String(b.browser ?? '')
   if (!/^[A-Za-z0-9_-]{8,40}$/.test(browser)) return json(res, 400, { ok: false })
-  anwesenheit.melden(w.konto.clientId, browser, w.ort ?? '', b.aktiv === true)
+  anwesenheit.melden(w.mandant, browser, w.ort ?? '', b.aktiv === true)
   const [e, bridge] = await Promise.all([einstellungenImVerbund(pvsOrt(w)), bridgeFuer(pvsOrt(w))])
   json(res, 200, { ok: true, lokal: !!w.ort, pvs: e.pvs, name: pvsVon(e.pvs)?.name ?? '', verbunden: !!bridge?.stand })
 }
@@ -1963,7 +1969,7 @@ async function claraText(req: IncomingMessage, res: ServerResponse, w: Wer) {
   const sitzung = String(daten.sitzung ?? '')
   if (!text || !/^[A-Za-z0-9_-]{6,40}$/.test(sitzung)) return json(res, 400, { ok: false })
   // Wer im Chat schreibt, arbeitet gerade an diesem Browser: Claras Rückfragen ans PVS gehen an dessen Praxisprogramm.
-  anwesenheit.melden(w.konto.clientId, `chat-${sitzung}`, w.ort ?? '', true)
+  anwesenheit.melden(w.mandant, `chat-${sitzung}`, w.ort ?? '', true)
   const roh = daten.plan && typeof daten.plan === 'object' ? daten.plan as Record<string, unknown> : null
   const plan = roh ? {
     patient: String(roh.patient ?? '').slice(0, 80),
@@ -2335,10 +2341,10 @@ async function werFuerClient(clientId: string): Promise<Wer | null> {
   const konto = { clientId } as Konto
   const mandant = mandantVon(z, konto)
   // Clara hat keinen Browser: Sie nimmt das PVS des Browsers der Praxis, an dem zuletzt gearbeitet wurde.
-  const ort = anwesenheit.ort(clientId)
+  const ort = anwesenheit.ort(mandant)
   return {
     konto, mandant, register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto),
-    ...(ort && ortGueltig(await agentenLesen(), mandant, ort) ? { ort } : {}),
+    ...(ort && await ortErlaubt(mandant, ort) ? { ort } : {}),
   }
 }
 
