@@ -769,7 +769,7 @@ async function connector<T>(basis: string, pfad: string, init: { method?: string
 
 /** Holt das PVS-Fenster nach vorn, damit der Plan dort gleich geöffnet werden kann. */
 function pvsNachVorn(pvs: string) {
-  const prozess = ({ dens: 'DensOffice', dampsoft: 'dswin' } as Record<string, string>)[pvs]
+  const prozess = ({ dens: 'DensOffice', dampsoft: 'dswin', 'cgm-z1pro': 'z1men' } as Record<string, string>)[pvs]
   if (!prozess) return
   const befehl = `$p = Get-Process ${prozess} -ErrorAction SilentlyContinue | Select-Object -First 1; if ($p) { (New-Object -ComObject WScript.Shell).AppActivate($p.Id) | Out-Null }`
   try {

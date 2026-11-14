@@ -10,9 +10,9 @@ export const PVS_CONNECTOR: Record<string, string> = {
 /** PVS, in denen die Patientensuche sucht und ihre HKPs listet (Übernahme nur mit PVS_CONNECTOR) */
 export const PVS_SUCHE: Record<string, string> = { ...PVS_CONNECTOR }
 /** PVS, deren 01-Befund PlanR lesen und als geänderten Befund zurückschreiben kann */
-export const PVS_BEFUND = new Set(['dampsoft', 'dens'])
+export const PVS_BEFUND = new Set(['dampsoft', 'dens', 'cgm-z1pro'])
 /** PVS, aus denen PlanR die genehmigten, noch nicht abgerechneten Pläne liest (Kontrollbuch) */
-export const PVS_OFFEN = new Set(['dampsoft', 'dens'])
+export const PVS_OFFEN = new Set(['dampsoft', 'dens', 'cgm-z1pro'])
 
 export interface PvsTreffer {
   id: string
@@ -133,6 +133,7 @@ export const PVS_PLANER: Record<string, string> = {
 const PLAN_PVS: Record<string, string[]> = {
   dampsoft: Object.keys(PVS_PLANER),
   dens: Object.keys(PVS_PLANER),
+  'cgm-z1pro': Object.keys(PVS_PLANER),
 }
 
 export const planInsPvsMoeglich = (pvs: string | undefined, modul: string) => !!pvs && (PLAN_PVS[pvs] ?? []).includes(modul)

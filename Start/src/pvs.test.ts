@@ -12,7 +12,7 @@ describe('PVS-Vermerk', () => {
     expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv', 'privat-kb'].every((m) => planInsPvsMoeglich('dampsoft', m))).toBe(true)
     expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv', 'privat-kb'].every((m) => planInsPvsMoeglich('dens', m))).toBe(true)
     expect(planInsPvsMoeglich('dens', 'hkp')).toBe(false)
-    expect(planInsPvsMoeglich('cgm-z1pro', 'privat-kv')).toBe(false)
+    expect(['privat-kv', 'privat-impl', 'privat-kons', 'kons-mkv', 'privat-kb'].every((m) => planInsPvsMoeglich('cgm-z1pro', m))).toBe(true)
     expect(planInsPvsMoeglich('evident', 'kons-mkv')).toBe(false)
     expect(planInsPvsMoeglich(undefined, 'kons-mkv')).toBe(false)
   })
