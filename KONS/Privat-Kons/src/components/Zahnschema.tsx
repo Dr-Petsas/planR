@@ -8,7 +8,7 @@ interface Props {
 }
 
 /** Was die Ziffer hinter dem Kürzel bedeutet. */
-const ZIFFER: Partial<Record<Therapie, { feld: 'flaechen' | 'kanaele' | 'sitzungen'; max: number }>> = {
+export const ZIFFER: Partial<Record<Therapie, { feld: 'flaechen' | 'kanaele' | 'sitzungen'; max: number }>> = {
   komposit: { feld: 'flaechen', max: 5 },
   inlay: { feld: 'flaechen', max: 3 },
   goldhaemmer: { feld: 'flaechen', max: 3 },

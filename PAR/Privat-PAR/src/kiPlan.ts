@@ -2,7 +2,7 @@
 import type { Plan, Rechnung, Zusatz } from './types'
 import { rechnen } from './engine/par'
 import { begruendungText } from './engine/begruendung'
-import { kiName, listenDienst, listenZeilen, type KiPosition, type PlanKiDienst } from './planKi'
+import { kiName, listenDienst, listenZeilen, type KiPosition, type KiZahnFeld, type KiZahnWerte, type PlanKiDienst } from './planKi'
 
 const ebene = (nr: string) => (nr === 'Mat.' ? 'MATERIAL' : 'GOZ')
 export function kiZeilen(r: Rechnung, plan: Plan): KiPosition[] {
@@ -12,11 +12,32 @@ export function kiZeilen(r: Rechnung, plan: Plan): KiPosition[] {
   return listenZeilen(r.zeilen.map((z) => (mit.has(z) ? { ...z, begruendung: begruendungText(z) } : z)), { ebene: (z) => ebene(z.nr), frei: (id) => frei.has(id) })
 }
 
+export const ZAHNFELDER: KiZahnFeld[] = [
+  { name: 'fehlt', text: 'Zahn fehlt', ja: true },
+  { name: 'cpt', text: 'chirurgische Therapie (CPT) an diesem Zahn', ja: true },
+]
+
+/** Fehlende Zähne und CPT-Zähne wie im Befundschema; die Strecke rechnet der Planer daraus neu. */
+export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Plan; text: string } | string {
+  const fehlt = w.fehlt !== undefined ? w.fehlt === true : plan.fehlend.includes(zahn)
+  const cpt = w.cpt !== undefined ? w.cpt === true : plan.cpt.includes(zahn)
+  if (fehlt && w.cpt === true) return `Zahn ${zahn} fehlt; dort gibt es keine chirurgische Therapie.`
+  const fehlend = fehlt ? [...new Set([...plan.fehlend, zahn])] : plan.fehlend.filter((z) => z !== zahn)
+  const cptNeu = cpt && !fehlt ? [...new Set([...plan.cpt, zahn])] : plan.cpt.filter((z) => z !== zahn)
+  if (fehlend.length === plan.fehlend.length && cptNeu.length === plan.cpt.length) return `Zahn ${zahn} steht schon so im Plan.`
+  const teile = [
+    ...(fehlend.length !== plan.fehlend.length ? [fehlt ? 'fehlt' : 'vorhanden'] : []),
+    ...(cptNeu.length !== plan.cpt.length ? [cptNeu.includes(zahn) ? 'chirurgische Therapie' : 'keine chirurgische Therapie'] : []),
+  ]
+  return { plan: { ...plan, fehlend, cpt: cptNeu }, text: `Zahn ${zahn}: ${teile.join(', ')}` }
+}
+
 export function parKi(lesen: () => { plan: Plan; gesperrt: boolean }, schreiben: (plan: Plan) => void): PlanKiDienst {
   return listenDienst<Plan, Zusatz & { ebene?: string }>({
     planart: 'privat-par', name: 'privater Parodontitis-Behandlungsplan (GOZ und Analogleistungen nach der PAR-Strecke)',
     ebenen: ['GOZ', 'MATERIAL'], tarif: ['GOZ'], maxFaktor: 3.5,
     lesen, schreiben,
+    zahnfelder: () => ZAHNFELDER, zahnSetzen,
     liste: (plan) => plan.zusatz.map((z) => ({ ...z, ebene: ebene(z.nr) })),
     mitListe: (plan, liste) => ({ ...plan, zusatz: liste.map(({ ebene: _e, ...z }) => z) }),
     neu: (s, id) => ({
@@ -41,7 +62,7 @@ export function parKi(lesen: () => { plan: Plan; gesperrt: boolean }, schreiben:
       diagnose: `${plan.diagnose || 'nicht eingetragen'}; Stadium ${plan.stadium}, Grad ${plan.grad}`,
       befund: `fehlende Zähne: ${plan.fehlend.join(', ') || 'keine'}; chirurgische Therapie an: ${plan.cpt.join(', ') || 'keinem Zahn'}`,
       strecke: `Variante ${plan.variante}, UPT über ${plan.uptJahre} Jahre, Standardfaktor ${plan.faktor}`,
-      aufbau: 'Die Zeilen der Strecke errechnet der Planer aus dem Befund. Weitere GOZ-Leistungen und Material kann ich ergänzen, den Faktor je Nummer ändern.',
+      aufbau: 'Die Zeilen der Strecke errechnet der Planer aus dem Befund. Ich kann Zähne als fehlend oder vorhanden eintragen und die chirurgische Therapie je Zahn setzen, weitere GOZ-Leistungen und Material ergänzen und den Faktor je Nummer ändern.',
       ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
     }),
   })

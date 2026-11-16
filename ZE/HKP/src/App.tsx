@@ -186,10 +186,12 @@ export default function App() {
   // Clara plant live (?live=1): MAS meldet jeden Schritt beim Anlegen per Sprache, hier wird er
   // sichtbar eingetragen. Ein neuer Vorgang löst vorher die Register-Verknüpfung, damit kein
   // Zwischenstand in einen anderen HKP gespeichert wird; der angelegte HKP wird danach verknüpft geladen.
-  const kiStand = useRef({ plan, ergebnis })
-  useEffect(() => { kiStand.current = { plan, ergebnis } })
-  useEffect(() => planKiHoeren(hkpKi(() => kiStand.current)), [])
   const liveAn = useMemo(() => liveModus(), [])
+  // Ein HKP aus dem Register lässt sich nur ändern, solange er auf Freigabe wartet.
+  const kiGesperrt = liveAn || (!!register.aktiv && register.aktiv.status !== 'wartet_auf_freigabe')
+  const kiStand = useRef({ plan, ergebnis, listen, gesperrt: kiGesperrt })
+  useEffect(() => { kiStand.current = { plan, ergebnis, listen, gesperrt: kiGesperrt } })
+  useEffect(() => planKiHoeren(hkpKi(() => kiStand.current, (neu) => setPlan(() => neu))), [setPlan])
   const [live, setLive] = useState<{ an: boolean; stand: LiveStand | null; spielt: boolean }>({ an: false, stand: null, spielt: false })
   const planRef = useRef(plan)
   const registerRef = useRef(register)

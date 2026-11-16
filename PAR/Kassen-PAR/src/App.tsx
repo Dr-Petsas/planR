@@ -74,9 +74,9 @@ export default function App() {
   const gesperrt = eintrag?.status === 'freigegeben'
 
   /** Fälle mit Patientennamen werden beim Wechsel automatisch gesichert; namenlose nur nach Rückfrage verworfen. */
-  const kiStand = useRef({ fall, gesperrt, strecke, meldungen })
-  useEffect(() => { kiStand.current = { fall, gesperrt, strecke, meldungen } })
-  useEffect(() => planKiHoeren(parKi(() => kiStand.current)), [])
+  const kiStand = useRef({ fall, gesperrt, preise, einst })
+  useEffect(() => { kiStand.current = { fall, gesperrt, preise, einst } })
+  useEffect(() => planKiHoeren(parKi(() => kiStand.current, (neu) => setFall(neu))), [setFall])
 
   const sichern = () => {
     if (!offen || gesperrt) return true

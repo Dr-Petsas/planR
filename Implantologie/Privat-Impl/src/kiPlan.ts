@@ -1,10 +1,13 @@
 /** Der Implantatplan für die KI-Zeile und das Prüfmodul: lesen, Schalter setzen, Positionen ändern. */
-import type { Einstellungen, GlobalOptionen, Plan, Region, RegionOptionen } from './types'
+import type { Einstellungen, GlobalOptionen, ImplantatDetail, Plan, Region, RegionOptionen } from './types'
 import { REGION_NAME } from './types'
 import { kalkulieren, type Kalkulation } from './engine/berechnung'
 import { geplanteRegionen, implantatZaehne, SITZUNG_NAME } from './engine/planung'
 import { IMPLANTATKOERPER } from './data/implantatkoerper'
-import { freiAnwenden, kiDienst, type KiPosition, type KiSchalter, type KiSchritt, type PlanBlick, type PlanKiDienst } from './planKi'
+import { BEFUND_KUERZEL, PLANUNG_KUERZEL, istImplantat } from './engine/zahnschema'
+import { STANDARD_IMPLANTAT } from './components/ImplantatDetails'
+import { implantateSetzen } from './implantatSystem'
+import { freiAnwenden, kiDienst, zahnText, type KiPosition, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
 
 export function kiZeilen(kalk: Kalkulation): KiPosition[] {
   return [...kalk.honorarGoz, ...kalk.honorarGoae, ...kalk.material, ...kalk.labor].map((z) => ({
@@ -57,6 +60,49 @@ function schalter(plan: Plan): KiSchalter[] {
   return s
 }
 
+export const ZAHNFELDER: KiZahnFeld[] = [
+  { name: 'befund', text: 'Befund (Zeile B, Kleinbuchstaben)', werte: { '': 'leer, kein Befund', ...BEFUND_KUERZEL } },
+  { name: 'planung', text: 'Planung (Zeile TP, Großbuchstaben; leer nimmt Implantat oder Maßnahme an diesem Zahn heraus)', werte: { '': 'leer, nichts geplant', ...PLANUNG_KUERZEL } },
+  { name: 'system', text: 'Implantatsystem (nur an Zähnen mit geplantem Implantat)', werte: Object.fromEntries(IMPLANTATKOERPER.map((s) => [s.id, `${s.hersteller} ${s.system}`])) },
+  { name: 'durchmesser', text: 'Implantatdurchmesser in mm', von: 2.5, bis: 8 },
+  { name: 'laenge', text: 'Implantatlänge in mm', von: 4, bis: 20 },
+  { name: 'zeitpunkt', text: 'Zeitpunkt der Implantation', werte: { sofort: 'Sofortimplantation', verzoegert: 'verzögert', spaet: 'Spätimplantation' } },
+  { name: 'deckung', text: 'Einheilung', werte: { gedeckt: 'zweizeitig, gedeckt mit späterer Freilegung', offen: 'einzeitig, offen mit Gingivaformer' } },
+]
+const DETAIL = ['system', 'durchmesser', 'laenge', 'zeitpunkt', 'deckung'] as const
+
+/**
+ * Trägt Befund, Planung und Implantat-Angaben eines Zahns ein wie die Seite. Ein neues Implantat übernimmt das System
+ * der schon geplanten Implantate, wenn alle dasselbe haben; fällt die Implantatplanung weg, gehen die Angaben mit.
+ */
+export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Plan; text: string } | string {
+  const alt = plan.zaehne[zahn] ?? { B: '', TP: '' }
+  const neu = { ...alt, ...(w.befund !== undefined ? { B: String(w.befund) } : {}), ...(w.planung !== undefined ? { TP: String(w.planung) } : {}) }
+  const detail: Partial<ImplantatDetail> = {}
+  for (const k of DETAIL) if (w[k] !== undefined) (detail as Record<string, unknown>)[k] = w[k]
+  const mitDetail = Object.keys(detail).length > 0
+  if (mitDetail && !istImplantat(neu.TP)) return `Zahn ${zahn}: dort ist kein Implantat geplant. System, Maße, Zeitpunkt und Einheilung gibt es nur mit Implantat.`
+  const vorher = plan.implantate[zahn]
+  const gleich = neu.B === alt.B && neu.TP === alt.TP && (!mitDetail || (!!vorher && Object.entries(detail).every(([k, v]) => vorher[k as keyof ImplantatDetail] === v)))
+  if (gleich) return `Zahn ${zahn} steht schon so im Plan.`
+  const zaehne = { ...plan.zaehne }
+  if (!neu.B && !neu.TP) delete zaehne[zahn]
+  else zaehne[zahn] = neu
+  let p: Plan = { ...plan, zaehne }
+  const implantate = { ...plan.implantate }
+  if (!istImplantat(neu.TP)) {
+    if (!implantate[zahn]) return { plan: p, text: zahnText(ZAHNFELDER, zahn, w) }
+    delete implantate[zahn]
+    return { plan: { ...p, implantate }, text: zahnText(ZAHNFELDER, zahn, w) }
+  }
+  const systeme = [...new Set(implantatZaehne(plan).filter((z) => z !== zahn).map((z) => plan.implantate[z]?.system).filter(Boolean))]
+  const basis = vorher ?? { ...STANDARD_IMPLANTAT, ...(systeme.length === 1 ? { system: systeme[0] as string } : {}) }
+  implantate[zahn] = { ...basis, ...detail }
+  p = implantateSetzen(p, implantate)
+  const sys = !vorher && !detail.system && systeme.length === 1 ? `, System wie die übrigen Implantate` : ''
+  return { plan: p, text: zahnText(ZAHNFELDER, zahn, w) + sys }
+}
+
 export function implBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): PlanBlick {
   const kalk = kalkulieren(plan, einst)
   const zaehne = Object.entries(plan.zaehne).filter(([, z]) => z.B || z.TP)
@@ -70,7 +116,7 @@ export function implBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): 
   return {
     planart: 'implantologie', name: 'Implantatplanung (Kostenvoranschlag Implantologie, privat: GOZ, GOÄ, Analog, Material, Labor)',
     nummer: plan.nummer, gesperrt,
-    kann: gesperrt ? [] : ['schalter', 'hinzu', 'setze', 'weg', 'zurueck'],
+    kann: gesperrt ? [] : ['schalter', 'zahn', 'hinzu', 'setze', 'weg', 'zurueck'],
     ebenen: ['GOZ', 'GOAE', 'MAT', 'BEB'],
     positionen: kiZeilen(kalk),
     summen: {
@@ -88,6 +134,7 @@ export function implBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): 
       ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
     },
     schalter: schalter(plan),
+    zahnfelder: ZAHNFELDER,
     hinweise: [],
   }
 }
@@ -110,6 +157,8 @@ export function implAnwenden(plan: Plan, einst: Einstellungen, schritte: KiSchri
     ebenen: ['GOZ', 'GOAE', 'MAT', 'BEB'],
     maxFaktor: einst.erlaubeUeber35 ? undefined : 3.5,
     schalter: schalterSetzen,
+    zahnfelder: () => ZAHNFELDER,
+    zahn: zahnSetzen,
   })
   let neu = r.plan
   let kalk = kalkulieren(neu, einst)

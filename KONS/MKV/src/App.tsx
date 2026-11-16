@@ -77,7 +77,7 @@ export default function App() {
 
   const kiStand = useRef({ plan, gesperrt, einst })
   useEffect(() => { kiStand.current = { plan, gesperrt, einst } })
-  useEffect(() => planKiHoeren(mkvKi(() => kiStand.current)), [setPlan])
+  useEffect(() => planKiHoeren(mkvKi(() => kiStand.current, (neu) => setPlan(neu))), [setPlan])
   const pruefZeilen = useMemo(() => kiZeilen(rechnung), [rechnung, plan])
 
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }

@@ -1,7 +1,8 @@
 /** Der private Zahnersatzplan für die KI-Zeile und das Prüfmodul: lesen, Schalter setzen, Positionen ändern. */
 import type { Einstellungen, Plan } from './types'
 import { kalkulieren, type Kalkulation } from './engine/berechnung'
-import { freiAnwenden, kiDienst, type KiPosition, type KiSchalter, type KiSchritt, type PlanBlick, type PlanKiDienst } from './planKi'
+import { BEFUND_KUERZEL, PLANUNG_KUERZEL } from './engine/zahnschema'
+import { freiAnwenden, kiDienst, zahnText, type KiPosition, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
 
 export function kiZeilen(kalk: Kalkulation): KiPosition[] {
   return [...kalk.honorar, ...kalk.labor, ...kalk.material].map((z) => ({
@@ -24,6 +25,31 @@ function schalter(plan: Plan): KiSchalter[] {
   ]
 }
 
+export const ZAHNFELDER: KiZahnFeld[] = [
+  { name: 'befund', text: 'Befund (Zeile B, Kleinbuchstaben)', werte: { '': 'leer, kein Befund', ...BEFUND_KUERZEL } },
+  { name: 'planung', text: 'Planung (Zeile TP, Großbuchstaben)', werte: { '': 'leer, nichts geplant', ...PLANUNG_KUERZEL } },
+  { name: 'brueckeAnfang', text: 'Brückenanfang von Hand an diesem Zahn festlegen; nur nötig, wenn die Brücke sich nicht aus Pfeilern und Gliedern ergibt', ja: true },
+  { name: 'brueckeEnde', text: 'Brückenende von Hand an diesem Zahn festlegen; nur nötig, wenn die Brücke sich nicht aus Pfeilern und Gliedern ergibt', ja: true },
+]
+
+/** Trägt Befund und Planung eines Zahns ein wie das Zahnschema der Seite; die Positionen rechnet der Planer daraus neu. */
+export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Plan; text: string } | string {
+  const alt = plan.zaehne[zahn] ?? { B: '', TP: '' }
+  const neu = {
+    ...alt,
+    ...(w.befund !== undefined ? { B: String(w.befund) } : {}),
+    ...(w.planung !== undefined ? { TP: String(w.planung) } : {}),
+    ...(w.brueckeAnfang !== undefined ? { bAnfang: !!w.brueckeAnfang } : {}),
+    ...(w.brueckeEnde !== undefined ? { bEnde: !!w.brueckeEnde } : {}),
+  }
+  if (!neu.TP) { neu.bAnfang = false; neu.bEnde = false }
+  if (neu.B === alt.B && neu.TP === alt.TP && !!neu.bAnfang === !!alt.bAnfang && !!neu.bEnde === !!alt.bEnde) return `Zahn ${zahn} steht schon so im Zahnschema.`
+  const zaehne = { ...plan.zaehne }
+  if (!neu.B && !neu.TP) delete zaehne[zahn]
+  else zaehne[zahn] = neu
+  return { plan: { ...plan, zaehne }, text: zahnText(ZAHNFELDER, zahn, w) }
+}
+
 export function zeBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): PlanBlick {
   const kalk = kalkulieren(plan, einst)
   const zaehne = Object.entries(plan.zaehne).filter(([, z]) => z.B || z.TP)
@@ -31,7 +57,7 @@ export function zeBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): Pl
   return {
     planart: 'privat-hkp', name: 'privater Zahnersatz (Kostenvoranschlag: GOZ, BEB-Labor, Material)',
     nummer: plan.nummer, gesperrt,
-    kann: gesperrt ? [] : ['schalter', 'hinzu', 'setze', 'weg', 'zurueck'],
+    kann: gesperrt ? [] : ['schalter', 'zahn', 'hinzu', 'setze', 'weg', 'zurueck'],
     ebenen: ['GOZ', 'BEB', 'MAT'],
     positionen: kiZeilen(kalk),
     summen: { honorar: kalk.summeHonorar, laborNetto: kalk.summeLaborNetto, mwst: kalk.mwst, material: kalk.summeMaterial, gesamt: kalk.gesamt },
@@ -43,6 +69,7 @@ export function zeBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): Pl
       ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
     },
     schalter: schalter(plan),
+    zahnfelder: ZAHNFELDER,
     hinweise: [],
   }
 }
@@ -59,7 +86,7 @@ function schalterSetzen(plan: Plan, name: string, wert: boolean | string | numbe
 
 export function zeAnwenden(plan: Plan, einst: Einstellungen, schritte: KiSchritt[]): { plan: Plan; getan: string[]; nicht: string[] } {
   const vorher = kalkulieren(plan, einst)
-  const r = freiAnwenden(plan, schritte, kiZeilen(vorher), { ebenen: ['GOZ', 'BEB', 'MAT'], maxFaktor: 3.5, schalter: schalterSetzen })
+  const r = freiAnwenden(plan, schritte, kiZeilen(vorher), { ebenen: ['GOZ', 'BEB', 'MAT'], maxFaktor: 3.5, schalter: schalterSetzen, zahnfelder: () => ZAHNFELDER, zahn: zahnSetzen })
   let neu = r.plan
   let kalk = kalkulieren(neu, einst)
   const alt = new Set(plan.manuell.map((m) => m.id))

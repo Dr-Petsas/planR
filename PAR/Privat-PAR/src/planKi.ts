@@ -43,7 +43,21 @@ export interface Meldung {
   ids?: string[]
 }
 
-export type KiOp = 'schalter' | 'hinzu' | 'setze' | 'weg' | 'zurueck'
+export type KiOp = 'schalter' | 'hinzu' | 'setze' | 'weg' | 'zurueck' | 'zahn'
+
+/** Ein Feld, das der Plan je Zahn führt (Befund, Planung, Flächen …). */
+export interface KiZahnFeld {
+  name: string
+  text: string
+  /** erlaubte Werte mit ihrer Bedeutung; '' leert das Feld */
+  werte?: Record<string, string>
+  /** Zahl in diesem Bereich */
+  von?: number
+  bis?: number
+  /** Ja/Nein */
+  ja?: boolean
+}
+export type KiZahnWerte = Record<string, string | number | boolean>
 
 export interface PlanBlick {
   planart: string
@@ -58,6 +72,8 @@ export interface PlanBlick {
   /** Befund, Planung und weitere Angaben in Klartext */
   angaben: Record<string, string>
   schalter: KiSchalter[]
+  /** was die KI-Zeile je Zahn eintragen kann (Befund, Planung …); fehlt, wenn der Plan kein Zahnschema führt */
+  zahnfelder?: KiZahnFeld[]
   hinweise: Meldung[]
   /** das Prüfmodul rechnet noch (Ausschlüsse vom Server stehen aus) */
   pruefLaeuft?: boolean
@@ -68,6 +84,7 @@ export type KiSchritt =
   | { op: 'hinzu'; ebene: string; nr: string; zahn: string; anzahl: number; faktor?: number; preis?: number; text?: string }
   | { op: 'setze'; id: string; anzahl?: number; faktor?: number; preis?: number; begruendung?: string }
   | { op: 'weg'; id: string }
+  | { op: 'zahn'; zahn: string; felder: KiZahnWerte }
   | { op: 'zurueck' }
 
 export interface KiErgebnis {
@@ -92,6 +109,60 @@ const zahl = (x: number) => x.toLocaleString('de-DE', { maximumFractionDigits: 2
 export const kiName = (p: { ebene: string; nr: string; zahn?: string }) =>
   `${p.ebene === 'GOAE' ? 'GOÄ' : p.ebene} ${p.nr}${p.zahn ? ` (${p.zahn})` : ''}`
 
+export const istZahn = (z: string) => z.length === 2 && '1234'.includes(z[0]) && '12345678'.includes(z[1])
+
+/**
+ * Prüft die Felder eines Zahn-Schritts gegen das, was der Planer führt. Groß- und Kleinschreibung der Kürzel
+ * richtet sich nach der Liste des Planers. Ergebnis: die bereinigten Werte oder der Grund der Ablehnung.
+ */
+export function zahnWerte(felder: KiZahnFeld[], s: { zahn: string; felder: KiZahnWerte }): KiZahnWerte | string {
+  if (!istZahn(s.zahn)) return `Zahn ${s.zahn}: diese Zahnnummer gibt es im Schema nicht.`
+  const aus: KiZahnWerte = {}
+  for (const [name, roh] of Object.entries(s.felder ?? {})) {
+    const f = felder.find((x) => x.name === name)
+    if (!f) return `Zahn ${s.zahn}: das Feld »${name}« führt dieser Plan nicht.`
+    if (f.werte) {
+      const w = String(roh).trim()
+      const treffer = Object.keys(f.werte).find((k) => k === w) ?? Object.keys(f.werte).find((k) => k.toLowerCase() === w.toLowerCase())
+      if (treffer === undefined) return `Zahn ${s.zahn}, ${f.text}: »${w}« kennt dieser Planer nicht.`
+      aus[name] = treffer
+    } else if (f.ja) {
+      if (typeof roh !== 'boolean') return `Zahn ${s.zahn}, ${f.text}: das geht nur mit ja oder nein.`
+      aus[name] = roh
+    } else {
+      const n = Number(roh)
+      if (typeof roh === 'boolean' || !Number.isFinite(n) || n < (f.von ?? -Infinity) || n > (f.bis ?? Infinity)) {
+        return `Zahn ${s.zahn}, ${f.text}: erlaubt ist ${f.von ?? ''} bis ${f.bis ?? ''}.`
+      }
+      aus[name] = n
+    }
+  }
+  if (!Object.keys(aus).length) return `Zahn ${s.zahn}: es fehlt, was dort eingetragen werden soll.`
+  return aus
+}
+
+/** »Zahn 16: Befund f (fehlt), Planung I (Implantat)« für die Rückmeldung. */
+export function zahnText(felder: KiZahnFeld[], zahn: string, werte: KiZahnWerte): string {
+  const teile = Object.entries(werte).map(([name, w]) => {
+    const f = felder.find((x) => x.name === name)
+    const kopf = f?.text.split(' (')[0] ?? name
+    if (typeof w === 'boolean') return `${kopf}: ${w ? 'ja' : 'nein'}`
+    if (w === '') return `${kopf} geleert`
+    const sinn = f?.werte?.[String(w)]
+    return `${kopf} ${w}${sinn ? ` (${sinn})` : ''}`
+  })
+  return `Zahn ${zahn}: ${teile.join(', ')}`
+}
+
+/** Planereigene Umsetzung eines Zahn-Schritts: neuer Plan mit Text oder der Grund der Ablehnung. */
+export type ZahnSetzen<P> = (plan: P, zahn: string, werte: KiZahnWerte) => { plan: P; text: string } | string
+
+function zahnSchritt<P>(plan: P, s: { zahn: string; felder: KiZahnWerte }, felder: KiZahnFeld[] | undefined, setzen: ZahnSetzen<P> | undefined) {
+  if (!felder?.length || !setzen) return 'Das Zahnschema dieses Plans ändere ich noch nicht selbst.'
+  const w = zahnWerte(felder, { zahn: String(s.zahn ?? '').trim(), felder: s.felder })
+  return typeof w === 'string' ? w : setzen(plan, String(s.zahn).trim(), w)
+}
+
 interface FreiPosition {
   id: string; ebene: string; nr: string; zahn: string; anzahl: number
   faktor?: number; preis?: number; text?: string; begruendung?: string
@@ -111,7 +182,12 @@ export function freiAnwenden<P extends FreiPlan>(
   plan: P,
   schritte: KiSchritt[],
   zeilen: KiPosition[],
-  o: { ebenen: string[]; maxFaktor?: number; schalter?: (plan: P, name: string, wert: boolean | string | number) => { plan: P; text: string } | string },
+  o: {
+    ebenen: string[]; maxFaktor?: number
+    schalter?: (plan: P, name: string, wert: boolean | string | number) => { plan: P; text: string } | string
+    zahnfelder?: (plan: P) => KiZahnFeld[]
+    zahn?: ZahnSetzen<P>
+  },
 ): { plan: P; getan: string[]; nicht: string[] } {
   let p = plan
   const getan: string[] = []
@@ -120,6 +196,10 @@ export function freiAnwenden<P extends FreiPlan>(
   for (const s of schritte) {
     if (s.op === 'schalter') {
       const r = o.schalter ? o.schalter(p, s.name, s.wert) : 'Diese Einstellung kenne ich hier nicht.'
+      if (typeof r === 'string') nicht.push(r)
+      else { p = r.plan; getan.push(r.text) }
+    } else if (s.op === 'zahn') {
+      const r = zahnSchritt(p, s, o.zahnfelder?.(p), o.zahn)
       if (typeof r === 'string') nicht.push(r)
       else { p = r.plan; getan.push(r.text) }
     } else if (s.op === 'hinzu') {
@@ -244,6 +324,7 @@ export function listeAnwenden<T extends ListenPos>(
   const errechnet = (z: KiPosition) => `${kiName(z)} errechnet der Planer aus der Planung. Das ändern Sie über Befund, Planung oder die Regler.`
   for (const s of schritte) {
     if (s.op === 'schalter') nicht.push('Diese Einstellung kenne ich hier nicht.')
+    else if (s.op === 'zahn') nicht.push('Das Zahnschema dieses Plans ändere ich noch nicht selbst.')
     else if (s.op === 'hinzu') {
       if (!o.ebenen.includes(s.ebene)) { nicht.push(`${kiName(s)}: diese Ebene nimmt der Plan nicht auf.`); continue }
       if (zeilen.some((z) => z.ebene === s.ebene && z.nr === s.nr)) { nicht.push(`${kiName({ ...s, zahn: '' })} steht schon im Plan. Ich kann dort die Anzahl ändern.`); continue }
@@ -316,6 +397,9 @@ export function listenDienst<P extends { nummer: string }, T extends ListenPos>(
   angaben: (plan: P) => Record<string, string>
   schalter?: (plan: P) => KiSchalter[]
   schalterSetzen?: (plan: P, name: string, wert: boolean | string | number) => { plan: P; text: string } | string
+  /** Felder je Zahn (Befund, Therapie …) und ihre Umsetzung im Plan */
+  zahnfelder?: (plan: P) => KiZahnFeld[]
+  zahnSetzen?: ZahnSetzen<P>
   /** Schritte, die der Planer selbst umsetzt (z. B. Faktor einer errechneten Zeile); null = nicht zuständig */
   eigen?: (plan: P, schritt: KiSchritt, zeilen: KiPosition[]) => { plan: P; text: string } | string | null
 }): PlanKiDienst {
@@ -326,7 +410,9 @@ export function listenDienst<P extends { nummer: string }, T extends ListenPos>(
     const nicht: string[] = []
     const rest: KiSchritt[] = []
     for (const s of schritte) {
-      const r = s.op === 'schalter' && o.schalterSetzen ? o.schalterSetzen(p, s.name, s.wert) : o.eigen ? o.eigen(p, s, vorher) : null
+      const r = s.op === 'schalter' && o.schalterSetzen ? o.schalterSetzen(p, s.name, s.wert)
+        : s.op === 'zahn' && o.zahnSetzen ? zahnSchritt(p, s, o.zahnfelder?.(p), o.zahnSetzen)
+          : o.eigen ? o.eigen(p, s, vorher) : null
       if (r === null) { rest.push(s); continue }
       if (typeof r === 'string') nicht.push(r)
       else { p = r.plan; getan.push(r.text) }
@@ -352,9 +438,10 @@ export function listenDienst<P extends { nummer: string }, T extends ListenPos>(
       const r = o.rechnen(plan)
       return {
         planart: o.planart, name: o.name, nummer: plan.nummer, gesperrt,
-        kann: gesperrt ? [] : [...(o.schalter ? ['schalter' as const] : []), 'hinzu', 'setze', 'weg', 'zurueck'],
+        kann: gesperrt ? [] : [...(o.schalter ? ['schalter' as const] : []), ...(o.zahnSetzen ? ['zahn' as const] : []), 'hinzu', 'setze', 'weg', 'zurueck'],
         ebenen: o.ebenen, positionen: r.zeilen, summen: r.summen, angaben: o.angaben(plan),
         schalter: o.schalter ? o.schalter(plan) : [], hinweise: [],
+        ...(o.zahnSetzen && o.zahnfelder ? { zahnfelder: o.zahnfelder(plan) } : {}),
       }
     },
     anwenden,
