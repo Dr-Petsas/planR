@@ -1745,6 +1745,7 @@ function zeichnen() {
         ${agent?.lokal ? `<span class="ort-marke${agent.verbunden ? '' : ' aus'}" title="Auf diesem PC läuft eine eigene PlanR-Bridge. Dieser Browser und ${esc(assistentin)} arbeiten mit dem Praxisprogramm dieses PCs.">Dieser PC · ${esc(pvsVon(einstellungen.pvs)?.name || 'Praxisprogramm')}${agent.verbunden ? '' : ' – nicht verbunden'}</span>` : ''}
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden || ich.testabo?.probe ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         ${ich.konto.admin ? `<button type="button" class="import-knopf" data-zuordnung title="GOZ-Ziffern je Behandlung prüfen">Zuordnung</button>` : ''}
+        ${ich.konto.email.toLowerCase() === 'superuser@pickadoc.de' ? '<a class="import-knopf" href="#probe-eingang">Kunden</a>' : ''}
         <button type="button" class="import-knopf" data-importe title="Hochgeladene Pläne: Original und Ergebnis – und neuen Plan importieren">Importe</button>
         <button type="button" class="import-knopf" data-training title="HKPs hochladen, eigene GOZ-Analogpositionen, Labor- und Materialpreise"><span>KI-Training</span></button>
         ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
@@ -2448,14 +2449,26 @@ function probeEingangOeffnen() {
   return import('./probeEingangSeite').then(({ probeEingangSeite }) => probeEingangSeite(app))
 }
 
+/** Der Superuser gehört in die Kundenliste, nicht in die leere Planübersicht seines Kontos. */
+function superuserZuHause(wer: { konto: { email: string }; sudo?: string }) {
+  if (wer.sudo || wer.konto.email.toLowerCase() !== 'superuser@pickadoc.de') return false
+  const hash = location.hash
+  if (hash === '#plaene' || hash === '#probe' || hash === '#probe-eingang' || hash.startsWith('#fall/')) return false
+  history.replaceState(null, '', '/#probe-eingang')
+  void probeEingangOeffnen()
+  return true
+}
+
 ausPickadoc().then(ichLaden).then(async (wer) => {
   if (!wer) return ohneAnmeldung()
   addEventListener('hashchange', () => {
     if (location.hash === '#probe' || location.hash.startsWith('#fall/')) void probeOeffnen()
     if (location.hash === '#probe-eingang') void probeEingangOeffnen()
+    if (location.hash === '#plaene') location.reload()
   })
   if (location.hash === '#probe' || location.hash.startsWith('#fall/')) return probeOeffnen()
   if (location.hash === '#probe-eingang') return probeEingangOeffnen()
+  if (superuserZuHause(wer)) return
   ich = wer
   sitzungBewachen()
   // Erst klären, welche Bridge zu diesem Browser gehört – davon hängen Einstellungen und Katalog ab.

@@ -41,6 +41,7 @@ export function kontoMenu(o: { name: string; email: string; admin: boolean; abo:
           </div>
         </div>
         <button type="button" class="konto-zeile" data-persoenlich role="menuitem">Persönliche Einstellungen</button>
+        ${o.email.toLowerCase() === 'superuser@pickadoc.de' ? '<a class="konto-zeile" href="#probe-eingang" role="menuitem">Kunden und Interessenten</a>' : ''}
         <div class="konto-abo"><span>Abo</span><b>${esc(o.abo)}</b></div>
         ${o.rechnungen ? '<button type="button" class="konto-zeile" data-rechnungen role="menuitem">Rechnungen</button>' : ''}
         <button type="button" class="konto-zeile" data-einstellungen role="menuitem">Praxis-Einstellungen</button>

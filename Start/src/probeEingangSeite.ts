@@ -31,6 +31,7 @@ function kopf(angemeldet: boolean) {
     : ''
   return `<header class="sb-kopf">
     <a class="sb-marke" href="/"><span class="sb-logo">${logo()}</span><span><b>PlanR</b><br><small>Superuser</small></span></a>
+    <a class="sb-knopf" href="/#plaene">Planübersicht</a>
     <a class="sb-knopf" href="#probe">Probe-Seite</a>
     ${rechts}
   </header>`
@@ -71,7 +72,7 @@ function kundenListe(kunden: Kunde[], monat: string) {
 }
 
 function probenListe(proben: Kunde[]) {
-  if (!proben.length) return '<p class="sb-leer">Noch keine Proben.</p>'
+  if (!proben.length) return '<p class="sb-leer">Noch keine Probe-Interessenten.</p>'
   const zeilen = proben.map((k) => `<div class="sb-zeile">
       <button type="button" class="sb-name" data-auf="${esc(k.id)}">${esc(k.name)}</button>
       ${loginZelle(k)}
@@ -99,7 +100,7 @@ function listeZeichnen(alle: Kunde[], monat: string) {
       ${kundenListe(kunden, monat)}
     </section>
     <section class="sb-block">
-      <header><h2>Proben</h2><span>${anzahl(proben.length, 'Probe', 'Proben')} · hochgeladener Plan und unser Ergebnis im Popup</span></header>
+      <header><h2>Probe-Interessenten</h2><span>${anzahl(proben.length, 'Interessent', 'Interessenten')} · Login und hochgeladene Pläne</span></header>
       ${probenListe(proben)}
     </section>`, true)
 }

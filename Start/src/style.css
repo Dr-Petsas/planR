@@ -542,7 +542,7 @@ html.popup-offen { overflow: hidden; overscroll-behavior: none; }
 .konto-kopf small, .persoenlich-kopf small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--grau); font-size: 12px; }
 .konto-zeile {
   display: block; width: 100%; text-align: left; padding: 9px 10px; border: 0; border-radius: 8px;
-  background: transparent; font: inherit; font-size: 14px; color: var(--text); cursor: pointer;
+  background: transparent; font: inherit; font-size: 14px; color: var(--text); cursor: pointer; text-decoration: none;
 }
 .konto-zeile:hover { background: var(--akzent-hell); }
 .konto-zeile.gefahr { color: var(--rot); }
