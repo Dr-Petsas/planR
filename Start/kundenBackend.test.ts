@@ -42,6 +42,16 @@ describe('kundenBauen', () => {
     expect(berg).toBeTruthy()
   })
 
+  it('zeigt eine doppelt abgeschickte Buchung nur einmal, mit der Buchung, die das Konto trägt', () => {
+    const erste = { ...buchung, id: 'b1', konto: { status: 'angelegt', clientId: 'c1' } } as Buchung
+    const zweite = { ...buchung, id: 'b2', konto: { status: 'vorhanden' } } as Buchung
+    for (const reihe of [[erste, zweite], [zweite, erste]]) {
+      const zeilen = kundenBauen(reihe, [], ['anton@berg.de'], { b1: { plaene: 3, umsatzCent: 100 } })
+      expect(zeilen.map((k) => k.id)).toEqual(['b1'])
+      expect(zeilen[0].plaeneAnzahl).toBe(3)
+    }
+  })
+
   it('zeigt einen Upload ohne Buchung und ohne Login', () => {
     const pantas = kundenBauen([], [fremd], []).find((k) => k.name === 'DR. PANTAS')!
     expect(pantas.login).toEqual({ email: 'pantas@pickadoc.de', vorhanden: false })

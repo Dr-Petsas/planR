@@ -121,7 +121,14 @@ function loginFuer(emails: string[], bekannt: Set<string>): KundeLogin | null {
 export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: string[], zahlen: Record<string, KundeZahlen> = {}): KundeZeile[] {
   const bekannt = new Set(logins.map(klein).filter((m) => m.includes('@')))
   const verwendet = new Set<string>()
-  const ausBuchung: KundeZeile[] = buchungen.map((b) => {
+  // Dieselbe Praxis hat das Formular zweimal abgeschickt: eine Zeile je Anmeldung, die Buchung mit dem Konto zählt.
+  const jeLogin = new Map<string, Buchung>()
+  for (const b of buchungen) {
+    const schluessel = klein(b.inhaber?.email ?? '') || b.id
+    const alt = jeLogin.get(schluessel)
+    if (!alt || (!alt.konto?.clientId && b.konto?.clientId)) jeLogin.set(schluessel, b)
+  }
+  const ausBuchung: KundeZeile[] = [...jeLogin.values()].map((b) => {
     const mails = new Set(mailsVonBuchung(b))
     const eigene = plaene.filter((p) => {
       if (verwendet.has(p.id)) return false
