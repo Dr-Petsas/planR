@@ -54,6 +54,15 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
       window.removeEventListener('pagehide', weg)
     }
   }, [offen, merkmal, eintrag?.status])
+  // Der Betrag hängt auch an Preisen und Einstellungen, die nach dem Öffnen eintreffen.
+  // Weicht er vom abgelegten ab, wird nachgespeichert: Die Übersicht zeigt dieselbe Summe wie der Planer.
+  const abgelegt = eintrag?.betrag
+  useEffect(() => {
+    if (offen || abgelegt === undefined || eintrag?.status === 'freigegeben') return
+    if (Math.abs(daten.betrag - abgelegt) < 0.005) return
+    const t = window.setTimeout(() => ablage.speichern(stand.current), 1500)
+    return () => window.clearTimeout(t)
+  }, [offen, daten.betrag, abgelegt, eintrag?.status])
   const freiRef = useRef(frei)
   freiRef.current = frei
   const tun = useRef(ablage.speichern)

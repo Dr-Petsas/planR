@@ -233,12 +233,14 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
   let reglerStand: Partial<Record<Fach, number>> = {}
   let betreiber = false
   let merkTimer = 0
-  /** Stand am Fall ablegen. Der Server nimmt ihn vom Betreiber immer, sonst nur, solange noch keiner da ist. */
+  /** Fall, an dem der Stand liegt: der Link, oder nach dem Upload der Fall im eigenen PlanR. */
+  let merkToken = fallToken
+  /** Stand am Fall ablegen: Zuordnung und Reglerstellung. Der letzte Stand gilt. */
   const fallMerken = () => {
-    if (!fallToken || !fall.length) return
+    if (!merkToken || !fall.length) return
     window.clearTimeout(merkTimer)
     merkTimer = window.setTimeout(() => {
-      void fetch(`/api/probe/fall/${fallToken}`, {
+      void fetch(`/api/probe/fall/${merkToken}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stand: JSON.stringify({ teile: fall, regler: reglerStand }) }),
       }).catch(() => undefined)
@@ -274,9 +276,9 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
     if (!daten || daten.type !== 'planr-probe-stand' || !daten.stand) return
     const ziel = reglerFuer(blatt.planart ?? '', !!blatt.gozAnteil)
     const s = blatt.summen ?? {}
-    // Der Betreiber stellt den Regler ein: Die Stellung bleibt am Fall, der Zahnarzt sieht sie unter dem Link.
+    // Die Reglerstellung bleibt am Fall: beim nächsten Öffnen steht der Plan wieder so da.
     const stufe = daten.stand.regler?.privatStufe
-    if (betreiber && aktiv && typeof stufe === 'number' && reglerStand[aktiv] !== stufe) {
+    if (merkToken && aktiv && typeof stufe === 'number' && reglerStand[aktiv] !== stufe) {
       reglerStand[aktiv] = stufe
       fallMerken()
     }
@@ -339,7 +341,7 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
     teil.fach = wahl.value as Fach
     teil.anlage = false
     zeigen(teil.fach)
-    if (betreiber) fallMerken()
+    fallMerken()
   })
 
   /**
@@ -347,6 +349,15 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
    * Angemeldet liegt er schon dort. Sonst legt PlanR auf die E-Mail-Adresse einen Zugang an und erzeugt das Passwort.
    */
   const abgelegteIds: string[] = []
+  /** Nach dem Upload im eigenen Konto: Die Pläne werden ein Fall, damit Zuordnung und Regler gespeichert bleiben. */
+  const fallSichern = async () => {
+    if (fallToken || merkToken || !abgelegteIds.length) return
+    const f = await fetch('/api/importe/fall', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: abgelegteIds }) })
+      .then((x) => x.json()).catch(() => null) as { ok?: boolean; token?: string } | null
+    if (!f?.ok || !f.token || merkToken) return
+    merkToken = f.token
+    fallMerken()
+  }
   const zugangFeld = wurzel.querySelector<HTMLElement>('[data-zugang]')!
   let zugangFertig = false
   const zugangZeigen = (vorschlag: string) => {
@@ -389,6 +400,7 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
         if (d.ok && d.email) {
           zugangFertig = true
           ergebnis.classList.remove('hp-vor-zugang')
+          void fallSichern()
           zugangFeld.innerHTML = `<p><b>${d.vorhanden ? 'Sie sind angemeldet.' : 'Ihr Zugang ist angelegt.'}</b> Login: ${sicher(d.email)}. ${d.vorhanden ? '' : 'Die Anmeldeadresse haben wir Ihnen auch per E-Mail geschickt. '}Der Plan steht unten im Planer und liegt in Ihrem PlanR unter „Importe“.</p>
             <a class="hp-knopf hp-knopf-voll" href="${d.angemeldet ? '/' : '/#anmelden'}">${d.angemeldet ? 'PlanR öffnen' : 'Jetzt anmelden'}</a>`
           return
@@ -562,10 +574,14 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
       ergebnis.hidden = true
       return
     }
+    if (!fallToken) merkToken = ''
     zeigen('')
     fallMerken()
     for (const g of gelesene) if (g.id && !abgelegteIds.includes(g.id)) abgelegteIds.push(g.id)
-    if (!fallToken) zugangZeigen(stempelMail)
+    if (!fallToken) {
+      zugangZeigen(stempelMail)
+      if (imKonto || zugangFertig) void fallSichern()
+    }
     const namen = gruppen.map((g) => g.reiter).join(', ')
     const stand = gruppen.length > 1
       ? `${fall.length} Dateien sortiert in ${gruppen.length} Pläne: ${namen}. Jeder Plan hat unten seinen Reiter.`

@@ -23,7 +23,7 @@ import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patient
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   BETREIBER, artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangFuerMandant, eingangListe, eingangSichtbar, eingangStand, eingangText,
-  eingangZuordnen, fallAnlegen, fallFinden, fallTeile, idGueltig, passwortPasst, probeGesperrt, standPruefen, zugangNamen,
+  eingangZuordnen, faelleAus, fallAnlegen, fallFinden, fallTeile, idGueltig, passwortPasst, probeGesperrt, standPruefen, zugangNamen,
   type ProbeKarte,
 } from './probeEingang.ts'
 import {
@@ -3252,7 +3252,12 @@ async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     return json(res, 200, { ok: true, token: fall.token })
   }
   if (req.method !== 'GET') return json(res, 405, { ok: false })
-  if (url === '/api/importe') return json(res, 200, { ok: true, importe: (await eingangFuerMandant(ORDNER, w.mandant)).map(importKurz) })
+  if (url === '/api/importe') {
+    const karten = await eingangFuerMandant(ORDNER, w.mandant)
+    const namen = new Map(karten.map((k) => [k.id, k.dateiname]))
+    const faelle = (await faelleAus(ORDNER, karten.map((k) => k.id))).map((f) => ({ token: f.token, zeit: f.zeit, dateien: f.ids.map((id) => namen.get(id) ?? '') }))
+    return json(res, 200, { ok: true, importe: karten.map(importKurz), faelle })
+  }
   const fund = await eingangDatei(ORDNER, url.slice('/api/importe/'.length))
   if (!fund || fund.karte.mandant !== w.mandant) return json(res, 404, { ok: false, meldung: 'Der Plan liegt hier nicht.' })
   dateiAusliefern(res, fund)
@@ -3302,7 +3307,8 @@ async function probeFall(req: IncomingMessage, res: ServerResponse, rest: string
     let gut = false
     try { gut = !!stand && Array.isArray((JSON.parse(stand) as { teile?: unknown }).teile) } catch { gut = false }
     if (!gut) return json(res, 400, { ok: false })
-    return json(res, 200, { ok: await fallTeile(ORDNER, token, stand, !betreiber) })
+    // Wer den Link hat, stellt die Regler und speichert: Betreiber wie Zahnarzt. Der letzte Stand gilt.
+    return json(res, 200, { ok: await fallTeile(ORDNER, token, stand, false) })
   }
   if (req.method !== 'GET') return json(res, 405, { ok: false })
   const karten = (await eingangListe(ORDNER)).filter((k) => fall.ids.includes(k.id))

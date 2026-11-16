@@ -188,6 +188,8 @@ function planSchliessen() {
   planLeisteLeeren()
   urlSetzen('replace')
   zeichnen()
+  // Der Planer speichert beim Schließen. Die Liste holt den Stand danach neu, sonst steht dort der alte Betrag.
+  window.setTimeout(() => { if (!planBlick) void laden().catch(() => {}) }, 700)
 }
 
 /** Filter gehören zur Übersicht. Ein offener Plan gibt die Liste frei, sonst sieht man die Auswahl nicht. */
@@ -782,14 +784,16 @@ function auswahlKarte(patient: Stammdaten): string {
 async function importeOeffnen() {
   const { planVergleich, popup } = await import('./planVergleich')
   const r = await fetch('/api/importe', { cache: 'no-store' }).catch(() => null)
-  const d = await r?.json().catch(() => null) as { ok?: boolean; importe?: import('./planVergleich').VergleichPlan[] } | null
+  const d = await r?.json().catch(() => null) as { ok?: boolean; importe?: import('./planVergleich').VergleichPlan[]; faelle?: { token: string; zeit: string; dateien: string[] }[] } | null
   const liste = d?.ok && Array.isArray(d.importe) ? d.importe : null
+  const faelle = d?.ok && Array.isArray(d.faelle) ? d.faelle : []
   const inhalt = !liste
     ? '<p class="sb-fehl">Die Importe sind gerade nicht erreichbar.</p>'
     : liste.length
       ? liste.map((p) => planVergleich(p, '/api/importe/')).join('')
       : '<p class="sb-fehl">Noch kein Plan importiert.</p>'
-  const fenster = popup('Importe', `<div class="sb-leiste"><a class="sb-knopf voll" href="#probe">Plan importieren</a>${liste?.length ? '<button type="button" class="sb-knopf" data-im-planer>Im Planer öffnen</button>' : ''}<span class="sb-fehl" data-importe-hinweis>Pläne, die Sie hochgeladen haben: links das Original, rechts das Ergebnis aus PlanR.</span></div>${inhalt}`)
+  const fenster = popup('Importe', `<div class="sb-leiste"><a class="sb-knopf voll" href="#probe">Plan importieren</a>${liste?.length && !faelle.length ? '<button type="button" class="sb-knopf" data-im-planer>Im Planer öffnen</button>' : ''}<span class="sb-fehl" data-importe-hinweis>Pläne, die Sie hochgeladen haben: links das Original, rechts das Ergebnis aus PlanR.</span></div>${faelle.length ? `<div class="sb-leiste importe-faelle"><b>Im Planer öffnen, Regler bleiben gespeichert:</b>${faelle.map((f) => `<a class="sb-knopf" href="/#fall/${esc(f.token)}" data-fall-link>${esc(new Date(f.zeit).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' }))} · ${esc(f.dateien.filter(Boolean).join(', ') || 'Plan')}</a>`).join('')}</div>` : ''}${inhalt}`)
+  fenster.querySelectorAll<HTMLAnchorElement>('[data-fall-link]').forEach((a) => a.addEventListener('click', (ev) => { ev.preventDefault(); location.href = a.href; location.reload() }))
   fenster.querySelector('a[href="#probe"]')?.addEventListener('click', () => document.querySelector('.sb-popup')?.remove())
   // Alle Importe als ein Fall im Planer: Reiter je Plan, mit den Reglern.
   fenster.querySelector<HTMLButtonElement>('[data-im-planer]')?.addEventListener('click', async (ev) => {

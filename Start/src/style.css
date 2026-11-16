@@ -227,6 +227,7 @@ main { min-width: 0; }
 }
 .import-knopf:hover { background: var(--akzent-hell); }
 .import-knopf.hervor { border-color: var(--akzent); color: var(--akzent-dunkel); font-weight: 600; }
+.importe-faelle { flex-wrap: wrap; gap: 8px; align-items: center; }
 /* Probe-Zugang: gehört zum Abo, ein Klick öffnet das Abo */
 .import-knopf.im-abo, .neu-knopf.im-abo { opacity: 0.45; filter: grayscale(1); }
 .import-knopf .punkt { width: 8px; height: 8px; border-radius: 50%; background: var(--akzent); }

@@ -447,6 +447,14 @@ export async function fallAnlegen(wurzel: string, ids: string[], name: string, j
   })
 }
 
+/** Fälle, die nur aus diesen Uploads bestehen: die Pläne einer Praxis, wie sie im Planer liegen. Neueste zuerst. */
+export async function faelleAus(wurzel: string, ids: string[], jetzt = Date.now()): Promise<ProbeFall[]> {
+  const eigene = new Set(ids)
+  return (await faelleLesen(wurzel))
+    .filter((f) => fallFrisch(f, jetzt) && f.ids.length > 0 && f.ids.every((id) => eigene.has(id)))
+    .sort((a, b) => b.zeit.localeCompare(a.zeit))
+}
+
 export async function fallFinden(wurzel: string, token: string, jetzt = Date.now()): Promise<ProbeFall | null> {
   if (!tokenGueltig(token)) return null
   const fall = (await faelleLesen(wurzel)).find((f) => f.token === token)
