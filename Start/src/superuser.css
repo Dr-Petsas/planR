@@ -120,3 +120,12 @@ body.sb-body { margin: 0; background: #f7fbfb; overflow: auto; display: block; }
   .sb-ergebnis { border-left: 0; border-top: 1px solid var(--linie, #e6e8eb); }
   .sb-blatt iframe { height: 46vh; }
 }
+
+/* Fall im Popup: der Planer mit dem gelesenen Plan, darüber Vollbild und Link für den Zahnarzt */
+.sb-fall { margin: 0 0 16px; border: 1px solid var(--linie, #e6e8eb); border-radius: 12px; overflow: hidden; }
+.sb-fall-kopf { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--linie, #e6e8eb); }
+.sb-fall-kopf b { margin-right: auto; }
+.sb-fall iframe { display: block; width: 100%; height: min(72vh, 820px); border: 0; background: #071a1f; }
+.sb-fall-link { padding: 8px 14px; font-size: 13px; color: var(--grau, #6b767d); overflow-wrap: anywhere; border-top: 1px solid var(--linie, #e6e8eb); }
+.sb-originale > summary { cursor: pointer; font-weight: 650; margin: 0 0 10px; }
+.sb-fall-kopf [hidden] { display: none; }

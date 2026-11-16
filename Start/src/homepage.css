@@ -1184,3 +1184,12 @@ html.hp-html::-webkit-scrollbar { width: 12px; height: 12px; }
 html.hp-html::-webkit-scrollbar-track { background: #071a1f; }
 html.hp-html::-webkit-scrollbar-thumb { background: #ff7aa8; border-radius: 6px; border: 3px solid #071a1f; }
 html.hp-html::-webkit-scrollbar-thumb:hover { background: #e0407b; }
+
+/* Fall unter seinem Link: keine Ablage, nur Status, Dateien und der Planer */
+.hp-fallseite .hp-probe-ablage > :not([data-status]):not([data-spin]) { display: none; }
+.hp-fallseite .hp-probe-ablage { background: none; border: 0; box-shadow: none; padding: 0; }
+.hp-fall-originale { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.hp-fall-originale a { color: #5fe3c4; overflow-wrap: anywhere; }
+/* Im Popup des Betreibers: nur Reiter und Planer */
+.hp-im-rahmen .hp-nav, .hp-im-rahmen .hp-hero-text, .hp-im-rahmen .hp-glow { display: none; }
+.hp-im-rahmen .hp-hero { padding: 6px 18px; min-height: 0; }

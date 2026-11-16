@@ -23,7 +23,7 @@ import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patient
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   BETREIBER, artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangFuerMandant, eingangListe, eingangSichtbar, eingangStand, eingangText,
-  eingangZuordnen, idGueltig, neuesPasswort, passwortPasst, standPruefen, zugangNamen,
+  eingangZuordnen, fallAnlegen, fallFinden, fallTeile, idGueltig, neuesPasswort, passwortPasst, standPruefen, zugangNamen,
   type ProbeKarte,
 } from './probeEingang.ts'
 import {
@@ -3179,10 +3179,12 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
   if (zugangBremse.gesperrt(ip(req))) return json(res, 429, { ok: false, meldung: 'Zu viele Zugänge von diesem Anschluss. Bitte rufen Sie uns an: 0211 3029 3035.' })
-  const roh = JSON.parse(await lesenBody(req, 4000)) as { email?: unknown; ids?: unknown; zustimmung?: unknown; firma2?: unknown }
+  const roh = JSON.parse(await lesenBody(req, 4000)) as { email?: unknown; ids?: unknown; zustimmung?: unknown; firma2?: unknown; fall?: unknown }
   if (String(roh.firma2 ?? '')) return json(res, 200, { ok: true })
   if (roh.zustimmung !== true) return json(res, 400, { ok: false, meldung: 'Bitte AGB, Datenschutzhinweisen und Auftragsverarbeitung zustimmen.' })
-  const ids = (Array.isArray(roh.ids) ? roh.ids : []).map((x) => String(x)).filter(idGueltig).slice(0, 30)
+  // Über den Link des Betreibers: die Pläne des Falls, auch wenn der Upload länger her ist.
+  const fall = roh.fall ? await fallFinden(ORDNER, String(roh.fall)) : null
+  const ids = fall ? fall.ids : (Array.isArray(roh.ids) ? roh.ids : []).map((x) => String(x)).filter(idGueltig).slice(0, 30)
   const karten = (await eingangListe(ORDNER)).filter((k) => ids.includes(k.id) && !k.mandant)
   if (!karten.length) return json(res, 400, { ok: false, meldung: 'Bitte zuerst einen Plan ablegen.' })
   const email = String(roh.email ?? '').trim().toLowerCase().slice(0, 200)
@@ -3205,7 +3207,7 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
     await jsonSchreiben(BUCHUNGEN, [...liste, b])
   })
   const mandant = mandantVon(await zugaengeLesen(), { clientId: konto.clientId })
-  const uebernommen = await eingangZuordnen(ORDNER, ids, mandant, email)
+  const uebernommen = await eingangZuordnen(ORDNER, ids, mandant, email, Date.now(), !!fall)
   let angemeldet = false
   const a = await einloggen(email, passwort).catch(() => null)
   if (a?.ok && a.wert.konto.clientId === konto.clientId) {
@@ -3239,6 +3241,61 @@ async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
   const fund = await eingangDatei(ORDNER, url.slice('/api/importe/'.length))
   if (!fund || fund.karte.mandant !== w.mandant) return json(res, 404, { ok: false, meldung: 'Der Plan liegt hier nicht.' })
   dateiAusliefern(res, fund)
+}
+
+/** POST /api/probe/eingang/fall {ids}: Der Betreiber holt den Link, unter dem der Zahnarzt Dateien und Ergebnis sieht. */
+async function probeFallLink(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) return json(res, wer.status, { ok: false })
+  const roh = JSON.parse(await lesenBody(req, 4000)) as { ids?: unknown; name?: unknown }
+  const ids = (Array.isArray(roh.ids) ? roh.ids : []).map((x) => String(x))
+  const fall = await fallAnlegen(ORDNER, ids, String(roh.name ?? ''))
+  if (!fall) return json(res, 404, { ok: false, meldung: 'Zu diesen Plänen liegt keine Datei.' })
+  return json(res, 200, { ok: true, token: fall.token })
+}
+
+const fallBremse = new Bremse(120, 15 * 60_000)
+
+/**
+ * GET  /api/probe/fall/<token>        Dateien des Falls und das gelesene Ergebnis
+ * POST /api/probe/fall/<token>        gelesenes Ergebnis ablegen: der Betreiber immer, sonst nur das erste
+ * GET  /api/probe/fall/<token>/<id>   eine Datei des Falls
+ * Der Link ist der Schlüssel. Wer ihn nicht hat, kommt an nichts.
+ */
+async function probeFall(req: IncomingMessage, res: ServerResponse, rest: string) {
+  res.setHeader('Cache-Control', 'no-store')
+  res.setHeader('Referrer-Policy', 'no-referrer')
+  const [token, id = ''] = rest.split('/')
+  const wer = ip(req)
+  if (fallBremse.gesperrt(wer)) return json(res, 429, { ok: false })
+  const fall = await fallFinden(ORDNER, token)
+  if (!fall) {
+    fallBremse.fehler(wer)
+    return json(res, 404, { ok: false, meldung: 'Dieser Link gilt nicht mehr.' })
+  }
+  if (id) {
+    if (req.method !== 'GET') return json(res, 405, { ok: false })
+    const fund = fall.ids.includes(id) ? await eingangDatei(ORDNER, id) : null
+    if (!fund) return json(res, 404, { ok: false, meldung: 'Die Datei liegt hier nicht.' })
+    return dateiAusliefern(res, fund)
+  }
+  const betreiber = 'konto' in await betreiberDerProbe(req)
+  if (req.method === 'POST') {
+    const stand = String((JSON.parse(await lesenBody(req, 700_000)) as { stand?: unknown }).stand ?? '')
+    let gut = false
+    try { gut = !!stand && Array.isArray((JSON.parse(stand) as { teile?: unknown }).teile) } catch { gut = false }
+    if (!gut) return json(res, 400, { ok: false })
+    return json(res, 200, { ok: await fallTeile(ORDNER, token, stand, !betreiber) })
+  }
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  const karten = (await eingangListe(ORDNER)).filter((k) => fall.ids.includes(k.id))
+  return json(res, 200, {
+    ok: true, name: fall.name, betreiber,
+    dateien: karten.map((k) => ({ id: k.id, name: k.dateiname, art: k.art, zeit: k.zeit })),
+    stand: fall.teile ?? null,
+  })
 }
 
 function dateiAusliefern(res: ServerResponse, fund: { karte: ProbeKarte; bytes: Buffer }) {
@@ -3423,6 +3480,8 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/zugang') return void probeZugang(req, res).catch(fehler500(res))
   if (url === '/api/probe/anmeldung') return void probeAnmeldung(req, res).catch(fehler500(res))
   if (url === '/api/probe/sudo') return void probeSudo(req, res).catch(fehler500(res))
+  if (url === '/api/probe/eingang/fall') return void probeFallLink(req, res).catch(fehler500(res))
+  if (url.startsWith('/api/probe/fall/')) return void probeFall(req, res, url.slice('/api/probe/fall/'.length)).catch(fehler500(res))
   if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
   if (url.startsWith('/probe-eingang/')) return void probeEingangSeite(req, res, url.slice('/probe-eingang/'.length)).catch(fehler500(res))

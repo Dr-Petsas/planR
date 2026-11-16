@@ -2279,6 +2279,7 @@ function ohneAnmeldung() {
   let ansicht = ''
   const zeigen = async () => {
     const soll = location.hash === '#probe-eingang' ? '#probe-eingang'
+      : location.hash.startsWith('#fall/') ? location.hash
       : (['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
       : location.hash === '#probe' ? '#probe'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' || location.hash === '#buchen-test' ? location.hash : 'start'
@@ -2293,11 +2294,11 @@ function ohneAnmeldung() {
         sitzungHinweisLoeschen()
         history.replaceState(null, '', location.pathname + location.search)
       })
-    } else if (soll === '#probe') {
+    } else if (soll === '#probe' || soll.startsWith('#fall/')) {
       anmeldePopupEntfernen()
       hp.homepageVerlassen()
       const { probeSeite } = await import('./probe')
-      probeSeite(app)
+      probeSeite(app, soll.startsWith('#fall/') ? soll.slice(6) : '')
       scrollTo(0, 0)
     } else if (soll === '#probe-eingang') {
       anmeldePopupEntfernen()
@@ -2381,9 +2382,11 @@ document.addEventListener('keydown', (ev) => {
   zeichnen()
 })
 
+/** #probe: Ablage · #fall/<token>: ein Fall unter seinem Link */
 function probeOeffnen() {
   document.body.classList.remove('planr-app', 'plan-offen')
-  return import('./probe').then(({ probeSeite }) => probeSeite(app))
+  const token = location.hash.startsWith('#fall/') ? location.hash.slice(6) : ''
+  return import('./probe').then(({ probeSeite }) => probeSeite(app, token))
 }
 
 function probeEingangOeffnen() {
@@ -2394,10 +2397,10 @@ function probeEingangOeffnen() {
 ausPickadoc().then(ichLaden).then(async (wer) => {
   if (!wer) return ohneAnmeldung()
   addEventListener('hashchange', () => {
-    if (location.hash === '#probe') void probeOeffnen()
+    if (location.hash === '#probe' || location.hash.startsWith('#fall/')) void probeOeffnen()
     if (location.hash === '#probe-eingang') void probeEingangOeffnen()
   })
-  if (location.hash === '#probe') return probeOeffnen()
+  if (location.hash === '#probe' || location.hash.startsWith('#fall/')) return probeOeffnen()
   if (location.hash === '#probe-eingang') return probeEingangOeffnen()
   ich = wer
   sitzungBewachen()

@@ -62,7 +62,10 @@ function textAusSeiten(seiten: EinleseSeite[] | undefined) {
   return zeilen.join('\n')
 }
 
-async function probeAblegen(datei: File, daten: ArrayBuffer) {
+/** Eine Datei zum Lesen: frisch hochgeladen oder aus einem Fall geholt (dann liegt sie schon im Eingang). */
+interface Quelle { name: string; type: string; puff: ArrayBuffer; id?: string }
+
+async function probeAblegen(datei: { name: string; type: string }, daten: ArrayBuffer) {
   try {
     const art = datei.type || (datei.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : datei.name.toLowerCase().endsWith('.txt') ? 'text/plain' : '')
     if (!art) return ''
@@ -134,14 +137,19 @@ async function fotosAusPdf(daten: ArrayBuffer): Promise<string[]> {
   return urls
 }
 
-export function probeSeite(app: HTMLElement) {
+/**
+ * fallToken: Seite eines Falls unter seinem Link (#fall/<token>). Die Dateien liegen schon bei Pickadoc,
+ * die Seite zeigt sie im Planer. Das gelesene Ergebnis liegt am Fall; fehlt es, wird hier gelesen.
+ */
+export function probeSeite(app: HTMLElement, fallToken = '') {
+  const imRahmen = !!fallToken && new URLSearchParams(location.search).has('rahmen')
   document.body.classList.remove('sb-body')
   document.body.classList.add('hp-body')
   document.documentElement.classList.add('hp-html')
   document.title = 'PlanR – Ihren HKP im Planer'
   imKonto = false
   app.innerHTML = `
-  <div class="hp">
+  <div class="hp${fallToken ? ' hp-fallseite' : ''}${imRahmen ? ' hp-im-rahmen' : ''}">
     <header class="hp-nav">
       <a class="hp-marke" href="/"><span class="hp-logo">${logo()}</span>${wortmarke()}<small>by Pickadoc</small></a>
       <nav>
@@ -153,9 +161,12 @@ export function probeSeite(app: HTMLElement) {
     <section class="hp-hero hp-probe" id="top">
       <div class="hp-glow"></div>
       <div class="hp-hero-text">
-        <p class="hp-eyebrow">Für Zahnärzte · am eigenen HKP</p>
+        ${fallToken ? `<p class="hp-eyebrow">Ihr Plan bei PlanR</p>
+        <h1 data-fall-titel>Ihr Plan im Planer.</h1>
+        <p class="hp-lead">Unten steht Ihr Plan im echten PlanR-Planer, mit allen Reglern. Ihre hochgeladenen Dateien:</p>
+        <ul class="hp-fall-originale" data-fall-originale></ul>` : `<p class="hp-eyebrow">Für Zahnärzte · am eigenen HKP</p>
         <h1>Legen Sie einen HKP hier ab. <span class="hp-verlauf">PlanR optimiert Ihren Umsatz.</span></h1>
-        <p class="hp-lead">PlanR liest Befund, Regelversorgung, Therapieplanung, GOZ und Labor und setzt sie in den HKP-Planer. Dort stehen Teil 1, Teil 2, die Anlagen und die Regler.</p>
+        <p class="hp-lead">PlanR liest Befund, Regelversorgung, Therapieplanung, GOZ und Labor und setzt sie in den HKP-Planer. Dort stehen Teil 1, Teil 2, die Anlagen und die Regler.</p>`}
       </div>
       <form class="hp-probe-ablage">
         <p class="hp-probe-pflicht">Patientendaten unkenntlich machen, bevor Sie etwas hier ablegen: Name, Geburtsdatum, Adresse, Telefon und Versichertennummer dürfen auf dem Blatt nicht mehr lesbar sein.</p>
@@ -218,6 +229,21 @@ export function probeSeite(app: HTMLElement) {
   let fall: Teil[] = []
   let gruppen: Gruppe[] = []
   let aktiv: Fach | '' = ''
+  /** Reglerstellung je Plan, wie sie am Fall liegt. Ohne Eintrag gilt die Vorgabe der Planart. */
+  let reglerStand: Partial<Record<Fach, number>> = {}
+  let betreiber = false
+  let merkTimer = 0
+  /** Stand am Fall ablegen. Der Server nimmt ihn vom Betreiber immer, sonst nur, solange noch keiner da ist. */
+  const fallMerken = () => {
+    if (!fallToken || !fall.length) return
+    window.clearTimeout(merkTimer)
+    merkTimer = window.setTimeout(() => {
+      void fetch(`/api/probe/fall/${fallToken}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stand: JSON.stringify({ teile: fall, regler: reglerStand }) }),
+      }).catch(() => undefined)
+    }, 400)
+  }
 
   const schicken = () => {
     const gruppe = gruppen.find((g) => g.fach === aktiv)
@@ -226,7 +252,7 @@ export function probeSeite(app: HTMLElement) {
       type: 'planr-probe',
       schema: {
         ...blatt.schema,
-        ...(blatt.planart ? { planart: blatt.planart, reglerStufe: reglerFuer(blatt.planart, !!blatt.gozAnteil).stufe, gozAnteil: !!blatt.gozAnteil } : {}),
+        ...(blatt.planart ? { planart: blatt.planart, reglerStufe: reglerStand[gruppe.fach] ?? reglerFuer(blatt.planart, !!blatt.gozAnteil).stufe, gozAnteil: !!blatt.gozAnteil } : {}),
       },
       positionen: blatt.positionen,
       summen: blatt.summen ?? {},
@@ -248,6 +274,12 @@ export function probeSeite(app: HTMLElement) {
     if (!daten || daten.type !== 'planr-probe-stand' || !daten.stand) return
     const ziel = reglerFuer(blatt.planart ?? '', !!blatt.gozAnteil)
     const s = blatt.summen ?? {}
+    // Der Betreiber stellt den Regler ein: Die Stellung bleibt am Fall, der Zahnarzt sieht sie unter dem Link.
+    const stufe = daten.stand.regler?.privatStufe
+    if (betreiber && aktiv && typeof stufe === 'number' && reglerStand[aktiv] !== stufe) {
+      reglerStand[aktiv] = stufe
+      fallMerken()
+    }
     const body = JSON.stringify({
       ergebnis: {
         planart: blatt.planart || 'hkp',
@@ -307,6 +339,7 @@ export function probeSeite(app: HTMLElement) {
     teil.fach = wahl.value as Fach
     teil.anlage = false
     zeigen(teil.fach)
+    if (betreiber) fallMerken()
   })
 
   /**
@@ -347,7 +380,7 @@ export function probeSeite(app: HTMLElement) {
       try {
         const r = await fetch('/api/probe/zugang', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: wert('email').value.trim(), ids: abgelegteIds, zustimmung: wert('zustimmung').checked, firma2: wert('firma2').value }),
+          body: JSON.stringify({ email: wert('email').value.trim(), ids: abgelegteIds, fall: fallToken || undefined, zustimmung: wert('zustimmung').checked, firma2: wert('firma2').value }),
         })
         const d = await r.json() as { ok?: boolean; meldung?: string; email?: string; passwort?: string; angemeldet?: boolean; vorhanden?: boolean }
         if (d.ok && d.passwort) {
@@ -405,7 +438,7 @@ export function probeSeite(app: HTMLElement) {
   }
 
   /** PDF oder Foto über den Einlese-Dienst. Kommt nichts Brauchbares, greift der bisherige Weg. */
-  const ausEinlesen = async (datei: File, daten: ArrayBuffer, hinweise: string[]): Promise<{ blatt: Blatt | null; text: string }> => {
+  const ausEinlesen = async (datei: { name: string; type: string }, daten: ArrayBuffer, hinweise: string[]): Promise<{ blatt: Blatt | null; text: string }> => {
     const art = datei.type || (datei.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : '')
     if (!art || daten.byteLength > 12_000_000) return { blatt: null, text: '' }
     try {
@@ -434,13 +467,7 @@ export function probeSeite(app: HTMLElement) {
     return null
   }
 
-  wurzel.querySelector<HTMLInputElement>('[data-dateien]')!.addEventListener('change', async (ev) => {
-    const dateien = [...((ev.target as HTMLInputElement).files ?? [])]
-    if (!dateien.length) return
-    if (!wurzel.querySelector<HTMLInputElement>('[data-frei]')!.checked) {
-      status.textContent = 'Bitte zuerst bestätigen, dass die Patientendaten unkenntlich sind.'
-      return
-    }
+  const lesen = async (dateien: Quelle[]) => {
     warten(true)
     const teile: Teil[] = []
     const hinweise: string[] = []
@@ -454,9 +481,9 @@ export function probeSeite(app: HTMLElement) {
       const hinein = (plan: Blatt | null) => { if (plan) fund.plan = plan }
       try {
         const art = datei.type
-        const puff = await datei.arrayBuffer()
-        id = await probeAblegen(datei, puff)
-        if (id && !abgelegt) {
+        const puff = datei.puff
+        id = datei.id ?? await probeAblegen(datei, puff)
+        if (id && !abgelegt && !datei.id) {
           abgelegt = true
           zielErreicht('probe')
         }
@@ -508,7 +535,7 @@ export function probeSeite(app: HTMLElement) {
       }
       // Das Modell ordnet die Datei ein, während die nächste schon gelesen wird.
       gelesene.push({ name: datei.name, id, text, plan: fund.plan, urteil: einordnen(datei.name, text) })
-      stempelMail = (await probeKontakt(id, text)) || stempelMail
+      if (!datei.id) stempelMail = (await probeKontakt(id, text)) || stempelMail
     }
     // Sortieren: jede Datei bekommt ihr Fach. Nur ZE-Blätter brauchen dafür einen gelesenen Plan.
     // Das Gebührenverzeichnis lädt erst hier, damit die Startseite klein bleibt.
@@ -534,13 +561,67 @@ export function probeSeite(app: HTMLElement) {
       return
     }
     zeigen('')
+    fallMerken()
     for (const g of gelesene) if (g.id && !abgelegteIds.includes(g.id)) abgelegteIds.push(g.id)
-    zugangZeigen(stempelMail)
+    if (!fallToken) zugangZeigen(stempelMail)
     const namen = gruppen.map((g) => g.reiter).join(', ')
     const stand = gruppen.length > 1
       ? `${fall.length} Dateien sortiert in ${gruppen.length} Pläne: ${namen}. Jeder Plan hat unten seinen Reiter.`
       : `Erkannt: ${gruppen[0].titel}.`
     status.textContent = [stand, ...hinweise].join(' ')
-    ergebnis.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (!fallToken) ergebnis.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  dateiFeld.addEventListener('change', async (ev) => {
+    const dateien = [...((ev.target as HTMLInputElement).files ?? [])]
+    if (!dateien.length) return
+    if (!wurzel.querySelector<HTMLInputElement>('[data-frei]')!.checked) {
+      status.textContent = 'Bitte zuerst bestätigen, dass die Patientendaten unkenntlich sind.'
+      return
+    }
+    const quellen: Quelle[] = []
+    for (const d of dateien) quellen.push({ name: d.name, type: d.type, puff: await d.arrayBuffer() })
+    await lesen(quellen)
   })
+
+  if (fallToken) void (async () => {
+    warten(true)
+    try {
+      const r = await fetch(`/api/probe/fall/${fallToken}`, { cache: 'no-store' })
+      const d = await r.json() as { ok?: boolean; meldung?: string; name?: string; betreiber?: boolean; dateien?: { id: string; name: string; art: string }[]; stand?: string | null }
+      if (!d.ok || !d.dateien?.length) {
+        warten(false)
+        status.textContent = d.meldung || 'Unter diesem Link liegt kein Plan.'
+        return
+      }
+      betreiber = d.betreiber === true
+      if (d.name) wurzel.querySelector<HTMLElement>('[data-fall-titel]')!.textContent = `Plan für ${d.name}`
+      wurzel.querySelector<HTMLElement>('[data-fall-originale]')!.innerHTML = d.dateien.map((x) =>
+        `<li><a href="/api/probe/fall/${fallToken}/${x.id}" target="_blank" rel="noopener">${sicher(x.name)}</a></li>`).join('')
+      for (const x of d.dateien) abgelegteIds.push(x.id)
+      let gemerkt: { teile?: Teil[]; regler?: Partial<Record<Fach, number>> } | null = null
+      try { gemerkt = d.stand ? JSON.parse(d.stand) as { teile?: Teil[] } : null } catch { gemerkt = null }
+      if (gemerkt?.teile?.length) {
+        fall = gemerkt.teile
+        reglerStand = gemerkt.regler ?? {}
+        warten(false)
+        zeigen('')
+        status.textContent = gruppen.length > 1
+          ? `${gruppen.length} Pläne: ${gruppen.map((g) => g.reiter).join(', ')}. Jeder Plan hat unten seinen Reiter.`
+          : `Erkannt: ${gruppen[0].titel}.`
+      } else {
+        const quellen: Quelle[] = []
+        for (const x of d.dateien) {
+          const antwort = await fetch(`/api/probe/fall/${fallToken}/${x.id}`)
+          if (antwort.ok) quellen.push({ name: x.name, type: x.art, puff: await antwort.arrayBuffer(), id: x.id })
+        }
+        await lesen(quellen)
+      }
+      // Der Betreiber braucht kein Angebot für einen Zugang, der Zahnarzt schon.
+      if (!betreiber && fall.length) zugangZeigen('')
+    } catch {
+      warten(false)
+      status.textContent = 'Keine Verbindung zu PlanR.'
+    }
+  })()
 }

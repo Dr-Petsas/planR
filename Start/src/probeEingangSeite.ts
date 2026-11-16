@@ -111,10 +111,52 @@ function kundePopup(k: Kunde, sudo: (email: string, meldung: Element | null) => 
     : `<span class="sb-fehl">${k.login ? `Noch kein Login für ${esc(k.login.email)}.` : 'Kein Login hinterlegt.'}</span>`
   const plaene = k.plaene.map((p) => planVergleich(p, '/probe-eingang/')).join('')
     || '<p class="sb-fehl">Kein Plan hochgeladen.</p>'
+  // Der Fall: alle Uploads dieser Praxis im echten Planer. Derselbe Link geht an den Zahnarzt.
+  const fall = k.plaene.length ? `<section class="sb-fall">
+      <div class="sb-fall-kopf"><b>Ergebnis im Planer</b>
+        <a class="sb-knopf voll" data-voll target="_blank" rel="noopener" hidden>Vollbild</a>
+        <button type="button" class="sb-knopf" data-link hidden>Link für den Kunden kopieren</button>
+        <a class="sb-knopf" data-mail hidden>Per E-Mail schicken</a>
+      </div>
+      <iframe title="Ergebnis im Planer" data-fall></iframe>
+      <div class="sb-fall-link" data-fall-link>Der Plan wird geöffnet …</div>
+    </section>` : ''
   const d = popup(k.name, `
     <div class="sb-leiste">${login}<span class="sb-meldung" data-meldung></span></div>
     ${stamm ? `<dl class="sb-stamm">${stamm}</dl>` : ''}
-    ${plaene}`)
+    ${fall}
+    ${fall ? `<details class="sb-originale"><summary>Hochgeladene Dateien und Zahlen (${k.plaene.length})</summary>${plaene}</details>` : plaene}`)
+  if (fall) void (async () => {
+    const zeile = d.querySelector<HTMLElement>('[data-fall-link]')!
+    try {
+      const r = await fetch('/api/probe/eingang/fall', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: k.plaene.map((p) => p.id), name: k.name }),
+      })
+      const a = await r.json() as { ok?: boolean; token?: string; meldung?: string }
+      if (!a.ok || !a.token) throw new Error(a.meldung || '')
+      const adresse = `${location.origin}/#fall/${a.token}`
+      d.querySelector<HTMLIFrameElement>('[data-fall]')!.src = `/?rahmen=1#fall/${a.token}`
+      const voll = d.querySelector<HTMLAnchorElement>('[data-voll]')!
+      voll.href = adresse
+      voll.hidden = false
+      zeile.textContent = `Link für den Kunden (gilt 60 Tage): ${adresse}`
+      const kopieren = d.querySelector<HTMLButtonElement>('[data-link]')!
+      kopieren.hidden = false
+      kopieren.addEventListener('click', () => {
+        void navigator.clipboard.writeText(adresse).then(
+          () => { kopieren.textContent = 'Link kopiert' },
+          () => { kopieren.textContent = 'Bitte den Link unten markieren' },
+        )
+      })
+      const mail = d.querySelector<HTMLAnchorElement>('[data-mail]')!
+      const text = `Guten Tag,\n\nIhr Plan steht bei PlanR im Planer. Unter diesem Link sehen Sie ihn mit allen Reglern:\n\n${adresse}\n\nDer Link gilt 60 Tage. Fragen? Rufen Sie uns an: 0211 3029 3035.\n\nDr. Petsas, Pickadoc`
+      mail.href = `mailto:${encodeURIComponent(k.login?.email ?? '')}?subject=${encodeURIComponent('Ihr Plan in PlanR')}&body=${encodeURIComponent(text)}`
+      mail.hidden = false
+    } catch (e) {
+      zeile.textContent = (e as Error).message || 'Der Plan ließ sich gerade nicht öffnen.'
+    }
+  })()
   d.querySelector<HTMLButtonElement>('[data-sudo]')?.addEventListener('click', (e) => {
     sudo((e.currentTarget as HTMLElement).dataset.sudo ?? '', d.querySelector('[data-meldung]'))
   })

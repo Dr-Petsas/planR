@@ -306,7 +306,7 @@ export async function eingangEinmalMelden(wurzel: string, id: string): Promise<P
  * Uploads einer Praxis zuordnen. Nur Karten ohne Praxis, höchstens einen Tag alt:
  * Wer eine fremde Kennung rät, bekommt damit keinen alten Plan.
  */
-export async function eingangZuordnen(wurzel: string, ids: string[], mandant: string, login: string, jetzt = Date.now()): Promise<number> {
+export async function eingangZuordnen(wurzel: string, ids: string[], mandant: string, login: string, jetzt = Date.now(), ohneFrist = false): Promise<number> {
   const gesucht = new Set(ids.filter(idGueltig).slice(0, 30))
   if (!gesucht.size || !mandant) return 0
   return exklusiv(async () => {
@@ -315,7 +315,8 @@ export async function eingangZuordnen(wurzel: string, ids: string[], mandant: st
     for (const karte of liste) {
       if (!gesucht.has(karte.id) || karte.mandant) continue
       const alter = jetzt - new Date(karte.zeit).getTime()
-      if (!(alter >= 0 && alter <= ZUORDNEN_STUNDEN * 3_600_000)) continue
+      // Über den Link des Betreibers (Fall) gilt die Frist nicht: Der Link selbst ist der Nachweis.
+      if (!ohneFrist && !(alter >= 0 && alter <= ZUORDNEN_STUNDEN * 3_600_000)) continue
       karte.mandant = mandant
       karte.login = login
       n++
@@ -377,6 +378,85 @@ export function neuesPasswort(): string {
   let aus = ''
   for (const b of randomBytes(12)) aus += zeichen[b % zeichen.length]
   return aus
+}
+
+/**
+ * Ein Fall: die Uploads einer Praxis unter einem Link. Wer den Link hat, sieht die Dateien und das Ergebnis im Planer.
+ * Der Betreiber legt den Link an und gibt ihn dem Zahnarzt. Das gelesene Ergebnis liegt dabei,
+ * damit der Zahnarzt dasselbe sieht wie der Betreiber und nichts neu gelesen werden muss.
+ */
+export interface ProbeFall {
+  token: string
+  ids: string[]
+  name: string
+  zeit: string
+  /** Gelesene Pläne (Teile des Falls) als JSON-Text, so wie die Probe-Seite sie zeigt */
+  teile?: string
+}
+
+export const FALL_TAGE = 60
+export const FALL_TEILE_MAX = 600_000
+const fallPfad = (wurzel: string) => `${wurzel}/probe-eingang/faelle.json`
+
+export function tokenGueltig(token: string) {
+  return token.length === 32 && [...token].every((c) => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))
+}
+
+async function faelleLesen(wurzel: string): Promise<ProbeFall[]> {
+  try {
+    const roh = JSON.parse(await readFile(fallPfad(wurzel), 'utf8')) as unknown
+    return Array.isArray(roh) ? roh.filter((f) => f && typeof f.token === 'string' && Array.isArray(f.ids)) as ProbeFall[] : []
+  } catch {
+    return []
+  }
+}
+
+async function faelleSchreiben(wurzel: string, liste: ProbeFall[]) {
+  const datei = fallPfad(wurzel)
+  await mkdir(dirname(datei), { recursive: true })
+  const tmp = `${datei}.${process.pid}.tmp`
+  await writeFile(tmp, JSON.stringify(liste), 'utf8')
+  await rename(tmp, datei)
+}
+
+const fallFrisch = (f: ProbeFall, jetzt: number) => jetzt - new Date(f.zeit).getTime() <= FALL_TAGE * 86_400_000
+
+/** Link für diese Uploads. Dieselben Uploads behalten ihren Link und ihr gelesenes Ergebnis; die Frist beginnt neu. */
+export async function fallAnlegen(wurzel: string, ids: string[], name: string, jetzt = Date.now()): Promise<ProbeFall | null> {
+  const vorhanden = new Set((await indexLesen(wurzel)).map((k) => k.id))
+  const sauber = [...new Set(ids.filter((id) => idGueltig(id) && vorhanden.has(id)))].sort().slice(0, 30)
+  if (!sauber.length) return null
+  const schluessel = sauber.join(',')
+  return exklusiv(async () => {
+    const liste = (await faelleLesen(wurzel)).filter((f) => fallFrisch(f, jetzt))
+    let fall = liste.find((f) => f.ids.join(',') === schluessel)
+    if (fall) fall.zeit = new Date(jetzt).toISOString()
+    else {
+      fall = { token: randomBytes(16).toString('hex'), ids: sauber, name: name.slice(0, 120), zeit: new Date(jetzt).toISOString() }
+      liste.push(fall)
+    }
+    await faelleSchreiben(wurzel, liste)
+    return fall
+  })
+}
+
+export async function fallFinden(wurzel: string, token: string, jetzt = Date.now()): Promise<ProbeFall | null> {
+  if (!tokenGueltig(token)) return null
+  const fall = (await faelleLesen(wurzel)).find((f) => f.token === token)
+  return fall && fallFrisch(fall, jetzt) ? fall : null
+}
+
+/** Gelesenes Ergebnis ablegen. nurLeer: nur, wenn noch keins da ist (erster Aufruf über den Link). */
+export async function fallTeile(wurzel: string, token: string, teile: string, nurLeer: boolean): Promise<boolean> {
+  if (!tokenGueltig(token) || teile.length > FALL_TEILE_MAX) return false
+  return exklusiv(async () => {
+    const liste = await faelleLesen(wurzel)
+    const fall = liste.find((f) => f.token === token)
+    if (!fall || (nurLeer && fall.teile)) return false
+    fall.teile = teile
+    await faelleSchreiben(wurzel, liste)
+    return true
+  })
 }
 
 export async function eingangDatei(wurzel: string, id: string): Promise<{ karte: ProbeKarte; bytes: Buffer } | null> {
