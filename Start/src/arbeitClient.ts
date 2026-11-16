@@ -224,7 +224,7 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
     // Im Korrekturlauf zählt, was der Plan und sein Prüfmodul danach melden, nicht die Ankündigung des Modells.
     if (d.frage) frage = d.frage
     // Ab der zweiten Runde ist die Antwort nur noch Nachrede zu bereits Erledigtem.
-    if (!d.pruefung || (runde === 1 && !schritte.length && !d.frage)) teile.push(satz(d.antwort))
+    const angesagt = !d.pruefung || (runde === 1 && !schritte.length && !d.frage) ? teile.push(satz(d.antwort)) - 1 : -1
     if (!schritte.length) break
     if (schritte.some((x) => typeof (x as { begruendung?: unknown })?.begruendung === 'string')) vorschlag = true
     const r = await fragenKi(fenster, { aktion: 'aendern', schritte }, 5000)
@@ -233,6 +233,8 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
       break
     }
     const { getan = [], nicht = [] } = r.ergebnis
+    // Hat der Plan nichts übernommen, zählt sein Grund und nicht die Ankündigung des Modells.
+    if (!getan.length && angesagt >= 0) teile.splice(angesagt, 1)
     if (getan.length) teile.push(`Im Plan geändert: ${getan.join('; ')}.`)
     for (const n of nicht) teile.push(satz(n))
     if (!getan.length) {

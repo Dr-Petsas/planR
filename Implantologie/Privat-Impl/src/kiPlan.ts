@@ -57,6 +57,7 @@ function schalter(plan: Plan): KiSchalter[] {
   for (const [feld, text, werte] of GLOBAL_WAHL) s.push({ name: `global.${feld}`, text, wert: String(plan.global[feld]), werte })
   for (const [feld, text] of GLOBAL_JA) s.push({ name: `global.${feld}`, text, wert: !!plan.global[feld] })
   s.push({ name: 'global.roehrchen', text: 'Anzahl Blutröhrchen/Kits', wert: plan.global.roehrchen })
+  s.push({ name: 'bemerkung', text: 'Bemerkung auf dem Plan (freier Text)', wert: plan.bemerkung ?? '' })
   return s
 }
 
@@ -142,6 +143,11 @@ export function implBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): 
 function schalterSetzen(plan: Plan, name: string, wert: boolean | string | number): { plan: Plan; text: string } | string {
   const jetzt = schalter(plan).find((s) => s.name === name)
   if (!jetzt) return 'Diese Einstellung gibt es in diesem Plan nicht.'
+  if (name === 'bemerkung') {
+    const neu = String(wert).trim().slice(0, 600)
+    if (neu === (plan.bemerkung ?? '')) return 'Die Bemerkung steht schon so im Plan.'
+    return { plan: { ...plan, bemerkung: neu }, text: neu ? `Bemerkung: ${neu}` : 'Bemerkung gelöscht' }
+  }
   if (typeof jetzt.wert !== typeof wert || (jetzt.werte && !jetzt.werte.includes(String(wert)))) return `${jetzt.text}: diesen Wert kenne ich nicht.`
   if (jetzt.wert === wert) return `${jetzt.text} ist schon so eingestellt.`
   const text = `${jetzt.text}: ${typeof wert === 'boolean' ? (wert ? 'eingeschaltet' : 'ausgeschaltet') : wert || 'ohne'}`

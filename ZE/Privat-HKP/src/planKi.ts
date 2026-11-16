@@ -286,6 +286,63 @@ export function kiDienst<P>(o: {
   }
 }
 
+/**
+ * Eine Einstellung des Plans (Regler, Auswahl, Ja/Nein, Freitext), wie die Seite sie führt.
+ * `werte` = Auswahl, `von`/`bis` = Zahl, weder noch und Text = freier Text.
+ */
+export interface KiFeld<P> {
+  name: string
+  text: string
+  lesen: (plan: P) => boolean | string | number
+  setzen: (plan: P, wert: never) => P
+  werte?: string[]
+  von?: number
+  bis?: number
+  /** fehlt die Einstellung in diesem Plan gerade (z. B. Abformung ohne Einlagefüllung)? */
+  da?: (plan: P) => boolean
+}
+
+const feldDa = <P>(felder: KiFeld<P>[], plan: P) => felder.filter((f) => !f.da || f.da(plan))
+
+/** Die Einstellungen als SCHALTER für die KI-Zeile. */
+export const felderSchalter = <P>(felder: KiFeld<P>[], plan: P): KiSchalter[] =>
+  feldDa(felder, plan).map((f) => ({
+    name: f.name,
+    text: f.von !== undefined ? `${f.text} (Zahl von ${zahl(f.von)} bis ${zahl(f.bis ?? f.von)})` : f.text,
+    wert: f.lesen(plan),
+    ...(f.werte ? { werte: f.werte } : {}),
+  }))
+
+/** Setzt eine Einstellung nach Prüfung. null: diese Einstellung führt die Liste nicht. */
+export function feldSetzen<P>(felder: KiFeld<P>[], plan: P, name: string, wert: boolean | string | number): { plan: P; text: string } | string | null {
+  const f = feldDa(felder, plan).find((x) => x.name === name)
+  if (!f) return null
+  const kopf = f.text.split(' (')[0]
+  const jetzt = f.lesen(plan)
+  let neu: boolean | string | number
+  let text: string
+  if (typeof jetzt === 'boolean') {
+    if (typeof wert !== 'boolean') return `${kopf}: das geht nur mit ja oder nein.`
+    neu = wert
+    text = `${kopf}: ${wert ? 'ja' : 'nein'}`
+  } else if (typeof jetzt === 'number') {
+    const n = typeof wert === 'number' ? Math.round(wert * 100) / 100 : NaN
+    if (!Number.isFinite(n) || n < (f.von ?? -Infinity) || n > (f.bis ?? Infinity)) return `${kopf}: erlaubt ist ${zahl(f.von ?? 0)} bis ${zahl(f.bis ?? 0)}.`
+    neu = n
+    text = `${kopf}: ${zahl(n)}`
+  } else if (f.werte) {
+    if (typeof wert !== 'string' || !f.werte.includes(wert)) return `${kopf}: diesen Wert kenne ich nicht.`
+    neu = wert
+    text = `${kopf}: ${wert || 'ohne'}`
+  } else {
+    if (typeof wert !== 'string') return `${kopf}: das ist ein Textfeld.`
+    neu = wert.trim().slice(0, 600)
+    text = neu ? `${kopf} eingetragen: »${neu.length > 80 ? `${neu.slice(0, 80)}…` : neu}«` : `${kopf} geleert`
+  }
+  if (neu === jetzt) return `${kopf} ist schon so eingestellt.`
+  return { plan: f.setzen(plan, neu as never), text }
+}
+
 /** Zeile einer Rechnung, wie sie die Planer mit Positionsliste liefern. */
 export interface ListenZeile {
   id?: string; ebene?: string; nr: string; zahn?: string; text: string; anzahl: number

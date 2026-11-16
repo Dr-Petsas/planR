@@ -1,5 +1,6 @@
 /** Handy-Ansicht (bis 840 px) wie im Kassen-HKP: Regler hinter einem Knopf, Planblätter als echte A4-Seite auf Bildschirmbreite verkleinert. */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 const HANDY = '(max-width: 840px)'
 const BLATT_BREITE_PX = 793.7
@@ -33,11 +34,33 @@ export function ReglerKlappe({ children }: { children: ReactNode }) {
 }
 
 /**
- * Einstellungen (Regler, Prüfmodul) als eigene Spalte links wie im Kassen-HKP: eigener Rollbalken, der Plan steht groß daneben.
- * Die Höhe der Kopfleiste geht als --kopf-h ans Layout; schmal (unter 1100 px) bleibt alles wie bisher unter der Kopfleiste.
+ * Einstellungen (Regler, Prüfmodul) stehen am breiten Bildschirm oben in der einen linken Spalte, zusammen mit der Eingabe und
+ * unter einem Rollbalken wie im Kassen-HKP; der Plan steht groß daneben. Dafür wandert der Inhalt in die Eingabespalte.
+ * Die Höhe der Kopfleiste geht als --kopf-h ans Layout; schmaler bleibt alles wie bisher unter der Kopfleiste.
  */
+const BREIT = '(min-width: 1280px)'
+
 export function Seitenleiste({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null)
+  const [ziel, setZiel] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    const mq = window.matchMedia(BREIT)
+    const halter = document.createElement('aside')
+    halter.className = 'seitenleiste in-spalte'
+    const setzen = () => {
+      const editor = mq.matches ? ref.current?.parentElement?.parentElement?.querySelector<HTMLElement>('.arbeitsflaeche > .editor') : null
+      if (!editor) { halter.remove(); setZiel(null); return }
+      if (halter.parentElement !== editor) {
+        const reiter = editor.querySelector<HTMLElement>(':scope > .reiter')
+        if (reiter) reiter.after(halter)
+        else editor.prepend(halter)
+      }
+      setZiel(halter)
+    }
+    setzen()
+    mq.addEventListener('change', setzen)
+    return () => { mq.removeEventListener('change', setzen); halter.remove() }
+  }, [])
   useEffect(() => {
     const kopf = ref.current?.parentElement
     if (!kopf || typeof ResizeObserver === 'undefined') return
@@ -48,7 +71,7 @@ export function Seitenleiste({ children }: { children: ReactNode }) {
     setzen()
     return () => beobachter.disconnect()
   }, [])
-  return <aside ref={ref} className="seitenleiste">{children}</aside>
+  return <aside ref={ref} className="seitenleiste" hidden={!!ziel}>{ziel ? createPortal(children, ziel) : children}</aside>
 }
 
 function einpassen() {

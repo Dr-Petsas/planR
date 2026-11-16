@@ -31,6 +31,7 @@ function schalter(plan: Plan): KiSchalter[] {
     { name: 'abformungProthese', text: 'zweite Abformung für den herausnehmbaren Teil', wert: plan.abformungProthese ?? '', werte: ABFORMUNG },
     { name: 'implantat.loeffel', text: 'Löffel bei Implantatabformung', wert: plan.implantat.loeffel, werte: ['geschlossen', 'offen'] },
     { name: 'implantat.abutment', text: 'Abutment auf Implantaten', wert: plan.implantat.abutment, werte: ['standard', 'individuell', 'keramik'] },
+    { name: 'bemerkung', text: 'Bemerkung auf dem Plan (freier Text)', wert: plan.bemerkung ?? '' },
   ]
 }
 
@@ -103,6 +104,11 @@ export function zeBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): Pl
 function schalterSetzen(plan: Plan, name: string, wert: boolean | string | number): { plan: Plan; text: string } | string {
   const jetzt = schalter(plan).find((s) => s.name === name)
   if (!jetzt) return 'Diese Einstellung gibt es in diesem Plan nicht.'
+  if (name === 'bemerkung') {
+    const neu = String(wert).trim().slice(0, 600)
+    if (neu === (plan.bemerkung ?? '')) return 'Die Bemerkung steht schon so im Plan.'
+    return { plan: { ...plan, bemerkung: neu }, text: neu ? `Bemerkung: ${neu}` : 'Bemerkung gelöscht' }
+  }
   if (typeof wert !== 'string' || !jetzt.werte?.includes(wert)) return `${jetzt.text}: diesen Wert kenne ich nicht.`
   if (jetzt.wert === wert) return `${jetzt.text} ist schon so eingestellt.`
   const text = `${jetzt.text.split(' (')[0]}: ${wert || 'ohne'}`

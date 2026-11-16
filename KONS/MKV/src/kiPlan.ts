@@ -2,6 +2,7 @@
 import type { Einstellungen, Plan, Rechnung, Therapie, ZahnLeistung } from './types'
 import { THERAPIE, THERAPIEN } from './data/katalog'
 import { rechnen } from './engine/mkv'
+import { feldSetzen, felderSchalter, type KiFeld } from './planKi'
 import { kiDienst, listenZeilen, zahnText, zahnWerte, type KiPosition, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
 
 const ebene = (e: string) => (e === 'ANALOG' ? 'GOZ' : e)
@@ -19,6 +20,30 @@ export const ZAHNFELDER: KiZahnFeld[] = [
   { name: 'mehrschicht', text: 'mehrschichtiger dentinadhäsiver Aufbau (nur Aufbau)', ja: true },
   { name: 'austausch', text: 'Austausch einer intakten Füllung (dann keine Mehrkostenregelung)', ja: true },
 ]
+const regler = <K extends keyof Plan['regler']>(k: K) => ({
+  lesen: (p: Plan) => p.regler[k] as number,
+  setzen: (p: Plan, w: number) => ({ ...p, regler: { ...p.regler, [k]: k === 'laborKlasse' ? Math.round(w) : w } }),
+})
+const wunsch = (k: keyof NonNullable<Plan['privat']>) => ({
+  lesen: (p: Plan) => !!p.privat?.[k],
+  setzen: (p: Plan, w: boolean) => ({ ...p, privat: { ...(p.privat ?? {}), [k]: w } }),
+})
+
+/** Regler und Angaben des Plans, wie sie in der Leiste links stehen. */
+export const FELDER: KiFeld<Plan>[] = [
+  { name: 'regler.modell', text: 'Berechnungsmodell der Mehrkosten (gozDifferenz = GOZ-Honorar abzüglich Kassenanteil, proZahn = fester Betrag je Füllung, proFlaeche = fester Betrag je Fläche)', werte: ['gozDifferenz', 'proZahn', 'proFlaeche'], lesen: (p) => p.regler.modell, setzen: (p, w: Plan['regler']['modell']) => ({ ...p, regler: { ...p.regler, modell: w } }) },
+  { name: 'regler.proZahn', text: 'Mehrkosten in Euro je Füllung (Modell proZahn)', von: 10, bis: 400, ...regler('proZahn'), da: (p) => p.regler.modell === 'proZahn' },
+  { name: 'regler.proFlaeche', text: 'Mehrkosten in Euro je Fläche (Modell proFlaeche)', von: 5, bis: 150, ...regler('proFlaeche'), da: (p) => p.regler.modell === 'proFlaeche' },
+  { name: 'regler.faktor', text: 'GOZ-Faktor plastischer Füllungen und Begleitleistungen; wirkt auf die Mehrkosten nur im Modell gozDifferenz, in den Modellen proZahn und proFlaeche gilt stattdessen der feste Betrag', von: 1, bis: 5, ...regler('faktor') },
+  { name: 'regler.inlayFaktor', text: 'GOZ-Faktor für Inlays und Goldhämmerfüllungen', von: 1, bis: 5, ...regler('inlayFaktor') },
+  { name: 'regler.laborKlasse', text: 'Preisklasse des Labors: 0 günstig, 1 Standard, 2 hochwertig', von: 0, bis: 2, ...regler('laborKlasse') },
+  { name: 'abformung', text: 'Abformung für Inlays (abdruck = konventionell, scan = Intraoralscan)', werte: ['abdruck', 'scan'], lesen: (p) => p.abformung ?? '', setzen: (p, w: NonNullable<Plan['abformung']>) => ({ ...p, abformung: w }), da: (p) => Object.values(p.zaehne).some((z) => z.therapie === 'inlay') },
+  { name: 'privat.oberflaeche', text: 'Oberflächenanästhesie privat dazu (GOZ 0080)', ...wunsch('oberflaeche') },
+  { name: 'privat.fluorid', text: 'lokale Fluoridierung privat dazu (GOZ 1020)', ...wunsch('fluorid') },
+  { name: 'privat.adhaesivKomposit', text: 'adhäsive Befestigung neben Kompositfüllungen (GOZ 2197, strittig, nur ausdrücklich vereinbart)', ...wunsch('adhaesivKomposit') },
+  { name: 'bemerkung', text: 'Bemerkung auf dem Plan (freier Text)', lesen: (p) => p.bemerkung ?? '', setzen: (p, w: string) => ({ ...p, bemerkung: w }) },
+]
+
 const maxFlaechen = (t: Therapie) => THERAPIE[t].maxFlaechen ?? (THERAPIE[t].plastisch ? 5 : 3)
 
 /** Trägt die Füllung eines Zahns ein wie Zahnschema und Tabelle; die Rechnung folgt daraus. */
@@ -58,6 +83,12 @@ export function mkvKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einst
     const getan: string[] = []
     const nicht: string[] = []
     for (const s of schritte) {
+      if (s.op === 'schalter') {
+        const r = feldSetzen(FELDER, p, s.name, s.wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.'
+        if (typeof r === 'string') nicht.push(r)
+        else { p = r.plan; getan.push(r.text) }
+        continue
+      }
       if (s.op !== 'zahn') { nicht.push('Freie Positionen nimmt dieser Plan nicht auf; alle Zeilen folgen aus den Füllungen je Zahn und den Reglern.'); continue }
       const werte = zahnWerte(ZAHNFELDER, s)
       const r = typeof werte === 'string' ? werte : zahnSetzen(p, s.zahn, werte)
@@ -73,17 +104,17 @@ export function mkvKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einst
     const r = rechnung(plan)
     return {
       planart: 'mkv', name: 'Mehrkostenvereinbarung Füllungen (§ 28 Abs. 2 SGB V): private Leistung abzüglich Kassenanteil',
-      nummer: plan.nummer, gesperrt, kann: gesperrt ? [] : ['zahn', 'zurueck'], ebenen: [],
+      nummer: plan.nummer, gesperrt, kann: gesperrt ? [] : ['schalter', 'zahn', 'zurueck'], ebenen: [],
       positionen: kiZeilen(r),
       summen: { privat: r.privat, kassenanteil: r.kassenanteil, mehrkosten: r.mehrkosten, privatOhneKasse: r.privat7Summe },
       angaben: {
         zaehne: Object.entries(plan.zaehne).map(([nr, z]) => `${nr}: ${z.therapie}, ${z.flaechen} Flächen${z.austausch ? ', Austausch intakter Füllung' : ''}`).join('; ') || 'noch kein Zahn geplant',
         regler: `Modell ${plan.regler.modell}, Faktor ${plan.regler.faktor}, Inlay-Faktor ${plan.regler.inlayFaktor}, Laborklasse ${plan.regler.laborKlasse}`,
         punktwert: `${r.punktwert}; ${r.punktwertHinweis}`,
-        aufbau: 'Alle Zeilen errechnet der Planer aus Therapie und Flächen je Zahn und den Reglern. Freie Positionen nimmt dieser Plan nicht auf. Ich kann Füllungen je Zahn eintragen, ändern und herausnehmen.',
+        aufbau: 'Alle Zeilen errechnet der Planer aus Therapie und Flächen je Zahn und den Reglern. Freie Positionen nimmt dieser Plan nicht auf. Ich kann Füllungen je Zahn eintragen, ändern und herausnehmen und die Regler und Angaben aus SCHALTER setzen.',
         ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
       },
-      schalter: [], zahnfelder: ZAHNFELDER, hinweise: [],
+      schalter: felderSchalter(FELDER, plan), zahnfelder: ZAHNFELDER, hinweise: [],
     }
     },
   })

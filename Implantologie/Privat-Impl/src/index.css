@@ -196,7 +196,7 @@ textarea { width: 100%; border: 1px solid var(--linie); border-radius: 6px; padd
 /* ---------- Zahnschema ---------- */
 .zahnschema { overflow-x: auto; padding: 8px 0; }
 .zs-kiefer { display: flex; flex-direction: column; gap: 3px; }
-.zs-reihe { display: grid; grid-template-columns: 62px repeat(16, minmax(30px, 1fr)); gap: 3px; align-items: center; }
+.zs-reihe { --zs-kopf: 62px; display: grid; grid-template-columns: 62px repeat(16, minmax(30px, 1fr)); gap: 3px; align-items: center; }
 .zs-label { font-size: 11px; color: var(--grau); text-transform: uppercase; letter-spacing: .5px; }
 .zs-nr { text-align: center; font-weight: 600; font-size: 12px; color: var(--grau); }
 .zs-nr.mitte, .zs-zelle.mitte { margin-left: 8px; }

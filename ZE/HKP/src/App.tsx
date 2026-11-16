@@ -189,8 +189,8 @@ export default function App() {
   const liveAn = useMemo(() => liveModus(), [])
   // Ein HKP aus dem Register lässt sich nur ändern, solange er auf Freigabe wartet.
   const kiGesperrt = liveAn || (!!register.aktiv && register.aktiv.status !== 'wartet_auf_freigabe')
-  const kiStand = useRef({ plan, ergebnis, listen, gesperrt: kiGesperrt })
-  useEffect(() => { kiStand.current = { plan, ergebnis, listen, gesperrt: kiGesperrt } })
+  const kiStand = useRef({ plan, ergebnis, listen, gesperrt: kiGesperrt, praxis: praxisListen })
+  useEffect(() => { kiStand.current = { plan, ergebnis, listen, gesperrt: kiGesperrt, praxis: praxisListen } })
   useEffect(() => planKiHoeren(hkpKi(() => kiStand.current, (neu) => setPlan(() => neu))), [setPlan])
   const [live, setLive] = useState<{ an: boolean; stand: LiveStand | null; spielt: boolean }>({ an: false, stand: null, spielt: false })
   const planRef = useRef(plan)

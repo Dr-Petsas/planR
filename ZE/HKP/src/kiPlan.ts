@@ -10,7 +10,13 @@ import { kronenEinheiten, werkstoffVon, WERKSTOFFE, WERKSTOFFE_FUER, type Kronen
 import { BEFUND_KUERZEL, THERAPIE_KUERZEL } from './engine/zahnschema'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './engine/regeln'
 import { privatStufeAnwenden, regelUebernehmen } from './engine/aufwertung'
-import { kiDienst, zahnText, zahnWerte, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
+import { IMPLANTATSYSTEME, implantatsystem } from './data/implantatsysteme'
+import { REPARATUR_ARTEN, reparaturArt } from './engine/reparaturen'
+import { gebietAufloesen } from './engine/kombinationen'
+import { positionAendern, rechnen as planRechnen, type PraxisListen } from './clara'
+import { aufZielpreis, preisSpanne } from './clara/zielpreis'
+import { euro, neueId } from './format'
+import { kiDienst, kiName, zahnText, zahnWerte, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
 
 export const ZAHNFELDER: KiZahnFeld[] = [
   { name: 'befund', text: 'Befund (Zeile B, Kleinbuchstaben)', werte: { '': 'leer, kein Befund', ...BEFUND_KUERZEL } },
@@ -30,7 +36,7 @@ const einheitenVon = (plan: HkpPlan): KronenEinheit[] =>
   kronenEinheiten(plan.positionen.map((p) => ({ zahn: p.zahn, ebene: p.ebene, nr: p.nr, labor: laborVon(p, plan) })))
 
 /** Was die KI-Zeile außer dem Zahnschema einstellen kann; jede Angabe steht so auch auf der Seite. */
-export function schalter(plan: HkpPlan): KiSchalter[] {
+export function schalter(plan: HkpPlan, praxis?: PraxisListen): KiSchalter[] {
   const einheiten = einheitenVon(plan)
   const stoffe = [...new Set(einheiten.map((e) => werkstoffVon(e, plan.werkstoffe ?? {}).werkstoff))]
   const alle = einheiten.length > 0 && einheiten.every((e) => werkstoffVon(e, plan.werkstoffe ?? {}).gewaehlt)
@@ -48,8 +54,27 @@ export function schalter(plan: HkpPlan): KiSchalter[] {
     ...(implantateIn(plan) ? [
       { name: 'implantat.abformung', text: 'Abformung der Implantate (scan = Scanbody, offen/geschlossen = Löffel)', wert: plan.implantat.abformung, werte: ['scan', 'offen', 'geschlossen'] },
       { name: 'implantat.abutment', text: 'Abutment auf Implantaten', wert: plan.implantat.abutment, werte: ['standard', 'individuell', 'keramik'] },
+      { name: 'implantat.system', text: `Implantatsystem für die Preise der Implantatteile (durchschnitt = noch nicht gewählt, Mittelwert; ${IMPLANTATSYSTEME.filter((s) => s.id !== 'durchschnitt').map((s) => `${s.id} = ${s.hersteller} ${s.system}`).join(', ')})`, wert: implantatsystem(plan.implantat.system).id, werte: IMPLANTATSYSTEME.map((s) => s.id) },
     ] : []),
+    { name: 'bemerkung', text: 'Bemerkungen auf dem Heil- und Kostenplan (freier Text)', wert: plan.bemerkungen ?? '' },
+    ...REPARATUR_ARTEN.map((a) => ({
+      name: `reparatur.${a.id}`,
+      text: `Wiederherstellung ${a.id.split('-')[0]}: ${a.titel.slice(0, 110)}; Wert = Gebiet (${a.je === 'kiefer' ? 'OK oder UK' : 'Zahnnummern mit Komma, z. B. 14,15'}), leer = nicht geplant`,
+      wert: plan.reparaturen.find((r) => r.art === a.id)?.gebiet ?? '',
+    })),
+    ...zielSchalter(plan, praxis),
   ]
+}
+
+/** Hochgeladener Plan: seine Laborzeilen stammen vom Beleg, die Preisregler rechnen ihn nicht neu. */
+const hatBlatt = (p: HkpPlan) => p.positionen.some((x) => x.id.startsWith('blatt-'))
+
+function zielSchalter(plan: HkpPlan, praxis?: PraxisListen): KiSchalter[] {
+  if (!praxis || !plan.positionen.length || hatBlatt(plan)) return []
+  const jetzt = planRechnen(plan, praxis).summen.eigenanteil
+  const { min, max } = preisSpanne(plan, praxis)
+  if (!(max - min > 0.005)) return []
+  return [{ name: 'zielEigenanteil', text: `Zielbetrag: gewünschter Eigenanteil des Patienten in Euro; der Planer stellt Honorarfaktor, Zusatzleistungen und Eigenlabor-Preise passend ein (möglich ${euro(min)} bis ${euro(max)})`, wert: Math.round(jetzt * 100) / 100 }]
 }
 
 /** Trägt Befund und Planung eines Zahns ein wie das Zahnschema in Teil 1. */
@@ -76,14 +101,63 @@ export function neuRechnen(q: HkpPlan): { plan: HkpPlan; hinweise: string[] } {
   return { plan: privat ? privat.plan : regelUebernehmen(q, regel), hinweise: [...regel.hinweise, ...(privat?.hinweise ?? [])] }
 }
 
-const NUR_SEITE = 'Einzelne Positionen dieses Kassen-HKP ändere ich nicht: sie folgen aus Zahnschema und Ausführung. Von Hand geht es im Reiter Positionen.'
+const EBENEN = ['BEMA', 'GOZ', 'BEL', 'BEB']
+type Einzel = Extract<KiSchritt, { op: 'hinzu' | 'setze' | 'weg' }>
+const schluessel = (p: { ebene: string; nr: string; zahn: string }) => `${p.ebene}|${p.nr}|${p.zahn}`
+
+/** Eine einzelne Position hinzufügen, ändern oder entfernen, wie im Reiter Positionen. */
+function positionSchritt(plan: HkpPlan, s: Einzel, praxis: PraxisListen): { plan: HkpPlan; text: string } | string {
+  if (s.op === 'hinzu') {
+    if (!EBENEN.includes(s.ebene)) return `${kiName(s)}: diese Ebene nimmt der Kassen-HKP von mir nicht auf.`
+    if (s.ebene === 'GOZ' && s.faktor !== undefined && (s.faktor < 1 || s.faktor > 3.5)) return `${kiName(s)}: der Faktor muss zwischen 1,0 und 3,5 liegen.`
+    const r = positionAendern(plan, { aktion: 'hinzufuegen', ebene: s.ebene as HkpPlan['positionen'][number]['ebene'], nr: s.nr, zahn: s.zahn, anzahl: s.anzahl, ...(s.faktor !== undefined ? { faktor: s.faktor } : {}) }, praxis)
+    if (!r.ok) return r.meldung
+    return { plan: r.plan, text: `${kiName(s)} hinzugefügt${s.anzahl > 1 ? `, ${s.anzahl}×` : ''}` }
+  }
+  const p = plan.positionen.find((x) => x.id === s.id)
+  if (!p) return 'Diese Zeile steht nicht als eigene Position im Plan: sie folgt aus einem Regler, dem Kronenmaterial oder der Ausführung. Das ändern Sie dort.'
+  const aus = p.auto ? [...new Set([...plan.ausgeschlossen, schluessel(p)])] : plan.ausgeschlossen
+  if (s.op === 'weg') return { plan: { ...plan, positionen: plan.positionen.filter((x) => x.id !== p.id), ausgeschlossen: aus }, text: `${kiName(p)} entfernt` }
+  const aend: Partial<HkpPlan['positionen'][number]> = {}
+  const was: string[] = []
+  if (s.anzahl !== undefined) {
+    if (!(s.anzahl > 0)) return `${kiName(p)}: eine Anzahl von 0 geht nicht. Soll die Position weg, sagen Sie es.`
+    aend.anzahl = s.anzahl; was.push(`Anzahl ${s.anzahl}`)
+  }
+  if (s.faktor !== undefined) {
+    if (p.ebene !== 'GOZ') return `${kiName(p)}: einen Steigerungsfaktor gibt es nur bei GOZ-Positionen.`
+    if (s.faktor < 1 || s.faktor > 3.5) return `${kiName(p)}: der Faktor muss zwischen 1,0 und 3,5 liegen; darüber nur mit Vereinbarung nach § 2 GOZ.`
+    aend.faktor = s.faktor; was.push(`Faktor ${String(s.faktor).replace('.', ',')}`)
+  }
+  if (s.preis !== undefined) return `${kiName(p)}: der Preis folgt aus der Gebühren- bzw. Preisliste. Einen eigenen Preis trage ich im Kassen-HKP nicht ein.`
+  if (!was.length) return `${kiName(p)}: es fehlt, was sich ändern soll (Anzahl oder GOZ-Faktor).`
+  return { plan: { ...plan, positionen: plan.positionen.map((x) => (x.id === p.id ? { ...x, ...aend, auto: false } : x)), ausgeschlossen: aus }, text: `${kiName(p)}: ${was.join(', ')}` }
+}
+
+/** Wiederherstellung einer Art auf ein Gebiet setzen; leeres Gebiet nimmt sie heraus. */
+function reparaturSetzen(plan: HkpPlan, artId: string, roh: string): { plan: HkpPlan; text: string } | string {
+  const art = reparaturArt(artId)
+  if (!art) return 'Diese Wiederherstellung kennt der Planer nicht.'
+  const kopf = `Wiederherstellung ${art.id.split('-')[0]} (${art.titel.split(' (')[0]})`
+  const alt = plan.reparaturen.find((r) => r.art === art.id)
+  if (!roh.trim()) {
+    if (!alt) return `${kopf} ist nicht geplant.`
+    return { plan: { ...plan, reparaturen: plan.reparaturen.filter((r) => r.art !== art.id) }, text: `${kopf} herausgenommen` }
+  }
+  const g = gebietAufloesen(roh)
+  if (art.je === 'kiefer' ? !g.kiefer.size : !g.zaehne.length) return `${kopf}: als Gebiet brauche ich ${art.je === 'kiefer' ? 'OK oder UK' : 'die Zahnnummern'}.`
+  const sauber = art.je === 'kiefer' ? [...g.kiefer].join(', ') : g.zaehne.join(', ')
+  if (alt?.gebiet === sauber) return `${kopf} steht schon für ${sauber} im Plan.`
+  const reparaturen = alt ? plan.reparaturen.map((r) => (r === alt ? { ...r, gebiet: sauber } : r)) : [...plan.reparaturen, { id: neueId(), art: art.id, gebiet: sauber }]
+  return { plan: { ...plan, reparaturen }, text: `${kopf}: ${sauber}` }
+}
 
 /**
  * Schritte der KI-Zeile am Kassen-HKP. Reihenfolge wie auf der Seite: erst Zahnschema und einfache Angaben,
  * dann neu rechnen, dann die Ausführung für den ganzen Plan, zuletzt das Material einzelner Zähne
  * (dafür müssen die Einheiten aus der Rechnung schon stehen).
  */
-export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[]): { plan: HkpPlan; getan: string[]; nicht: string[] } {
+export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[], praxis: PraxisListen = {}): { plan: HkpPlan; getan: string[]; nicht: string[] } {
   let p = plan
   const getan: string[] = []
   const nicht: string[] = []
@@ -92,6 +166,8 @@ export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[]): { plan: HkpPl
   const ausfText: string[] = []
   const stoffe: [string, Werkstoff][] = []
   let rechnen = false
+  const einzeln: Einzel[] = []
+  let ziel: number | undefined
 
   for (const s of schritte) {
     if (s.op === 'zahn') {
@@ -105,7 +181,26 @@ export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[]): { plan: HkpPl
       else { p = r.plan; getan.push(r.text); rechnen = true }
       continue
     }
-    if (s.op !== 'schalter') { nicht.push(NUR_SEITE); continue }
+    if (s.op === 'hinzu' || s.op === 'setze' || s.op === 'weg') { einzeln.push(s); continue }
+    if (s.op !== 'schalter') continue
+    if (s.name === 'zielEigenanteil') {
+      if (typeof s.wert !== 'number' || !(s.wert >= 0)) nicht.push('Zielbetrag: ich brauche den gewünschten Eigenanteil als Betrag in Euro.')
+      else ziel = s.wert
+      continue
+    }
+    if (s.name === 'bemerkung') {
+      const neu = String(s.wert ?? '').trim().slice(0, 600)
+      if (neu === (p.bemerkungen ?? '').trim()) { nicht.push('Die Bemerkung steht schon so im Plan.'); continue }
+      p = { ...p, bemerkungen: neu }
+      getan.push(neu ? `Bemerkung eingetragen: »${neu.length > 80 ? `${neu.slice(0, 80)}…` : neu}«` : 'Bemerkung geleert')
+      continue
+    }
+    if (s.name.startsWith('reparatur.')) {
+      const r = reparaturSetzen(p, s.name.slice(10), String(s.wert ?? ''))
+      if (typeof r === 'string') nicht.push(r)
+      else { p = r.plan; getan.push(r.text); rechnen = true }
+      continue
+    }
     const jetzt = schalter(p).find((x) => x.name === s.name)
     if (!jetzt) { nicht.push('Diese Einstellung gibt es in diesem Plan gerade nicht.'); continue }
     const kopf = jetzt.text.split(' (')[0]
@@ -123,6 +218,7 @@ export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[]): { plan: HkpPl
     if (s.name === 'bonus') { p = { ...p, zuschuss: { ...p.zuschuss, bonus: w as HkpPlan['zuschuss']['bonus'] } }; getan.push(text) }
     else if (s.name === 'versorgungsart') { p = { ...p, versorgungsart: w as HkpPlan['versorgungsart'] }; getan.push(text) }
     else if (s.name === 'abformungProthese') { p = { ...p, abformungProthese: w as HkpPlan['abformungProthese'] }; getan.push(text); rechnen = true }
+    else if (s.name === 'implantat.system') { p = { ...p, implantat: { ...p.implantat, system: w } }; const y = implantatsystem(w); getan.push(`Implantatsystem: ${y.hersteller} ${y.system}`.trim()) }
     else if (s.name === 'implantat.abformung' || s.name === 'implantat.abutment') { p = { ...p, implantat: { ...p.implantat, [s.name.slice(10)]: w } }; getan.push(text); rechnen = true }
     else if (s.name === 'abformung') { ausf.abformung = w as Ausfuehrung['abformung']; ausfText.push(text) }
     else if (s.name === 'labor') { ausf.labor = w as Ausfuehrung['labor']; ausfText.push(text) }
@@ -154,12 +250,30 @@ export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[]): { plan: HkpPl
     rechnen = true
   }
   if (rechnen && p !== plan) getan.push('Regelversorgung, Festzuschüsse und Positionen neu gerechnet')
+  for (const s of einzeln) {
+    const r = positionSchritt(p, s, praxis)
+    if (typeof r === 'string') nicht.push(r)
+    else { p = r.plan; getan.push(r.text) }
+  }
+  if (ziel !== undefined) {
+    if (hatBlatt(p) || !p.positionen.length) nicht.push('Einen Zielbetrag stelle ich nur an einem gerechneten Plan ein, nicht an einem leeren oder hochgeladenen.')
+    else {
+      const vor = planRechnen(p, praxis).summen.eigenanteil
+      const z = aufZielpreis(p, ziel, praxis)
+      if (Math.abs(z.eigenanteil - vor) < 0.005) nicht.push(`Zielbetrag ${euro(ziel)}: näher als ${euro(vor)} Eigenanteil kommen die Preisregler nicht (möglich ${euro(z.min)} bis ${euro(z.max)}).`)
+      else {
+        p = z.plan
+        getan.push(`Preisregler auf den Zielbetrag gestellt: Eigenanteil ${euro(z.eigenanteil)} statt ${euro(vor)}${z.unterMin ? `; ${euro(ziel)} liegt unter dem Möglichen (mindestens ${euro(z.min)})` : z.ueberMax ? `; ${euro(ziel)} liegt über dem Möglichen (höchstens ${euro(z.max)})` : ''}`)
+        hinweise.push(...z.hinweise)
+      }
+    }
+  }
   for (const h of [...new Set(hinweise)].slice(0, 4)) getan.push(`Hinweis des Planers: ${h}`)
   return { plan: p, getan, nicht }
 }
 
-export function hkpKi(lesen: () => { plan: HkpPlan; ergebnis: Ergebnis; listen: Listen; gesperrt: boolean }, schreiben: (plan: HkpPlan) => void): PlanKiDienst {
-  const anwenden = (plan: HkpPlan, schritte: KiSchritt[]) => hkpAnwenden(plan, schritte)
+export function hkpKi(lesen: () => { plan: HkpPlan; ergebnis: Ergebnis; listen: Listen; gesperrt: boolean; praxis?: PraxisListen }, schreiben: (plan: HkpPlan) => void): PlanKiDienst {
+  const anwenden = (plan: HkpPlan, schritte: KiSchritt[]) => hkpAnwenden(plan, schritte, lesen().praxis ?? {})
   return kiDienst<HkpPlan>({
     lesen: () => { const s = lesen(); return { plan: s.plan, gesperrt: s.gesperrt } },
     schreiben, anwenden,
@@ -174,7 +288,7 @@ export function hkpKi(lesen: () => { plan: HkpPlan; ergebnis: Ergebnis; listen: 
     const s = e.summen
     return {
       planart: 'kassen-hkp', name: 'Heil- und Kostenplan Zahnersatz der gesetzlichen Kasse (BEMA, GOZ, BEL II/BEB, Festzuschüsse)',
-      nummer: '', gesperrt, kann: gesperrt ? [] : ['schalter', 'zahn', 'zurueck'], ebenen: [],
+      nummer: '', gesperrt, kann: gesperrt ? [] : ['schalter', 'zahn', 'hinzu', 'setze', 'weg', 'zurueck'], ebenen: EBENEN,
       positionen: e.positionen.map((p) => ({
         id: p.id, ebene: p.ebene, nr: p.nr, zahn: p.zahn, anzahl: p.anzahl,
         ...(p.faktor !== undefined ? { faktor: p.faktor } : {}),
@@ -193,9 +307,10 @@ export function hkpKi(lesen: () => { plan: HkpPlan; ergebnis: Ergebnis; listen: 
         abformung: plan.abformung || 'noch nicht festgelegt',
         kronenmaterial: einheitenVon(plan).map((x) => { const w = werkstoffVon(x, plan.werkstoffe ?? {}); return `${x.zahn}: ${WERKSTOFFE[w.werkstoff].kurz}${w.gewaehlt ? '' : ' (Vorgabe, noch nicht gewählt)'}` }).join('; ') || 'keine Einheit mit Kronenmaterial',
         ...(e.zusatzNichtAngesetzt.length ? { nichtAngesetzt: e.zusatzNichtAngesetzt.join('; ') } : {}),
-        aufbau: 'Ich kann Befund und Therapieplanung je Zahn im Zahnschema ändern und die Angaben aus SCHALTER setzen (Bonus, Härtefall, Versorgungsart, Abformung, Labor, Kronenmaterial, Verblendung, Implantatangaben); der Planer rechnet daraus Regelversorgung, Festzuschüsse und Positionen neu. Einzelne Positionen ändert die Praxis im Reiter Positionen.',
+        aufbau: 'Ich kann Befund und Therapieplanung je Zahn im Zahnschema ändern und die Angaben aus SCHALTER setzen (Bonus, Härtefall, Versorgungsart, Abformung, Labor, Kronenmaterial, Verblendung, Implantatangaben, Bemerkung, Wiederherstellungen, Zielbetrag); der Planer rechnet daraus Regelversorgung, Festzuschüsse und Positionen neu. Einzelne Positionen (BEMA, GOZ, BEL, BEB) kann ich hinzufügen, in Anzahl oder GOZ-Faktor ändern und entfernen. Was aus Zahnschema oder Ausführung folgt, ändere ich dort und nicht an der einzelnen Zeile.',
+        ...(plan.reparaturen.length ? { wiederherstellungen: plan.reparaturen.map((r) => `${r.art}: ${r.gebiet || 'ohne Gebiet'}`).join('; ') } : {}),
       },
-      schalter: schalter(plan), zahnfelder: ZAHNFELDER,
+      schalter: schalter(plan, lesen().praxis), zahnfelder: ZAHNFELDER,
       hinweise: e.hinweise.map((h) => ({ stufe: h.stufe, text: h.text })),
     }
     },
