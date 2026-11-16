@@ -757,8 +757,25 @@ function auswahlKarte(patient: Stammdaten): string {
           <button type="button" data-wahl-zu aria-label="Schließen">✕</button>
         </div>
         ${bloecke}
+        <p class="bereich-name">Vorhandenen Plan übernehmen</p>
+        <div class="wahl-liste wahl-import"><a href="#probe"><span class="kuerzel">IMP</span><span><b>Plan importieren</b><small>HKP, GOZ-KVA oder Labor-KVA als PDF oder Foto hochladen. PlanR liest ihn ein und legt ihn unter „Importe“ ab.</small></span></a></div>
       </div>
     </div>`
+}
+
+/** Importe der Praxis: je Plan das hochgeladene Original und das Ergebnis aus PlanR. */
+async function importeOeffnen() {
+  const { planVergleich, popup } = await import('./planVergleich')
+  const r = await fetch('/api/importe', { cache: 'no-store' }).catch(() => null)
+  const d = await r?.json().catch(() => null) as { ok?: boolean; importe?: import('./planVergleich').VergleichPlan[] } | null
+  const liste = d?.ok && Array.isArray(d.importe) ? d.importe : null
+  const inhalt = !liste
+    ? '<p class="sb-fehl">Die Importe sind gerade nicht erreichbar.</p>'
+    : liste.length
+      ? liste.map((p) => planVergleich(p, '/api/importe/')).join('')
+      : '<p class="sb-fehl">Noch kein Plan importiert.</p>'
+  popup('Importe', `<div class="sb-leiste"><a class="sb-knopf voll" href="#probe">Plan importieren</a><span class="sb-fehl">Pläne, die Sie hochgeladen haben: links das Original, rechts das Ergebnis aus PlanR.</span></div>${inhalt}`)
+    .querySelector('a[href="#probe"]')?.addEventListener('click', () => document.querySelector('.sb-popup')?.remove())
 }
 
 function bridgeStand(a: NonNullable<typeof agent>, gewaehlt: string): string {
@@ -1687,6 +1704,7 @@ function zeichnen() {
         ${agent?.lokal ? `<span class="ort-marke${agent.verbunden ? '' : ' aus'}" title="Auf diesem PC läuft eine eigene PlanR-Bridge. Dieser Browser und ${esc(assistentin)} arbeiten mit dem Praxisprogramm dieses PCs.">Dieser PC · ${esc(pvsVon(einstellungen.pvs)?.name || 'Praxisprogramm')}${agent.verbunden ? '' : ' – nicht verbunden'}</span>` : ''}
         ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         ${ich.konto.admin ? `<button type="button" class="import-knopf" data-zuordnung title="GOZ-Ziffern je Behandlung prüfen">Zuordnung</button>` : ''}
+        <button type="button" class="import-knopf" data-importe title="Hochgeladene Pläne: Original und Ergebnis – und neuen Plan importieren">Importe</button>
         <button type="button" class="import-knopf" data-training title="HKPs hochladen, eigene GOZ-Analogpositionen, Labor- und Materialpreise"><span>KI-Training</span></button>
         ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
         <button type="button" class="neu-knopf mit-symbol" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen: Befund ansehen, neuen Plan erstellen oder HKP übernehmen` : 'Patient suchen und neuen Plan erstellen'} – jeder Plan gehört zu einem Patienten">${LUPE}<span class="chip-lang">Patientensuche</span><span class="chip-kurz">Suche</span></button>
@@ -1846,6 +1864,7 @@ function zeichnen() {
     if (ich.konto.admin) void verbundLaden().then(() => { if (einstellungAuf) zeichnen() })
   })
   app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => void einrichtungZeigen())
+  app.querySelector<HTMLButtonElement>('[data-importe]')?.addEventListener('click', () => void importeOeffnen())
   app.querySelector<HTMLButtonElement>('[data-zuordnung]')?.addEventListener('click', () => {
     history.replaceState(null, '', `${location.pathname}${location.search}#zuordnung`)
     void zuordnungOeffnen()

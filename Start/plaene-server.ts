@@ -16,13 +16,14 @@ import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
   setupCodeFinden, setupCodeSetzen, Anwesenheit, neueOrtKennung, ortGueltig, type AccessEinstellung, type AgentListe, type AgentStand,
 } from './pvs-agent-server.ts'
-import { PAKETE, TESTABO_PLAENE, aboAbschlussPruefen, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, testaboAbschliessen, testaboDazu, type Buchung } from './buchung.ts'
+import { PAKETE, TESTABO_PLAENE, aboAbschlussPruefen, buchungPruefen, ibanVerdeckt, infoMail, kundenMail, probeBuchung, testaboAbschliessen, testaboDazu, type Buchung } from './buchung.ts'
 import { arztAusPickadoc, arztDerPraxis, avatarHolen, signaturVonVerknuepft } from './pickadocArzt.ts'
 import { freieSlots, kalenderStand, terminEintragen, terminNachsehen } from './terminKalender.ts'
 import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patientAbgleichen, stammAus, vermerkNachKalender, type Akte, type Stamm } from './src/termin.ts'
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
-  BETREIBER, artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangSichtbar, eingangStand, eingangText, passwortPasst, standPruefen,
+  BETREIBER, artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangFuerMandant, eingangListe, eingangSichtbar, eingangStand, eingangText,
+  eingangZuordnen, idGueltig, neuesPasswort, passwortPasst, standPruefen, zugangNamen,
   type ProbeKarte,
 } from './probeEingang.ts'
 import {
@@ -33,7 +34,7 @@ import {
 import { spawn } from 'node:child_process'
 import { timingSafeEqual } from 'node:crypto'
 import { isoDatum, stammdatenAusPvs } from './pvsPatient.ts'
-import { kundenBauen } from './kundenBackend.ts'
+import { kundenBauen, type KundeZahlen } from './kundenBackend.ts'
 import { zipMitDatei } from './zipAnhang.ts'
 import {
   UST_SATZ, abrechnen, ausstellerVollstaendig, euroText, leeresZaehlwerk, monatMerken, monatVon, monatsname, naechsteNummer, rechnungErstellen, rechnungHtml,
@@ -3161,7 +3162,93 @@ async function probeAblegen(req: IncomingMessage, res: ServerResponse) {
   probeBremse.fehler(wer)
   const text = art === 'text/plain' ? bytes.toString('utf8').slice(0, 40_000) : ''
   const karte = await eingangAnlegen(ORDNER, { name, art, bytes, text })
-  return json(res, 200, { ok: true, id: karte.id })
+  // Angemeldete Praxis: Der Plan liegt gleich als Import in ihrem PlanR.
+  const w = await werIst(req).catch(() => null)
+  const zugeordnet = !!w && w.konto.email !== BETREIBER && await eingangZuordnen(ORDNER, [karte.id], w.mandant, w.konto.email) > 0
+  return json(res, 200, { ok: true, id: karte.id, zugeordnet })
+}
+
+const zugangBremse = new Bremse(4, 60 * 60_000)
+
+/**
+ * Zugang aus der Probe: E-Mail-Adresse genügt. PlanR legt Praxis und Konto als Testabo an, erzeugt das Passwort,
+ * meldet den Browser an und hängt die eben abgelegten Pläne als Importe an die Praxis.
+ * Das Passwort geht einmal an den Browser und an die Kontoanlage, gespeichert wird es nicht.
+ */
+async function probeZugang(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+  if (zugangBremse.gesperrt(ip(req))) return json(res, 429, { ok: false, meldung: 'Zu viele Zugänge von diesem Anschluss. Bitte rufen Sie uns an: 0211 3029 3035.' })
+  const roh = JSON.parse(await lesenBody(req, 4000)) as { email?: unknown; ids?: unknown; zustimmung?: unknown; firma2?: unknown }
+  if (String(roh.firma2 ?? '')) return json(res, 200, { ok: true })
+  if (roh.zustimmung !== true) return json(res, 400, { ok: false, meldung: 'Bitte AGB, Datenschutzhinweisen und Auftragsverarbeitung zustimmen.' })
+  const ids = (Array.isArray(roh.ids) ? roh.ids : []).map((x) => String(x)).filter(idGueltig).slice(0, 30)
+  const karten = (await eingangListe(ORDNER)).filter((k) => ids.includes(k.id) && !k.mandant)
+  if (!karten.length) return json(res, 400, { ok: false, meldung: 'Bitte zuerst einen Plan ablegen.' })
+  const email = String(roh.email ?? '').trim().toLowerCase().slice(0, 200)
+  const stempel = karten.find((k) => k.kontakt?.name || k.kontakt?.praxis)?.kontakt ?? karten[0].kontakt
+  const b0 = probeBuchung(email, zugangNamen(stempel ?? {}, email), stempel ?? {})
+  if (!b0) return json(res, 400, { ok: false, meldung: 'Bitte eine gültige E-Mail-Adresse angeben.' })
+  zugangBremse.fehler(ip(req))
+  const passwort = neuesPasswort()
+  const konto = await kontoAnlegen(b0, passwort)
+  if (konto.status === 'vorhanden') {
+    return json(res, 409, { ok: false, vorhanden: true, meldung: 'Für diese Adresse gibt es schon einen Zugang. Bitte anmelden – der Plan lässt sich dann in PlanR über „Plan importieren“ ablegen.' })
+  }
+  if (konto.status !== 'angelegt' || !konto.clientId) {
+    return json(res, 502, { ok: false, meldung: 'Der Zugang ließ sich gerade nicht anlegen. Bitte gleich noch einmal, oder rufen Sie uns an: 0211 3029 3035.' })
+  }
+  const b: Buchung = { ...b0, konto }
+  await exklusiv(async () => {
+    const alle = await jsonLesen<Buchung[]>(BUCHUNGEN, [])
+    const { liste } = testaboAbschliessen(Array.isArray(alle) ? alle : [])
+    await jsonSchreiben(BUCHUNGEN, [...liste, b])
+  })
+  const mandant = mandantVon(await zugaengeLesen(), { clientId: konto.clientId })
+  const uebernommen = await eingangZuordnen(ORDNER, ids, mandant, email)
+  let angemeldet = false
+  const a = await einloggen(email, passwort).catch(() => null)
+  if (a?.ok && a.wert.konto.clientId === konto.clientId) {
+    await sitzungStarten(req, res, a.wert.konto, a.wert.erneuern)
+    angemeldet = true
+  }
+  const info = infoMail(b, '')
+  const text = [
+    'Guten Tag,', '',
+    `Ihr PlanR-Zugang ist angelegt. Anmeldung: https://planr.pickadoc.de mit ${email}.`,
+    'Das Passwort stand nach dem Anlegen auf der Probe-Seite. Ist es nicht mehr zur Hand: auf der Anmeldeseite „Passwort vergessen“.', '',
+    `Ihr abgelegter Plan liegt in PlanR unter „Importe“. ${b.testabo?.vermerk ?? ''}`,
+    'In der Testzeit gibt es keine Lastschrift. Danach endet der Zugang, außer Sie buchen PlanR.', '',
+    'Fragen? Antworten Sie einfach auf diese E-Mail oder rufen Sie uns an: 0211 3029 3035.', '',
+    'Ihr PlanR-Team der Pickadoc GmbH',
+  ].join('\n')
+  void Promise.all([
+    mailSenden(ORDNER, { an: infoAdresse(), betreff: `PlanR-Zugang aus der Probe: ${b.praxis.name} (${b.id})`, text: info.text, antwortAn: email }),
+    mailSenden(ORDNER, { an: email, betreff: 'Ihr PlanR-Zugang', text, antwortAn: infoAdresse() }),
+  ]).catch(() => undefined)
+  return json(res, 200, { ok: true, email, passwort, angemeldet, uebernommen })
+}
+
+const importKurz = (k: ProbeKarte) => ({ id: k.id, zeit: k.zeit, dateiname: k.dateiname, stand: k.stand ?? null })
+
+/** GET /api/importe: Pläne, die diese Praxis über die Probe oder „Plan importieren“ abgelegt hat · GET /api/importe/<id>: das Original */
+async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, w: Wer) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  if (url === '/api/importe') return json(res, 200, { ok: true, importe: (await eingangFuerMandant(ORDNER, w.mandant)).map(importKurz) })
+  const fund = await eingangDatei(ORDNER, url.slice('/api/importe/'.length))
+  if (!fund || fund.karte.mandant !== w.mandant) return json(res, 404, { ok: false, meldung: 'Der Plan liegt hier nicht.' })
+  dateiAusliefern(res, fund)
+}
+
+function dateiAusliefern(res: ServerResponse, fund: { karte: ProbeKarte; bytes: Buffer }) {
+  const art = fund.karte.art || 'application/octet-stream'
+  const ansehen = art === 'application/pdf' || art === 'text/plain' || art.startsWith('image/')
+  res.statusCode = 200
+  res.setHeader('Content-Type', art)
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Content-Disposition', `${ansehen ? 'inline' : 'attachment'}; filename="${fund.karte.dateiname.replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(fund.karte.dateiname)}`)
+  res.end(fund.bytes)
 }
 
 async function probeNachtragen(req: IncomingMessage, res: ServerResponse, id: string) {
@@ -3170,9 +3257,12 @@ async function probeNachtragen(req: IncomingMessage, res: ServerResponse, id: st
   const text = String(roh.text ?? '').slice(0, 40_000)
   const stand = standPruefen(roh.ergebnis)
   if (!text && !stand) return json(res, 400, { ok: false })
+  let email = ''
   if (text) {
     const karte = await eingangText(ORDNER, id, text)
     if (!karte) return json(res, 404, { ok: false })
+    // Adresse aus dem Praxisstempel: füllt auf der Probe-Seite das Feld für den Zugang vor.
+    email = karte.kontakt?.email ?? ''
     const meldung = await eingangEinmalMelden(ORDNER, id)
     if (meldung) await probeHinweis({ ...meldung, kontakt: karte.kontakt }).catch(() => undefined)
   }
@@ -3180,7 +3270,7 @@ async function probeNachtragen(req: IncomingMessage, res: ServerResponse, id: st
     const karte = await eingangStand(ORDNER, id, stand)
     if (!karte) return json(res, 404, { ok: false })
   }
-  return json(res, 200, { ok: true })
+  return json(res, 200, { ok: true, email })
 }
 
 function betreiberHash(): string {
@@ -3269,8 +3359,22 @@ async function probeEingangJson(req: IncomingMessage, res: ServerResponse) {
   if (!('konto' in wer)) return json(res, wer.status, { ok: false })
   const liste = await eingangListe(ORDNER)
   const [z, buchungen] = await Promise.all([zugaengeLesen(), buchungenStand()])
-  const kunden = kundenBauen(buchungen, liste, Object.values(z.benutzer).map((b) => b.email))
-  return json(res, 200, { ok: true, kunden })
+  const monat = monatVon(new Date().toISOString())
+  const zahlen: Record<string, KundeZahlen> = {}
+  await Promise.all(buchungen.map(async (b) => {
+    const clientId = b.konto?.clientId
+    if (!clientId) return
+    // Nur lesen: Das Zählwerk führt die Abrechnung beim Arbeiten der Praxis selbst nach.
+    const zw = await jsonLesen<Zaehlwerk | null>(ZAEHLWERK(mandantVon(z, { clientId })), null).catch(() => null)
+    if (!zw?.plaene) return
+    const probezeit = !!b.testabo && b.testabo.status !== 'abo'
+    zahlen[b.id] = {
+      plaene: Math.max(Object.values(zw.plaene).filter((p) => !p.verworfen).length, b.testabo?.erstellt ?? 0),
+      umsatzCent: probezeit ? 0 : abrechnen(zw, monat, b.paket).nettoCent,
+    }
+  }))
+  const kunden = kundenBauen(buchungen, liste, Object.values(z.benutzer).map((b) => b.email), zahlen)
+  return json(res, 200, { ok: true, kunden, monat: monatsname(monat) })
 }
 
 async function probeEingangSeite(req: IncomingMessage, res: ServerResponse, id = '') {
@@ -3316,6 +3420,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/einlesen') return void probeEinlesen(req, res).catch(fehler500(res))
   if (url === '/api/probe/ablegen') return void probeAblegen(req, res).catch(fehler500(res))
   if (url.startsWith('/api/probe/ablegen/')) return void probeNachtragen(req, res, url.slice('/api/probe/ablegen/'.length)).catch(fehler500(res))
+  if (url === '/api/probe/zugang') return void probeZugang(req, res).catch(fehler500(res))
   if (url === '/api/probe/anmeldung') return void probeAnmeldung(req, res).catch(fehler500(res))
   if (url === '/api/probe/sudo') return void probeSudo(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
@@ -3351,6 +3456,7 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
   if (url === '/api/fallkatalog') return fallkatalog(req, res, w)
   if (url === '/api/praxisdaten' && req.method === 'GET') return void praxisdaten(res, w).catch(fehler500(res))
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
+  if (url === '/api/importe' || url.startsWith('/api/importe/')) return void importeEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/clara/text') return void claraText(req, res, w).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden' || url === '/api/versand/vermerk') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))

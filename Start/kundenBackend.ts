@@ -15,7 +15,12 @@ export interface ProbeKurz {
   dateiname: string
   kontakt: ZahnarztKontakt
   stand?: ProbeStand | null
+  /** Konto, dem der Upload zugeordnet ist */
+  login?: string
 }
+
+/** Pläne und Umsatz einer Buchung; null = nicht bekannt (z. B. Abrechnung über Pickadoc MAS) */
+export interface KundeZahlen { plaene: number | null; umsatzCent: number | null }
 
 export interface KundePlan {
   id: string
@@ -33,6 +38,12 @@ export interface StammZeile { label: string; wert: string }
 
 export interface KundeZeile {
   id: string
+  /** kunde = gebucht · probe = Upload aus der Probe, mit oder ohne Testzugang */
+  art: 'kunde' | 'probe'
+  /** In PlanR angelegte Pläne */
+  plaeneAnzahl: number | null
+  /** Netto im laufenden Monat, in Cent */
+  umsatzCent: number | null
   name: string
   login: KundeLogin | null
   stammdaten: StammZeile[]
@@ -106,18 +117,26 @@ function loginFuer(emails: string[], bekannt: Set<string>): KundeLogin | null {
 }
 
 /** Buchungen zuerst, danach Probe-Uploads, die zu keiner Buchung passen. */
-export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: string[]): KundeZeile[] {
+export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: string[], zahlen: Record<string, KundeZahlen> = {}): KundeZeile[] {
   const bekannt = new Set(logins.map(klein).filter((m) => m.includes('@')))
   const verwendet = new Set<string>()
   const ausBuchung: KundeZeile[] = buchungen.map((b) => {
     const mails = new Set(mailsVonBuchung(b))
     const eigene = plaene.filter((p) => {
+      if (verwendet.has(p.id)) return false
+      const zugeordnet = klein(p.login ?? '')
+      if (zugeordnet.includes('@')) return mails.has(zugeordnet)
       const mail = klein(p.kontakt?.email ?? '')
       return mail.includes('@') && mails.has(mail)
     })
     for (const p of eigene) verwendet.add(p.id)
+    const z = zahlen[b.id]
     return {
       id: b.id,
+      // Ein Zugang aus der Probe bleibt eine Probe, bis daraus ein reguläres Abo wird.
+      art: b.quelle === 'probe' && b.testabo?.status !== 'abo' ? 'probe' as const : 'kunde' as const,
+      plaeneAnzahl: z?.plaene ?? (b.testabo ? b.testabo.erstellt ?? 0 : null),
+      umsatzCent: z?.umsatzCent ?? (b.testabo && b.testabo.status !== 'abo' ? 0 : null),
       name: person(b) || b.praxis?.name || b.inhaber?.email || 'Kunde',
       login: loginFuer([...mails], bekannt),
       stammdaten: stammdaten(b),
@@ -127,7 +146,7 @@ export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: s
   const rest = new Map<string, ProbeKurz[]>()
   for (const p of plaene) {
     if (verwendet.has(p.id)) continue
-    const schluessel = klein(p.kontakt?.email ?? '') || klein(p.kontakt?.name ?? '') || p.id
+    const schluessel = klein(p.login ?? '') || klein(p.kontakt?.email ?? '') || klein(p.kontakt?.name ?? '') || p.id
     const liste = rest.get(schluessel) ?? []
     liste.push(p)
     rest.set(schluessel, liste)
@@ -135,9 +154,12 @@ export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: s
   const ausProbe: KundeZeile[] = [...rest.values()].map((gruppe) => {
     const erst = gruppe[0]
     const k = erst.kontakt
-    const email = klein(k.email ?? '')
+    const email = klein(erst.login ?? '') || klein(k.email ?? '')
     return {
       id: `probe-${erst.id}`,
+      art: 'probe' as const,
+      plaeneAnzahl: null,
+      umsatzCent: null,
       name: k.name || k.praxis || k.email || 'Unbekannter Upload',
       login: email.includes('@') ? loginFuer([email], bekannt) : null,
       stammdaten: [

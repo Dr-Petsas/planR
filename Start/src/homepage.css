@@ -311,6 +311,18 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 .pe-punkte span.an { background: var(--hp-mint); }
 .sudo-leiste { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 16px; background: #3a2a12; color: #ffe7c2; }
 .sudo-leiste button { border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+.hp-zugang { margin: 0 0 18px; padding: 18px 20px; border: 1px solid var(--hp-mint); border-radius: 16px; background: rgba(92, 230, 196, 0.08); }
+.hp-zugang p { margin: 0 0 12px; line-height: 1.5; }
+.hp-zugang-zeile { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 10px; }
+.hp-zugang-zeile input[type=email] { flex: 1 1 260px; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--hp-linie); background: #071a1f; color: var(--hp-text); font: inherit; }
+.hp-zugang-falle { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.hp-zugang-haken { display: flex; gap: 10px; align-items: flex-start; color: var(--hp-grau); font-size: 14px; }
+.hp-zugang-haken a, .hp-zugang-meldung a { color: var(--hp-mint); }
+.hp-zugang p.hp-zugang-meldung { margin: 10px 0 0; min-height: 1.4em; color: var(--hp-gold); }
+.hp-zugang-daten { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 0 0 12px; }
+.hp-zugang-daten dt { color: var(--hp-grau); font-size: 12px; }
+.hp-zugang-daten dd { margin: 2px 0 0; font-size: 18px; font-weight: 700; }
+.hp-zugang-daten code { font-size: 20px; letter-spacing: 0.04em; user-select: all; }
 @media (max-width: 800px) {
   .pe-vergleich, .pe-kunden { grid-template-columns: 1fr; }
 }

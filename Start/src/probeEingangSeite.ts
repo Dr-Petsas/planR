@@ -1,127 +1,131 @@
 /**
- * Betreiber-Ansicht der Probe: welche Pläne abgelegt wurden, und die Arztadresse, falls sie auf dem Plan steht.
+ * Superuser-Eingang: zwei Listen über die ganze Breite.
+ * 1. Kunden: Name, Login, erstellte Pläne, Umsatz im laufenden Monat.
+ * 2. Proben: Name, Login (falls vorhanden) und ein Popup mit dem hochgeladenen Plan und unserem Ergebnis.
  * Praxen sehen diese Seite nicht. Die öffentliche Ablage bleibt #probe.
  */
-import './homepage.css'
-import { logo, wortmarke } from './logo'
-
-interface Stand {
-  planart: string
-  planer: string
-  regler: { privatStufe: number; titel: string; gozFaktor: number }
-  vorher: { gesamt?: number; honorar?: number; material?: number }
-  nachher: { gesamt?: number; eigenanteil?: number; festzuschuss?: number }
-}
-
-interface Plan {
-  id: string
-  zeit: string
-  dateiname: string
-  stand?: Stand | null
-}
+import './superuser.css'
+import { logo } from './logo'
+import { esc, planVergleich, popup, zeitText, type VergleichPlan } from './planVergleich'
 
 interface Kunde {
   id: string
+  art: 'kunde' | 'probe'
+  plaeneAnzahl: number | null
+  umsatzCent: number | null
   name: string
   login: { email: string; vorhanden: boolean } | null
   stammdaten: { label: string; wert: string }[]
-  plaene: Plan[]
+  plaene: VergleichPlan[]
 }
 
-const euro = (n?: number) => typeof n === 'number'
-  ? n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
-  : '—'
+const ICON_PLAN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>'
+const ICON_LOGIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>'
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
+const cent = (n: number | null) => n === null ? '—' : (n / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+const zahl = (n: number | null) => n === null ? '—' : String(n)
 
 function kopf(angemeldet: boolean) {
   const rechts = angemeldet
-    ? `<span class="pe-wer">superuser angemeldet</span><button type="button" class="pe-abmelden" data-abmelden>Abmelden</button>`
+    ? `<span class="sb-wer">superuser angemeldet</span><button type="button" class="sb-knopf" data-abmelden>Abmelden</button>`
     : ''
-  return `<header class="hp-nav">
-    <a class="hp-marke" href="/"><span class="hp-logo">${logo()}</span>${wortmarke()}<small>Probe</small></a>
-    <nav>
-      <a href="#probe">Probe-Seite</a>
-      ${rechts}
-    </nav>
+  return `<header class="sb-kopf">
+    <a class="sb-marke" href="/"><span class="sb-logo">${logo()}</span><span><b>PlanR</b><br><small>Superuser</small></span></a>
+    <a class="sb-knopf" href="#probe">Probe-Seite</a>
+    ${rechts}
   </header>`
 }
 
-function zeitText(iso: string) {
-  const zeit = new Date(iso)
-  if (Number.isNaN(zeit.getTime())) return iso
-  return zeit.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' })
+function huelle(inhalt: string, angemeldet = false) {
+  return `<div class="sb">${kopf(angemeldet)}<main class="sb-haupt">${inhalt}</main></div>`
 }
 
-function balken(vorher?: number, nachher?: number) {
-  const max = Math.max(vorher ?? 0, nachher ?? 0, 1)
-  const breite = (n?: number) => `${Math.max(2, Math.round(((n ?? 0) / max) * 100))}%`
-  return `<div class="pe-balken">
-    <p><span>Vorher</span><i style="width:${breite(vorher)}"></i><b>${euro(vorher)}</b></p>
-    <p class="pe-nach"><span>Nachher</span><i style="width:${breite(nachher)}"></i><b>${euro(nachher)}</b></p>
+function loginZelle(k: Kunde) {
+  if (!k.login) return '<span class="sb-login fehlt">—</span>'
+  return k.login.vorhanden
+    ? `<span class="sb-login" title="${esc(k.login.email)}">${esc(k.login.email)}</span>`
+    : `<span class="sb-login fehlt" title="Noch kein Login">${esc(k.login.email)} · kein Login</span>`
+}
+
+function knoepfe(k: Kunde) {
+  const login = k.login?.vorhanden
+    ? `<button type="button" class="sb-icon" data-sudo="${esc(k.login.email)}" title="Als diese Praxis in PlanR anmelden" aria-label="Kunden-Login">${ICON_LOGIN}</button>`
+    : ''
+  const plan = `<button type="button" class="sb-icon" data-auf="${esc(k.id)}" title="${k.art === 'probe' ? 'Hochgeladener Plan und unser Ergebnis' : 'Stammdaten und Pläne'}" aria-label="Ansehen">${ICON_PLAN}</button>`
+  return `<span class="sb-tun">${login}${plan}</span>`
+}
+
+function kundenListe(kunden: Kunde[], monat: string) {
+  if (!kunden.length) return '<p class="sb-leer">Noch keine Kunden.</p>'
+  const zeilen = kunden.map((k) => `<div class="sb-zeile">
+      <button type="button" class="sb-name" data-auf="${esc(k.id)}">${esc(k.name)}</button>
+      ${loginZelle(k)}
+      <span class="sb-zahl">${zahl(k.plaeneAnzahl)}</span>
+      <span class="sb-zahl">${cent(k.umsatzCent)}</span>
+      ${knoepfe(k)}
+    </div>`).join('')
+  return `<div class="sb-liste kunden">
+    <div class="sb-zeile sb-kopfzeile"><span>Name</span><span>Login</span><span class="sb-zahl">Pläne erstellt</span><span class="sb-zahl">Umsatz ${esc(monat)}</span><span></span></div>
+    ${zeilen}
   </div>`
 }
 
-function regler(stand: Stand) {
-  const punkte = [0, 1, 2, 3, 4, 5].map((n) => `<span class="${n <= stand.regler.privatStufe ? 'an' : ''}"></span>`).join('')
-  return `<div class="pe-regler"><b>Kasse → Privat · ${esc(stand.regler.titel || 'Stufe ' + stand.regler.privatStufe)}</b><div class="pe-punkte">${punkte}</div></div>`
+function probenListe(proben: Kunde[]) {
+  if (!proben.length) return '<p class="sb-leer">Noch keine Proben.</p>'
+  const zeilen = proben.map((k) => `<div class="sb-zeile">
+      <button type="button" class="sb-name" data-auf="${esc(k.id)}">${esc(k.name)}</button>
+      ${loginZelle(k)}
+      <span class="sb-zeit">${esc(k.plaene[0] ? zeitText(k.plaene[0].zeit) : '—')}</span>
+      <span class="sb-zahl">${k.plaene.length}</span>
+      ${knoepfe(k)}
+    </div>`).join('')
+  return `<div class="sb-liste proben">
+    <div class="sb-zeile sb-kopfzeile"><span>Name</span><span>Login</span><span>Hochgeladen</span><span class="sb-zahl">Pläne</span><span></span></div>
+    ${zeilen}
+  </div>`
 }
 
-function planAnsicht(plan: Plan) {
-  const stand = plan.stand
-  const gerechnet = stand
-    ? `<h3>Gerechnet · ${esc(stand.planer || 'PlanR')}</h3>${regler(stand)}${balken(stand.vorher.gesamt, stand.nachher.gesamt)}
-       <p class="pe-meta">Honorar ${euro(stand.vorher.honorar)} · Material ${euro(stand.vorher.material)} · Eigenanteil ${euro(stand.nachher.eigenanteil)} · Festzuschuss ${euro(stand.nachher.festzuschuss)}</p>`
-    : '<h3>Gerechnet</h3><p class="pe-fehl">Noch keine Rechnung. Der Kunde hat den Plan nicht bis zum Ergebnis gesehen.</p>'
-  return `<article class="pe-karte">
-    <div class="pe-kopf"><b class="pe-datei">${esc(plan.dateiname || 'Plan')}</b><span class="pe-zeit">${esc(zeitText(plan.zeit))}</span></div>
-    <div class="pe-vergleich">
-      <div class="pe-blatt"><h3>Hochgeladen</h3><iframe class="pe-rahmen" title="Hochgeladener Plan" src="/probe-eingang/${esc(plan.id)}"></iframe></div>
-      <div class="pe-ergebnis">${gerechnet}</div>
-    </div>
-  </article>`
+function anzahl(n: number, eins: string, viele: string) {
+  return n === 1 ? `1 ${eins}` : `${n} ${viele}`
 }
 
-function kundeAnsicht(kunde: Kunde, offen: boolean) {
-  const stamm = kunde.stammdaten.map((z) => `<div><dt>${esc(z.label)}</dt><dd>${esc(z.wert)}</dd></div>`).join('')
-    || '<p class="pe-fehl">Keine Stammdaten hinterlegt.</p>'
-  const login = kunde.login?.vorhanden
-    ? `<button type="button" class="pe-konto" data-sudo="${esc(kunde.login.email)}">Kunden-Login</button>`
-    : `<p class="pe-fehl">${kunde.login ? `Noch kein Login für ${esc(kunde.login.email)}.` : 'Kein Login hinterlegt.'}</p>`
-  const plaene = kunde.plaene.map(planAnsicht).join('') || '<p class="pe-fehl">Noch kein Plan hochgeladen.</p>'
-  return `<section class="pe-kunde" data-kunde="${esc(kunde.id)}"${offen ? '' : ' hidden'}>
-    <h2>${esc(kunde.name)}</h2>
-    <dl class="pe-stamm">${stamm}</dl>
-    ${login}
-    ${plaene}
-  </section>`
-}
-
-function huelle(inhalt: string, angemeldet = false) {
-  return `<div class="hp">${kopf(angemeldet)}<main class="pe-haupt">${inhalt}</main></div>`
-}
-
-function listeZeichnen(kunden: Kunde[]) {
-  const namen = kunden.map((k, i) => `<button type="button" data-name="${esc(k.id)}" class="${i === 0 ? 'aktiv' : ''}">${esc(k.name)}</button>`).join('')
-    || '<p class="pe-fehl">Noch keine Kunden.</p>'
-  const details = kunden.map((k, i) => kundeAnsicht(k, i === 0)).join('')
+function listeZeichnen(alle: Kunde[], monat: string) {
+  const kunden = alle.filter((k) => k.art !== 'probe')
+  const proben = alle.filter((k) => k.art === 'probe')
   return huelle(`
-    <p class="hp-eyebrow">Nur für den Betreiber</p>
-    <h1>Kunden</h1>
-    <p class="pe-lead">${kunden.length === 1 ? '1 Kunde' : `${kunden.length} Kunden`}. Ein Klick öffnet Stammdaten, den hochgeladenen Plan, die Rechnung und den Login, falls es einen gibt.</p>
-    <p class="pe-hinweis" data-sudo-meldung></p>
-    <div class="pe-kunden">
-      <nav class="pe-namen">${namen}</nav>
-      <div class="pe-detail">${details}</div>
-    </div>`, true)
+    <p class="sb-meldung" data-sudo-meldung></p>
+    <section class="sb-block">
+      <header><h2>Kunden</h2><span>${anzahl(kunden.length, 'Kunde', 'Kunden')} · Umsatz netto, laufender Monat</span></header>
+      ${kundenListe(kunden, monat)}
+    </section>
+    <section class="sb-block">
+      <header><h2>Proben</h2><span>${anzahl(proben.length, 'Probe', 'Proben')} · hochgeladener Plan und unser Ergebnis im Popup</span></header>
+      ${probenListe(proben)}
+    </section>`, true)
+}
+
+function kundePopup(k: Kunde, sudo: (email: string, meldung: Element | null) => void) {
+  const stamm = k.stammdaten.map((z) => `<div><dt>${esc(z.label)}</dt><dd>${esc(z.wert)}</dd></div>`).join('')
+  const login = k.login?.vorhanden
+    ? `<button type="button" class="sb-knopf voll" data-sudo="${esc(k.login.email)}">Kunden-Login öffnen</button><span class="sb-fehl">${esc(k.login.email)}</span>`
+    : `<span class="sb-fehl">${k.login ? `Noch kein Login für ${esc(k.login.email)}.` : 'Kein Login hinterlegt.'}</span>`
+  const plaene = k.plaene.map((p) => planVergleich(p, '/probe-eingang/')).join('')
+    || '<p class="sb-fehl">Kein Plan hochgeladen.</p>'
+  const d = popup(k.name, `
+    <div class="sb-leiste">${login}<span class="sb-meldung" data-meldung></span></div>
+    ${stamm ? `<dl class="sb-stamm">${stamm}</dl>` : ''}
+    ${plaene}`)
+  d.querySelector<HTMLButtonElement>('[data-sudo]')?.addEventListener('click', (e) => {
+    sudo((e.currentTarget as HTMLElement).dataset.sudo ?? '', d.querySelector('[data-meldung]'))
+  })
 }
 
 function anmeldungZeichnen(meldung: string) {
-  return `<div class="hp">${kopf(false)}<main class="pe-tor"><form class="pe-anmelden" data-anmelden>
+  return `<div class="sb">${kopf(false)}<main class="sb-tor"><form class="sb-anmelden" data-anmelden>
       <label>E-Mail-Adresse<input type="email" name="email" autocomplete="username" required></label>
       <label>Passwort<input type="password" name="passwort" autocomplete="current-password" required></label>
-      <p class="pe-hinweis" data-meldung>${esc(meldung)}</p>
-      <button type="submit">Anmelden</button>
+      <p class="sb-meldung" style="margin:0" data-meldung>${esc(meldung)}</p>
+      <button type="submit" class="sb-knopf voll">Anmelden</button>
     </form></main></div>`
 }
 
@@ -153,14 +157,11 @@ function anmeldungVerdrahten(app: HTMLElement) {
   })
 }
 
-function abmeldenVerdrahten(app: HTMLElement) {
+function verdrahten(app: HTMLElement, kunden: Kunde[]) {
   app.querySelector('[data-abmelden]')?.addEventListener('click', () => {
     void fetch('/api/probe/anmeldung', { method: 'DELETE' }).then(() => location.reload())
   })
-}
-
-function sudoVerdrahten(app: HTMLElement) {
-  const senden = async (email: string, meldung: Element | null) => {
+  const sudo = async (email: string, meldung: Element | null) => {
     const r = await fetch('/api/probe/sudo', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
     }).catch(() => null)
@@ -168,23 +169,23 @@ function sudoVerdrahten(app: HTMLElement) {
     if (d?.ok) { location.href = '/'; return }
     if (meldung) meldung.textContent = d?.meldung || 'Das Konto ließ sich nicht öffnen.'
   }
-  for (const name of app.querySelectorAll<HTMLButtonElement>('[data-name]')) {
-    name.addEventListener('click', () => {
-      for (const anderer of app.querySelectorAll<HTMLButtonElement>('[data-name]')) anderer.classList.toggle('aktiv', anderer === name)
-      for (const feld of app.querySelectorAll<HTMLElement>('[data-kunde]')) feld.hidden = feld.dataset.kunde !== name.dataset.name
-    })
-  }
   for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-sudo]')) {
-    knopf.addEventListener('click', () => { void senden(knopf.dataset.sudo ?? '', app.querySelector('[data-sudo-meldung]')) })
+    knopf.addEventListener('click', () => { void sudo(knopf.dataset.sudo ?? '', app.querySelector('[data-sudo-meldung]')) })
+  }
+  for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-auf]')) {
+    knopf.addEventListener('click', () => {
+      const k = kunden.find((x) => x.id === knopf.dataset.auf)
+      if (k) kundePopup(k, (email, meldung) => { void sudo(email, meldung) })
+    })
   }
 }
 
 export function probeEingangSeite(app: HTMLElement) {
-  document.body.classList.add('hp-body')
-  document.documentElement.classList.add('hp-html')
-  document.body.classList.remove('planr-app', 'plan-offen')
-  document.title = 'PlanR – Eingegangene Pläne'
-  app.innerHTML = huelle('<p class="pe-lead">Wird geladen …</p>')
+  document.body.classList.remove('planr-app', 'plan-offen', 'hp-body')
+  document.documentElement.classList.remove('hp-html')
+  document.body.classList.add('sb-body')
+  document.title = 'PlanR – Superuser'
+  app.innerHTML = huelle('<p class="sb-leer">Wird geladen …</p>')
   void (async () => {
     try {
       const r = await fetch('/api/probe/eingang', { cache: 'no-store' })
@@ -198,13 +199,12 @@ export function probeEingangSeite(app: HTMLElement) {
         anmeldungVerdrahten(app)
         return
       }
-      const d = await r.json() as { ok?: boolean; kunden?: Kunde[] }
+      const d = await r.json() as { ok?: boolean; kunden?: Kunde[]; monat?: string }
       if (!r.ok || !d.ok || !Array.isArray(d.kunden)) throw new Error('liste')
-      app.innerHTML = listeZeichnen(d.kunden)
-      abmeldenVerdrahten(app)
-      sudoVerdrahten(app)
+      app.innerHTML = listeZeichnen(d.kunden, d.monat ?? '')
+      verdrahten(app, d.kunden)
     } catch {
-      app.innerHTML = huelle('<p class="pe-fehl">Die Liste ist gerade nicht erreichbar.</p>')
+      app.innerHTML = huelle('<p class="sb-leer">Die Liste ist gerade nicht erreichbar.</p>')
     }
   })()
 }

@@ -30,6 +30,35 @@ export interface Buchung {
   konto?: { status: 'angelegt' | 'vorhanden' | 'manuell'; clientId?: string }
   /** Testabo PlanR inklusive Sprachupgrade: Zeitraum und der Vermerk im Mini-Backend */
   testabo?: TestaboVermerk
+  /** probe = Zugang aus der öffentlichen Probe; Stammdaten, KZV und Praxissystem fehlen noch */
+  quelle?: 'probe'
+}
+
+/** Zugang aus der Probe: Testabo auf die E-Mail-Adresse, der Rest kommt aus dem Praxisstempel oder später. */
+export function probeBuchung(
+  email: string,
+  wer: { titel: string; vorname: string; nachname: string; praxis: string },
+  kontakt: { telefon?: string; anschrift?: string },
+  jetzt = new Date(),
+): Buchung | null {
+  const adresse = text(email, 200).toLowerCase()
+  if (!EMAIL_RE.test(adresse)) return null
+  return {
+    id: `B-${jetzt.toISOString().slice(0, 10).replace(/-/g, '')}-${randomBytes(3).toString('hex').toUpperCase()}`,
+    eingang: jetzt.toISOString(),
+    paket: 'planr_clara',
+    doku: true,
+    praxis: { name: text(wer.praxis, 160), rechtsform: '', strasse: text(kontakt.anschrift, 120), plz: '', ort: '', telefon: text(kontakt.telefon, 40), email: adresse, website: '', ustId: '' },
+    inhaber: { anrede: '', titel: text(wer.titel, 40), vorname: text(wer.vorname, 80), nachname: text(wer.nachname, 80), email: adresse, mobil: '' },
+    kzv: { nr: '', abrechnungsnr: '', zahnaerzte: 1, praxen: 1, eigenlabor: false },
+    pvs: { id: '', version: '', server: 'unbekannt', it: '' },
+    pickadocKonto: '',
+    benutzer: [],
+    sepa: { inhaber: '', anschrift: '', iban: '', bic: '', bank: '', mandatsreferenz: '', unterschrift: '' },
+    hinweis: 'Zugang aus der PlanR-Probe. AGB, Datenschutzhinweise und Auftragsverarbeitung online bestätigt.',
+    testabo: testaboAnlegen(jetzt),
+    quelle: 'probe',
+  }
 }
 
 export interface TestaboVermerk {

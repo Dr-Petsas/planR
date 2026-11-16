@@ -32,7 +32,14 @@ export interface ProbeKarte {
   kontakt: ZahnarztKontakt
   gemeldet: boolean
   stand?: ProbeStand
+  /** Praxis, in deren PlanR der Plan als Import liegt. Ohne Eintrag ist es ein offener Probe-Upload. */
+  mandant?: string
+  /** E-Mail des Kontos, das den Plan abgelegt oder übernommen hat */
+  login?: string
 }
+
+/** Offene Probe-Uploads lassen sich so lange einem neuen Zugang zuordnen. */
+export const ZUORDNEN_STUNDEN = 24
 
 const LEER: ZahnarztKontakt = { name: '', praxis: '', telefon: '', email: '', anschrift: '' }
 const PATIENT = ['versicherte', 'versichertennummer', 'versicherten-nr', 'versicherten nr', 'geburtsdatum', 'krankenkasse', 'kostentraeger', 'kostenträger']
@@ -295,6 +302,35 @@ export async function eingangEinmalMelden(wurzel: string, id: string): Promise<P
   })
 }
 
+/**
+ * Uploads einer Praxis zuordnen. Nur Karten ohne Praxis, höchstens einen Tag alt:
+ * Wer eine fremde Kennung rät, bekommt damit keinen alten Plan.
+ */
+export async function eingangZuordnen(wurzel: string, ids: string[], mandant: string, login: string, jetzt = Date.now()): Promise<number> {
+  const gesucht = new Set(ids.filter(idGueltig).slice(0, 30))
+  if (!gesucht.size || !mandant) return 0
+  return exklusiv(async () => {
+    const liste = await indexLesen(wurzel)
+    let n = 0
+    for (const karte of liste) {
+      if (!gesucht.has(karte.id) || karte.mandant) continue
+      const alter = jetzt - new Date(karte.zeit).getTime()
+      if (!(alter >= 0 && alter <= ZUORDNEN_STUNDEN * 3_600_000)) continue
+      karte.mandant = mandant
+      karte.login = login
+      n++
+    }
+    if (n) await indexSchreiben(wurzel, liste)
+    return n
+  })
+}
+
+/** Importe einer Praxis, neueste zuerst */
+export async function eingangFuerMandant(wurzel: string, mandant: string): Promise<ProbeKarte[]> {
+  if (!mandant) return []
+  return (await eingangListe(wurzel)).filter((k) => k.mandant === mandant)
+}
+
 export async function eingangListe(wurzel: string): Promise<ProbeKarte[]> {
   const liste = await indexLesen(wurzel)
   return liste.sort((a, b) => (a.zeit < b.zeit ? 1 : -1))
@@ -316,7 +352,31 @@ export function eingangSichtbar(karte: ProbeKarte) {
       anschrift: k.anschrift ?? '',
     },
     stand: karte.stand ?? null,
+    login: karte.login ?? '',
   }
+}
+
+/** Zugang aus der Probe: Vor- und Nachname und Praxisname aus dem Stempel, sonst aus der Adresse. */
+export function zugangNamen(kontakt: Partial<ZahnarztKontakt>, email: string): { titel: string; vorname: string; nachname: string; praxis: string } {
+  const woerter = String(kontakt.name ?? '').split(' ').map((w) => w.trim()).filter(Boolean)
+  const titelTeile: string[] = []
+  while (woerter.length > 1 && woerter[0].endsWith('.')) titelTeile.push(woerter.shift()!)
+  const nachname = woerter.pop() ?? ''
+  const lokal = email.split('@')[0] ?? ''
+  return {
+    titel: titelTeile.join(' ').slice(0, 40),
+    vorname: (woerter.join(' ') || 'Praxis').slice(0, 80),
+    nachname: (nachname || lokal || 'Probe').slice(0, 80),
+    praxis: (String(kontakt.praxis ?? '').trim() || String(kontakt.name ?? '').trim() || `Praxis ${lokal}`).slice(0, 160),
+  }
+}
+
+/** Zufälliges Passwort für den Zugang aus der Probe: 12 Zeichen, ohne verwechselbare Zeichen. */
+export function neuesPasswort(): string {
+  const zeichen = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+  let aus = ''
+  for (const b of randomBytes(12)) aus += zeichen[b % zeichen.length]
+  return aus
 }
 
 export async function eingangDatei(wurzel: string, id: string): Promise<{ karte: ProbeKarte; bytes: Buffer } | null> {

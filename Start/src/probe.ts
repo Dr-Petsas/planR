@@ -71,20 +71,25 @@ async function probeAblegen(datei: File, daten: ArrayBuffer) {
       headers: { 'Content-Type': art, 'X-Datei-Name': encodeURIComponent(datei.name) },
       body: daten,
     })
-    const d = await r.json() as { id?: string }
+    const d = await r.json() as { id?: string; zugeordnet?: boolean }
+    if (d.zugeordnet) imKonto = true
     return d.id ?? ''
   } catch {
     return ''
   }
 }
 
-function probeKontakt(id: string, text: string) {
-  if (!id) return Promise.resolve()
+/** Der Upload liegt schon im PlanR der angemeldeten Praxis. */
+let imKonto = false
+
+/** Schickt den gelesenen Text für den Praxisstempel; zurück kommt die E-Mail-Adresse daraus, falls eine draufsteht. */
+function probeKontakt(id: string, text: string): Promise<string> {
+  if (!id) return Promise.resolve('')
   return fetch(`/api/probe/ablegen/${id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: text.slice(0, 40_000) }),
-  }).then(() => undefined, () => undefined)
+  }).then((r) => r.json()).then((d: { email?: string }) => d.email ?? '', () => '')
 }
 
 function alsBase64(buf: ArrayBuffer) {
@@ -130,9 +135,11 @@ async function fotosAusPdf(daten: ArrayBuffer): Promise<string[]> {
 }
 
 export function probeSeite(app: HTMLElement) {
+  document.body.classList.remove('sb-body')
   document.body.classList.add('hp-body')
   document.documentElement.classList.add('hp-html')
   document.title = 'PlanR – Ihren HKP im Planer'
+  imKonto = false
   app.innerHTML = `
   <div class="hp">
     <header class="hp-nav">
@@ -172,6 +179,7 @@ export function probeSeite(app: HTMLElement) {
       </form>
     </section>
     <section class="hp-sektion hp-probe-plan" hidden data-ergebnis>
+      <div class="hp-zugang" data-zugang hidden></div>
       <div class="hp-fall">
         <div class="hp-fall-reiter" role="tablist" data-reiter></div>
         <p class="hp-fall-hinweis" data-fall-hinweis></p>
@@ -301,6 +309,65 @@ export function probeSeite(app: HTMLElement) {
     zeigen(teil.fach)
   })
 
+  /**
+   * Nach dem Lesen: Der Plan soll im eigenen PlanR liegen.
+   * Angemeldet liegt er schon dort. Sonst legt PlanR auf die E-Mail-Adresse einen Zugang an und erzeugt das Passwort.
+   */
+  const abgelegteIds: string[] = []
+  const zugangFeld = wurzel.querySelector<HTMLElement>('[data-zugang]')!
+  let zugangFertig = false
+  const zugangZeigen = (vorschlag: string) => {
+    if (zugangFertig || !abgelegteIds.length) return
+    zugangFeld.hidden = false
+    if (imKonto) {
+      zugangFertig = true
+      zugangFeld.innerHTML = `<p><b>Der Plan liegt in Ihrem PlanR.</b> Sie finden ihn dort oben unter „Importe“, mit dem Original und dem Ergebnis.</p>
+        <a class="hp-knopf hp-knopf-voll" href="/">Zurück zu PlanR</a>`
+      return
+    }
+    if (zugangFeld.querySelector('form')) return
+    zugangFeld.innerHTML = `<form data-zugang-form>
+        <p><b>Diesen Plan in Ihrem eigenen PlanR weiterbearbeiten.</b> PlanR legt Ihnen sofort einen Zugang an: voller Umfang, kostenlos zur Probe, ohne Lastschrift. Der Plan liegt dann dort unter „Importe“.</p>
+        <div class="hp-zugang-zeile">
+          <input type="email" name="email" placeholder="E-Mail-Adresse der Praxis" autocomplete="email" required value="${sicher(vorschlag)}">
+          <input type="text" name="firma2" tabindex="-1" autocomplete="off" class="hp-zugang-falle" aria-hidden="true">
+          <button type="submit" class="hp-knopf hp-knopf-voll">Zugang anlegen</button>
+        </div>
+        <label class="hp-zugang-haken"><input type="checkbox" name="zustimmung" required> Ich stimme den <a href="https://pickadoc.ai/agb.html" target="_blank" rel="noopener">AGB</a>, den <a href="https://pickadoc.ai/datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweisen</a> und der Auftragsverarbeitung zu.</label>
+        <p class="hp-zugang-meldung" data-zugang-meldung></p>
+      </form>`
+    const form = zugangFeld.querySelector<HTMLFormElement>('form')!
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault()
+      const knopf = form.querySelector('button')!
+      const meldung = form.querySelector<HTMLElement>('[data-zugang-meldung]')!
+      const wert = (name: string) => form.querySelector<HTMLInputElement>(`[name=${name}]`)!
+      knopf.disabled = true
+      meldung.textContent = 'Zugang wird angelegt …'
+      try {
+        const r = await fetch('/api/probe/zugang', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: wert('email').value.trim(), ids: abgelegteIds, zustimmung: wert('zustimmung').checked, firma2: wert('firma2').value }),
+        })
+        const d = await r.json() as { ok?: boolean; meldung?: string; email?: string; passwort?: string; angemeldet?: boolean; vorhanden?: boolean }
+        if (d.ok && d.passwort) {
+          zugangFertig = true
+          zugangFeld.innerHTML = `<p><b>Ihr Zugang ist angelegt.</b> Bitte das Passwort jetzt notieren, es wird nur hier angezeigt.</p>
+            <dl class="hp-zugang-daten"><div><dt>Login</dt><dd>${sicher(d.email ?? '')}</dd></div><div><dt>Passwort</dt><dd><code>${sicher(d.passwort)}</code></dd></div></dl>
+            <p>Ihr Plan liegt in PlanR oben unter „Importe“.</p>
+            <a class="hp-knopf hp-knopf-voll" href="${d.angemeldet ? '/' : '/#anmelden'}">${d.angemeldet ? 'PlanR öffnen' : 'Jetzt anmelden'}</a>`
+          return
+        }
+        meldung.innerHTML = d.vorhanden
+          ? `${sicher(d.meldung ?? '')} <a href="#anmelden">Anmelden</a>`
+          : sicher(d.meldung || 'Der Zugang ließ sich gerade nicht anlegen.')
+      } catch {
+        meldung.textContent = 'Keine Verbindung zu PlanR.'
+      }
+      knopf.disabled = false
+    })
+  }
+
   const dateiFeld = wurzel.querySelector<HTMLInputElement>('[data-dateien]')!
   wurzel.querySelector<HTMLInputElement>('[data-frei]')!.addEventListener('change', (ev) => {
     dateiFeld.disabled = !(ev.target as HTMLInputElement).checked
@@ -378,6 +445,7 @@ export function probeSeite(app: HTMLElement) {
     const teile: Teil[] = []
     const hinweise: string[] = []
     const gelesene: { name: string; id: string; text: string; plan: Blatt | null; urteil: Promise<Einordnung | null> }[] = []
+    let stempelMail = ''
     let abgelegt = false
     for (const datei of dateien) {
       let id = ''
@@ -440,7 +508,7 @@ export function probeSeite(app: HTMLElement) {
       }
       // Das Modell ordnet die Datei ein, während die nächste schon gelesen wird.
       gelesene.push({ name: datei.name, id, text, plan: fund.plan, urteil: einordnen(datei.name, text) })
-      await probeKontakt(id, text)
+      stempelMail = (await probeKontakt(id, text)) || stempelMail
     }
     // Sortieren: jede Datei bekommt ihr Fach. Nur ZE-Blätter brauchen dafür einen gelesenen Plan.
     // Das Gebührenverzeichnis lädt erst hier, damit die Startseite klein bleibt.
@@ -466,6 +534,8 @@ export function probeSeite(app: HTMLElement) {
       return
     }
     zeigen('')
+    for (const g of gelesene) if (g.id && !abgelegteIds.includes(g.id)) abgelegteIds.push(g.id)
+    zugangZeigen(stempelMail)
     const namen = gruppen.map((g) => g.reiter).join(', ')
     const stand = gruppen.length > 1
       ? `${fall.length} Dateien sortiert in ${gruppen.length} Pläne: ${namen}. Jeder Plan hat unten seinen Reiter.`
