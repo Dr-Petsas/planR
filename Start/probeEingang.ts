@@ -3,7 +3,7 @@
  * Aus dem Praxisstempel werden Name, Telefon, E-Mail und Anschrift des Zahnarztes gelesen.
  * Der Versichertenblock (Name, Geburtsdatum, Kasse, Versichertennummer) bleibt außen vor.
  */
-import { randomBytes } from 'node:crypto'
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
@@ -15,6 +15,14 @@ export interface ZahnarztKontakt {
   anschrift: string
 }
 
+export interface ProbeStand {
+  planart: string
+  planer: string
+  regler: { privatStufe: number; titel: string; gozFaktor: number }
+  vorher: { gesamt?: number; honorar?: number; material?: number }
+  nachher: { gesamt?: number; eigenanteil?: number; festzuschuss?: number }
+}
+
 export interface ProbeKarte {
   id: string
   zeit: string
@@ -23,17 +31,34 @@ export interface ProbeKarte {
   bytes: number
   kontakt: ZahnarztKontakt
   gemeldet: boolean
+  stand?: ProbeStand
 }
 
 const LEER: ZahnarztKontakt = { name: '', praxis: '', telefon: '', email: '', anschrift: '' }
 const PATIENT = ['versicherte', 'versichertennummer', 'versicherten-nr', 'versicherten nr', 'geburtsdatum', 'krankenkasse', 'kostentraeger', 'kostenträger']
 const ARTEN = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain'])
 
-export function darfEingangSehen(email: string, role = ''): boolean {
-  const e = email.trim().toLowerCase()
-  if (role.toLowerCase() === 'superuser') return true
-  if (e === 'contact@maik-music.io') return true
-  return e.endsWith('@pickadoc.de')
+/** Einziges Konto für den Betreiber-Eingang. Praxis-Konten bleiben draußen. */
+export const BETREIBER = 'superuser@pickadoc.de'
+
+export function darfEingangSehen(email: string, _role = ''): boolean {
+  return email.trim().toLowerCase() === BETREIBER
+}
+
+/** Prüfsumme `scrypt:<salt>:<hash>`, beide hex. Das Passwort selbst steht nirgends. */
+export function passwortPasst(passwort: string, gespeichert: string): boolean {
+  const teile = gespeichert.split(':')
+  if (teile.length !== 3 || teile[0] !== 'scrypt') return false
+  let salt: Buffer, soll: Buffer
+  try {
+    salt = Buffer.from(teile[1], 'hex')
+    soll = Buffer.from(teile[2], 'hex')
+  } catch {
+    return false
+  }
+  if (!salt.length || !soll.length) return false
+  const ist = scryptSync(passwort, salt, soll.length)
+  return ist.length === soll.length && timingSafeEqual(ist, soll)
 }
 
 function zeilenVon(text: string) {
@@ -208,6 +233,43 @@ export async function eingangAnlegen(wurzel: string, datei: { name: string; art:
   return karte
 }
 
+function zahl(x: unknown): number | undefined {
+  const n = typeof x === 'number' ? x : typeof x === 'string' && x.trim() ? Number(x) : NaN
+  if (!Number.isFinite(n) || n < 0 || n > 10_000_000) return undefined
+  return Math.round(n * 100) / 100
+}
+
+/** Nur die Felder, die der Betreiber neben dem Upload sieht. Alles andere fällt weg. */
+export function standPruefen(roh: unknown): ProbeStand | null {
+  if (!roh || typeof roh !== 'object') return null
+  const o = roh as Record<string, unknown>
+  const planart = String(o.planart ?? '')
+  if (planart !== 'hkp' && planart !== 'privat-ze' && planart !== 'privat-impl') return null
+  const regler = (o.regler && typeof o.regler === 'object' ? o.regler : {}) as Record<string, unknown>
+  const vorher = (o.vorher && typeof o.vorher === 'object' ? o.vorher : {}) as Record<string, unknown>
+  const nachher = (o.nachher && typeof o.nachher === 'object' ? o.nachher : {}) as Record<string, unknown>
+  const stufe = Math.min(5, Math.max(0, zahl(regler.privatStufe) ?? 0))
+  return {
+    planart,
+    planer: String(o.planer ?? '').slice(0, 40),
+    regler: { privatStufe: stufe, titel: String(regler.titel ?? '').slice(0, 40), gozFaktor: zahl(regler.gozFaktor) ?? 0 },
+    vorher: { gesamt: zahl(vorher.gesamt), honorar: zahl(vorher.honorar), material: zahl(vorher.material) },
+    nachher: { gesamt: zahl(nachher.gesamt), eigenanteil: zahl(nachher.eigenanteil), festzuschuss: zahl(nachher.festzuschuss) },
+  }
+}
+
+export async function eingangStand(wurzel: string, id: string, stand: ProbeStand): Promise<ProbeKarte | null> {
+  if (!idGueltig(id)) return null
+  return exklusiv(async () => {
+    const liste = await indexLesen(wurzel)
+    const karte = liste.find((e) => e.id === id)
+    if (!karte) return null
+    karte.stand = stand
+    await indexSchreiben(wurzel, liste)
+    return karte
+  })
+}
+
 export async function eingangText(wurzel: string, id: string, text: string): Promise<ProbeKarte | null> {
   if (!idGueltig(id)) return null
   return exklusiv(async () => {
@@ -253,6 +315,7 @@ export function eingangSichtbar(karte: ProbeKarte) {
       email: k.email ?? '',
       anschrift: k.anschrift ?? '',
     },
+    stand: karte.stand ?? null,
   }
 }
 

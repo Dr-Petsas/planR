@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blattAusZeilen, planAusHkpZeilen, probeAusHkpZeilen, schemaAusZeilen, textSchicht, type PdfZeile } from './hkpPdf'
+import { blattAusZeilen, planartAusText, planartErkennen, planAusHkpZeilen, privatSummenAusText, probeAusHkpZeilen, schemaAusZeilen, textSchicht, type PdfZeile } from './hkpPdf'
 
 const zeile = (texte: string[], x0 = 0, schritt = 28): PdfZeile => ({
   teile: texte.map((text, i) => ({ x: x0 + i * schritt, text })),
@@ -137,6 +137,19 @@ describe('HKP-PDF', () => {
     expect(text).toContain('18 17 16 15')
     expect(text).toContain('2210 GOZ 16')
     expect(text).not.toContain('@')
+  })
+
+  it('unterscheidet Privatplan und Kassen-HKP und nimmt die Endsumme, nicht die Zwischensumme', () => {
+    expect(planartAusText('Privat-Pl.\nZahnarzthonorar\nprivate Leistung')).toBe('privat-ze')
+    expect(planartAusText('Privat-Pl.\nImplantatinsertion\nZahnarzthonorar')).toBe('privat-impl')
+    expect(planartAusText('Regelversorgung\nFestzuschuss')).toBe('hkp')
+    expect(planartAusText('Festzuschuss und Zahnarzthonorar')).toBe('hkp')
+    expect(planartAusText('nur ein Befund')).toBe('')
+    expect(planartErkennen('Regelversorgung\nTherapieplanung', [{ ebene: 'BEMA' }, { ebene: 'GOZ' }])).toEqual({ planart: 'hkp', planer: 'hkp', gozAnteil: true })
+    expect(planartErkennen('Privat-Pl.\nZahnarzthonorar\nImplantatinsertion', [{ ebene: 'GOZ' }])).toEqual({ planart: 'privat-impl', planer: 'privat', gozAnteil: false })
+    expect(planartErkennen('Festzuschuss', [{ ebene: 'GOZ' }]).planer).toBe('hkp')
+    expect(privatSummenAusText('Zwischensumme Zahnarzthonorar: EUR 373,59\nZahnarzthonorar EUR 4393,35\nVerbrauchsmaterial EUR 721,22\nBehandlungskosten insgesamt (geschätzt) EUR 5114,57'))
+      .toEqual({ honorarGoz: 4393.35, material: 721.22, gesamt: 5114.57 })
   })
 
   it('sagt, wenn das PDF leer oder ohne Befund ist', () => {

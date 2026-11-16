@@ -151,11 +151,13 @@ export async function passwortVergessen(email: string): Promise<void> {
 // ---------- Sitzungen ----------
 
 export const SITZUNG_COOKIE = 'planr_sitzung'
+/** Zweite Sitzung des Betreibers, der ein Kundenkonto ansieht. Das eigene Cookie bleibt. */
+export const SUDO_COOKIE = 'planr_sudo'
 export const SITZUNG_TAGE = 30
 /** So oft fragt PlanR bei Firebase nach, ob das Konto noch gilt */
 export const PRUEFEN_MS = 6 * 3600_000
 
-export interface Sitzung { hash: string; konto: Konto; erneuern: string; seit: string; geprueft: number; zuletzt: number }
+export interface Sitzung { hash: string; konto: Konto; erneuern: string; seit: string; geprueft: number; zuletzt: number; sudo?: string }
 
 export const sitzungHash = (token: string) => createHash('sha256').update(token, 'utf8').digest('hex')
 export const neuesToken = () => randomBytes(32).toString('base64url')

@@ -2,7 +2,8 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { darfEingangSehen, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangSichtbar, eingangText, kontaktAusText } from './probeEingang'
+import { scryptSync, randomBytes } from 'node:crypto'
+import { BETREIBER, darfEingangSehen, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangSichtbar, eingangStand, eingangText, kontaktAusText, passwortPasst, standPruefen } from './probeEingang'
 
 const STEMPEL = `
 Zahnarztpraxis Dr. Anna Berg
@@ -46,11 +47,34 @@ describe('kontaktAusText', () => {
 })
 
 describe('darfEingangSehen', () => {
-  it('lässt Pickadoc und das Standalone-Konto hinein, eine fremde Praxis nicht', () => {
-    expect(darfEingangSehen('dr.petsas@pickadoc.de')).toBe(true)
-    expect(darfEingangSehen('contact@maik-music.io')).toBe(true)
-    expect(darfEingangSehen('praxis@example.de', 'superuser')).toBe(true)
+  it('lässt nur den Superuser hinein, keine Praxis und keine andere Pickadoc-Adresse', () => {
+    expect(darfEingangSehen(BETREIBER)).toBe(true)
+    expect(darfEingangSehen('Superuser@pickadoc.de')).toBe(true)
+    expect(darfEingangSehen('dr.petsas@pickadoc.de')).toBe(false)
+    expect(darfEingangSehen('contact@maik-music.io')).toBe(false)
+    expect(darfEingangSehen('praxis@example.de', 'superuser')).toBe(false)
     expect(darfEingangSehen('praxis@example.de', 'admin')).toBe(false)
+  })
+
+  it('prüft das Passwort gegen die Prüfsumme, nicht im Klartext', () => {
+    const salt = randomBytes(16)
+    const hash = scryptSync('richtig', salt, 32)
+    const gespeichert = `scrypt:${salt.toString('hex')}:${hash.toString('hex')}`
+    expect(passwortPasst('richtig', gespeichert)).toBe(true)
+    expect(passwortPasst('falsch', gespeichert)).toBe(false)
+    expect(passwortPasst('richtig', 'klartext')).toBe(false)
+  })
+})
+
+describe('standPruefen', () => {
+  it('behält Planart, Regler und die beiden Preise', () => {
+    expect(standPruefen({
+      planart: 'privat-impl', planer: 'Implantologie',
+      regler: { privatStufe: 3, titel: 'Ästhetik', gozFaktor: 2.3 },
+      vorher: { gesamt: 5114.57, honorar: 4393.35, material: 721.22 },
+      nachher: { gesamt: 905.13, eigenanteil: 333.84, festzuschuss: 571.29 },
+    })?.regler.titel).toBe('Ästhetik')
+    expect(standPruefen({ planart: 'etwas' })).toBeNull()
   })
 })
 
@@ -78,5 +102,8 @@ describe('Ablage', () => {
     const sichtbar = eingangSichtbar((await eingangListe(wurzel))[0])
     expect(sichtbar.kontakt.anschrift).toBe('Luise-Rainer-Str. 12, 40235 Düsseldorf')
     expect(sichtbar).not.toHaveProperty('gemeldet')
+    const stand = standPruefen({ planart: 'privat-ze', planer: 'Privat-ZE', regler: { privatStufe: 2, titel: 'Vollkeramik', gozFaktor: 0 }, vorher: { gesamt: 1000 }, nachher: { gesamt: 800 } })
+    expect(stand && (await eingangStand(wurzel, karte.id, stand))?.stand?.planer).toBe('Privat-ZE')
+    expect((await eingangListe(wurzel))[0].kontakt.email).toBe('anna@praxis-berg.de')
   })
 })

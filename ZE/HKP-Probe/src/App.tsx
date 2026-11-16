@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan, Preisliste } from '@kern/types'
 import { usePlan, leererPlan, planNormalisieren, probeAktiv } from './store/plan'
 import { planAusSchema, probeHoren, zuschussAbgleich } from './probeImport'
@@ -14,7 +14,8 @@ import { berechnen, type Listen } from '@kern/engine/berechnung'
 import { listenFuer, planMitKatalog } from '@kern/clara'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from '@kern/engine/regeln'
 import { privatStufeAnwenden, regelUebernehmen } from '@kern/engine/aufwertung'
-import { implantatZaehne } from '@kern/engine/implantat'
+import { implantateErfasst } from '@kern/engine/implantat'
+import { relevanzErmitteln } from '@kern/engine/relevanz'
 import { AbformungFrage } from './components/ImplantatAngaben'
 import { Teil1 } from './components/Teil1'
 import { Teil2 } from './components/Teil2'
@@ -117,6 +118,25 @@ export default function App() {
   }, [plan, listen, original, imOriginal])
   // Probe: Summen des hochgeladenen Plans, bleiben als Vergleich oben stehen.
   const blattSummen = useMemo(() => (original ? originalErgebnis(berechnen(original.plan, listen), original).summen : null), [original, listen])
+  const vergleichRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const kopf = vergleichRef.current
+    if (!kopf) return
+    const passen = () => {
+      const zeile = kopf.querySelector<HTMLElement>('.sv-zeile')
+      if (!zeile) return
+      zeile.style.transform = 'none'
+      const stil = getComputedStyle(kopf)
+      const frei = kopf.clientWidth - parseFloat(stil.paddingLeft) - parseFloat(stil.paddingRight)
+      const braucht = zeile.offsetWidth
+      const s = braucht > frei + 1 && frei > 0 ? frei / braucht : 1
+      zeile.style.transform = s < 0.999 ? `scale(${s})` : ''
+    }
+    passen()
+    const beobachter = new ResizeObserver(passen)
+    beobachter.observe(kopf)
+    return () => beobachter.disconnect()
+  }, [blattSummen?.gesamt, blattSummen?.eigenanteil, ergebnis.summen.gesamt, ergebnis.summen.eigenanteil, imOriginal])
   const register = useRegisterAbgleich(plan, ergebnis, setPlan)
   const linkAbgleich = useLinkAbgleich(plan, linkEintrag, setLinkEintrag)
   const [linkHinweis, setLinkHinweis] = useState('')
@@ -196,6 +216,7 @@ export default function App() {
   const liveAn = useMemo(() => liveModus(), [])
   const [live, setLive] = useState<{ an: boolean; stand: LiveStand | null; spielt: boolean }>({ an: false, stand: null, spielt: false })
   const planRef = useRef(plan)
+  const probeArt = useRef('hkp')
   const registerRef = useRef(register)
   const listenRef = useRef(listen)
   useEffect(() => {
@@ -204,14 +225,45 @@ export default function App() {
     registerRef.current = register
   })
   useEffect(() => {
+    if (!probeAktiv() || window.parent === window) return
+    const stufe = plan.einstellungen.eigenPrivatStufe ?? 0
+    window.parent.postMessage({
+      type: 'planr-probe-stand',
+      stand: {
+        regler: { privatStufe: stufe, gozFaktor: plan.einstellungen.honorarFaktor ?? 0 },
+        nachher: {
+          gesamt: ergebnis.summen.gesamt,
+          eigenanteil: ergebnis.summen.eigenanteil,
+          festzuschuss: ergebnis.summen.festzuschuss,
+        },
+        planart: probeArt.current,
+      },
+    }, location.origin)
+  }, [plan, ergebnis])
+  useEffect(() => {
     if (!probeAktiv()) return
     return probeHoren((schema, gebuehren, summen) => {
       const gelesen = planAusSchema(planRef.current.einstellungen, schema, gebuehren)
+      const privat = schema.planart === 'privat-ze' || schema.planart === 'privat-impl' || schema.planart === 'privat'
+      if (privat) {
+        const stufe = schema.reglerStufe ?? (schema.planart === 'privat-impl' || schema.planart === 'privat' ? 3 : 2)
+        const gehoben = schema.planart === 'privat-ze' ? privatStufeAnwenden(gelesen.plan, stufe) : null
+        const plan = gehoben?.plan ?? { ...gelesen.plan, einstellungen: { ...gelesen.plan.einstellungen, eigenPrivatStufe: stufe } }
+        probeArt.current = schema.planart ?? 'privat-ze'
+        setOriginal(null)
+        setPlan(() => plan)
+        setEngineHinweise([...(gehoben?.hinweise ?? []), ...gelesen.hinweise])
+        setReglerOffen(true)
+        setTab('teil1')
+        return
+      }
+      probeArt.current = schema.planart ?? 'hkp'
       const zuschuss = zuschussAbgleich(gelesen.plan, listenRef.current, summen)
       const blatt = blattUebernehmen(zuschuss.plan, listenRef.current, gebuehren, summen)
       setOriginal(blatt.original)
       setPlan(() => blatt.plan)
       setEngineHinweise([...blatt.hinweise, ...zuschuss.hinweise, ...gelesen.hinweise])
+      if (schema.gozAnteil) setReglerOffen(true)
       setTab('teil1')
     })
   }, [setPlan])
@@ -307,11 +359,10 @@ export default function App() {
     setEngineHinweise([...regel.hinweise, ...(privat?.hinweise ?? [])])
   }
 
-  const [abformungFrage, setAbformungFrage] = useState<string[] | null>(null)
+  const [abformungFrage, setAbformungFrage] = useState<{ implantate: string[]; mitProthese: boolean } | null>(null)
   function berechnenKlick() {
-    const R = regelversorgungErmitteln(plan.zaehne, regelOptionen(plan)).R
-    const imp = implantatZaehne(Object.fromEntries(Object.entries(plan.zaehne).map(([z, v]) => [z, { ...v, R: R[z] ?? '' }])))
-    if (!plan.abformung) setAbformungFrage(imp)
+    const imp = implantateErfasst(plan.zaehne)
+    if (!plan.abformung) setAbformungFrage({ implantate: imp, mitProthese: relevanzErmitteln(plan.zaehne).prothese.length > 0 })
     else regelengine()
   }
 
@@ -321,7 +372,11 @@ export default function App() {
   const probe = probeAktiv()
   const reiter = ([['teil1', 'HKP Teil 1'], ['teil2', 'HKP Teil 2'], ['anlage', 'Anlage'], ['eigenlabor', 'Eigenlabor'], ['register', 'Register'], ['preislisten', 'Preislisten'], ['einstellungen', 'Einstellungen']] as [Tab, string][])
     .filter(([id]) => !probe || (id !== 'register' && id !== 'preislisten' && id !== 'einstellungen'))
-  const fehler = ergebnis.hinweise.filter((h) => h.stufe === 'fehler').length
+  const privatBlatt = engineHinweise.some((h) => h.startsWith('Privatplan:'))
+  const pruefhinweise = privatBlatt
+    ? ergebnis.hinweise.filter((h) => h.text !== 'Ein Antrag ohne Befund-Nr. für Festzuschüsse ist nicht zulässig.')
+    : ergebnis.hinweise
+  const fehler = pruefhinweise.filter((h) => h.stufe === 'fehler').length
   const hkpAnsicht = tab === 'teil1' || tab === 'teil2' || tab === 'anlage' || tab === 'eigenlabor'
   // Probe: Teil 1, Teil 2 und Eigenlaborbeleg stehen untereinander auf einer Seite, die Reiter springen hin.
   const blaetterZusammen = probe && (tab === 'teil1' || tab === 'teil2' || tab === 'eigenlabor')
@@ -417,7 +472,8 @@ export default function App() {
       )}
 
       {hkpAnsicht && blattSummen && (
-        <div className="summenkopf sk-vergleich bildschirm" aria-live="polite">
+        <div className="summenkopf sk-vergleich bildschirm" aria-live="polite" ref={vergleichRef}>
+          <div className="sv-zeile">
           <div className="sv-block">
             <span>Ihr Plan (Original)</span>
             <p><small>Gesamt</small> <b>{euro(blattSummen.gesamt)}</b> <small>Eigenanteil</small> <b>{euro(blattSummen.eigenanteil)}</b></p>
@@ -431,6 +487,7 @@ export default function App() {
             <p><b>{imOriginal || Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt) < 0.005 ? '± 0,00 €' : `${ergebnis.summen.gesamt > blattSummen.gesamt ? '+' : '−'} ${euro(Math.abs(ergebnis.summen.gesamt - blattSummen.gesamt))}`}</b></p>
           </div>
           {!imOriginal && original && <button onClick={() => setPlan(() => original.plan)}>Original wiederherstellen</button>}
+          </div>
         </div>
       )}
       {hkpAnsicht && !blattSummen && (
@@ -460,11 +517,11 @@ export default function App() {
       )}
 
       <div className="hauptspalte" ref={hauptRef}>
-      {hkpAnsicht && (engineHinweise.length > 0 || ergebnis.hinweise.length > 0) && (
+      {hkpAnsicht && (engineHinweise.length > 0 || pruefhinweise.length > 0) && (
         <details className="hinweise">
-          <summary>{fehler > 0 && <span className="hinweis-achtung" title="Fehler – bitte öffnen" aria-label="Fehler">!</span>}Prüfhinweise ({ergebnis.hinweise.length + engineHinweise.length}{fehler ? `, davon ${fehler} Fehler` : ''})</summary>
+          <summary>{fehler > 0 && <span className="hinweis-achtung" title="Fehler – bitte öffnen" aria-label="Fehler">!</span>}Prüfhinweise ({pruefhinweise.length + engineHinweise.length}{fehler ? `, davon ${fehler} Fehler` : ''})</summary>
           {engineHinweise.map((h) => <p key={h} className="hinweis info">{h}</p>)}
-          {ergebnis.hinweise.map((h, i) => <p key={i} className={`hinweis ${h.stufe}`}>{h.text}</p>)}
+          {pruefhinweise.map((h, i) => <p key={i} className={`hinweis ${h.stufe}`}>{h.text}</p>)}
         </details>
       )}
 
@@ -533,7 +590,7 @@ export default function App() {
       <RueckgaengigLeiste />
       {abformungFrage && (
         <AbformungFrage
-          implantate={abformungFrage} wahl={plan} implantat={plan.implantat} onAbbruch={() => setAbformungFrage(null)}
+          implantate={abformungFrage.implantate} mitProthese={abformungFrage.mitProthese} wahl={plan} implantat={plan.implantat} onAbbruch={() => setAbformungFrage(null)}
           onOk={(wahl, implantat) => { setAbformungFrage(null); regelengine({ ...wahl, implantat }) }}
         />
       )}

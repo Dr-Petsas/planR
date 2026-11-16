@@ -13,7 +13,8 @@ import { ListenKarte } from './components/Listen'
 import { kronenEinheiten, werkstoffVon } from './engine/material'
 import { KronenmaterialFelder } from './components/Kronenmaterial'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
-import { neuerPlan, planMigrieren, useEinstellungen, usePlan, useZeAblage } from './store'
+import { neuerPlan, planMigrieren, STANDARD_REGLER, useEinstellungen, usePlan, useZeAblage } from './store'
+import { STANDARD_IMPLANTAT } from './engine/planung'
 import { ungespeichert } from './ablage'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
@@ -45,6 +46,35 @@ export default function App() {
   const [einst, setEinst] = useEinstellungen()
   const [plan, setPlan] = usePlan(einst.naechsteNummer)
   const [reiter, setReiter] = useState<Reiter>('planung')
+  const nummerRef = useRef(einst.naechsteNummer)
+  useEffect(() => { nummerRef.current = einst.naechsteNummer })
+  useEffect(() => {
+    const auf = (ev: MessageEvent) => {
+      if (ev.origin !== location.origin) return
+      const daten = ev.data as { type?: string; schema?: { B?: Record<string, string>; TP?: Record<string, string>; planart?: string }; positionen?: { ebene?: string; nr?: string; zahn?: string; anzahl?: number; faktor?: number }[] } | null
+      if (!daten || daten.type !== 'planr-probe' || !daten.schema) return
+      const zaehne: Plan['zaehne'] = {}
+      for (const [zahn, befund] of Object.entries(daten.schema.B ?? {})) zaehne[zahn] = { B: befund, TP: daten.schema.TP?.[zahn] ?? '' }
+      const manuell: Plan['manuell'] = []
+      for (const [i, p] of (daten.positionen ?? []).entries()) {
+        const ebene = p.ebene === 'BEB' || p.ebene === 'MAT' || p.ebene === 'GOZ' ? p.ebene : null
+        if (!ebene) continue
+        manuell.push({ id: `blatt-${i}`, ebene, nr: p.nr ?? '', zahn: p.zahn ?? '', anzahl: p.anzahl && p.anzahl > 0 ? p.anzahl : 1, ...(p.faktor ? { faktor: p.faktor } : {}), auto: false })
+      }
+      const implant = daten.schema.planart === 'privat-impl'
+      setPlan({
+        ...neuerPlan(nummerRef.current),
+        zaehne,
+        manuell,
+        implantat: implant ? { ...STANDARD_IMPLANTAT, abutment: 'keramik' } : STANDARD_IMPLANTAT,
+        regler: { ...STANDARD_REGLER, gozFaktor: 2.3, laborStufe: implant ? 2 : 1 },
+      })
+      setReiter('leistungen')
+    }
+    window.addEventListener('message', auf)
+    if (window.parent !== window) window.parent.postMessage({ type: 'planr-probe-bereit' }, location.origin)
+    return () => window.removeEventListener('message', auf)
+  }, [setPlan])
   useEffect(() => {
     let aus = false
     praxiskatalogHolen().then((k) => {
@@ -58,6 +88,16 @@ export default function App() {
     return () => { aus = true }
   }, [setEinst])
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
+  useEffect(() => {
+    if (window.parent === window) return
+    window.parent.postMessage({
+      type: 'planr-probe-stand',
+      stand: {
+        regler: { privatStufe: plan.regler.laborStufe, gozFaktor: plan.regler.gozFaktor || einst.gozFaktor },
+        nachher: { gesamt: kalk.gesamt, eigenanteil: kalk.gesamt, festzuschuss: 0 },
+      },
+    }, location.origin)
+  }, [plan, kalk, einst.gozFaktor])
   const ablage = useZeAblage()
   const daten = { nummer: plan.nummer, patient: patientName(plan.patient), betrag: kalk.gesamt, plan, pvs: pvsPlaene(plan, kalk) }
   const eintrag = ablage.eintrag(plan.nummer)

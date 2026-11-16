@@ -1,55 +1,46 @@
 /**
  * Öffentliche Seite: HKP und Anlagen lesen, dann im echten HKP-Planer anzeigen.
- * Jede Datei geht zusätzlich in den Probe-Eingang. Der Planer rechnet Befund und Therapie selbst.
+ * Jede Datei geht zusätzlich in den Probe-Eingang. Ein Kassen-HKP wird als HKP gerechnet.
+ * Ein Privatplan bleibt ein Privatplan: daraus wird keine Kassen-Regelversorgung.
  */
 import './homepage.css'
 import { logo, wortmarke } from './logo'
-import { blattAusEinlesen, type BlattPosition, type BlattSummen, type EinleseAntwort, type EinleseSeite } from './einlesenZeilen'
-import { blattAusZeilen, textSchichtenAusPdf, zeilenAusPdf, zeilenAusText, type ProbePosition, type ZahnSchema } from './hkpPdf'
+import { blattAusEinlesen, type BlattSummen, type EinleseAntwort, type EinleseSeite } from './einlesenZeilen'
+import { blattAusZeilen, planartAusText, planartErkennen, privatSummenAusText, reglerFuer, textSchichtenAusPdf, zeilenAusPdf, zeilenAusText, type Planart, type ProbePosition, type ZahnSchema } from './hkpPdf'
+import { gozPruefen, type Katalog } from './probeKatalog'
+import { FAECHER, anlagenZuordnen, dazu, fachEntscheiden, fachErkennen, gruppenBauen, hat, zaehlt, type Blatt, type Einordnung, type Fach, type Gruppe, type Teil } from './probeFall'
 import { werbungStarten, zielErreicht } from './werbung'
 
-type Zeile = ProbePosition | BlattPosition
-interface Blatt { schema: ZahnSchema; positionen: Zeile[]; summen?: BlattSummen }
 const LEER: Blatt = { schema: { B: {}, R: {}, TP: {} }, positionen: [] }
 
-function zaehlt(schema: ZahnSchema) {
-  return Object.keys(schema.B).length + Object.keys(schema.R).length + Object.keys(schema.TP).length
-}
-
-function dazu(ziel: Record<string, string>, quelle: Record<string, string> | undefined) {
-  for (const [z, c] of Object.entries(quelle ?? {})) if (c && !ziel[z]) ziel[z] = c
-}
-
-function hat(blatt: Blatt) {
-  return zaehlt(blatt.schema) > 0 || blatt.positionen.length > 0
-}
-
-function vereinen(teile: Blatt[]): Blatt {
-  const schema: ZahnSchema = { B: {}, R: {}, TP: {} }
-  const positionen: Zeile[] = []
-  const da = new Map<string, Zeile & { text?: string }>()
-  for (const teil of teile) {
-    dazu(schema.B, teil.schema.B)
-    dazu(schema.R, teil.schema.R)
-    dazu(schema.TP, teil.schema.TP)
-    for (const p of teil.positionen) {
-      // Material hat keine Nummer: dort unterscheidet die Bezeichnung.
-      const key = `${p.ebene}|${p.nr || (p as { text?: string }).text || ''}|${p.zahn}`
-      const schon = da.get(key)
-      if (schon) {
-        // Dieselbe Zeile aus einer zweiten Datei: die Bezeichnung nachtragen, wenn sie der ersten fehlte.
-        const text = (p as { text?: string }).text
-        if (!schon.text && text) schon.text = text
-        continue
-      }
-      const eigen = { ...p }
-      da.set(key, eigen)
-      positionen.push(eigen)
-    }
+function summenVomPrivat(text: string): BlattSummen {
+  const s = privatSummenAusText(text)
+  const aus: BlattSummen = {}
+  if (s.honorarGoz !== undefined) aus.honorarGoz = s.honorarGoz
+  if (s.material !== undefined) aus.labor = s.material
+  if (s.gesamt !== undefined) {
+    aus.gesamt = s.gesamt
+    aus.festzuschuss = 0
+    aus.eigenanteil = s.gesamt
   }
-  const summen: BlattSummen = {}
-  for (const teil of [...teile].reverse()) Object.assign(summen, teil.summen)
-  return { schema, positionen, summen }
+  return aus
+}
+
+/** Die Planart kommt aus dem Blatt. Ein Privatplan gibt seine eigenen Summen mit und keine Kassenzeilen. */
+function mitArt(plan: Blatt | null, text: string): Blatt | null {
+  const gelesen = plan?.positionen?.length ? plan.positionen : blattAusZeilen(zeilenAusText(text)).positionen
+  const er = planartErkennen(text, gelesen)
+  if (!plan && !er.planart) return null
+  const basis: Blatt = plan ?? { schema: { B: {}, R: {}, TP: {} }, positionen: gelesen }
+  if (er.planer === 'privat') {
+    return { ...basis, planart: er.planart as Planart, planer: 'privat', gozAnteil: false, summen: { ...basis.summen, ...summenVomPrivat(text) } }
+  }
+  if (er.planart === 'hkp') return { ...basis, planart: 'hkp', planer: 'hkp', gozAnteil: er.gozAnteil }
+  return basis
+}
+
+function sicher(s: string) {
+  return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
 }
 
 function textAusSeiten(seiten: EinleseSeite[] | undefined) {
@@ -181,6 +172,14 @@ export function probeSeite(app: HTMLElement) {
       </form>
     </section>
     <section class="hp-sektion hp-probe-plan" hidden data-ergebnis>
+      <div class="hp-fall">
+        <div class="hp-fall-reiter" role="tablist" data-reiter></div>
+        <p class="hp-fall-hinweis" data-fall-hinweis></p>
+        <details class="hp-fall-dateien" data-fall-dateien>
+          <summary>Zuordnung der Dateien ändern</summary>
+          <ul data-fall-liste></ul>
+        </details>
+      </div>
       <iframe class="hp-probe-rahmen" title="HKP-Planer" data-rahmen></iframe>
     </section>
   </div>`
@@ -203,12 +202,27 @@ export function probeSeite(app: HTMLElement) {
   const warten = (an: boolean) => { spin.hidden = !an; if (an) status.textContent = '' }
   const ergebnis = wurzel.querySelector<HTMLElement>('[data-ergebnis]')!
   const rahmen = wurzel.querySelector<HTMLIFrameElement>('[data-rahmen]')!
+  const reiterLeiste = wurzel.querySelector<HTMLElement>('[data-reiter]')!
+  const fallHinweis = wurzel.querySelector<HTMLElement>('[data-fall-hinweis]')!
+  const fallListe = wurzel.querySelector<HTMLElement>('[data-fall-liste]')!
   let blatt: Blatt = LEER
   let bereit = false
+  let fall: Teil[] = []
+  let gruppen: Gruppe[] = []
+  let aktiv: Fach | '' = ''
 
   const schicken = () => {
-    if (!bereit || !hat(blatt) || !rahmen.contentWindow) return
-    rahmen.contentWindow.postMessage({ type: 'planr-probe', schema: blatt.schema, positionen: blatt.positionen, summen: blatt.summen ?? {} }, location.origin)
+    const gruppe = gruppen.find((g) => g.fach === aktiv)
+    if (!bereit || !gruppe?.fuellt || !hat(blatt) || !rahmen.contentWindow) return
+    rahmen.contentWindow.postMessage({
+      type: 'planr-probe',
+      schema: {
+        ...blatt.schema,
+        ...(blatt.planart ? { planart: blatt.planart, reglerStufe: reglerFuer(blatt.planart, !!blatt.gozAnteil).stufe, gozAnteil: !!blatt.gozAnteil } : {}),
+      },
+      positionen: blatt.positionen,
+      summen: blatt.summen ?? {},
+    }, location.origin)
   }
 
   window.addEventListener('message', (ev) => {
@@ -219,12 +233,73 @@ export function probeSeite(app: HTMLElement) {
     schicken()
   })
 
-  const oeffnen = () => {
+  let standTimer = 0
+  window.addEventListener('message', (ev) => {
+    if (ev.origin !== location.origin || ev.source !== rahmen.contentWindow) return
+    const daten = ev.data as { type?: string; stand?: { regler?: { privatStufe?: number; gozFaktor?: number }; nachher?: { gesamt?: number; eigenanteil?: number; festzuschuss?: number } } } | null
+    if (!daten || daten.type !== 'planr-probe-stand' || !daten.stand) return
+    const ziel = reglerFuer(blatt.planart ?? '', !!blatt.gozAnteil)
+    const s = blatt.summen ?? {}
+    const body = JSON.stringify({
+      ergebnis: {
+        planart: blatt.planart || 'hkp',
+        planer: ziel.planer,
+        regler: { privatStufe: daten.stand.regler?.privatStufe ?? ziel.stufe, titel: ziel.titel, gozFaktor: daten.stand.regler?.gozFaktor ?? 0 },
+        vorher: { gesamt: s.gesamt, honorar: s.honorarGoz, material: s.labor },
+        nachher: daten.stand.nachher ?? {},
+      },
+    })
+    window.clearTimeout(standTimer)
+    standTimer = window.setTimeout(() => {
+      for (const id of blatt.dateien ?? []) {
+        void fetch(`/api/probe/ablegen/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
+      }
+    }, 500)
+  })
+
+  /** Ein Reiter je Plan. Darunter steht, was in diesem Plan liegt, und die Zuordnung je Datei. */
+  const zeigen = (fach: Fach | '') => {
+    gruppen = gruppenBauen(fall)
+    const gruppe = gruppen.find((g) => g.fach === fach) ?? gruppen[0]
+    if (!gruppe) return
+    aktiv = gruppe.fach
+    blatt = gruppe.blatt
+    reiterLeiste.innerHTML = gruppen.map((g) =>
+      `<button type="button" role="tab" aria-selected="${g.fach === aktiv}" class="${g.fach === aktiv ? 'an' : ''}" data-fach="${g.fach}">${sicher(g.reiter)}<small>${g.namen.length} ${g.namen.length === 1 ? 'Datei' : 'Dateien'}</small></button>`).join('')
+    const zaehne = new Set([...Object.keys(blatt.schema.B), ...Object.keys(blatt.schema.R), ...Object.keys(blatt.schema.TP)]).size
+    const ziel = reglerFuer(blatt.planart ?? '', !!blatt.gozAnteil)
+    const stand = !gruppe.fuellt
+      ? `${gruppe.titel}: Der Planer ist geöffnet, übernimmt die Datei aber noch nicht selbst. Die Datei liegt bei Pickadoc.`
+      : blatt.planer === 'privat'
+        ? `${gruppe.titel}. Er liegt im Privat-Planer, Regler auf ${ziel.titel}.`
+        : blatt.gozAnteil
+          ? `${zaehne} Zähne. Gesetzlicher HKP mit GOZ-Privatanteil, im HKP-Planer.`
+          : `${zaehne} Zähne und ${blatt.positionen.length} Gebührenpositionen stehen im HKP-Planer.`
+    fallHinweis.textContent = `${stand} Aus: ${gruppe.namen.join(', ')}.`
+    fallListe.innerHTML = fall.map((t, i) =>
+      `<li><span>${sicher(t.name)}</span><select data-teil="${i}" aria-label="Plan für ${sicher(t.name)}">${FAECHER.map((f) =>
+        `<option value="${f.fach}"${f.fach === t.fach ? ' selected' : ''}>${sicher(f.titel)}</option>`).join('')}</select></li>`).join('')
     ergebnis.hidden = false
-    if (!rahmen.getAttribute('src')) rahmen.src = '/planer/probe-hkp/'
-    else schicken()
-    ergebnis.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    rahmen.title = gruppe.titel
+    if (rahmen.getAttribute('src') !== gruppe.adresse) {
+      bereit = false
+      rahmen.src = gruppe.adresse
+    } else schicken()
   }
+
+  reiterLeiste.addEventListener('click', (ev) => {
+    const knopf = (ev.target as HTMLElement).closest<HTMLElement>('[data-fach]')
+    if (knopf) zeigen(knopf.dataset.fach as Fach)
+  })
+
+  fallListe.addEventListener('change', (ev) => {
+    const wahl = ev.target as HTMLSelectElement
+    const teil = fall[Number(wahl.dataset.teil)]
+    if (!teil) return
+    teil.fach = wahl.value as Fach
+    teil.anlage = false
+    zeigen(teil.fach)
+  })
 
   const dateiFeld = wurzel.querySelector<HTMLInputElement>('[data-dateien]')!
   wurzel.querySelector<HTMLInputElement>('[data-frei]')!.addEventListener('change', (ev) => {
@@ -235,6 +310,18 @@ export function probeSeite(app: HTMLElement) {
   const anLesen = async (body: { text?: string; bild?: string; bilder?: string[]; typ?: string }) => {
     const r = await fetch('/api/probe/lesen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     return await r.json() as { ok?: boolean; message?: string; befund?: Record<string, string>; regel?: Record<string, string>; therapie?: Record<string, string>; positionen?: ProbePosition[]; text?: string }
+  }
+
+  /** Das eigene Modell sagt, welcher Plan die Datei ist. Antwortet es nicht, sortieren die festen Wörter. */
+  const einordnen = async (name: string, text: string): Promise<Einordnung | null> => {
+    if (!text.trim()) return null
+    try {
+      const r = await fetch('/api/probe/einordnen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, text: text.slice(0, 9000) }) })
+      const d = await r.json() as { ok?: boolean; art?: string; kasse?: boolean; grund?: string }
+      return d.ok && typeof d.art === 'string' ? { art: d.art, kasse: d.kasse === true, grund: d.grund } : null
+    } catch {
+      return null
+    }
   }
 
   const ausAntwort = (d: { befund?: Record<string, string>; regel?: Record<string, string>; therapie?: Record<string, string>; positionen?: ProbePosition[]; text?: string }): Blatt | null => {
@@ -288,12 +375,15 @@ export function probeSeite(app: HTMLElement) {
       return
     }
     warten(true)
-    const teile: Blatt[] = []
+    const teile: Teil[] = []
     const hinweise: string[] = []
+    const gelesene: { name: string; id: string; text: string; plan: Blatt | null; urteil: Promise<Einordnung | null> }[] = []
     let abgelegt = false
     for (const datei of dateien) {
       let id = ''
       let text = ''
+      const fund: { plan: Blatt | null } = { plan: null }
+      const hinein = (plan: Blatt | null) => { if (plan) fund.plan = plan }
       try {
         const art = datei.type
         const puff = await datei.arrayBuffer()
@@ -304,17 +394,18 @@ export function probeSeite(app: HTMLElement) {
         }
         if (art.startsWith('text') || datei.name.toLowerCase().endsWith('.txt')) {
           text = new TextDecoder().decode(puff)
-          const plan = await ausText(datei.name, text, hinweise)
-          if (plan) teile.push(plan)
+          const plan = mitArt(await ausText(datei.name, text, hinweise), text)
+          if (plan) hinein(plan)
         } else if (art.startsWith('image')) {
           warten(true)
           const gelesen = await ausEinlesen(datei, puff, hinweise)
           text = gelesen.text
-          if (gelesen.blatt) teile.push(gelesen.blatt)
+          const bildPlan = mitArt(gelesen.blatt, text)
+          if (bildPlan) hinein(bildPlan)
           else {
             const d = await anLesen({ bild: alsBase64(puff), typ: art || 'image/jpeg' })
-            const erkannt = d.ok ? ausAntwort(d) : null
-            if (erkannt) teile.push(erkannt)
+            const erkannt = mitArt(d.ok ? ausAntwort(d) : null, text)
+            if (erkannt) hinein(erkannt)
             else hinweise.push(`${datei.name}: ${d.message || 'nicht gelesen'}`)
           }
         } else {
@@ -332,26 +423,54 @@ export function probeSeite(app: HTMLElement) {
             })
             const erkannt = d.ok ? ausAntwort(d) : null
             const lokal = blattAusZeilen(await zeilenAusPdf(puff.slice(0)))
-            const plan = erkannt ?? (hat(lokal) ? lokal : null)
-            if (plan) teile.push(plan)
+            const plan = mitArt(erkannt ?? (hat(lokal) ? lokal : null), text)
+            if (plan) hinein(plan)
             else hinweise.push(`${datei.name}: ${d.message || 'Darin wurde kein Zahnschema erkannt.'}`)
-          } else teile.push(gelesen.blatt)
+          } else {
+            if (!planartAusText(text)) {
+              const schicht = (await textSchichtenAusPdf(puff.slice(0))).join('\n\n')
+              if (planartAusText(schicht)) text = `${text}\n${schicht}`
+            }
+            const plan = mitArt(gelesen.blatt, text)
+            if (plan) hinein(plan)
+          }
         }
       } catch {
         hinweise.push(`${datei.name}: Das ließ sich nicht lesen.`)
       }
+      // Das Modell ordnet die Datei ein, während die nächste schon gelesen wird.
+      gelesene.push({ name: datei.name, id, text, plan: fund.plan, urteil: einordnen(datei.name, text) })
       await probeKontakt(id, text)
     }
+    // Sortieren: jede Datei bekommt ihr Fach. Nur ZE-Blätter brauchen dafür einen gelesenen Plan.
+    // Das Gebührenverzeichnis lädt erst hier, damit die Startseite klein bleibt.
+    const katalog = gelesene.some((g) => g.plan?.positionen.some((p) => p.ebene === 'GOZ'))
+      ? await import('../../ZE/HKP/src/data/goz-2012.json').then((m) => m.default as Katalog).catch(() => null)
+      : null
+    for (const g of gelesene) {
+      const zeilen = g.plan?.positionen ?? []
+      if (katalog) for (const hinweis of gozPruefen(zeilen, katalog)) hinweise.push(`${g.name}: ${hinweis}`)
+      const erkennung = planartErkennen(g.text, zeilen)
+      const wahl = fachEntscheiden(fachErkennen(g.name, g.text, erkennung, zeilen), erkennung, await g.urteil)
+      const ohnePlan = wahl.fach !== 'ze' && wahl.fach !== 'privat-ze' && wahl.fach !== 'impl'
+      if (!g.plan && !ohnePlan) continue
+      teile.push({ ...(g.plan ?? { schema: { B: {}, R: {}, TP: {} }, positionen: [] }), name: g.name, ...wahl, dateien: g.id ? [g.id] : [] })
+      if (!g.plan) for (let i = hinweise.length - 1; i >= 0; i--) if (hinweise[i].startsWith(`${g.name}:`)) hinweise.splice(i, 1)
+    }
+    anlagenZuordnen(teile)
     warten(false)
-    blatt = vereinen(teile)
-    if (!hat(blatt)) {
+    fall = teile
+    if (!fall.length) {
       status.textContent = hinweise.join(' ') || 'Darin wurde kein Plan erkannt.'
       ergebnis.hidden = true
       return
     }
-    const zaehne = new Set([...Object.keys(blatt.schema.B), ...Object.keys(blatt.schema.R), ...Object.keys(blatt.schema.TP)]).size
-    const stand = `${zaehne} Zähne und ${blatt.positionen.length} Gebührenpositionen stehen im HKP-Planer.`
-    status.textContent = hinweise.length ? `${stand} ${hinweise.join(' ')}` : stand
-    oeffnen()
+    zeigen('')
+    const namen = gruppen.map((g) => g.reiter).join(', ')
+    const stand = gruppen.length > 1
+      ? `${fall.length} Dateien sortiert in ${gruppen.length} Pläne: ${namen}. Jeder Plan hat unten seinen Reiter.`
+      : `Erkannt: ${gruppen[0].titel}.`
+    status.textContent = [stand, ...hinweise].join(' ')
+    ergebnis.scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
 }

@@ -14,6 +14,12 @@ export interface ProbeSchema {
   B?: Record<string, string>
   R?: Record<string, string>
   TP?: Record<string, string>
+  /** Vom Blatt. privat-ze und privat-impl bleiben privat, hkp bleibt ein Kassen-HKP. */
+  planart?: 'hkp' | 'privat-ze' | 'privat-impl' | 'privat'
+  /** Stufe des Reglers „Kasse → Privat“, die der Kunde sieht. */
+  reglerStufe?: number
+  /** Gesetzlicher HKP und zusätzlich GOZ. Bleibt im HKP-Planer. */
+  gozAnteil?: boolean
 }
 
 export interface ProbeGebuehr {
@@ -129,6 +135,16 @@ function gebuehrenDazu(plan: HkpPlan, liste: ProbeGebuehr[]): HkpPlan {
  * wird nicht geplant, eine Abweichung probiert die bekannten Lesefehler am Befund aus, der Rest wird gemeldet.
  */
 export function planAusSchema(einstellungen: HkpPlan['einstellungen'], schema: ProbeSchema, gebuehren: ProbeGebuehr[] = []): { plan: HkpPlan; hinweise: string[] } {
+  if (schema.planart === 'privat-impl' || schema.planart === 'privat') {
+    const zaehne: Record<string, ZahnZeilen> = Object.fromEntries(ALLE_ZAEHNE.map((z) => {
+      const befund = befundOhneStrich(wert(schema.B, z))
+      return [z, { B: befund in BEFUND_KUERZEL ? befund : '', R: '', TP: '' }]
+    }))
+    return {
+      plan: { ...leererPlan(), einstellungen: { ...einstellungen, eigenPrivatStufe: schema.reglerStufe ?? 3 }, zaehne, patient: leererPlan().patient },
+      hinweise: ['Privatplan: Implantat. Daraus wird kein Kassen-Modellguss. Der Regler steht auf Ästhetik.'],
+    }
+  }
   const zaehne: Record<string, ZahnZeilen> = Object.fromEntries(ALLE_ZAEHNE.map((z) => {
     const befund = befundOhneStrich(wert(schema.B, z))
     const tp = markeLesen(wert(schema.TP, z))

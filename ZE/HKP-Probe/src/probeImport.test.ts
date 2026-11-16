@@ -77,6 +77,29 @@ describe('Probe-Import in den HKP-Planer', () => {
     expect(hinweise.some((h) => h.startsWith('Regelversorgung weicht'))).toBe(false)
   })
 
+  it('rechnet aus einem Implantat-Privatplan keinen Kassen-Modellguss', () => {
+    const { plan, hinweise } = planAusSchema(leererPlan().einstellungen, {
+      planart: 'privat-impl',
+      B: { '14': 'x', '16': 'x', '11': 'b' },
+    })
+    expect(plan.zaehne['14'].B).toBe('x')
+    expect(plan.zaehne['14'].R).toBe('')
+    expect(plan.zaehne['16'].R).toBe('')
+    expect(plan.zaehne['11'].R).toBe('')
+    expect(plan.positionen).toEqual([])
+    expect(plan.einstellungen.eigenPrivatStufe).toBe(3)
+    expect(hinweise[0]).toContain('Implantat')
+  })
+
+  it('setzt einen privaten Zahnersatz in die Regelversorgung, der Regler hebt ihn danach an', () => {
+    const { plan } = planAusSchema(leererPlan().einstellungen, {
+      planart: 'privat-ze',
+      B: { '26': 'ww' },
+    })
+    expect(plan.zaehne['26'].R).not.toBe('')
+    expect(plan.positionen.some((p) => p.ebene === 'BEMA' || p.ebene === 'BEL' || p.ebene === 'GOZ')).toBe(true)
+  })
+
   it('ohne Therapieplanung trägt die Regelversorgung ein', () => {
     const { plan } = planAusSchema(leererPlan().einstellungen, {
       B: { '26': 'ww' },

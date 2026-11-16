@@ -17,6 +17,7 @@ import { zuordnungOeffnen } from './zuordnungSeite'
 import { kastenSatz, OK, schemaVon, UK, type Kasten, type KastenGruppe } from './kasten'
 import { dauerStufen, dauerText, geschlecht, kalenderErlaubt, motivFuerPlan, motivPasst, slotBadge, terminKurz, uhrZeiger, type TerminGrund, type TerminMotiv } from './termin'
 import { trainingOeffnen } from './training'
+import { DOKU_MONAT, PAKETE, PRO_PLAN } from './paket'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 const STATUS: Record<string, string> = {
@@ -49,6 +50,12 @@ let auswahl = false
 let neuFuer: Stammdaten | null = null
 let einstellungAuf = false
 let persoenlichAuf = false
+/** Popup: Testabo ist voll, reguläres Abo abschließen */
+let aboAuf = false
+let aboSendet = false
+let aboFehler = ''
+let aboGezeigt = false
+const aboFeld: Record<string, string | boolean> = {}
 /** Cache-Bruch fürs Profilfoto nach Hochladen oder Entfernen */
 let fotoStand = 0
 let einstellungen: Einstellungen = LEER
@@ -386,9 +393,8 @@ function zeile(p: PlanKarte, i: number, imFall = false): string {
     ? `<button type="button" class="aktion tonne" data-loeschen="${i}" title="${hkp ? 'HKP verwerfen' : 'Plan löschen'}" aria-label="${hkp ? 'HKP verwerfen' : 'Plan löschen'}: ${name}">${TONNE}</button>`
     : `<span class="aktion tonne aus" title="Liegt bei der Kasse – nur in PlanR änderbar">${TONNE}</span>`
   const ziel = exportZiel(p)
-  const dens = einstellungen.pvs === 'dens'
   const export_ = ziel
-    ? `<button type="button" class="aktion pvs-knopf${p.imPvs ? ' im-pvs' : ''}" data-export="${i}" title="${esc(`In ${ziel} exportieren${p.imPvs ? ` · ${p.imPvs}` : ''}`)}" aria-label="In ${esc(ziel)} exportieren: ${name}">${dens ? DELFIN : EXPORT}<span>${dens ? 'DENS' : esc(ziel)}</span></button>`
+    ? `<button type="button" class="aktion pvs-knopf${p.imPvs ? ' im-pvs' : ''}" data-export="${i}" title="${esc(`In ${ziel} exportieren${p.imPvs ? ` · ${p.imPvs}` : ''}`)}" aria-label="In ${esc(ziel)} exportieren: ${name}">${ziel === 'DENSoffice' ? DELFIN : EXPORT}<span>${esc(ziel)}</span></button>`
     : hkp
       ? `<span class="aktion aus" title="Kein Praxisprogramm mit Bridge eingestellt (Einstellungen)">${EXPORT}</span>`
       : `<button type="button" class="aktion" data-export="${i}" title="Als JSON exportieren" aria-label="Exportieren: ${name}">${EXPORT}</button>`
@@ -423,7 +429,15 @@ function melden(text: string, zurueck?: PlanKarte, erfolg = false) {
   zeichnen()
 }
 
-interface Antwort { ok: boolean; meldung?: string; datei?: PlanDatei; nummer?: string }
+interface Antwort { ok: boolean; meldung?: string; datei?: PlanDatei; nummer?: string; testaboVoll?: boolean }
+
+function testaboVollOeffnen() {
+  if (!ich) return
+  ich.testabo = { erstellt: ich.testabo?.erstellt ?? ich.testabo?.max ?? 5, max: ich.testabo?.max ?? 5, bis: ich.testabo?.bis ?? '', voll: true }
+  aboAuf = true
+  aboGezeigt = true
+  zeichnen()
+}
 
 async function senden(pfad: 'loeschen' | 'zurueck' | 'export' | 'import', daten: unknown): Promise<Antwort> {
   try {
@@ -513,7 +527,17 @@ function neuUrl(basis: string, p: Stammdaten): string {
 }
 
 /** Neuer Plan für einen Patienten: erst die Planart wählen */
+function testaboStoppt(): boolean {
+  if (!ich?.testabo?.voll) return false
+  aboAuf = true
+  auswahl = false
+  neuFuer = null
+  zeichnen()
+  return true
+}
+
 function neuerPlanFuer(p: Stammdaten) {
+  if (testaboStoppt()) return
   neuFuer = p
   auswahl = true
   einstellungAuf = false
@@ -583,7 +607,10 @@ dateiFeld.addEventListener('change', async () => {
     if (!confirm(`Den Plan ${datei.kuerzel} ${nummerMitReihe(datei.nummer)} gibt es schon. Mit der Datei überschreiben?\n\nDatei: ${aus}`)) return
   }
   const r = await senden('import', { datei: roh, ziel: ziel ? kennung(ziel) : undefined })
-  if (!r.ok) return melden(r.meldung || 'Import hat nicht geklappt.')
+  if (!r.ok) {
+    if (r.testaboVoll) testaboVollOeffnen()
+    return melden(r.meldung || 'Import hat nicht geklappt.')
+  }
   await laden()
   melden(datei.modul === 'hkp'
     ? (ziel ? 'HKP ersetzt.' : 'HKP im Register angelegt – er wartet auf Freigabe.')
@@ -665,6 +692,42 @@ async function offenLaden() {
   offenLaeuft = false
   if (planSicht === 'offen') zeichnen()
 }
+
+function aboKarte(): string {
+  const t = ich.testabo!
+  const bis = t.bis ? ` Das Testabo läuft sonst bis ${esc(new Date(t.bis).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' }))}.` : ''
+  const feld = (name: string, label: string, extra = '') => {
+    const f = aboFehlerFelder[name]
+    return `<label class="feld">${label}<input name="${name}" value="${esc(String(aboFeld[name] ?? ''))}" ${extra}>${f ? `<small class="abo-fehler">${esc(f)}</small>` : ''}</label>`
+  }
+  const haken = (name: string, text: string) => {
+    const f = aboFehlerFelder[name]
+    return `<label class="abo-haken"><input type="checkbox" name="${name}"${aboFeld[name] === true ? ' checked' : ''}><span>${text}${f ? `<small class="abo-fehler">${esc(f)}</small>` : ''}</span></label>`
+  }
+  return `
+    <div class="wahl mitte" role="dialog" aria-modal="true" aria-label="Reguläres Abo abschließen">
+      <button type="button" class="wahl-grund" data-abo-zu aria-label="Schließen"></button>
+      <form class="wahl-karte einstellungen" data-abo>
+        <div class="wahl-kopf">
+          <h2>Testabo ist voll</h2>
+          <button type="button" data-abo-zu aria-label="Schließen">✕</button>
+        </div>
+        <p class="abo-text">${t.erstellt} von ${t.max} Plänen sind angelegt. Weitere Pläne gibt es mit dem regulären Abo: ${PAKETE.planr_clara.monat} € PlanR plus ${DOKU_MONAT} € Sprachdokumentation im Monat, ${PRO_PLAN.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € je Plan. Die Praxisdaten aus dem Testabo bleiben.${bis}</p>
+        ${feld('sepa.inhaber', 'Kontoinhaber', 'autocomplete="cc-name"')}
+        ${feld('sepa.iban', 'IBAN', 'spellcheck="false" autocomplete="off" placeholder="DE00 0000 0000 0000 0000 00"')}
+        ${feld('sepa.bic', 'BIC (optional)', 'autocomplete="off"')}
+        ${feld('sepa.unterschrift', 'Zur Bestätigung Vor- und Nachname', 'autocomplete="name"')}
+        ${haken('sepa.mandat', 'Ich erteile der Pickadoc GmbH das <b>SEPA-Lastschriftmandat</b>.')}
+        ${haken('zustimmung.agb', 'Ich habe die <a href="https://pickadoc.ai/agb.html" target="_blank" rel="noopener">AGB</a> gelesen und stimme zu.')}
+        ${haken('zustimmung.datenschutz', 'Ich habe die <a href="https://pickadoc.ai/datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweise</a> zur Kenntnis genommen.')}
+        ${haken('zustimmung.avv', 'Ich beauftrage die Pickadoc GmbH mit der <b>Verarbeitung von Patientendaten im Auftrag</b> (Art. 28 DSGVO).')}
+        ${aboFehler ? `<p class="abo-fehler" role="alert">${esc(aboFehler)}</p>` : ''}
+        <button type="submit" class="neu-knopf"${aboSendet ? ' disabled' : ''}>${aboSendet ? 'Wird abgeschlossen …' : 'Reguläres Abo abschließen'}</button>
+      </form>
+    </div>`
+}
+
+let aboFehlerFelder: Record<string, string> = {}
 
 function auswahlKarte(patient: Stammdaten): string {
   const wer = [patient.vorname, patient.name].filter(Boolean).join(' ')
@@ -1611,6 +1674,7 @@ function zeichnen() {
   const versendet = offen?.versendet || ''
   const punkte = planBlick ? planPunkte.map((p) => `<button type="button" class="plan-punkt${p.id === planAktiv ? ' aktiv' : ''}" data-punkt="${esc(p.id)}">${esc(p.text)}</button>`).join('') : ''
   app.innerHTML = `
+  ${ich.sudo ? `<div class="sudo-leiste">Kundenkonto von ${esc(ich.konto.email)}. Geöffnet durch ${esc(ich.sudo)}. <button type="button" data-sudo-ende>Zurück zum Eingang</button></div>` : ''}
   <header class="kopf">
     <div class="marke">
       ${planBlick
@@ -1674,6 +1738,7 @@ function zeichnen() {
     ${meldung?.erfolg ? `<div class="erfolg" role="status"><div class="erfolg-karte"><b>Plan übertragen</b><p>${esc(meldung.text)}</p><button type="button" data-erfolg-zu>Verstanden</button></div></div>` : meldung ? `<div class="meldung" role="status"><span>${esc(meldung.text)}</span>${meldung.zurueck ? '<button type="button" data-zurueck>Rückgängig</button>' : ''}</div>` : ''}
     ${planBlick ? '' : terminPopup()}
     ${auswahl && neuFuer ? auswahlKarte(neuFuer) : ''}
+    ${aboAuf && ich.testabo ? aboKarte() : ''}
     ${einstellungAuf ? einstellungKarte() : ''}
     ${persoenlichAuf ? persoenlichKarte({ name: ich.konto.name || ich.konto.email, email: ich.konto.email, admin: ich.konto.admin, foto: `/api/profil/foto?v=${fotoStand}`, eigen: !!ich.foto }) : ''}`
   const rahmen = app.querySelector<HTMLIFrameElement>('.plan-rahmen')
@@ -1743,8 +1808,8 @@ function zeichnen() {
       planrPlaene,
       neuerPlan: neuerPlanFuer,
       befundOeffnen: befundPvs() ? (nr, titel) => befundOeffnen({ patient: nr }, titel) : undefined,
-      dateiWaehlen: () => importWaehlen(null),
-      geoeffnet: ausPvsOeffnen,
+      dateiWaehlen: () => { if (!testaboStoppt()) importWaehlen(null) },
+      geoeffnet: async (nr, hinweise) => { if (!testaboStoppt()) await ausPvsOeffnen(nr, hinweise) },
     })
   })
   app.querySelectorAll<HTMLImageElement>('img[data-avatar]').forEach((img) => img.addEventListener('error', () => img.remove()))
@@ -1788,6 +1853,9 @@ function zeichnen() {
   app.querySelector<HTMLButtonElement>('[data-training]')?.addEventListener('click', () => trainingOeffnen({ admin: !!ich.konto.admin }))
   app.querySelector<HTMLButtonElement>('[data-clara-dialog]')?.addEventListener('click', () => void claraZeigen())
   app.querySelector<HTMLButtonElement>('[data-rechnungen]')?.addEventListener('click', () => void rechnungenZeigen())
+  app.querySelector<HTMLButtonElement>('[data-sudo-ende]')?.addEventListener('click', () => {
+    void fetch('/api/probe/sudo', { method: 'DELETE' }).then(() => { location.href = '/#probe-eingang' })
+  })
   app.querySelector<HTMLButtonElement>('[data-abmelden]')!.addEventListener('click', () => {
     if (confirm(`${ich.konto.email} auf diesem Gerät abmelden?`)) void abmelden()
   })
@@ -1909,6 +1977,20 @@ function zeichnen() {
   })
   app.querySelectorAll<HTMLButtonElement>('[data-slot]').forEach((b) => b.addEventListener('click', () => { void terminBuchen(b.dataset.slot || '') }))
   app.querySelectorAll<HTMLButtonElement>('[data-wahl-zu]').forEach((b) => b.addEventListener('click', auswahlSchliessen))
+  app.querySelectorAll<HTMLButtonElement>('[data-abo-zu]').forEach((b) => b.addEventListener('click', () => { aboAuf = false; zeichnen() }))
+  app.querySelector<HTMLFormElement>('[data-abo]')?.addEventListener('input', (ev) => {
+    const el = ev.target as HTMLInputElement
+    if (!el.name) return
+    aboFeld[el.name] = el.type === 'checkbox' ? el.checked : el.value
+  })
+  app.querySelector<HTMLFormElement>('[data-abo]')?.addEventListener('submit', (ev) => {
+    ev.preventDefault()
+    const form = ev.currentTarget as HTMLFormElement
+    for (const el of form.querySelectorAll<HTMLInputElement>('input')) {
+      if (el.name) aboFeld[el.name] = el.type === 'checkbox' ? el.checked : el.value
+    }
+    void aboSenden()
+  })
   app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', () => { auswahlSchliessen(); void einrichtungZeigen(true) })
   app.querySelector<HTMLButtonElement>('[data-ort-vergessen]')?.addEventListener('click', () => { ortVergessen(); location.reload() })
   app.querySelector<HTMLButtonElement>('[data-bridge-pc]')?.addEventListener('click', async (ev) => {
@@ -2052,16 +2134,55 @@ window.addEventListener('popstate', () => {
   if (planSicht === 'offen') void offenLaden()
   else zeichnen()
 })
+window.addEventListener('planr-testabo-voll', () => testaboVollOeffnen())
+
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return
   if (terminBlick?.buchen) return
   if (terminBlick) { terminBlick = null; stammLauf += 1; slotLauf += 1; zeichnen(); return }
+  if (aboAuf) { aboAuf = false; zeichnen(); return }
   if (auswahl || einstellungAuf) auswahlSchliessen()
 })
 
+async function aboSenden() {
+  aboSendet = true
+  aboFehler = ''
+  aboFehlerFelder = {}
+  zeichnen()
+  const text = (k: string) => String(aboFeld[k] ?? '').trim()
+  const wahr = (k: string) => aboFeld[k] === true
+  try {
+    const r = await fetch('/api/testabo/abschluss', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sepa: { inhaber: text('sepa.inhaber'), iban: text('sepa.iban'), bic: text('sepa.bic'), unterschrift: text('sepa.unterschrift'), mandat: wahr('sepa.mandat') },
+        zustimmung: { agb: wahr('zustimmung.agb'), datenschutz: wahr('zustimmung.datenschutz'), avv: wahr('zustimmung.avv') },
+      }),
+    })
+    const d = await r.json() as { ok?: boolean; fehler?: Record<string, string>; meldung?: string }
+    aboSendet = false
+    if (!d.ok) {
+      aboFehlerFelder = d.fehler ?? {}
+      aboFehler = d.meldung || 'Das Abo konnte nicht abgeschlossen werden.'
+      zeichnen()
+      return
+    }
+    aboAuf = false
+    aboFehler = ''
+    if (ich) ich.testabo = null
+    melden('Das reguläre Abo ist abgeschlossen. Weitere Pläne sind frei.', undefined, true)
+  } catch {
+    aboSendet = false
+    aboFehler = 'Keine Verbindung. Bitte erneut versuchen.'
+    zeichnen()
+  }
+}
+
 async function laden() {
-  const d = await (await fetch('/api/plaene', { cache: 'no-store' })).json() as { plaene?: PlanKarte[] }
+  const d = await (await fetch('/api/plaene', { cache: 'no-store' })).json() as { plaene?: PlanKarte[]; testabo?: Ich['testabo'] }
   plaene = Array.isArray(d.plaene) ? d.plaene : []
+  if (ich && 'testabo' in d) ich.testabo = d.testabo
+  if (ich.testabo?.voll && !aboGezeigt) { aboAuf = true; aboGezeigt = true }
   planAusAdresse()
   zeichnen()
   if (planSicht === 'offen' && !offenLaeuft) void offenLaden()
@@ -2141,7 +2262,7 @@ function ohneAnmeldung() {
     const soll = location.hash === '#probe-eingang' ? '#probe-eingang'
       : (['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
       : location.hash === '#probe' ? '#probe'
-      : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' ? location.hash : 'start'
+      : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' || location.hash === '#buchen-test' ? location.hash : 'start'
     if (soll === ansicht) return
     const vorher = ansicht
     ansicht = soll
@@ -2169,7 +2290,7 @@ function ohneAnmeldung() {
       anmeldePopupEntfernen()
       hp.homepageVerlassen()
       const { buchungSeite } = await import('./buchung')
-      buchungSeite(app, soll === '#buchen-doku')
+      buchungSeite(app, soll === '#buchen-doku', soll === '#buchen-test')
       scrollTo(0, 0)
     } else {
       anmeldePopupEntfernen()
