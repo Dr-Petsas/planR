@@ -36,7 +36,7 @@ import { spawn } from 'node:child_process'
 import { timingSafeEqual } from 'node:crypto'
 import { isoDatum, stammdatenAusPvs } from './pvsPatient.ts'
 import { kundenBauen, type KundeZahlen } from './kundenBackend.ts'
-import { PROBE_PASSWORT, demoImplantat } from './demoKonto.ts'
+import { PROBE_PASSWORT } from './demoKonto.ts'
 import { zipMitDatei } from './zipAnhang.ts'
 import {
   UST_SATZ, abrechnen, ausstellerVollstaendig, euroText, leeresZaehlwerk, monatMerken, monatVon, monatsname, naechsteNummer, rechnungErstellen, rechnungHtml,
@@ -340,8 +340,11 @@ async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   if (!eigeneSeite(req)) return json(res, 403, { ok: false })
   if (req.method === 'DELETE') {
     const token = cookieWert(req.headers.cookie, SITZUNG_COOKIE)
-    if (token) await sitzungExklusiv((liste) => sitzungenSpeichern(liste.filter((x) => x.hash !== sitzungHash(token))))
-    res.setHeader('Set-Cookie', `${SITZUNG_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${sicher(req)}`)
+    const sudo = cookieWert(req.headers.cookie, SUDO_COOKIE)
+    const weg = new Set([token, sudo].filter(Boolean).map(sitzungHash))
+    if (weg.size) await sitzungExklusiv((liste) => sitzungenSpeichern(liste.filter((x) => !weg.has(x.hash))))
+    const leer = `Path=/; Max-Age=0; HttpOnly; SameSite=Lax${sicher(req)}`
+    res.setHeader('Set-Cookie', [`${SITZUNG_COOKIE}=; ${leer}`, `${SUDO_COOKIE}=; ${leer}`])
     return json(res, 200, { ok: true })
   }
   if (req.method !== 'POST') return json(res, 405, { ok: false })
@@ -3559,11 +3562,6 @@ async function probeLoginAnlegen(req: IncomingMessage, res: ServerResponse) {
     }
   })
   if (ids.length) await eingangZuordnen(ORDNER, ids, mandant, email, Date.now(), true)
-  if ((await dateiLesen(mandant)).length === 0) {
-    const demo = demoImplantat(werNamen.praxis)
-    const karte = kartePrüfen(demo.karte)
-    if (karte) await inDenEingang(mandant, karte, demo.plan)
-  }
   return json(res, 200, { ok: true, email })
 }
 
