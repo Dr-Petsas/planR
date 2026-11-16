@@ -44,6 +44,17 @@ export const BEFUND_KUERZEL: Record<string, string> = {
   i: 'vorhandenes Implantat',
   ix: 'zu entfernendes (periimplantär erkranktes) Implantat',
   pz: 'parodontal geschädigter Zahn',
+  // Kürzel aus dem Zahnersatz-Befund, wie sie auf eingelesenen Plänen stehen
+  b: 'Brückenglied',
+  bw: 'erneuerungsbedürftiges Brückenglied',
+  e: 'ersetzter Zahn',
+  ew: 'ersetzter, erneuerungsbedürftiger Zahn',
+  pw: 'erhaltungswürdiger Zahn mit partiellen Substanzdefekten',
+  t: 'Teleskop',
+  tw: 'erneuerungsbedürftiges Teleskop',
+  sw: 'erneuerungsbedürftige Suprakonstruktion',
+  ur: 'unzureichende Retention',
+  ')(': 'Lückenschluss',
 }
 
 /**

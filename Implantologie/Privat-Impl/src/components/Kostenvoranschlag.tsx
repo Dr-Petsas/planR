@@ -23,7 +23,8 @@ function gueltigBis(iso: string, monate: number) {
 export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
   const { praxis } = einst
   const { patient } = plan
-  const versorgt = ALLE_ZAEHNE.filter((z) => plan.zaehne[z]?.TP || plan.zaehne[z]?.B)
+  // Der Befund steht im Zahnschema. Hier erscheinen nur Zähne, an denen etwas geplant ist.
+  const versorgt = ALLE_ZAEHNE.filter((z) => plan.zaehne[z]?.TP)
   const begruendungen = [...kalk.honorarGoz, ...kalk.honorarGoae].filter((z) => z.begruendung && (z.faktor ?? 0) > 2.3)
   const analoge = [...kalk.honorarGoz, ...kalk.honorarGoae].filter((z) => z.analog)
   const ueber35 = kalk.honorarGoz.some((z) => (z.faktor ?? 0) > 3.5)
@@ -83,10 +84,10 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
         <br />für den besprochenen implantatchirurgischen Eingriff erhalten Sie nachfolgend die voraussichtlichen Kosten.
       </p>
 
-      {versorgt.length > 0 && (
+      {(versorgt.length > 0 || sitzungen.length > 0) && (
         <section>
-          <h2>Befund und geplante Behandlung</h2>
-          <table className="kv-tabelle kv-zaehne">
+          <h2>{versorgt.length > 0 ? 'Befund und geplante Behandlung' : 'Geplante Behandlung'}</h2>
+          {versorgt.length > 0 && <table className="kv-tabelle kv-zaehne">
             <thead><tr><th>Zahn</th><th>Befund</th><th>Geplant</th></tr></thead>
             <tbody>
               {versorgt.map((z) => (
@@ -97,7 +98,7 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table>}
           {sitzungen.length > 0 && <p className="kv-ablauf"><b>Behandlungsablauf:</b> {sitzungen.map((s) => SITZUNG_NAME[s] ?? `Sitzung ${s}`).join(' → ')}</p>}
         </section>
       )}

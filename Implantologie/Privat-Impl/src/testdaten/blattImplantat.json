@@ -1,0 +1,480 @@
+{
+ "schema": {
+  "B": {
+   "11": "b",
+   "12": "b",
+   "13": "b",
+   "14": "x",
+   "15": "b",
+   "16": "x",
+   "18": "f",
+   "21": "k",
+   "22": "k",
+   "23": "b",
+   "24": "b",
+   "25": "b",
+   "26": "i",
+   "28": "f",
+   "31": "k",
+   "32": "k",
+   "33": "k",
+   "34": "k",
+   "35": "i",
+   "36": "b",
+   "37": "i",
+   "38": "f",
+   "41": "k",
+   "42": "k",
+   "43": "k",
+   "44": "k",
+   "45": "i",
+   "46": "b",
+   "47": "i",
+   "48": "f"
+  },
+  "R": {},
+  "TP": {}
+ },
+ "positionen": [
+  {
+   "ebene": "GOZ",
+   "nr": "0030",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 25.87,
+   "faktor": 2.3,
+   "sitzung": 1,
+   "text": "Aufstellung eines schriftlichen Heil- und Kostenplans nach Befundaufnahme und gegebenenfalls Auswertung von Modellen"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "34",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 40.22,
+   "faktor": 2.3,
+   "sitzung": 1,
+   "text": "Erörterung(min.20 min) der Auswirkung einer Krankheit auf die Lebensgestaltung, einschl.Beratung ggf.mit Bezugsperson"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "6000",
+   "analog": true,
+   "zahn": "",
+   "anzahl": 4,
+   "betrag": 41.4,
+   "faktor": 2.3,
+   "sitzung": 1,
+   "text": "Full Mouth Desinfektion gemäß § 6 Abs. 1 GOZ entsprechend GOZ-Nr. 6000 Profil- oder Enfacefotografie einschließlich kieferorthopädischer Auswertung"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "1",
+   "zahn": "",
+   "anzahl": 2,
+   "betrag": 21.44,
+   "faktor": 2.3,
+   "sitzung": 1,
+   "text": "Beratung auch mittels Fernsprecher"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "5",
+   "zahn": "",
+   "anzahl": 2,
+   "betrag": 21.44,
+   "faktor": 2.3,
+   "sitzung": 1,
+   "text": "symptombezogene Untersuchung"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9000",
+   "zahn": "OK",
+   "anzahl": 1,
+   "betrag": 174.01,
+   "faktor": 3.5,
+   "sitzung": 1,
+   "text": "Implantatbezogene Analyse und Vermessung des Alveolarfortsatzes, des Kieferkörpers und der angrenzenden knöchernen Strukturen sowie der Schleimhaut, einschließlich metrischer Auswertung von radiologischen Befundunterlagen, Modellen und Fotos zur Feststellung der Implantatposition, ggf. mit Hilfe einer individuellen Schablone zur Diagnostik, einschließlich Implantatauswahl, je Kiefer"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "5170",
+   "zahn": "OK",
+   "anzahl": 1,
+   "betrag": 49.21,
+   "faktor": 3.5,
+   "sitzung": 1,
+   "text": "Anatomische Abformung des Kiefers mit individuellem Löffel bei ungünstigen Zahnbogen- und Kieferformen und/oder tief ansetzenden Bändern oder spezielle Abformung zur Remontage, je Kiefer"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9003",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 19.68,
+   "faktor": 3.5,
+   "sitzung": 1,
+   "text": "Verwenden einer Orientierungsschablone/Positionierungsschablone zur Implantation, je Kiefer"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "5377",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 46.63,
+   "faktor": 1,
+   "sitzung": 1,
+   "text": "Zuschlag für computergesteuerte Analyse,einschl. speziell nachfolgender 3D-Rekonstruktion"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "5370",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 291.44,
+   "faktor": 2.5,
+   "sitzung": 1,
+   "text": "Computergesteuerte Tomographie im Kopfbereich - gegebenenfalls einschließlich des kranio-zervikalen Übergangs"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "5004",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 58.29,
+   "faktor": 2.5,
+   "sitzung": 1,
+   "text": "Panoramaschichtaufnahme der Kiefer"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "0080",
+   "zahn": "11-15",
+   "anzahl": 1,
+   "betrag": 5.91,
+   "faktor": 3.5,
+   "sitzung": 2,
+   "text": "Intraorale Oberflächenanästhesie, je Kieferhälfte oder Frontzahnbereich"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "0090",
+   "zahn": "15,13,11",
+   "anzahl": 18,
+   "betrag": 212.58,
+   "faktor": 3.5,
+   "sitzung": 2,
+   "text": "Intraorale Infiltrationsanästhesie"
+  },
+  {
+   "ebene": "MAT",
+   "nr": "vm005",
+   "zahn": "",
+   "anzahl": 15,
+   "betrag": 19.95,
+   "faktor": 1,
+   "sitzung": 2,
+   "text": "Septanest Anästhetikum"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "2442",
+   "zahn": "",
+   "anzahl": 3,
+   "betrag": 361.95,
+   "faktor": 2.3,
+   "sitzung": 2,
+   "text": "Implan. Biomaterials zur Weichteilunterfütterung gemäß § 6 Abs. 1 GOZ entsprechend GOÄ-Nr. ä2442 Implantation alloplastischen Materials zur Weichteilunterfüttg. ,als selbständige Leistung",
+   "analog": true
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9005",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 59.05,
+   "faktor": 3.5,
+   "sitzung": 2,
+   "text": "Verwenden einer auf dreidimensionale Daten gestützten Navigationsschablone/chirurgischen Führungsschablone zur Implantation, ggf. einschließlich Fixierung, je Kiefer"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9090",
+   "zahn": "15,13,11",
+   "anzahl": 3,
+   "betrag": 236.22,
+   "faktor": 3.5,
+   "sitzung": 2,
+   "text": "Knochengewinnung (z.B. Knochenkollektor oder Knochenschaber), Knochenaufbereitung und -implantation, auch zur Weichteilunterfütterung"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9150",
+   "zahn": "",
+   "anzahl": 3,
+   "betrag": 261.96,
+   "faktor": 2.3,
+   "sitzung": 2,
+   "text": "Fixation oder Stabilisierung des Augmentates durch Osteosynthesemaßnahmen (z.B. Schrauben- oder Plattenosteosynthese oder Titannetze), zusätzlich zu der Leistung nach der Nummer 9100, je Kieferhälfte oder Frontzahnbereich"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9010",
+   "zahn": "15,13,11",
+   "anzahl": 3,
+   "betrag": 912.39,
+   "faktor": 3.5,
+   "sitzung": 2,
+   "text": "Implantatinsertion, je Implantat. Präparieren einer Knochenkavität für ein enossales Implantat, Einsetzen einer Implantatschablone zur Überprüfung der Knochenkavität (z. B. Tiefenlehre), ggf. einschließlich Knochenkondensation, Knochenglättung im Bereich des Implantats, Einbringen eines enossalen Implantats einschließlich Verschlussschraube und ggf. Einbringen von Aufbauelementen bei offener Einheilung sowie Wundverschluss"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "0530",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 123.73,
+   "faktor": 1,
+   "sitzung": 2,
+   "text": "Zuschlag bei nichtstationärer Durchführung von zahnärztlich-chirurgischen Leistungen, die mit Punktzahlen von 1200 und mehr Punkten bewertet sind"
+  },
+  {
+   "ebene": "MAT",
+   "nr": "vm025",
+   "zahn": "",
+   "anzahl": 3,
+   "betrag": 555.78,
+   "faktor": 1,
+   "sitzung": 2,
+   "text": "Camlog Schraubimplantat, Promote"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "3060",
+   "zahn": "15,13,11",
+   "anzahl": 3,
+   "betrag": 54.33,
+   "faktor": 2.3,
+   "sitzung": 2,
+   "text": "Stillung einer Blutung durch Abbinden oder Umstechen des Gefäßes oder durch Knochenbolzung"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "5004",
+   "zahn": "",
+   "anzahl": 2,
+   "betrag": 116.58,
+   "faktor": 2.5,
+   "sitzung": 2,
+   "text": "Panoramaschichtaufnahme der Kiefer"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "2382",
+   "zahn": "15,13,11",
+   "anzahl": 1,
+   "betrag": 150.76,
+   "faktor": 3.5,
+   "sitzung": 2,
+   "text": "Schwierige Hautlappenplastik od. Spalthauttransplantation"
+  },
+  {
+   "ebene": "MAT",
+   "nr": "vm008",
+   "zahn": "",
+   "anzahl": 3,
+   "betrag": 37.05,
+   "faktor": 1,
+   "sitzung": 2,
+   "text": "Nahtmaterial"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "6190",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 27.56,
+   "faktor": 3.5,
+   "sitzung": 2,
+   "text": "Beratendes und belehrendes Gespräch mit Anweisungen zur Beseitigung von schädlichen Gewohnheiten und Dysfunktionen"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "0080",
+   "zahn": "15-11",
+   "anzahl": 3,
+   "betrag": 11.64,
+   "faktor": 2.3,
+   "sitzung": 3,
+   "text": "Intraorale Oberflächenanästhesie, je Kieferhälfte oder Frontzahnbereich"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "3300",
+   "zahn": "15,13,11",
+   "anzahl": 2,
+   "betrag": 16.82,
+   "faktor": 2.3,
+   "sitzung": 3,
+   "text": "Nachbehandlung nach chirurgischem Eingriff (z. B. Tamponieren), als selbständige Leistung, je Operationsgebiet (Raum einer zusammenhängenden Schnittführung)"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "3290",
+   "zahn": "15,13,11",
+   "anzahl": 1,
+   "betrag": 7.11,
+   "faktor": 2.3,
+   "sitzung": 3,
+   "text": "Kontrolle nach chirurgischem Eingriff, als selbständige Leistung, je Kieferhälfte oder Frontzahnbereich"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9003",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 12.94,
+   "faktor": 2.3,
+   "sitzung": 4,
+   "text": "Verwenden einer Orientierungsschablone/Positionierungsschablone zur Implantation, je Kiefer"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9170",
+   "zahn": "",
+   "anzahl": 3,
+   "betrag": 194.04,
+   "faktor": 2.3,
+   "sitzung": 4,
+   "text": "Entfernung im Knochen liegender Materialien durch Osteotomie (z.B. Osteosynthesematerial, Knochenschrauben) oder Entfernung eines subperiostalen Gerüstimplantats , je Kieferhälfte oder Frontzahnbereich"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "0510",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 42.18,
+   "faktor": 1,
+   "sitzung": 4,
+   "text": "Zuschlag bei nichtstationärer Durchführung von zahnärztlich-chirurgischen Leistungen, die mit Punktzahlen von 500 bis 799 Punkten bewertet sind"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9050",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 40.49,
+   "faktor": 2.3,
+   "sitzung": 4,
+   "text": "Resonanzfrequenzanalyse pro Eingriff gemäß § 6 Abs. 1 GOZ entsprechend GOZ-Nr. 9050 Entfernen und Wiedereinsetzen sowie Auswechseln eines oder mehrerer Aufbauelemente bei einem zweiphasigen Implantatsystem während der rekonstruktiven Phase",
+   "analog": true
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "9040",
+   "zahn": "15,13,11",
+   "anzahl": 3,
+   "betrag": 369.69,
+   "faktor": 3.5,
+   "sitzung": 4,
+   "text": "Freilegen eines Implantats und Einfügen eines oder mehrerer Aufbauelemente (z.B. eines Gingivaformers) bei einem zweiphasigen Implantatsystem"
+  },
+  {
+   "ebene": "MAT",
+   "nr": "vm026",
+   "zahn": "",
+   "anzahl": 3,
+   "betrag": 107.4,
+   "faktor": 1,
+   "sitzung": 4,
+   "text": "Gingivaformer für Camlog Implantat"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "444",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 75.77,
+   "faktor": 1,
+   "sitzung": 4,
+   "text": "Zuschlag bei amb. Durchführung von operativen Leistungen,die mit Punktzahlen von 800 - 1199 Punkten bewertet sind"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "2382",
+   "zahn": "15,13,11",
+   "anzahl": 1,
+   "betrag": 99.07,
+   "faktor": 2.3,
+   "sitzung": 4,
+   "text": "Schwierige Hautlappenplastik od. Spalthauttransplantation"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "4070",
+   "analog": true,
+   "zahn": "15,13,11",
+   "anzahl": 3,
+   "betrag": 38.82,
+   "faktor": 2.3,
+   "sitzung": 4,
+   "text": "Applikation einer CHX-Gel Einlage in ein Implantat vor dem Eingliedern des Gingivaformers/Einheilkappe/Abutment gemäß § 6 Abs. 1 GOZ entsprechend GOZ-Nr. 4070 Parodontalchirurgische Therapie (insbesondere Entfernung subgingivaler Konkremente und Wurzelglättung) an einem einwurzeligen Zahn oder Implantat, geschlossenes Vorgehen"
+  },
+  {
+   "ebene": "MAT",
+   "nr": "vmCHX",
+   "zahn": "",
+   "anzahl": 4,
+   "betrag": 1.04,
+   "faktor": 1,
+   "sitzung": 4,
+   "text": "Chlorhexamed Mundgel Applikator 2 Gramm"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "2430",
+   "analog": true,
+   "zahn": "15,13,11",
+   "anzahl": 3,
+   "betrag": 79.17,
+   "faktor": 2.3,
+   "sitzung": 4,
+   "text": "Subgingiv. medikament. antibakt. Lokalapplikation, je Implantat gemäß § 6 Abs. 1 GOZ entsprechend GOZ-Nr. 2430 Medikamentöse Einlage in Verbindung mit Maßnahmen nach den Nummern 2360 bis 2380 und 2410, je Zahn und Sitzung"
+  },
+  {
+   "ebene": "GOÄ",
+   "nr": "5004",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 58.29,
+   "faktor": 2.5,
+   "sitzung": 4,
+   "text": "Panoramaschichtaufnahme der Kiefer"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "3290",
+   "zahn": "15,13,11",
+   "anzahl": 1,
+   "betrag": 7.11,
+   "faktor": 2.3,
+   "sitzung": 5,
+   "text": "Kontrolle nach chirurgischem Eingriff, als selbständige Leistung, je Kieferhälfte oder Frontzahnbereich"
+  },
+  {
+   "ebene": "GOZ",
+   "nr": "6190",
+   "zahn": "",
+   "anzahl": 1,
+   "betrag": 27.56,
+   "faktor": 3.5,
+   "sitzung": 5,
+   "text": "Beratendes und belehrendes Gespräch mit Anweisungen zur Beseitigung von schädlichen Gewohnheiten und Dysfunktionen"
+  }
+ ],
+ "summen": {
+  "honorarGoz": 4393.35,
+  "labor": 721.22,
+  "gesamt": 5114.57
+ }
+}

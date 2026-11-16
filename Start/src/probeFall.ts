@@ -115,7 +115,8 @@ export function vereinenGleich(teile: Blatt[]): Blatt {
     dazu(schema.TP, teil.schema.TP)
     for (const p of teil.positionen) {
       // Material hat keine Nummer: dort unterscheidet die Bezeichnung.
-      const key = `${p.ebene}|${p.nr || (p as { text?: string }).text || ''}|${p.zahn}`
+      // Der private Kostenvoranschlag führt dieselbe Ziffer in mehreren Sitzungen: jede Sitzung ist eine eigene Zeile.
+      const key = `${p.ebene}|${p.nr || (p as { text?: string }).text || ''}|${p.zahn}|${(p as { sitzung?: number }).sitzung ?? ''}`
       const schon = da.get(key)
       if (schon) {
         // Dieselbe Zeile aus einer zweiten Datei: die Bezeichnung nachtragen, wenn sie der ersten fehlte.
@@ -165,7 +166,8 @@ export function gruppenBauen(teile: Teil[]): Gruppe[] {
     } else if (f.fach === 'privat-ze' || f.fach === 'impl') {
       blatt.planart = f.fach === 'impl' || eigene.every((t) => t.planart === 'privat-impl') ? 'privat-impl' : 'privat-ze'
       blatt.planer = 'privat'
-      adresse = '/planer/privat-hkp/'
+      // Implantologie hat GOÄ, Analogleistungen und Sitzungen. Der Zahnersatz-Planer kennt sie nicht.
+      adresse = f.fach === 'impl' ? '/planer/implantologie/' : '/planer/privat-hkp/'
     } else {
       const wege: Record<string, [string, string]> = {
         par: ['/planer/par/', '/planer/privat-par/'],

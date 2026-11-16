@@ -25,6 +25,7 @@ import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdat
 import { Befundleiste, useBefundMitPlan } from './components/Befundleiste'
 import { befundZeile } from './befund01'
 import { eigenlaborMischen, praxiskatalogHolen } from './praxiskatalog'
+import { planAusBlatt, type BlattSchema, type BlattZeile } from './planAusBlatt'
 
 const hatInhalt = (p: Plan) => Boolean(patientName(p.patient).trim() || Object.values(p.zaehne).some((z) => z.B || z.TP))
 
@@ -57,7 +58,33 @@ export default function App() {
     })
     return () => { aus = true }
   }, [setEinst])
+  // Probe-Seite: ein eingelesener Kostenvoranschlag kommt als Nachricht und wird zum Plan.
+  const einstRef = useRef(einst)
+  useEffect(() => { einstRef.current = einst })
+  useEffect(() => {
+    const auf = (ev: MessageEvent) => {
+      if (ev.origin !== location.origin) return
+      const daten = ev.data as { type?: string; schema?: BlattSchema; positionen?: BlattZeile[] } | null
+      if (!daten || daten.type !== 'planr-probe' || !daten.schema) return
+      setPlan(planAusBlatt(einstRef.current.naechsteNummer, daten.schema, daten.positionen ?? [], einstRef.current))
+      // Der Befund steht im Zahnschema, darunter die Leistungen.
+      setReiter('planung')
+    }
+    window.addEventListener('message', auf)
+    if (window.parent !== window) window.parent.postMessage({ type: 'planr-probe-bereit' }, location.origin)
+    return () => window.removeEventListener('message', auf)
+  }, [setPlan])
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
+  useEffect(() => {
+    if (window.parent === window) return
+    window.parent.postMessage({
+      type: 'planr-probe-stand',
+      stand: {
+        regler: { privatStufe: plan.regler.begleitStufe, gozFaktor: plan.regler.gozFaktor || einst.gozFaktor },
+        nachher: { gesamt: kalk.gesamt, eigenanteil: kalk.gesamt, festzuschuss: 0 },
+      },
+    }, location.origin)
+  }, [plan, kalk, einst.gozFaktor])
 
   const ablage = useImplAblage()
   const fassung = pvsPlaene(plan, kalk)

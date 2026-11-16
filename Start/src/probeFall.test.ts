@@ -33,6 +33,14 @@ describe('fachErkennen', () => {
 })
 
 describe('gruppenBauen', () => {
+  it('hält dieselbe Ziffer aus zwei Sitzungen auseinander', () => {
+    const g = gruppenBauen([teil({ name: 'impl.pdf', fach: 'impl', planart: 'privat-impl', positionen: [
+      { ebene: 'GOÄ', nr: '5004', zahn: '', anzahl: 1, sitzung: 1 },
+      { ebene: 'GOÄ', nr: '5004', zahn: '', anzahl: 2, sitzung: 2 },
+      { ebene: 'GOÄ', nr: '5004', zahn: '', anzahl: 2, sitzung: 2 },
+    ] })])
+    expect(g[0].blatt.positionen).toHaveLength(2)
+  })
   it('bildet je Fach einen Plan in fester Reihenfolge', () => {
     const g = gruppenBauen([
       teil({ name: 'par.pdf', fach: 'par', dateien: ['p1'] }),
@@ -43,7 +51,7 @@ describe('gruppenBauen', () => {
     expect(g.map((x) => x.reiter)).toEqual(['HKP', 'Implantation', 'PAR'])
     expect(g[0].blatt).toMatchObject({ planart: 'hkp', planer: 'hkp', gozAnteil: true, dateien: ['h1', 'h2'] })
     expect(g[0].blatt.positionen).toHaveLength(2)
-    expect(g[1]).toMatchObject({ adresse: '/planer/privat-hkp/', fuellt: true })
+    expect(g[1]).toMatchObject({ adresse: '/planer/implantologie/', fuellt: true })
     expect(g[1].blatt).toMatchObject({ planart: 'privat-impl', planer: 'privat' })
     expect(g[2]).toMatchObject({ adresse: '/planer/par/', fuellt: false, namen: ['par.pdf'] })
   })

@@ -92,7 +92,22 @@ export function betragVon(wort: string): number | undefined {
   return Number(`${ganz}.${cent.padEnd(2, '0')}`)
 }
 
-export interface BlattPosition { ebene: 'GOZ' | 'BEL' | 'BEB' | 'MAT'; nr: string; zahn: string; anzahl: number; betrag?: number; text?: string }
+export interface BlattPosition {
+  ebene: 'GOZ' | 'GOÄ' | 'BEL' | 'BEB' | 'MAT'
+  nr: string
+  zahn: string
+  anzahl: number
+  betrag?: number
+  text?: string
+  /** Nur Privatplan: Steigerungsfaktor der Zeile */
+  faktor?: number
+  /** Nur Privatplan: Analogleistung nach § 6 Abs. 1 GOZ, nr ist die Vergleichsziffer */
+  analog?: boolean
+  /** Nur Privatplan: Sitzung laut Zwischenüberschrift, ab 1 */
+  sitzung?: number
+  /** Nur Privatplan: betrag ist der Betrag der ganzen Zeile, auch beim Material (dort brutto) */
+  zeilenbetrag?: true
+}
 
 export interface BlattSummen {
   honorarGoz?: number
@@ -210,6 +225,66 @@ function laborZeilen(zeilen: PdfZeile[], stand: LaborStand = { grenze: -1, menge
   return aus
 }
 
+interface PrivatStand { sitzung: number; letzte?: BlattPosition }
+
+const linkerRand = (t: PdfTeil) => t.x - (t.w ?? 0) / 2
+
+/**
+ * Privater Kostenvoranschlag aus dem Praxisprogramm: „Zähne · Geb.-Nr. · Bezeichnung · Anz. · Faktor · Betrag".
+ * GOZ steht als vier Ziffern, GOÄ mit „ä" davor, Analogleistungen mit „a" dahinter, Material mit „vm" davor.
+ * Die Bezeichnung läuft über mehrere Zeilen, „1. Sitzung …" ist eine Zwischenüberschrift.
+ * Der Betrag gilt für die ganze Zeile. Der Kopf steht auf jeder Seite neu, die Sitzung zählt über die Seiten weiter.
+ */
+function privatZeilen(zeilen: PdfZeile[], stand: PrivatStand): BlattPosition[] {
+  const aus: BlattPosition[] = []
+  const kopf = zeilen.findIndex((z) => kopfMit(z, 'zähne', 'geb', 'bezeichnung', 'anz', 'faktor', 'betrag'))
+  if (kopf < 0) return aus
+  const spalte = (anfang: string) => zeilen[kopf].teile.find((t) => t.text.toLowerCase().startsWith(anfang))!
+  // Zähne stehen links der Mitte zwischen „Zähne“ und „Geb.-Nr.“, die Bezeichnung beginnt am linken Rand ihres Kopfworts.
+  const zahnGrenze = (spalte('zähne').x + spalte('geb').x) / 2
+  const textGrenze = linkerRand(spalte('bezeichnung')) - 5
+  const faktorX = spalte('faktor').x
+  for (const z of zeilen.slice(kopf + 1)) {
+    const worte = z.teile
+    const klein = worte.map((t) => t.text.toLowerCase())
+    if (klein[0]?.startsWith('zahnarzthonorar') || klein[0]?.startsWith('verbrauchsmaterial')) break
+    if (klein.some((w) => w.startsWith('zahnarzthonorar'))) { stand.letzte = undefined; continue }
+    const f = worte.findIndex((t, i) => i > 0 && Math.abs(t.x - faktorX) <= 30 && t.text.includes(',') && betragVon(t.text) !== undefined)
+    if (f < 0) {
+      // Zwischenüberschrift: „1. Sitzung Implantat-Vorbehandlung", „4.Sitzung Implantat-Freilegung"
+      if (klein.slice(0, 2).some((w) => w.includes('sitzung'))) { stand.sitzung++; stand.letzte = undefined; continue }
+      if (stand.letzte && worte.length) stand.letzte.text = [stand.letzte.text, ...worte.map((t) => t.text)].filter(Boolean).join(' ')
+      continue
+    }
+    stand.letzte = undefined
+    const anzahl = Number(worte[f - 1].text)
+    const betrag = f < worte.length - 1 ? betragVon(worte[worte.length - 1].text) : undefined
+    const nrIndex = worte.findIndex((t, i) => i < f - 1 && t.x > zahnGrenze && t.x < textGrenze)
+    if (nrIndex < 0 || !Number.isInteger(anzahl) || anzahl < 1 || betrag === undefined) continue
+    const roh = worte[nrIndex].text.toLowerCase()
+    const zahn = worte.slice(0, nrIndex).map((t) => t.text).join(' ')
+    const text = worte.slice(nrIndex + 1, f - 1).map((t) => t.text).join(' ')
+    const faktor = betragVon(worte[f].text)!
+    let p: BlattPosition | undefined
+    const grund = { zahn, anzahl, betrag, faktor, zeilenbetrag: true as const, ...(stand.sitzung ? { sitzung: stand.sitzung } : {}), ...(text ? { text } : {}) }
+    if (roh.startsWith('vm')) p = { ebene: 'MAT', nr: worte[nrIndex].text, ...grund }
+    else if (roh.startsWith('ä') && nurZiffern(roh.slice(1))) p = { ebene: 'GOÄ', nr: roh.slice(1), ...grund }
+    else if (roh.length === 5 && roh.endsWith('a') && nurZiffern(roh.slice(0, 4))) p = { ebene: 'GOZ', nr: roh.slice(0, 4), analog: true, ...grund }
+    else if (roh.length === 4 && nurZiffern(roh)) p = { ebene: 'GOZ', nr: roh, ...grund }
+    if (!p) continue
+    aus.push(p)
+    stand.letzte = p
+  }
+  return aus
+}
+
+/** „… gemäß § 6 Abs. 1 GOZ entsprechend GOZ-Nr. 9050 …" steht oft erst in der Folgezeile: Analog gilt dann auch ohne „a". */
+function analogNachtragen(positionen: BlattPosition[]) {
+  for (const p of positionen) {
+    if (p.zeilenbetrag && !p.analog && p.ebene !== 'MAT' && p.text?.includes('Abs. 1 GOZ entsprechend')) p.analog = true
+  }
+}
+
 /** Summe der Positionen mit 7,00% MwSt EUR 256,00 17,92 273,92 */
 function mwstAus(zeilen: PdfZeile[]): NonNullable<BlattSummen['laborMwst']> {
   const aus: NonNullable<BlattSummen['laborMwst']> = []
@@ -254,6 +329,10 @@ const MARKEN: [Exclude<keyof BlattSummen, 'laborMwst'>, string][] = [
   ['honorarGoz', 'summe der goz-honorarleistungen'],
   ['labor', 'material- und laborkosten ('],
   ['laborBeleg', 'gesamtsumme praxislaborkosten'],
+  // Privater Kostenvoranschlag: Zwischensumme und Übertrag beginnen anders und zählen nicht.
+  ['honorarGoz', 'zahnarzthonorar eur'],
+  ['labor', 'verbrauchsmaterial eur'],
+  ['gesamt', 'behandlungskosten insgesamt'],
 ]
 
 function summenAus(zeilen: PdfZeile[]): BlattSummen {
@@ -283,6 +362,7 @@ export function blattAusEinlesen(antwort: EinleseAntwort): EinleseBlatt {
   const blatt: EinleseBlatt = { schema: { B: {}, R: {}, TP: {} }, positionen: [], summen: {}, pruefen: [] }
   const gesehen = new Set<string>()
   const labor: LaborStand = { grenze: -1, mengeVorn: false }
+  const privat: PrivatStand = { sitzung: 0 }
   for (const seite of antwort.ergaenzung?.seiten ?? []) {
     const { zeilen } = zeilenAusSeite(seite)
     const schema = schemaAusZeilen(zeilen)
@@ -304,8 +384,11 @@ export function blattAusEinlesen(antwort: EinleseAntwort): EinleseBlatt {
       gesehen.add(marke)
       blatt.positionen.push(...liste)
     }
+    // Der private Kostenvoranschlag geht über mehrere Seiten: jede Seite trägt eigene Zeilen, nichts liegt doppelt bei.
+    blatt.positionen.push(...privatZeilen(zeilen, privat))
     blatt.summen = { ...summenAus(zeilen), ...blatt.summen }
   }
+  analogNachtragen(blatt.positionen)
   return blatt
 }
 
