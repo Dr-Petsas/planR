@@ -372,6 +372,17 @@ export function zugangNamen(kontakt: Partial<ZahnarztKontakt>, email: string): {
   }
 }
 
+const UMLAUT: Record<string, string> = {
+  ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss', à: 'a', á: 'a', â: 'a', è: 'e', é: 'e', ê: 'e', ì: 'i', í: 'i', î: 'i', ò: 'o', ó: 'o', ô: 'o', ù: 'u', ú: 'u', û: 'u', ñ: 'n',
+}
+
+/** Demo-Login eines Probe-Interessenten: Nachname kleingeschrieben, z. B. pantas@pickadoc.de. */
+export function probeEmail(name: string): string {
+  const nachname = zugangNamen({ name, praxis: '', telefon: '', email: '', anschrift: '' }, 'praxis@pickadoc.de').nachname
+  const stamm = [...nachname.toLowerCase()].map((c) => UMLAUT[c] ?? c).join('').replace(/[^a-z]/g, '')
+  return `${stamm || 'praxis'}@pickadoc.de`
+}
+
 /** Zufälliges Passwort für den Zugang aus der Probe: 12 Zeichen, ohne verwechselbare Zeichen. */
 /** Im Probe-Zugang gesperrt, bis das Abo abgeschlossen ist: Einrichtung, Zuordnung, KI-Training, Patientensuche. */
 export function probeGesperrt(methode: string, url: string): boolean {

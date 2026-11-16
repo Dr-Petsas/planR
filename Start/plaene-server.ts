@@ -24,7 +24,7 @@ import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patient
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   BETREIBER, artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangFuerMandant, eingangListe, eingangSichtbar, eingangStand, eingangText,
-  eingangZuordnen, faelleAus, fallAnlegen, fallFinden, fallTeile, idGueltig, passwortPasst, probeGesperrt, standPruefen, zugangNamen,
+  eingangZuordnen, faelleAus, fallAnlegen, fallFinden, fallTeile, idGueltig, passwortPasst, probeEmail, probeGesperrt, standPruefen, zugangNamen,
   type ProbeKarte,
 } from './probeEingang.ts'
 import {
@@ -36,6 +36,7 @@ import { spawn } from 'node:child_process'
 import { timingSafeEqual } from 'node:crypto'
 import { isoDatum, stammdatenAusPvs } from './pvsPatient.ts'
 import { kundenBauen, type KundeZahlen } from './kundenBackend.ts'
+import { PROBE_PASSWORT, demoImplantat } from './demoKonto.ts'
 import { zipMitDatei } from './zipAnhang.ts'
 import {
   UST_SATZ, abrechnen, ausstellerVollstaendig, euroText, leeresZaehlwerk, monatMerken, monatVon, monatsname, naechsteNummer, rechnungErstellen, rechnungHtml,
@@ -3513,6 +3514,59 @@ async function betreiberDerProbe(req: IncomingMessage): Promise<{ konto: Konto }
   return darfEingangSehen(s.konto.email, s.konto.role) ? { konto: s.konto } : { status: 403 }
 }
 
+/** Superuser legt für einen Probe-Interessenten den Demo-Account an und kann sich danach als diese Praxis anmelden. */
+async function probeLoginAnlegen(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) return json(res, wer.status, { ok: false })
+  const roh = JSON.parse(await lesenBody(req, 4000) || '{}') as { name?: unknown; ids?: unknown }
+  const name = String(roh.name ?? '').replace(/\s+/g, ' ').trim().slice(0, 160)
+  const ids = (Array.isArray(roh.ids) ? roh.ids : []).map((x) => String(x)).filter(idGueltig).slice(0, 30)
+  if (!name) return json(res, 400, { ok: false, meldung: 'Der Name des Interessenten fehlt.' })
+  const email = probeEmail(name)
+  const werNamen = zugangNamen({ name, praxis: '', telefon: '', email: '', anschrift: '' }, email)
+  const b0 = probeBuchung(email, werNamen, {})
+  if (!b0) return json(res, 400, { ok: false, meldung: 'Aus dem Namen wird keine E-Mail-Adresse.' })
+  const reg = await fetch(`${MAS}/registrieren`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-PlanR-Key': masSchluessel() },
+    body: JSON.stringify({
+      email, passwort: PROBE_PASSWORT, titel: werNamen.titel, vorname: werNamen.vorname, nachname: werNamen.nachname,
+      praxis: { name: b0.praxis.name, strasse: b0.praxis.strasse, plz: b0.praxis.plz, ort: b0.praxis.ort },
+      paket: b0.paket, sprachsteuerung: true, doku: true, buchung: b0.id, mandatsreferenz: '',
+      testaboBis: b0.testabo?.bis ?? '',
+    }),
+    signal: AbortSignal.timeout(20_000),
+  }).then(async (r) => ({ ok: r.ok, status: r.status, daten: await r.json().catch(() => ({})) as { ok?: boolean; clientId?: string; uid?: string; error?: string } })).catch(() => null)
+  let konto: Konto | null = null
+  if (reg?.ok && reg.daten.ok && reg.daten.clientId && reg.daten.uid) {
+    konto = { uid: reg.daten.uid, email, name: `${werNamen.vorname} ${werNamen.nachname}`.trim(), clientId: reg.daten.clientId, role: 'admin', admin: true }
+  } else if (reg?.status === 409) {
+    const a = await einloggen(email, PROBE_PASSWORT).catch(() => null)
+    if (!a?.ok) return json(res, 409, { ok: false, meldung: `Für ${email} gibt es schon ein Konto mit einem anderen Passwort.` })
+    konto = a.wert.konto
+  } else {
+    return json(res, 502, { ok: false, meldung: 'Der Demo-Account ließ sich gerade nicht anlegen. Bitte gleich noch einmal.' })
+  }
+  const mandant = mandantVon(await zugaengeLesen(), konto)
+  await exklusiv(async () => {
+    const neu = benutzerVermerken(await zugaengeLesen(), konto)
+    await jsonSchreiben(ZUGAENGE, neu)
+    const alle = await buchungenStand()
+    if (!alle.some((b) => b.inhaber?.email?.toLowerCase() === email)) {
+      await jsonSchreiben(BUCHUNGEN, [...alle, { ...b0, konto: { status: 'angelegt' as const, clientId: konto.clientId } }])
+    }
+  })
+  if (ids.length) await eingangZuordnen(ORDNER, ids, mandant, email, Date.now(), true)
+  if ((await dateiLesen(mandant)).length === 0) {
+    const demo = demoImplantat(werNamen.praxis)
+    const karte = kartePrüfen(demo.karte)
+    if (karte) await inDenEingang(mandant, karte, demo.plan)
+  }
+  return json(res, 200, { ok: true, email })
+}
+
 async function probeEingangJson(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== 'GET') return json(res, 405, { ok: false })
   const wer = await betreiberDerProbe(req)
@@ -3585,6 +3639,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/sudo') return void probeSudo(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang/fall') return void probeFallLink(req, res).catch(fehler500(res))
   if (url.startsWith('/api/probe/fall/')) return void probeFall(req, res, url.slice('/api/probe/fall/'.length)).catch(fehler500(res))
+  if (url === '/api/probe/eingang/login') return void probeLoginAnlegen(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
   if (url.startsWith('/probe-eingang/')) return void probeEingangSeite(req, res, url.slice('/probe-eingang/'.length)).catch(fehler500(res))

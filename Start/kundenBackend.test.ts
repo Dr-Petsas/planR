@@ -44,7 +44,7 @@ describe('kundenBauen', () => {
 
   it('zeigt einen Upload ohne Buchung und ohne Login', () => {
     const pantas = kundenBauen([], [fremd], []).find((k) => k.name === 'DR. PANTAS')!
-    expect(pantas.login).toBeNull()
+    expect(pantas.login).toEqual({ email: 'pantas@pickadoc.de', vorhanden: false })
     expect(pantas.plaene).toHaveLength(1)
     expect(pantas.stammdaten.find((z) => z.label === 'Praxis')?.wert).toContain('Pantas')
   })

@@ -8,6 +8,7 @@ import { PAKETE, SERVER } from './src/paket.ts'
 import { kzvNachNr } from './src/data/kzv.ts'
 import { pvsVon } from './src/einstellungen.ts'
 import type { ProbeStand, ZahnarztKontakt } from './probeEingang.ts'
+import { probeEmail } from './probeEingang.ts'
 
 export interface ProbeKurz {
   id: string
@@ -161,7 +162,7 @@ export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: s
       plaeneAnzahl: null,
       umsatzCent: null,
       name: k.name || k.praxis || k.email || 'Unbekannter Upload',
-      login: email.includes('@') ? loginFuer([email], bekannt) : null,
+      login: email.includes('@') ? loginFuer([email], bekannt) : { email: probeEmail(k.name || k.praxis || erst.dateiname), vorhanden: false },
       stammdaten: [
         zeile('Praxis', k.praxis),
         zeile('Anschrift', k.anschrift),

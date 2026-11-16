@@ -49,9 +49,12 @@ function loginZelle(k: Kunde) {
 }
 
 function knoepfe(k: Kunde) {
-  const login = k.login?.vorhanden
-    ? `<button type="button" class="sb-icon" data-sudo="${esc(k.login.email)}" title="Als diese Praxis in PlanR anmelden" aria-label="Kunden-Login">${ICON_LOGIN}</button>`
-    : ''
+  const email = k.login?.email ?? ''
+  const login = k.art === 'probe'
+    ? `<button type="button" class="sb-icon" data-probe-login="${esc(k.id)}" title="Vollständiger Demo-Account ${esc(email)}, Passwort 12345678" aria-label="Demo-Login">${ICON_LOGIN}</button>`
+    : k.login?.vorhanden
+      ? `<button type="button" class="sb-icon" data-sudo="${esc(email)}" title="Als diese Praxis in PlanR anmelden" aria-label="Kunden-Login">${ICON_LOGIN}</button>`
+      : ''
   const plan = `<button type="button" class="sb-icon" data-auf="${esc(k.id)}" title="${k.art === 'probe' ? 'Hochgeladener Plan und unser Ergebnis' : 'Stammdaten und Pläne'}" aria-label="Ansehen">${ICON_PLAN}</button>`
   return `<span class="sb-tun">${login}${plan}</span>`
 }
@@ -107,9 +110,11 @@ function listeZeichnen(alle: Kunde[], monat: string) {
 
 function kundePopup(k: Kunde, sudo: (email: string, meldung: Element | null) => void) {
   const stamm = k.stammdaten.map((z) => `<div><dt>${esc(z.label)}</dt><dd>${esc(z.wert)}</dd></div>`).join('')
-  const login = k.login?.vorhanden
-    ? `<button type="button" class="sb-knopf voll" data-sudo="${esc(k.login.email)}">Kunden-Login öffnen</button><span class="sb-fehl">${esc(k.login.email)}</span>`
-    : `<span class="sb-fehl">${k.login ? `Noch kein Login für ${esc(k.login.email)}.` : 'Kein Login hinterlegt.'}</span>`
+  const login = k.art === 'probe'
+    ? `<button type="button" class="sb-knopf voll" data-probe-login="${esc(k.id)}">Demo-Login öffnen</button><span class="sb-fehl">${esc(k.login?.email ?? '')} · Passwort 12345678</span>`
+    : k.login?.vorhanden
+      ? `<button type="button" class="sb-knopf voll" data-sudo="${esc(k.login.email)}">Kunden-Login öffnen</button><span class="sb-fehl">${esc(k.login.email)}</span>`
+      : `<span class="sb-fehl">${k.login ? `Noch kein Login für ${esc(k.login.email)}.` : 'Kein Login hinterlegt.'}</span>`
   const plaene = k.plaene.map((p) => planVergleich(p, '/probe-eingang/')).join('')
     || '<p class="sb-fehl">Kein Plan hochgeladen.</p>'
   // Der Fall: alle Uploads dieser Praxis im echten Planer. Derselbe Link geht an den Zahnarzt.
@@ -161,6 +166,10 @@ function kundePopup(k: Kunde, sudo: (email: string, meldung: Element | null) => 
   d.querySelector<HTMLButtonElement>('[data-sudo]')?.addEventListener('click', (e) => {
     sudo((e.currentTarget as HTMLElement).dataset.sudo ?? '', d.querySelector('[data-meldung]'))
   })
+  d.querySelector<HTMLButtonElement>('[data-probe-login]')?.addEventListener('click', (e) => {
+    const knopf = e.currentTarget as HTMLButtonElement
+    void probeAccount(k, d.querySelector('[data-meldung]'), knopf)
+  })
 }
 
 function anmeldungZeichnen(meldung: string) {
@@ -200,6 +209,34 @@ function anmeldungVerdrahten(app: HTMLElement) {
   })
 }
 
+function probeAccount(k: Kunde, meldung: Element | null, knopf: HTMLButtonElement) {
+  knopf.disabled = true
+  if (meldung) meldung.textContent = 'Demo-Account wird angelegt …'
+  void (async () => {
+    try {
+      const r = await fetch('/api/probe/eingang/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: k.name, ids: k.plaene.map((p) => p.id) }),
+      })
+      const d = await r.json() as { ok?: boolean; email?: string; meldung?: string }
+      if (!d.ok || !d.email) {
+        if (meldung) meldung.textContent = d.meldung || 'Der Demo-Account ließ sich nicht anlegen.'
+        knopf.disabled = false
+        return
+      }
+      const s = await fetch('/api/probe/sudo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: d.email }),
+      })
+      const a = await s.json() as { ok?: boolean; meldung?: string }
+      if (a.ok) { location.href = '/'; return }
+      if (meldung) meldung.textContent = a.meldung || 'Das Konto ließ sich nicht öffnen.'
+    } catch {
+      if (meldung) meldung.textContent = 'Keine Verbindung zu PlanR.'
+    }
+    knopf.disabled = false
+  })()
+}
+
 function verdrahten(app: HTMLElement, kunden: Kunde[]) {
   app.querySelector('[data-abmelden]')?.addEventListener('click', () => {
     void fetch('/api/probe/anmeldung', { method: 'DELETE' }).then(() => location.reload())
@@ -214,6 +251,12 @@ function verdrahten(app: HTMLElement, kunden: Kunde[]) {
   }
   for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-sudo]')) {
     knopf.addEventListener('click', () => { void sudo(knopf.dataset.sudo ?? '', app.querySelector('[data-sudo-meldung]')) })
+  }
+  for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-probe-login]')) {
+    knopf.addEventListener('click', () => {
+      const k = kunden.find((x) => x.id === knopf.dataset.probeLogin)
+      if (k) void probeAccount(k, app.querySelector('[data-sudo-meldung]'), knopf)
+    })
   }
   for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-auf]')) {
     knopf.addEventListener('click', () => {
