@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Zahnschema } from './components/Zahnschema'
 import { ImplantatDetails } from './components/ImplantatDetails'
+import { festVomBlatt, implantateSetzen } from './implantatSystem'
 import { RegionenBoxen } from './components/RegionenBoxen'
 import { GlobalBoxen } from './components/GlobalBoxen'
 import { Leistungen } from './components/Leistungen'
@@ -206,7 +207,10 @@ export default function App() {
               {implTeeth.length > 0 && (
                 <div className="impl-block">
                   <h4>Implantate <small>System, Durchmesser/Länge, Zeitpunkt und Deckung je Implantat</small></h4>
-                  <ImplantatDetails zaehne={implTeeth} implantate={plan.implantate} onChange={(implantate) => setPlan({ ...plan, implantate })} />
+                  <ImplantatDetails zaehne={implTeeth} implantate={plan.implantate} onChange={(implantate) => setPlan(implantateSetzen(plan, implantate))} />
+                  {implTeeth.some((z) => festVomBlatt(plan, z)) && (
+                    <ul className="hinweise"><li>Das Implantatmaterial steht als feste Zeile vom eingelesenen Blatt im Plan. Die Wahl des Systems ändert diesen Preis nicht. Den Preis ändern Sie dort in der Materialzeile.</li></ul>
+                  )}
                 </div>
               )}
               <div className="global-block"><GlobalBoxen wert={plan.global} onChange={(global) => setPlan({ ...plan, global })} /></div>

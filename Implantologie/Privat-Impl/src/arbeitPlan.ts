@@ -6,6 +6,7 @@ import type { Plan } from './types'
 import { IMPLANTATKOERPER } from './data/implantatkoerper'
 import { implantatZaehne } from './engine/planung'
 import { STANDARD_IMPLANTAT } from './components/ImplantatDetails'
+import { implantateSetzen } from './implantatSystem'
 import { arbeitVerstehen, systemAusText, type ArbeitStand } from './arbeitDialog'
 import { arbeitHoeren, type Anfrage, type ArbeitAntwort } from './arbeitFenster'
 
@@ -63,7 +64,7 @@ export function implDienst(anfrage: Anfrage, lesen: () => { plan: Plan; gesperrt
   const systemId = r.tun.systemId
   const implantate = { ...plan.implantate }
   for (const z of implantatZaehne(plan)) implantate[z] = { ...STANDARD_IMPLANTAT, ...implantate[z], system: systemId }
-  const neu = { ...plan, implantate }
+  const neu = implantateSetzen(plan, implantate)
   offen.set(id, { plan: neu, text: r.text, stempel: stempel(plan) })
   return { art: 'vorschlag', text: r.text, vorschlag: id }
 }
