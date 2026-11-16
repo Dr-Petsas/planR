@@ -218,6 +218,27 @@ main { min-width: 0; }
 .aktion.pvs-knopf svg { width: 18px; height: 18px; }
 .aktion.pvs-knopf:hover { background: var(--akzent-dunkel); color: #fff; }
 .aktion.pvs-knopf.im-pvs { background: #1a7f37; }
+.aktion.schritte-knopf {
+  display: inline-flex; gap: 7px; width: auto; height: 34px; padding: 0 6px 0 11px;
+  background: #f59e0b; color: #1f1400; border-radius: 8px; box-shadow: 0 0 0 2px rgba(245, 158, 11, .28);
+  font: inherit; font-size: 12.5px; font-weight: 800; letter-spacing: .01em;
+}
+.aktion.schritte-knopf b { min-width: 22px; padding: 2px 6px; border-radius: 6px; background: rgba(255, 255, 255, .7); font-size: 12px; text-align: center; }
+.aktion.schritte-knopf:hover { background: #d97706; color: #fff; }
+.aktion.schritte-knopf:hover b { color: #1f1400; }
+.bs-popup .sb-fenster { max-width: 760px; }
+.bs-hinweis { margin: 0 0 14px; color: var(--grau); font-size: 13px; }
+.bs-leer { margin: 6px 0; color: var(--grau); font-size: 13.5px; }
+.bs-abschnitt { margin: 0 0 18px; }
+.bs-abschnitt h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; padding: 7px 12px; border-radius: 8px; font-size: 14px; font-weight: 800; background: var(--akzent-hell); color: var(--akzent-dunkel); }
+.bs-abschnitt h3 span { margin-left: auto; font-size: 12px; font-weight: 700; opacity: .75; }
+.bs-abschnitt.bs-haupt h3 { background: #fef3c7; color: #92400e; }
+.bs-abschnitt.bs-kontrolle h3 { background: #dcfce7; color: #166534; }
+.bs-abschnitt ol { list-style: none; margin: 0; padding: 0; }
+.bs-schritt { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: baseline; padding: 6px 12px; border-bottom: 1px solid rgba(127, 127, 127, .18); font-size: 14px; }
+.bs-nr { color: var(--grau); font-variant-numeric: tabular-nums; text-align: right; }
+.bs-leistung { color: var(--grau); font-size: 11.5px; white-space: nowrap; }
+.bs-phase { padding: 10px 12px 3px; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--grau); }
 .aktion.pvs-knopf.im-pvs:hover { background: #146c2e; }
 .aktion.versand.versendet { color: #1a7f37; background: #e6f4ea; }
 .aktion.versand.versendet:hover { color: #146c2e; background: #d3ecda; }

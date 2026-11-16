@@ -14,6 +14,7 @@ export function pvsPlaene(plan: Plan, kalk: Kalkulation): PvsPlan[] {
     einzelpreis: z.einzel, betrag: z.betrag, art: ebene === 'GOAE' ? 'IM' : pvsArt(z.nr, 'IM'),
     bezeichnung: z.text.slice(0, 300),
     ...(z.punkte ? { punkte: z.punkte } : {}),
+    ...(z.sitzung ? { sitzung: z.sitzung } : {}),
     punktwert: ebene === 'GOAE' ? GOAE_PUNKTWERT : GOZ_PUNKTWERT,
     // Bei Analogleistungen ist `begruendung` die PKV-Einschätzung aus dem Katalog, keine Faktorbegründung.
     ...(!z.analog && z.begruendung?.trim() ? { begruendung: z.begruendung.trim() } : {}),

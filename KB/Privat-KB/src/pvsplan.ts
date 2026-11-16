@@ -28,6 +28,8 @@ export interface PvsPosition {
   begruendung?: string
   /** MwSt.-Satz in Prozent auf diese Labor-/Materialzeile, wie der Planer ihn rechnet (DENS setzt ihn je Laborposition) */
   mwst?: number
+  /** Behandlungssitzung der Leistung: für die Behandlungsschritte in der Übersicht, nicht fürs Praxisprogramm */
+  sitzung?: number
 }
 
 export interface PvsPlan {

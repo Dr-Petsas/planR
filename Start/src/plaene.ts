@@ -20,6 +20,8 @@ export interface PlanKarte {
   imPvs?: string
   /** Kostenvoranschlag per E-Mail an den Patienten (Text für die Liste) */
   versendet?: string
+  /** Zahl der Behandlungsschritte, die sich aus den Leistungen des Plans ergeben */
+  schritte?: number
   /** Eingetragener CalendR-Termin, ISO-Zeit */
   termin?: string
   /** DS-Win-Praxis (1–9) in einer Praxisgemeinschaft; fehlt = Hauptpraxis des Mandanten */

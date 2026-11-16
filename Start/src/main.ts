@@ -17,6 +17,7 @@ import { zuordnungOeffnen } from './zuordnungSeite'
 import { kastenSatz, OK, schemaVon, UK, type Kasten, type KastenGruppe } from './kasten'
 import { dauerStufen, dauerText, geschlecht, kalenderErlaubt, motivFuerPlan, motivPasst, slotBadge, terminKurz, uhrZeiger, type TerminGrund, type TerminMotiv } from './termin'
 import { trainingOeffnen } from './training'
+import { schritteOeffnen } from './schritteSeite'
 import { DOKU_MONAT, PAKETE, PRO_PLAN } from './paket'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
@@ -406,6 +407,9 @@ function zeile(p: PlanKarte, i: number, imFall = false): string {
   const import_ = ersetzbar(p)
     ? `<button type="button" class="aktion" data-import="${i}" title="Plan aus JSON-Datei ersetzen" aria-label="Importieren: ${name}">${IMPORT}</button>`
     : `<span class="aktion aus" title="Wartet nicht mehr auf Freigabe – nur in PlanR änderbar">${IMPORT}</span>`
+  const schritte = p.schritte
+    ? `<button type="button" class="aktion schritte-knopf" data-schritte="${i}" title="Behandlungsschritte: was der Reihe nach zu tun ist" aria-label="Behandlungsschritte: ${name}"><span>Schritte</span><b>${p.schritte}</b></button>`
+    : ''
   const wann = dswin
     ? new Date(p.geaendert).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : zeit(p.geaendert)
@@ -417,7 +421,7 @@ function zeile(p: PlanKarte, i: number, imFall = false): string {
     <span class="sp-betrag">${p.betrag ? esc(euro(p.betrag)) : ''}</span>
     <span class="sp-zeit">${esc(wann)}</span>
     <span class="sp-termin">${dswin ? '' : terminZelle(p)}</span>
-    <span class="sp-aktionen">${dswin ? befundKnopf(p, i) : `${befundKnopf(p, i)}${versand}${export_}${import_}${tonne}`}</span>
+    <span class="sp-aktionen">${dswin ? befundKnopf(p, i) : `${schritte}${befundKnopf(p, i)}${versand}${export_}${import_}${tonne}`}</span>
   </div>`
 }
 
@@ -1820,6 +1824,10 @@ function zeichnen() {
   app.querySelectorAll<HTMLButtonElement>('[data-befund]').forEach((b) => b.addEventListener('click', () => {
     const p = sichtbar[Number(b.dataset.befund)]
     if (p?.kennung) befundOeffnen(p.kennung, p.patient)
+  }))
+  app.querySelectorAll<HTMLButtonElement>('[data-schritte]').forEach((b) => b.addEventListener('click', () => {
+    const p = sichtbar[Number(b.dataset.schritte)]
+    if (p) schritteOeffnen(p.modul, p.nummer, p.patient)
   }))
   app.querySelectorAll<HTMLButtonElement>('[data-export]').forEach((b) => b.addEventListener('click', () => {
     const p = sichtbar[Number(b.dataset.export)]

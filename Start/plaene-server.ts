@@ -7,6 +7,7 @@ import {
   type Eingang, type Grab, type PlanKarte,
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
+import { behandlungsschritte, positionenAusFassung, schritteAnzahl } from './src/schritte.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import {
@@ -842,7 +843,9 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
   try {
     const wahl = await pvsPatient(c, patient)
     if (!wahl.id) return json(res, wahl.status ?? 409, { ok: false, meldung: wahl.meldung })
-    for (const plan of plaene) {
+    for (const voll of plaene) {
+      // Die Sitzung gehört den Behandlungsschritten, das Praxisprogramm kennt das Feld nicht.
+      const plan = { ...voll, positionen: (Array.isArray(voll.positionen) ? voll.positionen as Record<string, unknown>[] : []).map(({ sitzung: _s, ...rest }) => rest) }
       const anlage = await c.rufen<{ number?: number; label?: string; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/plaene/import`, {
         method: 'POST', body: { json: JSON.stringify(plan) }, ms: 70_000, headers: { 'X-DSWIN-EDIT': '1' },
       })
@@ -3623,6 +3626,19 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
     }).catch(() => json(res, 500, { ok: false }))
     return
   }
+  if (req.method === 'GET' && q.get('nur') === 'schritte') {
+    // Behandlungsschritte eines Plans für die Übersicht: aus der zuletzt gespeicherten Fassung, also immer zum Stand des Plans
+    const modul = q.get('modul') ?? ''
+    const nummer = q.get('nummer') ?? ''
+    if (!MODUL_RE.test(modul) || !nummer || nummer.length > 80) return json(res, 400, { ok: false })
+    Promise.all([dateiLesen(m), inhalteLesen(m)]).then(([datei, inhalte]) => {
+      const k = datei.find((x) => x.modul === modul && x.nummer === nummer && sichtbar(w, x))
+      if (!k) return json(res, 404, { ok: false })
+      const i = inhalte[schluessel(modul, nummer)]
+      json(res, 200, { ok: true, geaendert: i?.geaendert || k.geaendert, schritte: behandlungsschritte(positionenAusFassung(i?.pvs), modul === 'privat-impl') })
+    }).catch(() => json(res, 500, { ok: false }))
+    return
+  }
   if (req.method === 'GET' && (q.get('nur') === 'abgleich' || q.get('nur') === 'geloescht')) {
     // Abgleich für einen Planer: gelöschte Pläne und importierte Pläne seines Moduls
     const modul = q.get('modul') ?? ''
@@ -3657,6 +3673,8 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
         if (vs) k.versendet = versandText(vs)
         const termin = termine[schluessel(k.modul, k.nummer)]
         if (termin?.iso) k.termin = termin.iso
+        const anzahl = schritteAnzahl(behandlungsschritte(positionenAusFassung(inhalte[schluessel(k.modul, k.nummer)]?.pvs), k.modul === 'privat-impl'))
+        if (anzahl) k.schritte = anzahl
         if (!k.kennung) {
           const kennung = kennungVon((inhalte[schluessel(k.modul, k.nummer)]?.plan as { patient?: unknown } | undefined)?.patient)
           if (kennung) k.kennung = kennung
