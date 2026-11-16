@@ -52,6 +52,8 @@ describe('behandlungsschritte', () => {
 
   it('nimmt für unbekannte Nummern den Leistungstext', () => {
     expect(texte(s.haupt)).toContain('Digitale Volumentomographie')
+    const alt = behandlungsschritte([p('GOZ', '2430a', '15', { bezeichnung: 'analog § 6 Abs. 1 GOZ' }), p('GOZ', '9050a', '', { bezeichnung: 'Resonanzfrequenzanalyse, analog § 6 Abs. 1 GOZ' })])
+    expect(texte(alt.haupt)).toEqual(['Analogleistung GOZ 2430a 15', 'Resonanzfrequenzanalyse'])
   })
 
   it('ordnet nach Sitzung, wenn der Planer sie mitgibt', () => {

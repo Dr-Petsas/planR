@@ -187,10 +187,11 @@ const istZahn = (t: string) => t.length === 2 && t[0] >= '1' && t[0] <= '4' && t
 /** Leistungstext auf den Handgriff kürzen: bis zur ersten Einschränkung, höchstens 80 Zeichen. */
 function kurz(text: string): string {
   let t = text.trim()
-  for (const ende of [' gemäß', ' gem. ', ' entsprechend', ' einschließlich', ' einschl.', ', je ', ' je ', ' (z. B.']) {
+  for (const ende of [', analog', ' analog §', ' pro Eingriff', ' gemäß', ' gem. ', ' entsprechend', ' einschließlich', ' einschl.', ', je ', ' je ', ' (z. B.']) {
     const i = t.indexOf(ende)
     if (i > 12) t = t.slice(0, i)
   }
+  if (t.startsWith('analog')) return ''
   return t.length > 80 ? `${t.slice(0, 77).trimEnd()}…` : t
 }
 
@@ -213,7 +214,7 @@ export function behandlungsschritte(positionen: SchrittPosition[], impl = false)
     const regel = REGELN[schluessel]
     const sitzung = p.sitzung && p.sitzung > 0 ? p.sitzung : 0
     let a: Abschnitt = regel?.a ?? 'haupt'
-    let text = regel?.text ?? kurz(p.bezeichnung || (ebene === 'GOZ' ? GOZ_TEXT.get(nr) ?? '' : '') || `${ebene} ${nr}`)
+    let text = regel?.text ?? (kurz(p.bezeichnung ?? '') || kurz(ebene === 'GOZ' ? GOZ_TEXT.get(nr) ?? '' : '') || `Analogleistung ${ebene === 'GOAE' ? 'GOÄ' : ebene} ${nr}`)
     if (mitSitzung && sitzung) {
       // Die Sitzung entscheidet: erste = Planung, letzte = Nachsorge; dazwischen der Eingriff.
       if (sitzung === 1) a = 'vor'
