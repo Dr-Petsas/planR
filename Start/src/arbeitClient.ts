@@ -223,7 +223,8 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
     const schritte = Array.isArray(d.schritte) ? d.schritte : []
     // Im Korrekturlauf zählt, was der Plan und sein Prüfmodul danach melden, nicht die Ankündigung des Modells.
     if (d.frage) frage = d.frage
-    if ((!schritte.length && !d.frage) || !d.pruefung) teile.push(satz(d.antwort))
+    // Ab der zweiten Runde ist die Antwort nur noch Nachrede zu bereits Erledigtem.
+    if (!d.pruefung || (runde === 1 && !schritte.length && !d.frage)) teile.push(satz(d.antwort))
     if (!schritte.length) break
     if (schritte.some((x) => typeof (x as { begruendung?: unknown })?.begruendung === 'string')) vorschlag = true
     const r = await fragenKi(fenster, { aktion: 'aendern', schritte }, 5000)
