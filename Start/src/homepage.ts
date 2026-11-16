@@ -1,10 +1,12 @@
 import './homepage.css'
+import './clara-handy.css'
 import { logo, wortmarke } from './logo'
-import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN } from './paket'
+import { DOKU_MONAT, PAKETE, PRO_PLAN, TESTABO_PLAENE, TESTABO_TAGE } from './paket'
 import { einwilligungAendern, werbungAktiv, werbungStarten } from './werbung'
 
 /** Öffentliche Startseite von PlanR für Besucher ohne Anmeldung. */
 
+const CLARA_SCHRITTE = ['Befund', 'Regelversorgung', 'Festzuschuss', 'BEMA', 'GOZ', 'BEL II', 'Begründung']
 const CLARA_ZUSTAENDE = [
   { id: 'listening', zustand: 'Ich höre zu', unter: 'Patient und Befund sagen', hinweis: '„HKP für Frau Berger …“' },
   { id: 'thinking', zustand: 'Sie rechnet …', unter: 'Befund · Zuschüsse · Regler', hinweis: '' },
@@ -90,6 +92,83 @@ const RUECK_PLAENE = [
 
 const FORMEN = '<div class="hp-formen" aria-hidden="true"><i class="f1"></i><i class="f2"></i><i class="f3"></i><i class="f4"></i><i class="f5"></i></div>'
 
+/** Demo-HKP (Anna Berger): Brücke 14–16, Krone 26, Vollkeramik. */
+const OK = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28]
+const UK = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38]
+type Reihe = 'TP' | 'R' | 'B'
+const GEBISS: Record<number, Partial<Record<Reihe, string>>> = {
+  14: { TP: 'KM', R: 'KV', B: 'ww' }, 15: { TP: 'BM', R: 'BV', B: 'f' }, 16: { TP: 'KM', R: 'KV', B: 'ww' },
+  26: { TP: 'KM', R: 'K', B: 'ww' }, 46: { B: 'k' }, 36: { B: 'k' }, 38: { B: 'f' }, 48: { B: 'f' },
+}
+const FESTZUSCHUSS = [['2.1', '14–16', '1', '1.012,41'], ['2.7', '14, 16', '2', '205,10'], ['1.1', '26', '1', '375,52'], ['1.3', '26', '1', '63,20']]
+const KOSTEN = [['BEMA-Honorar', '742,18'], ['GOZ-Honorar', '1.284,60'], ['Material- und Laborkosten', '2.353,22']]
+
+function gebissZeilen(zaehne: number[], reihen: Reihe[], nummernZuerst: boolean): string {
+  const nummern = `<tr class="hkp-nr"><th></th>${zaehne.map((z) => `<td>${z}</td>`).join('')}</tr>`
+  const zeilen = reihen.map((r) => `<tr><th>${r}</th>${zaehne.map((z) => {
+    const w = GEBISS[z]?.[r] ?? ''
+    return `<td${w && r === 'TP' ? ' class="hkp-plan"' : ''}>${w}</td>`
+  }).join('')}</tr>`).join('')
+  return nummernZuerst ? nummern + zeilen : zeilen + nummern
+}
+
+const HKP_FORMULAR = `
+  <div class="hkp">
+    <div class="hkp-kopf">
+      <div class="hkp-feld">
+        <small>Krankenkasse bzw. Kostenträger</small><b>AOK Rheinland/Hamburg</b>
+        <small>Name, Vorname des Versicherten</small><b>Berger, Anna</b>
+        <span>geb. 14.03.1968 · Vers.-Nr. A123456789</span>
+      </div>
+      <div class="hkp-titel"><b>Heil- und Kostenplan</b><span>Teil 1 · Zahnersatz</span><em>Bonus 30 %</em></div>
+    </div>
+    <div class="hkp-abschnitt">I. Befund des gesamten Gebisses / Behandlungsplan</div>
+    <table class="hkp-gebiss">
+      ${gebissZeilen(OK, ['TP', 'R', 'B'], false)}
+      <tr class="hkp-trenner"><td colspan="17"></td></tr>
+      ${gebissZeilen(UK, ['B', 'R', 'TP'], true)}
+    </table>
+    <div class="hkp-unten">
+      <div>
+        <div class="hkp-abschnitt">II. Befunde für Festzuschüsse</div>
+        <table class="hkp-tab">
+          <tr><th>Befund</th><th>Zahn/Gebiet</th><th>Anz.</th><th>Betrag €</th></tr>
+          ${FESTZUSCHUSS.map((z) => `<tr>${z.map((w) => `<td>${w}</td>`).join('')}</tr>`).join('')}
+          <tr class="hkp-summe"><td colspan="3">Festzuschüsse gesamt</td><td>1.656,23</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="hkp-abschnitt">III. Kostenplanung</div>
+        <table class="hkp-tab">
+          ${KOSTEN.map(([t, w], i) => `<tr><td>${i + 1}</td><td>${t}</td><td>${w}</td></tr>`).join('')}
+          <tr class="hkp-summe"><td>4</td><td>Gesamtkosten</td><td>4.380,00</td></tr>
+          <tr><td>5</td><td>Festzuschüsse</td><td>−1.656,23</td></tr>
+          <tr class="hkp-eigen"><td>6</td><td>Eigenanteil</td><td>2.723,77</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="hkp-fuss"><span>Zahnarztpraxis Dr. Demo · Musterstraße 1 · 40235 Düsseldorf</span><span class="hkp-stempel">${logo('PlanR-Stempel')} von deiner KI-Assistentin</span></div>
+  </div>`
+
+const HKP_MINI = `
+  <div class="hkp hkp--mini">
+    <div class="hkp-titel"><b>Heil- und Kostenplan</b><span>Teil 1 · Zahnersatz</span></div>
+    <div class="hkp-feld"><b>Berger, Anna</b><span>AOK Rheinland/Hamburg · Bonus 30 %</span></div>
+    <div class="hkp-abschnitt">I. Befund / Behandlungsplan</div>
+    <table class="hkp-gebiss">${gebissZeilen(OK, ['TP', 'R', 'B'], false)}</table>
+    <div class="hkp-abschnitt">II. Festzuschüsse</div>
+    <table class="hkp-tab">
+      ${FESTZUSCHUSS.map(([b, z, , w]) => `<tr><td>${b}</td><td>${z}</td><td>${w}</td></tr>`).join('')}
+    </table>
+    <div class="hkp-abschnitt">III. Kostenplanung</div>
+    <table class="hkp-tab">
+      <tr class="hkp-summe"><td>Gesamtkosten</td><td>4.380,00</td></tr>
+      <tr><td>Festzuschüsse</td><td>−1.656,23</td></tr>
+      <tr class="hkp-eigen"><td>Eigenanteil</td><td>2.723,77</td></tr>
+    </table>
+    <div class="hkp-fuss"><span class="hkp-stempel">${logo('PlanR-Stempel')} von deiner KI-Assistentin</span></div>
+  </div>`
+
 const euro = (n: number) => `${Math.round(n).toLocaleString('de-DE')} €`
 const komma = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const cent = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
@@ -98,7 +177,7 @@ const kosten = (plaene: number, doku = false) => PLANR + plaene * PRO_PLAN + (do
 /** Vergleich „Gestern / Heute“. Mit Sprachdokumentation steigen der Monatsbeitrag und die Gegenüberstellung mit. */
 function vergleich(doku: boolean): { titel: string; alt: string[]; neu: string[]; monat: number } {
   const monat = doku ? PLANR + DOKU_MONAT : PLANR
-  const preis = `${monat} € im Monat, ${EINRICHTUNG.toLocaleString('de-DE')} € einmalig, ${cent(PRO_PLAN)} je Plan`
+  const preis = `${monat} € im Monat, ${cent(PRO_PLAN)} je Plan`
   if (!doku) {
     return {
       titel: 'HKP outsourcen',
@@ -153,7 +232,45 @@ const HTML = `
       <p class="hp-klein">Schon Kunde? <a href="#anmelden">Mit dem Pickadoc-Konto anmelden</a></p>
     </div>
     <div class="hp-handy">
-      <img class="hp-foto hp-foto-handy" src="/bilder/hero-hkp.png" width="536" height="705" alt="Heil- und Kostenplan auf dem Handy">
+      <div class="cc-stage">
+        <div class="cc-phone" aria-label="Clara erstellt einen HKP per Sprache">
+          <div class="cc-phone__notch" aria-hidden="true"></div>
+          <div class="cc-flip">
+            <div class="cc-flip__inner" data-clara="flip">
+              <div class="cc-flip__face cc-flip__face--front">
+                <div class="cc-screen cc-screen--voice clara-phone__screen" data-clara="schirm" data-state="listening">
+                  <div class="cp-top">
+                    <small data-clara="unter">Patient und Befund sagen</small>
+                    <h4>Clara<small class="hp-frei">Name frei wählbar</small></h4>
+                  </div>
+                  <div class="cp-mid">
+                    <div class="cp-orb-wrap">
+                      <div class="cp-ring r1"></div>
+                      <div class="cp-ring r2"></div>
+                      <div class="cp-orb"><div class="cp-wave" aria-hidden="true"><span></span><span></span><span></span></div></div>
+                    </div>
+                    <div class="cp-state" data-clara="zustand">Ich höre zu</div>
+                    <div class="cp-hint" data-clara="hinweis"></div>
+                    <div class="cp-agents" aria-hidden="true">
+                      ${CLARA_SCHRITTE.map((s) => `<span>${s}</span>`).join('')}
+                    </div>
+                  </div>
+                  <div class="cp-mode" aria-hidden="true"><i class="is-on">🎙 Sprache</i><i>💬 Chat</i></div>
+                </div>
+              </div>
+              <div class="cc-flip__face cc-flip__face--back">
+                <div class="cc-screen hp-hkp-schirm">${HKP_MINI}</div>
+              </div>
+            </div>
+          </div>
+          <div class="cc-flip-labels" aria-hidden="true"><span class="is-voice">Clara</span><span class="is-text">HKP</span></div>
+          <div class="mas-phone-dots cc-hero-dots" data-clara="punkte" aria-label="Clara Zustand">
+            <button type="button" class="is-active" data-i="0" aria-label="Hört zu"></button>
+            <button type="button" data-i="1" aria-label="Rechnet"></button>
+            <button type="button" data-i="2" aria-label="Spricht"></button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -168,8 +285,13 @@ const HTML = `
 
   <section class="hp-buehne hp-pink" id="hkp">
     <div class="hp-buehne-innen">
-      <div class="hp-buehne-bild hp-buehne-bild--pink">
-        <img class="hp-foto" src="/bilder/hkp-buehne.png" width="820" height="595" alt="Heil- und Kostenplan auf dem Tablet, daneben der Mehrerlös mit PlanR">
+      <div class="hp-buehne-bild hp-buehne-bild--pink" aria-hidden="true">
+        ${FORMEN}
+        <div class="hp-tablet"><div class="hp-tablet-schirm">${HKP_FORMULAR}</div></div>
+        <div class="hp-schwebe">
+          <small>Mit PlanR</small><b>4.380 €</b><em>+1.430 € gegenüber dem PVS-Plan</em>
+          <ul><li>Festzuschüsse ermittelt</li><li>GOZ-Faktor 3,0 begründet</li><li>Mehrkostenvereinbarung bereit</li></ul>
+        </div>
       </div>
       <div class="hp-buehne-text">
         <p class="hp-eyebrow">Der Heil- und Kostenplan</p>
@@ -235,8 +357,31 @@ const HTML = `
         <li><span>2</span><div><h3>Befund sagen</h3><p>„14 bis 16 Brücke, 26 Krone, Vollkeramik.“ Befund, Regelversorgung, Festzuschüsse und alle Positionen nach BEMA, GOZ und BEL II stehen in Sekunden.</p></div></li>
         <li><span>3</span><div><h3>Maximalen Umsatz errechnen lassen</h3><p>Deine KI-Assistentin Clara (Name frei wählbar) schlägt Zusatzleistungen, Faktor, Eigenlabor und Privatanteil vor – mit Begründungen und Mehrkostenvereinbarung. Du entscheidest per Regler.</p></div></li>
       </ol>
-      <div class="hp-buehne-bild hp-buehne-bild--rechts">
-        <img class="hp-foto hp-foto-clara" src="/bilder/clara-handy.png" width="641" height="724" alt="Clara erstellt einen Heil- und Kostenplan per Sprache">
+      <div class="hp-buehne-bild hp-buehne-bild--rechts" aria-hidden="true">
+        ${FORMEN}
+        <div class="hp-schraeg-handy">
+          <div class="cc-phone">
+            <div class="cc-phone__notch"></div>
+            <div class="cc-screen hp-chat">
+              <div class="hp-chat-kopf"><span class="hp-chat-orb"></span><div><b>Clara</b><small>Name frei wählbar</small></div></div>
+              <div class="hp-sprache">
+                <span class="hp-mic"><i></i><i></i><i></i><i></i><i></i></span>
+                <p data-diktat></p>
+              </div>
+              <div class="hp-plan" data-plan>
+                <div class="hp-plan-kopf"><b>HKP · Berger, Anna</b><span class="hp-pille">fertig</span></div>
+                <div class="hp-plan-zeile"><span>14–16</span><span>Brücke, Vollkeramik</span></div>
+                <div class="hp-plan-zeile"><span>26</span><span>Vollkeramikkrone</span></div>
+                <div class="hp-plan-zeile"><span>Festzuschüsse</span><span>1.656,23 €</span></div>
+                <div class="hp-plan-zeile"><span>BEMA · GOZ · BEL II</span><span>24 Positionen</span></div>
+                <div class="hp-plan-summe"><span>Praxisumsatz</span><b data-demo-summe>0 €</b></div>
+                <div class="hp-plan-balken"><i data-demo-balken></i></div>
+                <p class="hp-chat-antwort">„Plan steht. Soll ich ihn ins PVS geben?“</p>
+              </div>
+              <div class="cp-mode"><i class="is-on">🎙 Sprache</i><i>💬 Chat</i></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
    </div>
@@ -541,7 +686,7 @@ const HTML = `
     <div class="hp-sektion-kopf hp-ein">
       <p class="hp-eyebrow">Preise</p>
       <h2>Ein Plan, der sich ab dem ersten HKP rechnet.</h2>
-      <p>Alle Preise netto zzgl. USt. Der Monatsbeitrag ist jederzeit zum Monatsende kündbar. Einrichtung und KI-Training sind einmalig.</p>
+      <p>Alle Preise netto zzgl. USt. Der Monatsbeitrag ist jederzeit zum Monatsende kündbar.</p>
     </div>
     <div class="hp-tiers">
       <article class="hp-tier hp-tier-top hp-ein">
@@ -550,10 +695,17 @@ const HTML = `
         <p class="hp-preis"><b data-planr-monat>${PLANR} €</b> / Monat</p>
         <p class="hp-volumen" data-planr-hinweis hidden></p>
         <p class="hp-volumen">+ <b>${cent(PRO_PLAN)}</b> je erstelltem Plan</p>
-        <p class="hp-einmal"><b>${EINRICHTUNG.toLocaleString('de-DE')} €</b> einmalig</p>
-        <ul><li>Alle Pläne erstellen</li><li>Alle gängigen PVS</li><li>Einrichtung und KI-Training, ein bis zwei Wochen</li><li>Deine KI-Assistentin Clara (Name frei wählbar) legt die Pläne per Sprache an</li></ul>
+        <ul><li>Alle Pläne erstellen</li><li>Alle gängigen PVS</li><li>Deine KI-Assistentin Clara (Name frei wählbar) legt die Pläne per Sprache an</li></ul>
         <a class="hp-knopf hp-knopf-voll" href="#buchen-clara" data-planr-buchen>PlanR buchen</a>
       </article>
+      <a class="hp-klammer hp-ein" href="#buchen-test">
+        <span class="hp-klammer-arm" aria-hidden="true"></span>
+        <span class="hp-klammer-kern">
+          <b>${TESTABO_TAGE} Tage testen</b>
+          <small>${TESTABO_PLAENE} Pläne inklusive</small>
+        </span>
+        <span class="hp-klammer-arm" aria-hidden="true"></span>
+      </a>
       <article class="hp-tier hp-ein">
         <span class="hp-band-tag hp-band-mint">Upgrade</span>
         <h3>KI-Sprachdokumentation</h3>
@@ -562,7 +714,7 @@ const HTML = `
         <ul><li>Diktat per Headset in die Karteikarte</li><li>Direkt in Dampsoft, Z1.PRO, Charly und DENS Office</li><li>Zusätzlich zu PlanR</li><li>Bei Pickadoc MAS schon enthalten</li></ul>
         <button class="hp-knopf" type="button" data-doku-knopf aria-pressed="false">Als Upgrade dazubuchen</button>
       </article>
-      <article class="hp-tier hp-ein">
+      <article class="hp-tier hp-tier-mas hp-ein">
         <h3>Pickadoc MAS</h3>
         <p class="hp-preis"><b>PlanR inklusive</b></p>
         <p class="hp-volumen"><b>Unbegrenzt</b> Pläne erstellen</p>
@@ -602,6 +754,7 @@ const HTML = `
     </div>
     <div class="hp-kontakt-wege hp-ein">
       <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Jetzt online buchen</a>
+      <a class="hp-knopf" href="#buchen-test">${TESTABO_TAGE} Tage testen</a>
       <a class="hp-knopf" href="mailto:info@pickadoc.de?subject=PlanR%20buchen">E-Mail schreiben</a>
       <a class="hp-knopf" href="tel:+4921130293035">0211 3029 3035</a>
       <a class="hp-knopf" href="https://wa.me/491776004600" target="_blank" rel="noopener">WhatsApp</a>
@@ -631,9 +784,8 @@ let laeuft = 0
 
 /** Hero: Diktat tippt sich, danach füllt sich der Plan und die Summe zählt hoch – in Schleife. */
 function demoStarten(wurzel: HTMLElement) {
-  const diktat = wurzel.querySelector<HTMLElement>('[data-diktat]')
-  if (!diktat) return
   const lauf = ++laeuft
+  const diktat = wurzel.querySelector<HTMLElement>('[data-diktat]')!
   const plan = wurzel.querySelector<HTMLElement>('[data-plan]')!
   const summe = wurzel.querySelector<HTMLElement>('[data-demo-summe]')!
   const balken = wurzel.querySelector<HTMLElement>('[data-demo-balken]')!
@@ -708,7 +860,6 @@ function demoStarten(wurzel: HTMLElement) {
 
 /** Hero-Handy: alle 3 s Flip zwischen Clara (Zuhören → Rechnen → Sprechen, wie auf pickadoc.ai) und dem pinken HKP. */
 function claraHandyStarten(wurzel: HTMLElement) {
-  if (!wurzel.querySelector('[data-clara="flip"]')) return
   const lauf = laeuft
   const feld = (name: string) => wurzel.querySelector<HTMLElement>(`[data-clara="${name}"]`)!
   const flip = feld('flip')

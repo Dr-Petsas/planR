@@ -5,10 +5,14 @@ export const PAKETE = {
 } as const
 export type Paket = keyof typeof PAKETE
 export const PRO_PLAN = 2.49
-/** Einrichtung und KI-Training (ein bis zwei Wochen), einmalig auf der ersten Rechnung */
-export const EINRICHTUNG = 1299
+/** Keine Einrichtungsgebühr. Die Konstante bleibt, damit alte Importe nicht brechen. */
+export const EINRICHTUNG = 0
 /** KI-Sprachdokumentation: Pauschale, kein Preis je Eintrag */
 export const DOKU_MONAT = 89
+/** Testabo: PlanR inklusive Sprachupgrade, ohne Lastschrift */
+export const TESTABO_TAGE = 14
+/** So viele Pläne darf ein Testabo anlegen, danach das reguläre Abo */
+export const TESTABO_PLAENE = 5
 export const RECHTSFORMEN = ['Einzelpraxis', 'Berufsausübungsgemeinschaft', 'Praxisgemeinschaft', 'MVZ', 'Sonstige'] as const
 export const SERVER = { server: 'Eigener Praxisserver', arbeitsplatz: 'Arbeitsplatz-PC, der dauerhaft läuft', unbekannt: 'Weiß ich nicht' } as const
 

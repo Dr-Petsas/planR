@@ -149,6 +149,16 @@ describe('Auftragswarteschlange', () => {
     expect(hub.verbunden('andere')).toBeNull()
   })
 
+  it('ein älterer Poll schreibt das Praxisprogramm nicht zurück', async () => {
+    const hub = new AgentHub()
+    const alt = hub.abholen('praxis', 40, { pvs: 'dampsoft', version: '1.23' })
+    const neu = hub.abholen('praxis', 10, { pvs: 'dens', version: '1.23' })
+    await neu
+    expect(hub.verbunden('praxis')?.pvs).toBe('dens')
+    await alt
+    expect(hub.verbunden('praxis')?.pvs).toBe('dens')
+  })
+
   it('stellt einen Auftrag zurück, wenn der Abholer weg ist', async () => {
     const hub = new AgentHub()
     const ergebnis = hub.rufen('praxis', { method: 'GET', pfad: '/patients/2/clinical', ms: 1000 })

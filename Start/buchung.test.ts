@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buchungPruefen, ibanGueltig, infoMail, kundenMail, neueMandatsreferenz } from './buchung.ts'
+import { aboAbschlussPruefen, buchungPruefen, ibanGueltig, infoMail, kundenMail, neueMandatsreferenz, testaboAbschliessen, testaboAnlegen, testaboDazu, testaboVoll } from './buchung.ts'
 
 const gueltig = {
   paket: 'planr_clara',
@@ -51,6 +51,66 @@ describe('Buchung prüfen', () => {
   it('lehnt unbekannte Praxissysteme ab', () => {
     const r = buchungPruefen({ ...gueltig, pvs: { id: 'xyz' } })
     expect(r.ok).toBe(false)
+  })
+  it('nimmt ein Testabo ohne IBAN an und vermerkt PlanR inklusive Sprachupgrade', () => {
+    const { sepa: _sepa, ...ohneSepa } = gueltig
+    const jetzt = new Date('2026-11-15T08:00:00Z')
+    const r = buchungPruefen({ ...ohneSepa, testabo: true, paket: 'planr', doku: false }, jetzt)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.buchung.paket).toBe('planr_clara')
+    expect(r.buchung.doku).toBe(true)
+    expect(r.buchung.sepa.iban).toBe('')
+    expect(r.buchung.testabo?.status).toBe('laeuft')
+    expect(r.buchung.testabo?.erstellt).toBe(0)
+    expect(r.buchung.testabo?.vermerk).toContain('Höchstens 5 Pläne')
+    expect(r.buchung.testabo?.vermerk).toContain('PlanR inkl. Sprachupgrade')
+    expect(r.buchung.testabo?.vermerk).toContain('Keine Lastschrift')
+    expect(r.buchung.testabo?.bis.slice(0, 10)).toBe('2026-11-29')
+    const info = infoMail(r.buchung, '')
+    const kunde = kundenMail(r.buchung, '')
+    expect(info.betreff).toContain('Testabo')
+    expect(info.text).toContain(r.buchung.testabo?.vermerk)
+    expect(info.text).not.toContain('SEPA-LASTSCHRIFTMANDAT')
+    expect(kunde.text).toContain('Sprachupgrade')
+    expect(kunde.text).not.toContain('Lastschriftmandat')
+  })
+})
+
+describe('Testabo-Abschluss', () => {
+  it('zählt höchstens fünf Pläne und macht daraus das reguläre Abo', () => {
+    const start = new Date('2026-11-15T08:00:00Z')
+    const angelegt = buchungPruefen({ ...gueltig, testabo: true }, start)
+    if (!angelegt.ok) throw new Error('Testabo ungültig')
+    let b = angelegt.buchung
+    for (let i = 0; i < 5; i++) b = testaboDazu(b, 1)
+    expect(testaboVoll(b)).toBe(true)
+    expect(b.testabo?.vermerk).toContain('5 von 5 Plänen')
+    const ohne = aboAbschlussPruefen(b, { sepa: { inhaber: 'Anna', iban: 'DE00', mandat: true, unterschrift: 'Anna Muster' }, zustimmung: { agb: true, datenschutz: true, avv: true } })
+    expect(ohne.ok).toBe(false)
+    const mit = aboAbschlussPruefen(b, { sepa: { inhaber: 'Anna Muster', iban: 'DE89 3704 0044 0532 0130 00', mandat: true, unterschrift: 'Anna Muster' }, zustimmung: { agb: true, datenschutz: true, avv: true } }, start)
+    expect(mit.ok).toBe(true)
+    if (!mit.ok) return
+    expect(mit.buchung.testabo?.status).toBe('abo')
+    expect(mit.buchung.sepa.iban).toBe('DE89370400440532013000')
+    expect(mit.buchung.testabo?.vermerk).toContain('Reguläres Abo abgeschlossen')
+    expect(infoMail(mit.buchung, '').text).toContain('SEPA-LASTSCHRIFTMANDAT')
+    expect(kundenMail(mit.buchung, '').text).toContain('DE89 •••• •••• 3000')
+  })
+
+  it('setzt den Vermerk auf beendet, sobald die Frist vorbei ist', () => {
+    const start = new Date('2026-11-01T08:00:00Z')
+    const lauf = testaboAnlegen(start)
+    const buchung = buchungPruefen({ ...gueltig, testabo: true }, start)
+    if (!buchung.ok) throw new Error('Testabo ungültig')
+    const offen = testaboAbschliessen([buchung.buchung], new Date('2026-11-10T08:00:00Z'))
+    expect(offen.geaendert).toBe(false)
+    expect(offen.liste[0].testabo?.status).toBe('laeuft')
+    const zu = testaboAbschliessen([buchung.buchung], new Date(lauf.bis))
+    expect(zu.geaendert).toBe(true)
+    expect(zu.liste[0].testabo?.status).toBe('beendet')
+    expect(zu.liste[0].testabo?.vermerk).toContain('Testabo beendet')
+    expect(zu.liste[0].testabo?.vermerk).toContain('Keine Lastschrift erfolgt')
   })
 })
 

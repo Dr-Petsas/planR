@@ -45,13 +45,12 @@ describe('Abrechnung', () => {
     expect([a.nettoCent, a.ustCent, a.bruttoCent]).toEqual([9888, 1879, 11767])
   })
 
-  it('erster Monat anteilig plus einmalige Einrichtung', () => {
+  it('erster Monat ist anteilig, ohne Einrichtungsgebühr', () => {
     const z = leeresZaehlwerk(new Date('2026-10-12T10:00:00Z'))
     const a = abrechnen(z, '2026-10', 'planr_clara')
     expect(a.posten[0].text).toContain('20 von 31 Tagen')
-    expect(a.posten[1].text).toContain('einmalig')
-    expect(a.posten[1].summeCent).toBe(129900)
-    expect(a.nettoCent).toBe(Math.round((22900 * 20) / 31) + 129900)
+    expect(a.posten.map((p) => p.text).join(' ')).not.toContain('einmalig')
+    expect(a.nettoCent).toBe(Math.round((22900 * 20) / 31))
   })
 
   it('die Einrichtung steht nur auf der ersten Rechnung', () => {

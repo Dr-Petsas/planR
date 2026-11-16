@@ -2,7 +2,7 @@
 import './buchung.css'
 import { KZVEN } from './data/kzv'
 import { PVS_LISTE, pvsVon } from './einstellungen'
-import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './paket'
+import { DOKU_MONAT, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, TESTABO_PLAENE, TESTABO_TAGE, ibanGueltig, ibanNorm, type Paket } from './paket'
 import { anleitungHtml, anleitungVon, bridgeSetupLaden, codeLesbar } from './einrichtung'
 import { logo } from './logo'
 import { werbungStarten, zielErreicht } from './werbung'
@@ -35,15 +35,16 @@ function haken(w: Werte, f: Record<string, string>, name: string, text: string):
   return `<label class="bu-haken${f[name] ? ' fehler' : ''}"><input type="checkbox" name="${name}"${w[name] === true ? ' checked' : ''}><span>${text}${f[name] ? `<small class="bu-fehler">${esc(f[name])}</small>` : ''}</span></label>`
 }
 
-/** Seite #buchen bzw. #buchen-clara */
-export function buchungSeite(app: HTMLElement, dokuAn = false) {
+/** Seite #buchen, #buchen-clara, #buchen-doku oder #buchen-test */
+export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
   let schritt = 0
   let erreicht = 0
   let fehler: Record<string, string> = {}
   let meldung = ''
   let sendet = false
-  const w: Werte = { paket: 'planr_clara', doku: dokuAn, 'praxis.rechtsform': 'Einzelpraxis', 'kzv.praxen': '1', 'kzv.zahnaerzte': '1', 'pvs.server': 'server' }
-  document.title = 'PlanR buchen'
+  const schritte = test ? ['Testabo', 'Praxis', 'KZV & PVS', 'Prüfen & starten'] as const : SCHRITTE
+  const w: Werte = { paket: 'planr_clara', doku: test || dokuAn, 'praxis.rechtsform': 'Einzelpraxis', 'kzv.praxen': '1', 'kzv.zahnaerzte': '1', 'pvs.server': 'server' }
+  document.title = test ? 'PlanR 14 Tage testen' : 'PlanR buchen'
   werbungStarten()
 
   const paket = (): Paket => 'planr_clara'
@@ -67,11 +68,15 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
     const f = fehler
     const monat = monatsbeitrag()
     switch (schritt) {
-      case 0: return `
+      case 0: return test ? `
+        <h2>PlanR inklusive Sprachupgrade</h2>
+        <p class="bu-text">${TESTABO_TAGE} Tage PlanR mit Sprachsteuerung und KI-Sprachdokumentation, höchstens ${TESTABO_PLAENE} Pläne. In der Testzeit keine Lastschrift. Danach, oder sobald ${TESTABO_PLAENE} Pläne angelegt sind, schließen Sie das reguläre Abo ab.</p>
+        <p class="bu-text">Enthalten sind beide Pakete: PlanR (alle Pläne, alle gängigen PVS, Clara per Sprache) und das Sprachupgrade (Diktat in die Karteikarte, kein Preis je Eintrag).</p>
+        <p class="bu-klein">Kein SEPA-Mandat. Beginn und Ende stehen danach als Vermerk in der Buchung.</p>` : `
         <h2>PlanR</h2>
-        <p class="bu-text">${monat} € im Monat${w.doku === true ? ` (${PAKETE.planr_clara.monat} € PlanR und ${DOKU_MONAT} € Sprachdokumentation)` : ''}, plus ${cent(PRO_PLAN)} je erstelltem Plan. Einmalig ${EINRICHTUNG.toLocaleString('de-DE')} € für Einrichtung und KI-Training, ein bis zwei Wochen. Alle Pläne, alle gängigen PVS.</p>
+        <p class="bu-text">${monat} € im Monat${w.doku === true ? ` (${PAKETE.planr_clara.monat} € PlanR und ${DOKU_MONAT} € Sprachdokumentation)` : ''}, plus ${cent(PRO_PLAN)} je erstelltem Plan. Alle Pläne, alle gängigen PVS.</p>
         ${haken(w, {}, 'doku', `<b>KI-Sprachdokumentation</b> dazubuchen: ${DOKU_MONAT} € im Monat, kein Preis je Eintrag. Das Diktat geht in die Karteikarte. Bei Pickadoc MAS ist das enthalten.`)}
-        <p class="bu-klein">Alle Preise netto zzgl. USt. Der Monatsbeitrag ist jederzeit zum Monatsende kündbar, die Einrichtung einmalig. PlanR ist ein Produkt der Pickadoc GmbH. Pickadoc-MAS-Praxen haben PlanR und die Sprachdokumentation schon inklusive.</p>`
+        <p class="bu-klein">Alle Preise netto zzgl. USt. Der Monatsbeitrag ist jederzeit zum Monatsende kündbar. PlanR ist ein Produkt der Pickadoc GmbH. Pickadoc-MAS-Praxen haben PlanR und die Sprachdokumentation schon inklusive.</p>`
       case 1: return `
         <h2>Ihre Praxis</h2>
         <div class="bu-raster">
@@ -116,7 +121,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
         <div class="bu-raster">
           <label class="feld breit">Nachricht an uns (optional)<textarea name="hinweis" rows="2">${esc(String(w.hinweis ?? ''))}</textarea></label>
         </div>`
-      case 3: return `
+      case 3: return test ? pruefenInhalt() : `
         <h2>SEPA-Lastschriftmandat</h2>
         <p class="bu-text">Der Monatsbeitrag und die Pläne des Vormonats werden per Lastschrift eingezogen. Jede Abbuchung kündigen wir mit der Rechnung an.</p>
         <div class="bu-raster">
@@ -129,46 +134,49 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
         ${mandatVorschau()}
         ${haken(w, f, 'sepa.mandat', 'Ich erteile / Wir erteilen der Pickadoc GmbH dieses <b>SEPA-Lastschriftmandat</b>.')}
         ${feld(w, f, 'sepa.unterschrift', 'Zur Bestätigung Vor- und Nachname eintippen (gilt als Unterschrift)', 'text', 'autocomplete="name"')}`
-      default: {
-        const pvs = pvsVon(String(w['pvs.id'] ?? ''))
-        const kzv = KZVEN.find((k) => k.nr === w['kzv.nr'])
-        const iban = ibanNorm(String(w['sepa.iban'] ?? ''))
-        return `
-        <h2>Prüfen und kostenpflichtig buchen</h2>
+      default: return pruefenInhalt()
+    }
+  }
+
+  function pruefenInhalt(): string {
+    const f = fehler
+    const pvs = pvsVon(String(w['pvs.id'] ?? ''))
+    const kzv = KZVEN.find((k) => k.nr === w['kzv.nr'])
+    const iban = ibanNorm(String(w['sepa.iban'] ?? ''))
+    const bis = new Date(Date.now() + TESTABO_TAGE * 24 * 60 * 60 * 1000).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })
+    return `
+        <h2>${test ? 'Prüfen und Testabo starten' : 'Prüfen und kostenpflichtig buchen'}</h2>
         <dl class="bu-zusammen">
-          <dt>Paket</dt><dd>${esc(PAKETE[paket()].name)} · ${monatsbeitrag()} € / Monat + ${cent(PRO_PLAN)} je Plan · einmalig ${EINRICHTUNG.toLocaleString('de-DE')} € Einrichtung${w.doku === true ? ` · davon ${DOKU_MONAT} € Sprachdokumentation, kein Preis je Eintrag` : ''}</dd>
+          <dt>Paket</dt><dd>${test ? `Testabo · PlanR inkl. Sprachupgrade · ${TESTABO_TAGE} Tage bis ${esc(bis)} · keine Lastschrift` : `${esc(PAKETE[paket()].name)} · ${monatsbeitrag()} € / Monat + ${cent(PRO_PLAN)} je Plan${w.doku === true ? ` · davon ${DOKU_MONAT} € Sprachdokumentation, kein Preis je Eintrag` : ''}`}</dd>
           <dt>Praxis</dt><dd>${esc(String(w['praxis.name'] ?? ''))}, ${esc(String(w['praxis.strasse'] ?? ''))}, ${esc(String(w['praxis.plz'] ?? ''))} ${esc(String(w['praxis.ort'] ?? ''))}</dd>
           <dt>Inhaber/in</dt><dd>${esc([w['inhaber.titel'], w['inhaber.vorname'], w['inhaber.nachname']].filter(Boolean).join(' '))} · Anmeldung mit ${esc(String(w['inhaber.email'] ?? ''))}</dd>
           <dt>KZV</dt><dd>${esc(kzv ? `${kzv.kurz}` : '')} · Abrechnungsnummer ${esc(String(w['kzv.abrechnungsnr'] ?? ''))}</dd>
           <dt>Praxissystem</dt><dd>${esc(pvs?.name ?? '')}${pvs && !pvs.bereit ? ' (Anbindung in Vorbereitung)' : ''}</dd>
-          <dt>Lastschrift</dt><dd>${esc(String(w['sepa.inhaber'] ?? ''))} · ${esc(iban.slice(0, 4))} •••• ${esc(iban.slice(-4))}</dd>
+          ${test ? '' : `<dt>Lastschrift</dt><dd>${esc(String(w['sepa.inhaber'] ?? ''))} · ${esc(iban.slice(0, 4))} •••• ${esc(iban.slice(-4))}</dd>`}
         </dl>
         ${haken(w, f, 'zustimmung.agb', 'Ich habe die <a href="https://pickadoc.ai/agb.html" target="_blank" rel="noopener">AGB</a> gelesen und stimme zu.')}
         ${haken(w, f, 'zustimmung.datenschutz', 'Ich habe die <a href="https://pickadoc.ai/datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweise</a> zur Kenntnis genommen.')}
         ${haken(w, f, 'zustimmung.avv', 'Ich beauftrage die Pickadoc GmbH mit der <b>Verarbeitung von Patientendaten im Auftrag</b> (Art. 28 DSGVO). Den Auftragsverarbeitungsvertrag erhalte ich mit der Freischaltung.')}
         <input type="text" name="firma2" class="bu-falle" tabindex="-1" autocomplete="off" aria-hidden="true">`
-      }
-    }
   }
 
   function seitenleiste(): string {
     const p = PAKETE[paket()]
     const monat = monatsbeitrag()
     return `<aside class="bu-leiste">
-      <b>${esc(p.name)}</b>
-      <span class="bu-preis">${monat} € <small>/ Monat</small></span>
-      ${w.doku === true ? `<span class="bu-volumen">${p.monat} € PlanR + ${DOKU_MONAT} € Sprachdokumentation</span>` : ''}
-      <span class="bu-volumen">+ ${cent(PRO_PLAN)} je Plan</span>
-      <p>Einmalig ${EINRICHTUNG.toLocaleString('de-DE')} € Einrichtung und KI-Training.</p>
-      <p>Bei 20 Plänen im Monat: ${cent(monat + 20 * PRO_PLAN)}</p>
-      <ul><li>Alle Pläne, alle gängigen PVS</li><li>Jederzeit zum Monatsende kündbar</li><li>Einrichtung und KI-Training: ein bis zwei Wochen</li></ul>
+      <b>${test ? 'Testabo' : esc(p.name)}</b>
+      <span class="bu-preis">${test ? `0 € <small>/ ${TESTABO_TAGE} Tage</small>` : `${monat} € <small>/ Monat</small>`}</span>
+      ${test ? '<span class="bu-volumen">PlanR inkl. Sprachupgrade</span>' : w.doku === true ? `<span class="bu-volumen">${p.monat} € PlanR + ${DOKU_MONAT} € Sprachdokumentation</span>` : ''}
+      ${test ? '' : `<span class="bu-volumen">+ ${cent(PRO_PLAN)} je Plan</span>
+      <p>Bei 20 Plänen im Monat: ${cent(monat + 20 * PRO_PLAN)}</p>`}
+      <ul>${test ? '<li>PlanR und Sprachupgrade zusammen</li><li>Keine Lastschrift in der Testzeit</li><li>Danach endet der Zugang</li>' : '<li>Alle Pläne, alle gängigen PVS</li><li>Jederzeit zum Monatsende kündbar</li>'}</ul>
       <p class="bu-klein">Fragen? <a href="tel:+4921130293035">0211 3029 3035</a></p>
     </aside>`
   }
 
   function schrittLeiste(): string {
     const monat = monatsbeitrag()
-    const punkte = SCHRITTE.map((s, i) => {
+    const punkte = schritte.map((s, i) => {
       const klasse = i === schritt ? 'aktiv' : i <= erreicht ? 'erledigt' : ''
       const an = i <= erreicht || i === schritt + 1
       return `<li class="${klasse}"><button type="button" data-sprung="${i}"${an ? '' : ' disabled'}${i === schritt ? ' aria-current="step"' : ''}><span>${i + 1}</span><b>${s}</b></button></li>`
@@ -176,10 +184,10 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
     return `<nav class="bu-schritte" aria-label="Buchungsschritte">
         <button type="button" class="bu-pfeil" data-sprung="${schritt - 1}" aria-label="Zurück">←</button>
         <ol>${punkte}</ol>
-        <button type="button" class="bu-pfeil" data-sprung="${schritt + 1}" aria-label="Weiter"${schritt >= SCHRITTE.length - 1 ? ' disabled' : ''}>→</button>
+        <button type="button" class="bu-pfeil" data-sprung="${schritt + 1}" aria-label="Weiter"${schritt >= schritte.length - 1 ? ' disabled' : ''}>→</button>
       </nav>
-      <p class="bu-schritt-name">${schritt + 1} von ${SCHRITTE.length} · ${SCHRITTE[schritt]}</p>
-      ${schritt > 0 ? `<p class="bu-preiszeile">${monat} € plus ${cent(PRO_PLAN)} je Plan · einmalig ${EINRICHTUNG.toLocaleString('de-DE')} €${w.doku === true ? ` · davon ${DOKU_MONAT} € Sprachdokumentation` : ''}</p>` : ''}`
+      <p class="bu-schritt-name">${schritt + 1} von ${schritte.length} · ${schritte[schritt]}</p>
+      ${schritt > 0 ? `<p class="bu-preiszeile">${test ? `${TESTABO_TAGE} Tage PlanR inkl. Sprachupgrade · keine Lastschrift` : `${monat} € plus ${cent(PRO_PLAN)} je Plan${w.doku === true ? ` · davon ${DOKU_MONAT} € Sprachdokumentation` : ''}`}</p>` : ''}`
   }
 
   function zeichnen() {
@@ -196,7 +204,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
             ${meldung ? `<p class="bu-meldung" role="alert">${esc(meldung)}</p>` : ''}
             <div class="bu-fuss">
               ${schritt > 0 ? '<button type="button" class="link-knopf" data-zurueck>← Zurück</button>' : '<a class="link-knopf" href="#preise">← Zur Startseite</a>'}
-              <button type="submit" class="neu-knopf"${sendet ? ' disabled' : ''}>${schritt < SCHRITTE.length - 1 ? 'Weiter' : sendet ? 'Wird gebucht …' : 'Kostenpflichtig buchen'}</button>
+              <button type="submit" class="neu-knopf"${sendet ? ' disabled' : ''}>${schritt < schritte.length - 1 ? 'Weiter' : sendet ? (test ? 'Wird gestartet …' : 'Wird gebucht …') : (test ? 'Testabo starten' : 'Kostenpflichtig buchen')}</button>
             </div>
           </form>
           ${seitenleiste()}
@@ -223,7 +231,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
 
   function springen(ziel: number) {
     if (ziel < 0) { location.hash = '#top'; return }
-    if (ziel >= SCHRITTE.length || ziel === schritt) return
+    if (ziel >= schritte.length || ziel === schritt) return
     if (ziel > schritt) {
       fehler = pruefen()
       meldung = ''
@@ -246,11 +254,11 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
       if (String(w.passwort ?? '').length < 8) f.passwort = 'Das Passwort braucht mindestens 8 Zeichen.'
       else if (w.passwort !== w.passwort2) f.passwort2 = 'Die beiden Passwörter stimmen nicht überein.'
     }
-    if (schritt === 3) {
+    if (!test && schritt === 3) {
       if (w['sepa.iban'] && !ibanGueltig(String(w['sepa.iban']))) f['sepa.iban'] = 'Die IBAN ist nicht gültig – bitte prüfen.'
       if (w['sepa.mandat'] !== true) f['sepa.mandat'] = 'Bitte das SEPA-Lastschriftmandat erteilen.'
     }
-    if (schritt === 4) for (const k of ['agb', 'datenschutz', 'avv']) if (w[`zustimmung.${k}`] !== true) f[`zustimmung.${k}`] = 'Bitte bestätigen.'
+    if (schritt === schritte.length - 1) for (const k of ['agb', 'datenschutz', 'avv']) if (w[`zustimmung.${k}`] !== true) f[`zustimmung.${k}`] = 'Bitte bestätigen.'
     return f
   }
 
@@ -261,7 +269,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
       paket: paket(), praxis: teil('praxis'), inhaber: teil('inhaber'),
       kzv: { ...teil('kzv'), zahnaerzte: Number(g('kzv.zahnaerzte')), praxen: Number(g('kzv.praxen') || 1), eigenlabor: w['kzv.eigenlabor'] === true },
       pvs: teil('pvs'), hinweis: g('hinweis'), passwort: String(w.passwort ?? ''),
-      sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'), doku: w.doku === true,
+      sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'), doku: test || w.doku === true, testabo: test,
       firma2: (app.querySelector<HTMLInputElement>('[name=firma2]')?.value ?? ''),
     }
   }
@@ -270,20 +278,20 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
     fehler = pruefen()
     meldung = ''
     if (Object.keys(fehler).length) { meldung = 'Bitte die markierten Angaben ergänzen.'; return zeichnen() }
-    if (schritt < SCHRITTE.length - 1) { schritt += 1; erreicht = Math.max(erreicht, schritt); zeichnen(); scrollTo(0, 0); return }
+    if (schritt < schritte.length - 1) { schritt += 1; erreicht = Math.max(erreicht, schritt); zeichnen(); scrollTo(0, 0); return }
     sendet = true
     zeichnen()
     try {
       const r = await fetch('/api/buchung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten()) })
-      const d = await r.json() as { ok: boolean; id?: string; email?: string; pvs?: string; konto?: string; angemeldet?: boolean; fehler?: Record<string, string>; meldung?: string }
+      const d = await r.json() as { ok: boolean; id?: string; email?: string; pvs?: string; konto?: string; angemeldet?: boolean; fehler?: Record<string, string>; meldung?: string; testabo?: { bis: string; vermerk: string } | null }
       sendet = false
       if (d.ok) {
         zielErreicht('buchung')
-        return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']), String(d.konto ?? 'manuell'), d.angemeldet === true)
+        return bestaetigung(app, d.id ?? '', String(d.email ?? w['inhaber.email']), String(d.pvs ?? w['pvs.id']), String(d.konto ?? 'manuell'), d.angemeldet === true, d.testabo)
       }
       fehler = d.fehler ?? {}
       const erster = Object.keys(fehler)[0]
-      if (erster) schritt = SCHRITT_VON.find(([re]) => re.test(erster))?.[1] ?? schritt
+      if (erster) schritt = (test && erster.startsWith('zustimmung.') ? schritte.length - 1 : SCHRITT_VON.find(([re]) => re.test(erster))?.[1]) ?? schritt
       meldung = d.meldung || 'Die Buchung hat nicht geklappt.'
     } catch {
       sendet = false
@@ -296,7 +304,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false) {
   scrollTo(0, 0)
 }
 
-function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string, konto: string, angemeldet: boolean) {
+function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string, konto: string, angemeldet: boolean, testabo?: { bis: string; vermerk: string } | null) {
   const pvs = pvsVon(pvsId)
   const zugang = angemeldet
     ? `<li><b>Zugang:</b> Ihr Konto ist eingerichtet und Sie sind schon angemeldet. Später melden Sie sich mit ${esc(email)} und Ihrem Passwort an.</li>`
@@ -305,14 +313,15 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
     : konto === 'vorhanden'
       ? `<li><b>Freischaltung:</b> Für ${esc(email)} gibt es schon ein Pickadoc-Konto. Wir schalten PlanR dafür frei – meist noch am selben Werktag. Danach melden Sie sich mit Ihrem bestehenden Pickadoc-Passwort an.</li>`
       : `<li><b>Freischaltung:</b> Wir richten Ihren Zugang ein – meist noch am selben Werktag. Sie bekommen dann eine E-Mail, mit der Sie das Passwort für ${esc(email)} festlegen.</li>`
-  document.title = 'PlanR – Buchung eingegangen'
+  const bis = testabo?.bis ? new Date(testabo.bis).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' }) : ''
+  document.title = testabo ? 'PlanR – Testabo läuft' : 'PlanR – Buchung eingegangen'
   app.innerHTML = `
     <div class="bu-seite">
-      <header class="bu-kopf"><a class="marke" href="#top"><span class="logo">${logo()}</span><div><h1>PlanR</h1><p>Buchung eingegangen</p></div></a></header>
+      <header class="bu-kopf"><a class="marke" href="#top"><span class="logo">${logo()}</span><div><h1>PlanR</h1><p>${testabo ? 'Testabo läuft' : 'Buchung eingegangen'}</p></div></a></header>
       <div class="bu-karte bu-danke">
         <p class="bu-haekchen">✓</p>
-        <h2>Vielen Dank – Ihre Buchung ist eingegangen.</h2>
-        <p class="bu-text">Buchungsnummer <b>${esc(id)}</b>. Die Bestätigung mit Ihrem SEPA-Mandat geht an <b>${esc(email)}</b>.</p>
+        <h2>${testabo ? 'Ihr Testabo ist gestartet.' : 'Vielen Dank – Ihre Buchung ist eingegangen.'}</h2>
+        <p class="bu-text">${testabo ? `Buchungsnummer <b>${esc(id)}</b>. ${esc(testabo.vermerk)} Die Bestätigung geht an <b>${esc(email)}</b>. Am ${esc(bis)} endet der Zugang.` : `Buchungsnummer <b>${esc(id)}</b>. Die Bestätigung mit Ihrem SEPA-Mandat geht an <b>${esc(email)}</b>.`}</p>
         <ol class="bu-weiter">
           ${zugang}
           <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Installation der Bridge, Verbindung, Preise &amp; Positionen.</li>

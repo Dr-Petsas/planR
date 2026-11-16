@@ -527,6 +527,10 @@ html.popup-offen { overflow: hidden; overscroll-behavior: none; }
 .konto-abo b { display: block; margin-top: 2px; font-size: 14px; font-weight: 600; }
 .konto-trenn { height: 1px; margin: 6px 4px; background: var(--linie); }
 .wahl.mitte { justify-items: center; align-items: center; }
+.abo-text { margin: 0; color: var(--text); font-size: 14px; font-weight: 450; line-height: 1.45; }
+.abo-haken { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; font-weight: 450; color: var(--text); }
+.abo-haken input { margin-top: 3px; }
+.abo-fehler { color: #9d1730; font-size: 13px; font-weight: 600; }
 .persoenlich { width: min(420px, 100%); display: flex; flex-direction: column; gap: 16px; padding: 8px 20px 18px; }
 .persoenlich-kopf { display: flex; gap: 14px; align-items: center; }
 .persoenlich-foto { display: flex; flex-wrap: wrap; gap: 8px; }

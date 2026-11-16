@@ -6,9 +6,9 @@
 import { randomBytes } from 'node:crypto'
 import { KZVEN } from './src/data/kzv.ts'
 import { pvsVon } from './src/einstellungen.ts'
-import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket } from './src/paket.ts'
+import { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, TESTABO_PLAENE, TESTABO_TAGE, ibanGueltig, ibanNorm, type Paket } from './src/paket.ts'
 
-export { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, ibanGueltig, ibanNorm, type Paket }
+export { DOKU_MONAT, EINRICHTUNG, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, TESTABO_PLAENE, TESTABO_TAGE, ibanGueltig, ibanNorm, type Paket }
 
 export const GLAEUBIGER = { name: 'Pickadoc GmbH', anschrift: 'Medical Center · c/o Dr. Petsas · Luise-Rainer-Str. 6–10 · 40235 Düsseldorf' }
 
@@ -28,12 +28,107 @@ export interface Buchung {
   doku: boolean
   /** Pickadoc-Konto: sofort angelegt, schon vorhanden (Freischaltung von Hand) oder Anlage fehlgeschlagen */
   konto?: { status: 'angelegt' | 'vorhanden' | 'manuell'; clientId?: string }
+  /** Testabo PlanR inklusive Sprachupgrade: Zeitraum und der Vermerk im Mini-Backend */
+  testabo?: TestaboVermerk
+}
+
+export interface TestaboVermerk {
+  von: string
+  bis: string
+  /** laeuft = Test, beendet = Frist um, abo = reguläres Abo abgeschlossen */
+  status: 'laeuft' | 'beendet' | 'abo'
+  /** Angelegte Pläne in diesem Testabo, auch wenn einer später gelöscht wird */
+  erstellt: number
+  vermerk: string
 }
 
 type Roh = Record<string, unknown>
 const obj = (x: unknown): Roh => (x && typeof x === 'object' && !Array.isArray(x) ? x as Roh : {})
 const text = (x: unknown, max = 120) => String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, max)
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+const tagText = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })
+
+export function testaboAnlegen(jetzt = new Date()): TestaboVermerk {
+  const von = jetzt.toISOString()
+  const bis = new Date(jetzt.getTime() + TESTABO_TAGE * 24 * 60 * 60 * 1000).toISOString()
+  return {
+    von, bis, status: 'laeuft',
+    erstellt: 0,
+    vermerk: `Testabo PlanR inkl. Sprachupgrade vom ${tagText(von)} bis ${tagText(bis)}. Keine Lastschrift. Höchstens ${TESTABO_PLAENE} Pläne.`,
+  }
+}
+
+const testVermerk = (t: TestaboVermerk, erstellt = t.erstellt ?? 0) =>
+  `Testabo PlanR inkl. Sprachupgrade vom ${tagText(t.von)} bis ${tagText(t.bis)}. Keine Lastschrift. ${erstellt} von ${TESTABO_PLAENE} Plänen erstellt.`
+
+export const testaboVoll = (b: Buchung | null | undefined) =>
+  !!b?.testabo && b.testabo.status === 'laeuft' && (b.testabo.erstellt ?? 0) >= TESTABO_PLAENE
+
+/** Zählt einen neu angelegten Plan. Negative Werte nehmen eine gescheiterte Anlage zurück. */
+export function testaboDazu(b: Buchung, n: number): Buchung {
+  if (!b.testabo || b.testabo.status !== 'laeuft' || n === 0) return b
+  const erstellt = Math.max(0, (b.testabo.erstellt ?? 0) + n)
+  return { ...b, testabo: { ...b.testabo, erstellt, vermerk: testVermerk(b.testabo, erstellt) } }
+}
+
+/** SEPA und Zustimmung auf eine laufende Testabo-Buchung: daraus wird das reguläre Abo. */
+export function aboAbschlussPruefen(b: Buchung, roh: unknown, jetzt = new Date()): { ok: true; buchung: Buchung } | { ok: false; fehler: Record<string, string> } {
+  if (!b.testabo || b.testabo.status !== 'laeuft') return { ok: false, fehler: { testabo: 'Es läuft kein Testabo.' } }
+  const r = obj(roh)
+  const s = obj(r.sepa)
+  const z = obj(r.zustimmung)
+  const f: Record<string, string> = {}
+  const sepa = {
+    inhaber: text(s.inhaber, 140),
+    anschrift: text(s.anschrift, 200) || `${b.praxis.strasse}, ${b.praxis.plz} ${b.praxis.ort}`,
+    iban: ibanNorm(String(s.iban ?? '')).slice(0, 34),
+    bic: text(s.bic, 11).toUpperCase().replace(/\s/g, ''),
+    bank: text(s.bank, 80),
+    mandatsreferenz: neueMandatsreferenz(jetzt),
+    unterschrift: text(s.unterschrift, 140),
+  }
+  if (!sepa.inhaber) f['sepa.inhaber'] = 'Bitte den Kontoinhaber angeben.'
+  if (!ibanGueltig(sepa.iban)) f['sepa.iban'] = 'Die IBAN ist nicht gültig – bitte prüfen.'
+  if (sepa.bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(sepa.bic)) f['sepa.bic'] = 'Die BIC hat 8 oder 11 Stellen.'
+  if (s.mandat !== true) f['sepa.mandat'] = 'Bitte das SEPA-Lastschriftmandat erteilen.'
+  if (sepa.unterschrift.length < 3) f['sepa.unterschrift'] = 'Bitte zur Bestätigung Vor- und Nachnamen eintippen.'
+  if (z.agb !== true) f['zustimmung.agb'] = 'Bitte den AGB zustimmen.'
+  if (z.datenschutz !== true) f['zustimmung.datenschutz'] = 'Bitte die Datenschutzhinweise bestätigen.'
+  if (z.avv !== true) f['zustimmung.avv'] = 'Ohne Auftragsverarbeitung darf PlanR keine Patientendaten verarbeiten.'
+  if (Object.keys(f).length) return { ok: false, fehler: f }
+  return {
+    ok: true,
+    buchung: {
+      ...b,
+      sepa,
+      testabo: {
+        ...b.testabo,
+        status: 'abo',
+        vermerk: `Reguläres Abo abgeschlossen am ${tagText(jetzt.toISOString())}. ${testVermerk(b.testabo)}. Mandat ${sepa.mandatsreferenz}.`,
+      },
+    },
+  }
+}
+
+/** Abgelaufene Testabos bekommen den Abschluss-Vermerk. Die Liste bleibt sonst gleich. */
+export function testaboAbschliessen(liste: Buchung[], jetzt = new Date()): { liste: Buchung[]; geaendert: boolean } {
+  let geaendert = false
+  const neu = liste.map((b) => {
+    if (!b.testabo || b.testabo.status !== 'laeuft') return b
+    if (new Date(b.testabo.bis).getTime() > jetzt.getTime()) return b
+    geaendert = true
+    return {
+      ...b,
+      testabo: {
+        ...b.testabo,
+        status: 'beendet' as const,
+        vermerk: `Testabo beendet am ${tagText(b.testabo.bis)}. PlanR inkl. Sprachupgrade. Keine Lastschrift erfolgt.`,
+      },
+    }
+  })
+  return { liste: neu, geaendert }
+}
 
 export const ibanGruppiert = (iban: string) => ibanNorm(iban).replace(/(.{4})/g, '$1 ').trim()
 export const ibanVerdeckt = (iban: string) => { const i = ibanNorm(iban); return `${i.slice(0, 4)} •••• •••• ${i.slice(-4)}` }
@@ -51,7 +146,8 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
   const f: Record<string, string> = {}
   const pflicht = (wert: string, feld: string, name: string) => { if (!wert) f[feld] = `Bitte ${name} angeben.` }
 
-  const paket = (Object.keys(PAKETE) as Paket[]).find((x) => x === r.paket)
+  const testabo = r.testabo === true
+  const paket = testabo ? 'planr_clara' : (Object.keys(PAKETE) as Paket[]).find((x) => x === r.paket)
   if (!paket) f.paket = 'Bitte ein Paket wählen.'
 
   const praxis = {
@@ -101,16 +197,20 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
   const falsch = benutzer.find((x) => !EMAIL_RE.test(x))
   if (falsch) f.benutzer = `„${falsch}“ ist keine gültige E-Mail-Adresse.`
 
-  const sepa = {
-    inhaber: text(s.inhaber, 140), anschrift: text(s.anschrift, 200) || `${praxis.strasse}, ${praxis.plz} ${praxis.ort}`,
-    iban: ibanNorm(String(s.iban ?? '')).slice(0, 34), bic: text(s.bic, 11).toUpperCase().replace(/\s/g, ''), bank: text(s.bank, 80),
-    mandatsreferenz: neueMandatsreferenz(jetzt), unterschrift: text(s.unterschrift, 140),
+  const sepa = testabo
+    ? { inhaber: '', anschrift: '', iban: '', bic: '', bank: '', mandatsreferenz: '', unterschrift: '' }
+    : {
+      inhaber: text(s.inhaber, 140), anschrift: text(s.anschrift, 200) || `${praxis.strasse}, ${praxis.plz} ${praxis.ort}`,
+      iban: ibanNorm(String(s.iban ?? '')).slice(0, 34), bic: text(s.bic, 11).toUpperCase().replace(/\s/g, ''), bank: text(s.bank, 80),
+      mandatsreferenz: neueMandatsreferenz(jetzt), unterschrift: text(s.unterschrift, 140),
+    }
+  if (!testabo) {
+    pflicht(sepa.inhaber, 'sepa.inhaber', 'den Kontoinhaber')
+    if (!ibanGueltig(sepa.iban)) f['sepa.iban'] = 'Die IBAN ist nicht gültig – bitte prüfen.'
+    if (sepa.bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(sepa.bic)) f['sepa.bic'] = 'Die BIC hat 8 oder 11 Stellen.'
+    if (s.mandat !== true) f['sepa.mandat'] = 'Bitte das SEPA-Lastschriftmandat erteilen.'
+    if (sepa.unterschrift.length < 3) f['sepa.unterschrift'] = 'Bitte zur Bestätigung Vor- und Nachnamen eintippen.'
   }
-  pflicht(sepa.inhaber, 'sepa.inhaber', 'den Kontoinhaber')
-  if (!ibanGueltig(sepa.iban)) f['sepa.iban'] = 'Die IBAN ist nicht gültig – bitte prüfen.'
-  if (sepa.bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(sepa.bic)) f['sepa.bic'] = 'Die BIC hat 8 oder 11 Stellen.'
-  if (s.mandat !== true) f['sepa.mandat'] = 'Bitte das SEPA-Lastschriftmandat erteilen.'
-  if (sepa.unterschrift.length < 3) f['sepa.unterschrift'] = 'Bitte zur Bestätigung Vor- und Nachnamen eintippen.'
 
   if (z.agb !== true) f['zustimmung.agb'] = 'Bitte den AGB zustimmen.'
   if (z.datenschutz !== true) f['zustimmung.datenschutz'] = 'Bitte die Datenschutzhinweise bestätigen.'
@@ -122,7 +222,8 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
     passwort,
     buchung: {
       id: `B-${jetzt.toISOString().slice(0, 10).replace(/-/g, '')}-${randomBytes(3).toString('hex').toUpperCase()}`,
-      eingang: jetzt.toISOString(), paket, doku: r.doku === true, praxis, inhaber, kzv, pvs, pickadocKonto, benutzer, sepa, hinweis: text(r.hinweis, 1000),
+      eingang: jetzt.toISOString(), paket, doku: testabo || r.doku === true, praxis, inhaber, kzv, pvs, pickadocKonto, benutzer, sepa, hinweis: text(r.hinweis, 1000),
+      ...(testabo ? { testabo: testaboAnlegen(jetzt) } : {}),
     },
   }
 }
@@ -130,7 +231,7 @@ export function buchungPruefen(roh: unknown, jetzt = new Date()): { ok: true; bu
 const euro = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
 const kzvName = (nr: string) => { const k = KZVEN.find((x) => x.nr === nr); return k ? `${k.kurz} (${k.name}, Nr. ${k.nr})` : nr }
 const wer = (b: Buchung) => [b.inhaber.titel, b.inhaber.vorname, b.inhaber.nachname].filter(Boolean).join(' ')
-export const preisText = (p: Paket) => `${PAKETE[p].name}: ${euro(PAKETE[p].monat)} im Monat + ${euro(PRO_PLAN)} je Plan${p === 'planr_clara' ? `, einmalig ${euro(EINRICHTUNG)} Einrichtung und KI-Training (ein bis zwei Wochen)` : ''}, netto zzgl. USt., jederzeit zum Monatsende kündbar. PlanR ist ein Produkt der Pickadoc GmbH`
+export const preisText = (p: Paket) => `${PAKETE[p].name}: ${euro(PAKETE[p].monat)} im Monat + ${euro(PRO_PLAN)} je Plan, netto zzgl. USt., jederzeit zum Monatsende kündbar. PlanR ist ein Produkt der Pickadoc GmbH`
 
 /** Wortlaut des Mandats; dieselbe Fassung zeigt das Formular und bekommt die Praxis per Mail. */
 export function mandatText(b: Pick<Buchung, 'praxis' | 'sepa'>, glaeubigerId: string, ibanAnzeige = ibanGruppiert(b.sepa.iban)): string {
@@ -183,8 +284,15 @@ export function infoMail(b: Buchung, glaeubigerId: string): { betreff: string; t
     `  Bridge-Rechner: ${SERVER[b.pvs.server]}`,
     ...(b.pvs.it ? [`  IT-Betreuung: ${b.pvs.it}`] : []),
     '',
-    'SEPA-LASTSCHRIFTMANDAT (erteilt online, bestätigt mit dem Namen „' + b.sepa.unterschrift + '“)',
-    ...mandatText(b, glaeubigerId).split('\n').map((z) => `  ${z}`),
+    ...(b.testabo?.status === 'laeuft' ? [
+      'TESTABO',
+      `  ${b.testabo.vermerk}`,
+      '  Enthalten: PlanR mit Sprachsteuerung und die KI-Sprachdokumentation.',
+      '  Keine Lastschrift in der Testzeit. Danach endet der Zugang.',
+    ] : [
+      'SEPA-LASTSCHRIFTMANDAT (erteilt online, bestätigt mit dem Namen „' + b.sepa.unterschrift + '“)',
+      ...mandatText(b, glaeubigerId).split('\n').map((z) => `  ${z}`),
+    ]),
     '',
     'ZUSTIMMUNG: AGB, Datenschutzhinweise und Auftragsverarbeitung (Art. 28 DSGVO) bestätigt.',
     ...(b.hinweis ? ['', 'NACHRICHT DER PRAXIS', `  ${b.hinweis}`] : []),
@@ -193,15 +301,22 @@ export function infoMail(b: Buchung, glaeubigerId: string): { betreff: string; t
       'FREISCHALTUNG: automatisch erledigt',
       `  Praxis in Pickadoc angelegt (clientId ${b.konto.clientId}), Admin-Konto ${b.inhaber.email} mit selbst gewähltem Passwort,`,
       `  subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung}, doku: ${b.doku === true} }. Die Praxis kann sich sofort anmelden.`,
-      `  Bitte nur prüfen: Buchung plausibel? SEPA-Mandat ${b.sepa.mandatsreferenz} ins Lastschriftverfahren übernehmen.`,
+      `  Bitte nur prüfen: Buchung plausibel? ${b.testabo?.status === 'laeuft' ? `Testabo bis ${tagText(b.testabo.bis)}. Kein SEPA-Mandat.` : `SEPA-Mandat ${b.sepa.mandatsreferenz} ins Lastschriftverfahren übernehmen.`}`,
     ] : [
       `ZU TUN FÜR DIE FREISCHALTUNG (${b.konto?.status === 'vorhanden' ? 'für diese E-Mail gibt es schon ein Pickadoc-Konto' : 'automatische Anlage hat nicht geklappt'})`,
       `  1. Praxis in Pickadoc finden bzw. anlegen; Konto ${b.inhaber.email} als Admin.`,
-      `  2. Billing: subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung}, doku: ${b.doku === true} }, SEPA-Mandat ${b.sepa.mandatsreferenz} hinterlegen.`,
+      `  2. Billing: subscriptions.planr = { enabled: true, sprachsteuerung: ${PAKETE[b.paket].sprachsteuerung}, doku: ${b.doku === true}${b.testabo?.status === 'laeuft' ? `, testaboBis: ${b.testabo.bis}` : ''} }${b.testabo?.status === 'laeuft' ? '. Kein SEPA-Mandat.' : `, SEPA-Mandat ${b.sepa.mandatsreferenz} hinterlegen.`}`,
       `  3. ${b.konto?.status === 'vorhanden' ? 'Der Praxis Bescheid geben: Anmeldung mit dem bestehenden Pickadoc-Passwort.' : 'Passwort-Mail an die Praxis auslösen (PlanR-Anmeldung → „Passwort vergessen“).'}`,
     ]),
   ]
-  return { betreff: `PlanR-Buchung: ${b.praxis.name} – ${PAKETE[b.paket].name} (${b.id})`, text: zeilen.join('\n') }
+  return {
+    betreff: b.testabo?.status === 'laeuft'
+      ? `PlanR-Testabo: ${b.praxis.name} (${b.id})`
+      : b.testabo?.status === 'abo'
+        ? `PlanR-Abo: ${b.praxis.name} (${b.id})`
+        : `PlanR-Buchung: ${b.praxis.name} – ${PAKETE[b.paket].name} (${b.id})`,
+    text: zeilen.join('\n'),
+  }
 }
 
 /** Bestätigung an die Praxis: Zusammenfassung, Mandat mit verdeckter IBAN, nächste Schritte */
@@ -209,6 +324,34 @@ export function kundenMail(b: Buchung, glaeubigerId: string, basis = 'https://pl
   const pvs = pvsVon(b.pvs.id)
   const anrede = b.inhaber.anrede === 'Frau' ? `Sehr geehrte Frau ${[b.inhaber.titel, b.inhaber.nachname].filter(Boolean).join(' ')}`
     : b.inhaber.anrede === 'Herr' ? `Sehr geehrter Herr ${[b.inhaber.titel, b.inhaber.nachname].filter(Boolean).join(' ')}` : `Guten Tag ${wer(b)}`
+  if (b.testabo?.status === 'laeuft') {
+    return {
+      betreff: `Ihr PlanR-Testabo ${b.id}`,
+      text: [
+        `${anrede},`,
+        '',
+        `vielen Dank. Das Testabo für ${b.praxis.name} ist eingerichtet: PlanR inklusive Sprachupgrade.`,
+        b.testabo.vermerk,
+        'In der Testzeit gibt es keine Lastschrift. Danach endet der Zugang, außer Sie buchen PlanR.',
+        '',
+        'So geht es weiter:',
+        ...(b.konto?.status === 'angelegt' ? [
+          `  1. Ihr Zugang ist eingerichtet: Melden Sie sich unter ${basis} mit ${b.inhaber.email} und dem Passwort aus der Buchung an.`,
+        ] : b.konto?.status === 'vorhanden' ? [
+          `  1. Für ${b.inhaber.email} gibt es schon ein Pickadoc-Konto. Wir schalten das Testabo dafür frei und melden uns.`,
+        ] : [
+          `  1. Wir schalten das Testabo frei – meist noch am selben Werktag. Sie bekommen dann eine E-Mail, mit der Sie das Passwort für ${b.inhaber.email} festlegen.`,
+        ]),
+        `  2. Nach der Anmeldung führt Sie der Einrichtungsassistent durch die Verbindung mit ${pvs?.name ?? 'Ihrem Praxissystem'}.`,
+        '',
+        'Fragen? Antworten Sie einfach auf diese E-Mail oder rufen Sie uns an: 0211 3029 3035.',
+        '',
+        'Freundliche Grüße',
+        'Ihr PlanR-Team der Pickadoc GmbH',
+        GLAEUBIGER.anschrift,
+      ].join('\n'),
+    }
+  }
   return {
     betreff: `Ihre PlanR-Buchung ${b.id}`,
     text: [

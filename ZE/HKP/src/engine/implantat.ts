@@ -23,6 +23,19 @@ export function implantatZaehne(zaehne: Record<string, ZahnZeilen>): string[] {
   return ALLE_ZAEHNE.filter((z) => IMPLANTAT_TP.test(kuerzelVon(zaehne[z])))
 }
 
+/** Befundkürzel, die ein Implantat im Plan festhalten (nicht eine erst gerechnete Regelversorgung). */
+const BEFUND_IMPLANTAT = new Set(['i', 'ix', 'sk', 'skw', 'sb', 'sbw', 'se', 'sew', 'so', 'sow', 'st', 'stw'])
+
+/** Implantate, die der Plan selbst trägt: Therapie, Regelversorgung oder Befund. */
+export function implantateErfasst(zaehne: Record<string, ZahnZeilen>): string[] {
+  return ALLE_ZAEHNE.filter((z) => {
+    const v = zaehne[z]
+    if (!v) return false
+    if (IMPLANTAT_TP.test((v.TP.trim() || v.R.trim()).toUpperCase())) return true
+    return BEFUND_IMPLANTAT.has(v.B.trim().toLowerCase())
+  })
+}
+
 let zaehler = 0
 function pos(ebene: Ebene, nr: string, zahn: string, anzahl = 1, extra: Partial<Position> = {}): Position {
   return { id: `impl-${Date.now().toString(36)}-${(zaehler++).toString(36)}`, ebene, nr, zahn, anzahl, auto: true, ...extra }

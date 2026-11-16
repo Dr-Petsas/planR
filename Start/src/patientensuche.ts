@@ -123,10 +123,11 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
     if (busy) return
     busy = true
     status(`Plan ${h.nummer} von ${p.vorname} ${p.name} wird übernommen …`)
-    const r = await apiJson<{ nummer?: string; hinweise?: string[] }>('/api/plaene/pvs-import', {
+    const r = await apiJson<{ nummer?: string; hinweise?: string[]; testaboVoll?: boolean }>('/api/plaene/pvs-import', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patient: p.id, plan: h.nummer }),
     })
     busy = false
+    if (r.testaboVoll) window.dispatchEvent(new CustomEvent('planr-testabo-voll'))
     if (!r.ok || !r.nummer) return status(r.meldung || 'Import hat nicht geklappt.')
     zu()
     await u.geoeffnet(r.nummer, r.hinweise ?? [])

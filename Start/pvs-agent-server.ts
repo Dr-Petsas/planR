@@ -265,7 +265,8 @@ export class AgentHub {
 
   /** Long-Poll des Agenten: nächster Auftrag oder null nach `ms`. `abbruch` meldet eine abgerissene Verbindung. */
   abholen(mandant: string, ms: number, info: Omit<AgentStand, 'am'> = {}, abbruch?: (weg: () => void) => void): Promise<Auftrag | null> {
-    this.stand.set(mandant, { ...info, am: Date.now() })
+    const mein: AgentStand = { ...info, am: Date.now() }
+    this.stand.set(mandant, mein)
     const da = this.schlange.get(mandant)?.shift()
     if (da) return Promise.resolve(this.ausgeben(da))
     return new Promise((resolve) => {
@@ -278,7 +279,9 @@ export class AgentHub {
       }
       const geben = (a: Auftrag | null) => {
         weg()
-        this.stand.set(mandant, { ...info, am: Date.now() })
+        const jetzt = this.stand.get(mandant)
+        // Ein neuerer Poll hat das Praxisprogramm schon gemeldet. Den alten Stand nicht zurückschreiben.
+        this.stand.set(mandant, jetzt && jetzt !== mein ? { ...jetzt, am: Date.now() } : { ...info, am: Date.now() })
         resolve(a && this.ausgeben(a))
       }
       const timer = setTimeout(() => geben(null), ms)

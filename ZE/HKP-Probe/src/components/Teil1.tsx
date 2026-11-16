@@ -54,6 +54,23 @@ const RECHNUNG = [
   'Mat.- und Lab.-Kosten Praxis', 'Versandkosten Praxis', 'Gesamtsumme', 'Festzuschuss Kasse', 'Versichertenanteil',
 ]
 
+/** Abschnitt V: geschätzte Rechnung. Bonus und Härtefall ändern Festzuschuss und Versichertenanteil, nicht die Gesamtsumme. */
+function rechnungsBetraege(s: Ergebnis['summen']): Array<number | undefined> {
+  const gewerbe = Math.round((s.fremdNetto + s.fremdMwst) * 100) / 100
+  const praxis = Math.round((s.eigenNetto + s.eigenMwst + s.material + s.materialMwst) * 100) / 100
+  return [
+    s.bemaHonorar || undefined,
+    undefined,
+    s.gozHonorar || undefined,
+    gewerbe || undefined,
+    praxis || undefined,
+    undefined,
+    s.gesamt,
+    s.kassenanteil,
+    s.eigenanteil,
+  ]
+}
+
 /** Feld des Vordrucks: kleine Beschriftung oben links, Eingabe darunter */
 function Feld({ titel, children, className = '' }: { titel: ReactNode; children?: ReactNode; className?: string }) {
   return (
@@ -100,6 +117,7 @@ function Erlaeuterung({ titel, zusatz, liste }: { titel: string; zusatz?: string
 
 export function Teil1({ plan, setPlan, ergebnis, listen, onAbformung, onRegelversorgung }: Props) {
   const s = ergebnis.summen
+  const rechnung = rechnungsBetraege(s)
   const feld = <K extends keyof HkpPlan>(k: K, v: HkpPlan[K]) => setPlan((p) => ({ ...p, [k]: v }))
   const patient = (k: keyof HkpPlan['patient'], v: string) => setPlan((p) => ({ ...p, patient: { ...p.patient, [k]: v } }))
   const verwaltung = (k: keyof HkpPlan['verwaltung'], v: string) => setPlan((p) => ({ ...p, verwaltung: { ...p.verwaltung, [k]: v } }))
@@ -353,7 +371,7 @@ export function Teil1({ plan, setPlan, ergebnis, listen, onAbformung, onRegelver
             </thead>
             <tbody>
               {RECHNUNG.map((t, i) => (
-                <tr key={t} className={i === 6 ? 'hb-strich' : ''}><td className="c">{i + 1}</td><td>{t}</td><td className="hb-euro" /><td className="hb-ct" /></tr>
+                <tr key={t} className={i === 6 ? 'hb-strich' : ''}><td className="c">{i + 1}</td><td>{t}</td><EuroCt wert={rechnung[i]} vorschau /></tr>
               ))}
             </tbody>
           </table>

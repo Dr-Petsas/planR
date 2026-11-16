@@ -41,9 +41,11 @@ export function ImplantatFelder({ wert, onChange, abformung }: { wert: Implantat
   )
 }
 
-/** Rückfrage vor dem Berechnen, solange die Abformung des Plans nicht festgelegt ist */
-export function AbformungFrage({ implantate, wahl, implantat, onOk, onAbbruch }: {
+/** Rückfrage vor dem Berechnen, solange die Abformung des Plans nicht festgelegt ist.
+ *  Die zweite Abformung nur bei herausnehmbarem Zahnersatz – Kronen und Brücken haben keine Prothese. */
+export function AbformungFrage({ implantate, mitProthese, wahl, implantat, onOk, onAbbruch }: {
   implantate: string[]
+  mitProthese: boolean
   wahl: Pick<HkpPlan, 'abformung' | 'abformungProthese'>
   implantat: ImplantatAngaben
   onOk: (wahl: Pick<HkpPlan, 'abformung' | 'abformungProthese'>, implantat: ImplantatAngaben) => void
@@ -68,10 +70,14 @@ export function AbformungFrage({ implantate, wahl, implantat, onOk, onAbbruch }:
       <div className="dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <h3>Abformung: Intraoralscan oder Abdruck?</h3>
         <p>Davon hängen GOZ 0065, die Modelle im Labor{implantate.length ? ' und die Abformteile der Implantate' : ''} ab.</p>
-        <h4>1. Präparierte Zähne / Primärkronen</h4>
+        <h4>{mitProthese ? '1. Präparierte Zähne / Primärkronen' : 'Präparierte Zähne und Brücken'}</h4>
         {optionen(ABFORMUNG_ARTEN, art, setArt, 'abformung')}
-        <h4>2. Herausnehmbarer Teil <small>nur bei Kombinations-/Prothesenarbeit, z. B. nach dem Einsetzen der Primärkronen – nochmals anklicken zum Abwählen</small></h4>
-        {optionen(PROTHESE_ARTEN, prothese, setProthese, 'abformung-prothese', true)}
+        {mitProthese && (
+          <>
+            <h4>2. Herausnehmbarer Teil <small>Kombinations- oder Prothesenarbeit, z. B. nach dem Einsetzen der Primärkronen – nochmals anklicken zum Abwählen</small></h4>
+            {optionen(PROTHESE_ARTEN, prothese, setProthese, 'abformung-prothese', true)}
+          </>
+        )}
         {implantate.length > 0 && (
           <>
             <h4>Implantatkrone {implantate.join(', ')}</h4>
@@ -80,7 +86,7 @@ export function AbformungFrage({ implantate, wahl, implantat, onOk, onAbbruch }:
         )}
         <div className="dialog-knoepfe">
           <button onClick={onAbbruch}>Abbrechen</button>
-          <button className="primaer" disabled={!art} onClick={() => onOk({ abformung: art, abformungProthese: prothese }, imp)}>Übernehmen und berechnen</button>
+          <button className="primaer" disabled={!art} onClick={() => onOk({ abformung: art, abformungProthese: mitProthese ? prothese : '' }, imp)}>Übernehmen und berechnen</button>
         </div>
       </div>
     </div>

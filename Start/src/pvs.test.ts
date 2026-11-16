@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgeSollPvs, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, vermerkText } from './pvs'
+import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgePvsGemeldet, bridgeSollPvs, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, pvsFuerBridge, vermerkText } from './pvs'
 
 describe('PVS-Vermerk', () => {
   it('ein Plan bzw. MKV und Privatvereinbarung als zwei DS-Win-Pläne', () => {
@@ -28,6 +28,27 @@ describe('PVS-Vermerk', () => {
     expect(bridgeFolgtEinstellung('2.0')).toBe(true)
     expect(bridgeFolgtEinstellung('1.17')).toBe(false)
     expect(bridgeFolgtEinstellung(undefined)).toBe(false)
+    expect(bridgePvsGemeldet('cgm-z1pro')).toBe('cgm-z1pro')
+    expect(bridgePvsGemeldet('dens')).toBe('dens')
+    expect(bridgePvsGemeldet('dampsoft')).toBe('dampsoft')
+    expect(bridgePvsGemeldet('charly')).toBeUndefined()
+    expect(bridgePvsGemeldet(null)).toBeUndefined()
+  })
+
+  it('die verbundene Bridge folgt der Ablage, die sie bedient, nicht ihrer eigenen alten Einstellung', () => {
+    const ablagen = { standard: ['standard', 'p-kkz'] }
+    const einstellung = {
+      standard: { pvs: 'dens', geaendert: '2026-11-14T19:00:00.000Z' },
+      'p-kkz': { pvs: 'dampsoft', geaendert: '2026-11-14T12:00:00.000Z' },
+    }
+    const verbunden = (m: string) => m === 'p-kkz'
+    expect(pvsFuerBridge('p-kkz', ablagen, verbunden, einstellung)).toBe('dens')
+    expect(pvsFuerBridge('p-kkz', ablagen, verbunden, {
+      ...einstellung, standard: { pvs: 'cgm-z1pro', geaendert: '2026-11-14T19:05:00.000Z' },
+    })).toBe('cgm-z1pro')
+    expect(pvsFuerBridge('pc-1', {}, () => false, { 'pc-1': { pvs: 'dens', geaendert: '' } })).toBe('dens')
+    expect(bridgeSollPvs(pvsFuerBridge('p-kkz', ablagen, verbunden, einstellung), 'dampsoft')).toBe('dens')
+    expect(bridgeSollPvs(pvsFuerBridge('p-kkz', ablagen, verbunden, einstellung), 'dens')).toBeUndefined()
   })
 })
 

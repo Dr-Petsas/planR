@@ -147,6 +147,38 @@ export function bridgeSollPvs(eingestellt: string, gemeldet?: string): string | 
   return eingestellt
 }
 
+/** Gemeldetes Praxisprogramm der Bridge; nur ein angebundener Connector zählt. */
+export function bridgePvsGemeldet(roh: string | null | undefined): string | undefined {
+  const pvs = String(roh ?? '')
+  return PVS_CONNECTOR[pvs] ? pvs : undefined
+}
+
+export interface PvsWahl { pvs: string; geaendert: string }
+
+/**
+ * Praxisprogramm, das diese Bridge fahren muss.
+ * Sie bedient jede Ablage, deren gerade verbundene Bridge sie ist.
+ * Bei mehreren gilt die zuletzt geänderte Einstellung. Ohne solche Ablage die eigene.
+ */
+export function pvsFuerBridge(
+  bridge: string,
+  ablagen: Record<string, string[]>,
+  verbunden: (mandant: string) => boolean,
+  einstellung: Record<string, PvsWahl | undefined>,
+): string {
+  const treffer: PvsWahl[] = []
+  for (const [ablage, bruecken] of Object.entries(ablagen)) {
+    if (!bruecken.length) continue
+    const aktiv = bruecken.find((m) => verbunden(m)) ?? bruecken[0]
+    if (aktiv !== bridge) continue
+    const e = einstellung[ablage]
+    if (e?.pvs) treffer.push(e)
+  }
+  if (!treffer.length && einstellung[bridge]?.pvs) treffer.push(einstellung[bridge])
+  treffer.sort((a, b) => (b.geaendert || '').localeCompare(a.geaendert || ''))
+  return treffer[0]?.pvs ?? ''
+}
+
 /** Ab Bridge 1.18 folgt sie dieser Einstellung und stellt den Connector um. */
 export function bridgeFolgtEinstellung(version: string | undefined): boolean {
   const [haupt, neben] = (version ?? '').split('.').map((teil) => Number(teil) || 0)

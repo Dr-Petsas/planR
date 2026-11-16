@@ -12,7 +12,8 @@ import { berechnen, type Listen } from './engine/berechnung'
 import { listenFuer, planMitKatalog } from './clara'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './engine/regeln'
 import { privatStufeAnwenden, regelUebernehmen } from './engine/aufwertung'
-import { implantatZaehne } from './engine/implantat'
+import { implantateErfasst } from './engine/implantat'
+import { relevanzErmitteln } from './engine/relevanz'
 import { AbformungFrage } from './components/ImplantatAngaben'
 import { Teil1 } from './components/Teil1'
 import { Teil2 } from './components/Teil2'
@@ -282,11 +283,10 @@ export default function App() {
     setEngineHinweise([...regel.hinweise, ...(privat?.hinweise ?? [])])
   }
 
-  const [abformungFrage, setAbformungFrage] = useState<string[] | null>(null)
+  const [abformungFrage, setAbformungFrage] = useState<{ implantate: string[]; mitProthese: boolean } | null>(null)
   function berechnenKlick() {
-    const R = regelversorgungErmitteln(plan.zaehne, regelOptionen(plan)).R
-    const imp = implantatZaehne(Object.fromEntries(Object.entries(plan.zaehne).map(([z, v]) => [z, { ...v, R: R[z] ?? '' }])))
-    if (!plan.abformung) setAbformungFrage(imp)
+    const imp = implantateErfasst(plan.zaehne)
+    if (!plan.abformung) setAbformungFrage({ implantate: imp, mitProthese: relevanzErmitteln(plan.zaehne).prothese.length > 0 })
     else regelengine()
   }
 
@@ -474,7 +474,7 @@ export default function App() {
       <RueckgaengigLeiste />
       {abformungFrage && (
         <AbformungFrage
-          implantate={abformungFrage} wahl={plan} implantat={plan.implantat} onAbbruch={() => setAbformungFrage(null)}
+          implantate={abformungFrage.implantate} mitProthese={abformungFrage.mitProthese} wahl={plan} implantat={plan.implantat} onAbbruch={() => setAbformungFrage(null)}
           onOk={(wahl, implantat) => { setAbformungFrage(null); regelengine({ ...wahl, implantat }) }}
         />
       )}
