@@ -27,7 +27,7 @@ function bild(name: string, foto: string, gross = false): string {
 }
 
 export function kontoMenu(o: { name: string; email: string; admin: boolean; abo: string; foto: string; rechnungen: boolean }): string {
-  const rolle = o.admin ? 'Praxis-Admin' : 'Benutzer'
+  const rolle = o.email.toLowerCase() === 'superuser@pickadoc.de' ? 'Superuser' : o.admin ? 'Praxis-Admin' : 'Benutzer'
   return `
     <div class="konto">
       <button type="button" class="avatar-knopf" data-konto aria-haspopup="menu" aria-expanded="false" aria-label="Konto von ${esc(o.name)}">${bild(o.name, o.foto)}</button>

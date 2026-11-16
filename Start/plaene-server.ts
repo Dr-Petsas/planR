@@ -196,7 +196,8 @@ async function werIst(req: IncomingMessage): Promise<Wer | null> {
   const s = await sitzungExklusiv(async (liste) => (sudoToken && sitzungFinden(liste, sudoToken)) || (normal && sitzungFinden(liste, normal)) || null)
   if (!s) return null
   const jetzt = Date.now()
-  if (!s.sudo && jetzt - s.geprueft > PRUEFEN_MS) {
+  // Der Superuser hat kein Pickadoc-Konto: die Sitzung bleibt lokal, Firebase wird nicht gefragt.
+  if (!s.sudo && !darfEingangSehen(s.konto.email, s.konto.role) && jetzt - s.geprueft > PRUEFEN_MS) {
     const r = await erneuern(s.erneuern).catch(() => null)
     if (r && !r.ok && r.status !== 502) {
       await sitzungExklusiv((liste) => sitzungenSpeichern(liste.filter((x) => x.hash !== s.hash)))
@@ -351,6 +352,19 @@ async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   if (!uebergabe && (!email || !passwort)) return json(res, 400, { ok: false, meldung: 'Bitte E-Mail-Adresse und Passwort eingeben.' })
   if (anmeldeBremse.gesperrt(ip(req)) || (!uebergabe && anmeldeBremse.gesperrt(email))) {
     return json(res, 429, { ok: false, meldung: 'Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen.' })
+  }
+  // Dieselbe Adresse und dasselbe Passwort wie im Betreiber-Eingang, auch über „Anmelden“ auf der Hauptseite.
+  if (!uebergabe && email === BETREIBER) {
+    const hash = betreiberHash()
+    if (!hash || !passwortPasst(passwort, hash)) {
+      anmeldeBremse.fehler(ip(req))
+      anmeldeBremse.fehler(email)
+      return json(res, 401, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' })
+    }
+    const konto = betreiberKonto()
+    await betreiberSitzung(req, res, konto)
+    const z = await zugaengeLesen()
+    return json(res, 200, { ...werInfo(werAus(z, konto), z), testabo: null })
   }
   const r = uebergabe ? await erneuern(uebergabe) : await einloggen(email, passwort)
   if (!r.ok) {
@@ -3425,6 +3439,18 @@ function betreiberHash(): string {
   return ''
 }
 
+const betreiberKonto = (): Konto => ({ uid: 'betreiber', email: BETREIBER, name: 'Superuser', clientId: 'betreiber', role: 'superuser', admin: true })
+
+/** Sitzung ohne Pickadoc-Konto. Gilt für den Eingang und für die Anmeldung auf der Hauptseite. */
+async function betreiberSitzung(req: IncomingMessage, res: ServerResponse, konto: Konto) {
+  const token = neuesToken()
+  const jetzt = Date.now()
+  await sitzungExklusiv((liste) => sitzungenSpeichern([...liste, {
+    hash: sitzungHash(token), konto, erneuern: '', seit: new Date(jetzt).toISOString(), geprueft: jetzt, zuletzt: jetzt,
+  }]))
+  res.setHeader('Set-Cookie', `${SITZUNG_COOKIE}=${token}; Path=/; Max-Age=${8 * 3600}; HttpOnly; SameSite=Lax${sicher(req)}`)
+}
+
 /** Nur superuser@pickadoc.de. Praxis-Konten bekommen hier keine Sitzung. */
 async function probeAnmeldung(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Cache-Control', 'no-store')
@@ -3443,13 +3469,7 @@ async function probeAnmeldung(req: IncomingMessage, res: ServerResponse) {
   if (email !== BETREIBER || !hash || !passwortPasst(passwort, hash)) {
     return json(res, 401, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' })
   }
-  const konto: Konto = { uid: 'betreiber', email: BETREIBER, name: 'Superuser', clientId: 'betreiber', role: 'superuser', admin: true }
-  const token = neuesToken()
-  const jetzt = Date.now()
-  await sitzungExklusiv((liste) => sitzungenSpeichern([...liste, {
-    hash: sitzungHash(token), konto, erneuern: '', seit: new Date(jetzt).toISOString(), geprueft: jetzt, zuletzt: jetzt,
-  }]))
-  res.setHeader('Set-Cookie', `${SITZUNG_COOKIE}=${token}; Path=/; Max-Age=${8 * 3600}; HttpOnly; SameSite=Lax${sicher(req)}`)
+  await betreiberSitzung(req, res, betreiberKonto())
   return json(res, 200, { ok: true })
 }
 
