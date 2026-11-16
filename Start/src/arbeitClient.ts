@@ -167,7 +167,7 @@ async function nachPruefung(fenster: Window): Promise<KiBlick | null> {
   return blick
 }
 
-type KiAntwort = { ok?: boolean; antwort?: string; schritte?: unknown[]; pruefung?: boolean; message?: string }
+type KiAntwort = { ok?: boolean; antwort?: string; schritte?: unknown[]; pruefung?: boolean; frage?: string; message?: string }
 
 async function modellFragen(body: unknown): Promise<KiAntwort> {
   try {
@@ -211,6 +211,8 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
   let gesamt: number | undefined
   let nachlauf: { runde: number; getan: string[]; nicht: string[] } | undefined
   let vorschlag = false
+  // Doppelte und sich ausschließende Positionen: die Praxis entscheidet, die Zeile fragt.
+  let frage = ''
 
   for (let runde = 1; runde <= RUNDEN; runde++) {
     const d = await modellFragen({ text: t, blick, verlauf: verlauf.zuege.slice(-6), ...(nachlauf ? { nachlauf } : {}) })
@@ -220,7 +222,8 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
     }
     const schritte = Array.isArray(d.schritte) ? d.schritte : []
     // Im Korrekturlauf zählt, was der Plan und sein Prüfmodul danach melden, nicht die Ankündigung des Modells.
-    if (!schritte.length || !d.pruefung) teile.push(satz(d.antwort))
+    if (d.frage) frage = d.frage
+    if ((!schritte.length && !d.frage) || !d.pruefung) teile.push(satz(d.antwort))
     if (!schritte.length) break
     if (schritte.some((x) => typeof (x as { begruendung?: unknown })?.begruendung === 'string')) vorschlag = true
     const r = await fragenKi(fenster, { aktion: 'aendern', schritte }, 5000)
@@ -240,7 +243,9 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
     const neu = await nachPruefung(fenster)
     if (!neu) break
     blick = neu
-    if (!d.pruefung || !pruefOffen(blick.hinweise).length) break
+    // Was auf die Entscheidung der Praxis wartet, löst keine weitere Runde aus.
+    const wartet = (h: KiMeldung) => !!frage && (h.art === 'doppelt' || h.art === 'ausschluss')
+    if (!d.pruefung || !pruefOffen((blick.hinweise ?? []).filter((h) => !wartet(h))).length) break
     nachlauf = { runde: runde + 1, getan, nicht }
   }
 
@@ -253,6 +258,7 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
       teile.push(`Summe jetzt ${euro(gesamt)}${typeof vor === 'number' && Math.abs(vor - gesamt) >= 0.005 ? ` (vorher ${euro(vor)})` : ''}. Noch nicht gespeichert; „nimm das zurück“ macht die letzte Änderung rückgängig.`)
     }
   }
+  if (frage) teile.push(frage)
   const aus = teile.join(' ')
   verlauf.zuege.push({ wer: 'ich', text: t }, { wer: 'clara', text: aus })
   verlauf.zuege = verlauf.zuege.slice(-8)
