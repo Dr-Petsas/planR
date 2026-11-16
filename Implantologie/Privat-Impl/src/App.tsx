@@ -19,6 +19,9 @@ import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
 import { ReglerKlappe } from './components/Handy'
 import { implAnmelden } from './arbeitPlan'
+import { implKi, kiZeilen } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
+import { Pruefmodul } from './components/Pruefmodul'
 import { PatientFelder } from './components/Stammdaten'
 import type { Plan } from './types'
 import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
@@ -101,6 +104,11 @@ export default function App() {
     () => ({ plan: planRef.current, gesperrt: sperreRef.current }),
     (neu) => setPlan(neu),
   ), [setPlan])
+  useEffect(() => planKiHoeren(implKi(
+    () => ({ plan: planRef.current, gesperrt: sperreRef.current, einst: einstRef.current }),
+    (neu) => setPlan(neu),
+  )), [setPlan])
+  const pruefZeilen = useMemo(() => kiZeilen(kalk), [kalk])
   const sichern = () => { if (!gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   useBefundMitPlan(!gesperrt)
   const neu = (patient?: Partial<Patient> | null) => {
@@ -160,6 +168,7 @@ export default function App() {
             <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
           </fieldset>
         </ReglerKlappe>
+        <Pruefmodul positionen={pruefZeilen} hinweise={kalk.hinweise} begruendung ueber35={einst.erlaubeUeber35} />
       </div>
 
       <main className="arbeitsflaeche">

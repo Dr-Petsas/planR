@@ -105,3 +105,22 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
   .vorschau, .druck-bereich { min-width: 0; max-width: 100%; }
   select, .pos-neu select { max-width: 100%; }
 }
+
+/* Prüfmodul oben im Plan */
+.pruefmodul { margin: 8px 16px 0; background: #fff; border: 1px solid var(--linie, #e3ddd3); border-left: 4px solid #3f9a6b; border-radius: 8px; font-size: 13px; color: #1f2a30; }
+.pruefmodul.pm-warnung { border-left-color: #c98a1a; }
+.pruefmodul.pm-fehler { border-left-color: var(--rot, #b0413a); background: var(--rot-hell, #fdf3f2); }
+.pruefmodul > summary { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; list-style: none; }
+.pruefmodul > summary::-webkit-details-marker { display: none; }
+.pruefmodul .pm-marke { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; font-size: 12px; font-weight: 700; color: #fff; background: #3f9a6b; flex: none; }
+.pruefmodul.pm-warnung .pm-marke { background: #c98a1a; }
+.pruefmodul.pm-fehler .pm-marke { background: var(--rot, #b0413a); }
+.pruefmodul .pm-stand { color: var(--grau, #6b767d); }
+.pruefmodul.pm-fehler .pm-stand { color: var(--rot, #b0413a); font-weight: 600; }
+.pruefmodul ul { list-style: none; margin: 0; padding: 0 12px 10px; max-height: 40vh; overflow: auto; }
+.pruefmodul li { display: flex; gap: 10px; padding: 5px 0; border-top: 1px solid var(--linie, #ece7de); line-height: 1.4; }
+.pruefmodul li > span { flex: none; width: 62px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding-top: 2px; color: var(--grau, #6b767d); }
+.pruefmodul li.pm-fehler > span { color: var(--rot, #b0413a); }
+.pruefmodul li.pm-warnung > span { color: #a36c0c; }
+.pruefmodul > p { margin: 0; padding: 0 12px 10px; color: var(--grau, #6b767d); }
+@media print { .pruefmodul { display: none !important; } }

@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
+import { parKi, kiZeilen } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
+import { Pruefmodul } from './components/Pruefmodul'
 import { euro, rechnen } from './engine/par'
 import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, usePlan, usePlanAblage } from './store'
 import { mitPatient, neuAusAdresse, patientName, type Patient as Anmeldung } from './stammdaten'
@@ -44,6 +47,11 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
 
+  const kiStand = useRef({ plan, gesperrt, einst })
+  useEffect(() => { kiStand.current = { plan, gesperrt, einst } })
+  useEffect(() => planKiHoeren(parKi(() => kiStand.current, (neu) => setPlan(neu))), [setPlan])
+  const pruefZeilen = useMemo(() => kiZeilen(rechnung, plan), [rechnung, plan])
+
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   const neu = (patient?: Partial<Anmeldung> | null) => {
     sichern()
@@ -83,6 +91,7 @@ export default function App() {
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen}
             extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: rechnung.gesamt, thema: 'Parodontitisbehandlung' }} vorher={sichern} />} />
         </header>
+        <Pruefmodul positionen={pruefZeilen} eigene={rechnung.warnungen.map((text) => ({ stufe: 'warnung' as const, text }))} hinweise={rechnung.hinweise} begruendung />
         {(reiter === 'planung' || reiter === 'befund') && (
           <ReglerKlappe>
             <fieldset className="sperre" disabled={gesperrt}>

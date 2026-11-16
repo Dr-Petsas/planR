@@ -13,6 +13,9 @@ import { ListenKarte } from './components/Listen'
 import { kronenEinheiten, werkstoffVon } from './engine/material'
 import { KronenmaterialFelder } from './components/Kronenmaterial'
 import { EigenlaborKatalog } from './components/EigenlaborKatalog'
+import { zeKi, kiZeilen } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
+import { Pruefmodul } from './components/Pruefmodul'
 import { neuerPlan, planMigrieren, STANDARD_REGLER, useEinstellungen, usePlan, useZeAblage } from './store'
 import { STANDARD_IMPLANTAT } from './engine/planung'
 import { ungespeichert } from './ablage'
@@ -110,6 +113,13 @@ export default function App() {
     () => ({ plan: planRef.current, gesperrt: sperreRef.current }),
     (neu) => setPlan(neu),
   ), [setPlan])
+  const einstKi = useRef(einst)
+  useEffect(() => { einstKi.current = einst })
+  useEffect(() => planKiHoeren(zeKi(
+    () => ({ plan: planRef.current, gesperrt: sperreRef.current, einst: einstKi.current }),
+    (neu) => setPlan(neu),
+  )), [setPlan])
+  const pruefZeilen = useMemo(() => kiZeilen(kalk), [kalk])
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   useBefundMitPlan(!gesperrt)
   const neu = (patient?: Partial<Patient> | null) => {
@@ -180,6 +190,7 @@ export default function App() {
             <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
           </fieldset>
         </ReglerKlappe>
+        <Pruefmodul positionen={pruefZeilen} hinweise={kalk.hinweise} begruendung />
       </div>
 
       <main className="arbeitsflaeche">

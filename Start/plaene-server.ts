@@ -3075,6 +3075,62 @@ async function probeEinordnen(req: IncomingMessage, res: ServerResponse) {
   }
 }
 
+/** KI-Zeile im offenen Plan: Satz samt Planstand an das eigene Modell (MAS). Der Stand trägt keinen Patienten. */
+async function planKi(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
+  const key = masSchluessel()
+  if (!key) return json(res, 200, { ok: false, message: 'Die KI-Zeile ist hier nicht eingerichtet.' })
+  let roh: { text?: unknown; blick?: unknown; verlauf?: unknown }
+  try {
+    roh = JSON.parse(await lesenBody(req, 400_000) || '{}')
+  } catch {
+    return json(res, 400, { ok: false })
+  }
+  const text = String(roh.text ?? '').trim().slice(0, 1200)
+  if (!text || !roh.blick || typeof roh.blick !== 'object') return json(res, 400, { ok: false })
+  const verlauf = (Array.isArray(roh.verlauf) ? roh.verlauf : []).slice(-6)
+    .map((z) => ({ wer: (z as { wer?: unknown })?.wer === 'clara' ? 'clara' : 'ich', text: String((z as { text?: unknown })?.text ?? '').slice(0, 400) }))
+  try {
+    const r = await fetch(`${MAS}/plan-ki`, {
+      method: 'POST',
+      headers: { 'X-PlanR-Key': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, blick: roh.blick, verlauf }),
+      signal: AbortSignal.timeout(60_000),
+    })
+    return json(res, 200, await r.json().catch(() => ({ ok: false })))
+  } catch {
+    return json(res, 200, { ok: false, message: 'Die KI-Zeile ist gerade nicht erreichbar. Der Plan ist unverändert.' })
+  }
+}
+
+/** Prüfmodul der Planer: Ausschlüsse zwischen den Positionen (nur Ebene, Nummer, Zahn). */
+async function planPruefen(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  const key = masSchluessel()
+  if (!key) return json(res, 200, { ok: false, meldungen: [] })
+  let roh: { positionen?: unknown }
+  try {
+    roh = JSON.parse(await lesenBody(req, 200_000) || '{}')
+  } catch {
+    return json(res, 400, { ok: false })
+  }
+  const positionen = (Array.isArray(roh.positionen) ? roh.positionen : []).slice(0, 400).map((x) => {
+    const q = x as { ebene?: unknown; nr?: unknown; zahn?: unknown }
+    return { ebene: String(q?.ebene ?? '').slice(0, 8), nr: String(q?.nr ?? '').slice(0, 24), zahn: String(q?.zahn ?? '').slice(0, 60) }
+  })
+  try {
+    const r = await fetch(`${MAS}/plan-pruefen`, {
+      method: 'POST',
+      headers: { 'X-PlanR-Key': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ positionen }),
+      signal: AbortSignal.timeout(15_000),
+    })
+    return json(res, 200, await r.json().catch(() => ({ ok: false, meldungen: [] })))
+  } catch {
+    return json(res, 200, { ok: false, meldungen: [] })
+  }
+}
+
 /** Einlese-Dienst (tools/einlesen, Docling + PaddleOCR). Adresse und Schlüssel aus der Umgebung, lokal aus data/planr-einlesen.env. */
 function einlesenZugang(): { url: string; token: string } {
   const env: Record<string, string | undefined> = { ...process.env }
@@ -3551,6 +3607,8 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
   if (url === '/api/benutzer') return void benutzerEndpunkt(req, res, w).catch(fehler500(res))
   if (url === '/api/importe' || url.startsWith('/api/importe/')) return void importeEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/clara/text') return void claraText(req, res, w).catch(fehler500(res))
+  if (url === '/api/plan/ki') return void planKi(req, res).catch(fehler500(res))
+  if (url === '/api/plan/pruefen') return void planPruefen(req, res).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden' || url === '/api/versand/vermerk') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/termine' || url === '/api/termine/slots' || url === '/api/termine/buchen') return void termineEndpunkt(req, res, url, query, w).catch(fehler500(res))

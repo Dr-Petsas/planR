@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { kbKi, kiZeilen } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
+import { Pruefmodul } from './components/Pruefmodul'
 import { euro, istUkps, rechnen } from './engine/kb'
 import { pvsPlaene } from './engine/pvs'
 import { neuerPlan, nummerFormat, planMigrieren, useEinstellungen, usePlan, usePlanAblage } from './store'
@@ -43,6 +46,11 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
 
+  const kiStand = useRef({ plan, gesperrt, einst })
+  useEffect(() => { kiStand.current = { plan, gesperrt, einst } })
+  useEffect(() => planKiHoeren(kbKi(() => kiStand.current, (neu) => setPlan(neu))), [setPlan])
+  const pruefZeilen = useMemo(() => kiZeilen(rechnung), [rechnung])
+
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   const neu = (patient?: Partial<Anmeldung> | null) => {
     sichern()
@@ -82,6 +90,7 @@ export default function App() {
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen}
             extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: rechnung.gesamt, thema: istUkps(plan.positionen) ? 'Unterkieferprotrusionsschiene' : 'Schienentherapie' }} vorher={sichern} />} />
         </header>
+        <Pruefmodul positionen={pruefZeilen} eigene={rechnung.warnungen.map((text) => ({ stufe: 'warnung' as const, text }))} hinweise={rechnung.hinweise} begruendung />
         {reiter === 'planung' && (
           <ReglerKlappe>
             <fieldset className="sperre" disabled={gesperrt}>

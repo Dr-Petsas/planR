@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
+import { konsKi, kiZeilen } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
+import { Pruefmodul } from './components/Pruefmodul'
 import { euro, rechnen } from './engine/kons'
 import { pvsPlaene } from './engine/pvs'
 import { Befundleiste } from './components/Befundleiste'
@@ -78,6 +81,11 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
 
+  const kiStand = useRef({ plan, gesperrt, einst })
+  useEffect(() => { kiStand.current = { plan, gesperrt, einst } })
+  useEffect(() => planKiHoeren(konsKi(() => kiStand.current, (neu) => setPlan(neu))), [setPlan])
+  const pruefZeilen = useMemo(() => kiZeilen(rechnung, plan), [rechnung, plan])
+
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   const neu = (patient?: Partial<Anmeldung> | null) => {
     sichern()
@@ -117,6 +125,7 @@ export default function App() {
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen}
             extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: rechnung.summe, thema: 'Zahnerhaltung' }} vorher={sichern} />} />
         </header>
+        <Pruefmodul positionen={pruefZeilen} hinweise={rechnung.hinweise} begruendung />
         {reiter === 'planung' && (
           <ReglerKlappe>
             <fieldset className="sperre" disabled={gesperrt}>

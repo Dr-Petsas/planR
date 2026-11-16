@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
+import { mkvKi, kiZeilen } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
+import { Pruefmodul } from './components/Pruefmodul'
 import { euro, rechnen } from './engine/mkv'
 import { pvsPlaene } from './engine/pvs'
 import { Befundleiste } from './components/Befundleiste'
@@ -72,6 +75,11 @@ export default function App() {
   const offen = ungespeichert(plan, eintrag)
   const gesperrt = eintrag?.status === 'freigegeben'
 
+  const kiStand = useRef({ plan, gesperrt, einst })
+  useEffect(() => { kiStand.current = { plan, gesperrt, einst } })
+  useEffect(() => planKiHoeren(mkvKi(() => kiStand.current)), [setPlan])
+  const pruefZeilen = useMemo(() => kiZeilen(rechnung), [rechnung, plan])
+
   const sichern = () => { if (offen && !gesperrt && hatInhalt(plan)) ablage.speichern(daten) }
   const neu = (patient?: Partial<Anmeldung> | null) => {
     sichern()
@@ -110,6 +118,7 @@ export default function App() {
           </div>
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen} />
         </header>
+        <Pruefmodul positionen={pruefZeilen} hinweise={rechnung.hinweise} begruendung />
         {reiter === 'planung' && (
           <ReglerKlappe>
             <fieldset className="sperre" disabled={gesperrt}>

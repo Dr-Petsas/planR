@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { parKi } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
 import { ermittlePunktwert } from './punktwerte'
 import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
 import { useDatenVersion } from './components/Listen'
@@ -49,7 +51,8 @@ export default function App() {
   const preise = useMemo(() => preiseAus(einst, punktwert.wert, kchPunktwert.wert), [einst, punktwert.wert, kchPunktwert.wert])
   const meldungen = useMemo(() => pruefeFall(fall, einst, diag), [fall, einst, diag])
   const zahl = zaehlMeldungen(meldungen)
-  const summe = useMemo(() => streckeRechnen(fall, preise).summe, [fall, preise])
+  const strecke = useMemo(() => streckeRechnen(fall, preise), [fall, preise])
+  const summe = strecke.summe
 
   // Strecke beim ersten Oeffnen anlegen; bei Gradwechsel UPT-Folge neu rechnen
   useEffect(() => {
@@ -71,6 +74,10 @@ export default function App() {
   const gesperrt = eintrag?.status === 'freigegeben'
 
   /** Fälle mit Patientennamen werden beim Wechsel automatisch gesichert; namenlose nur nach Rückfrage verworfen. */
+  const kiStand = useRef({ fall, gesperrt, strecke, meldungen })
+  useEffect(() => { kiStand.current = { fall, gesperrt, strecke, meldungen } })
+  useEffect(() => planKiHoeren(parKi(() => kiStand.current)), [])
+
   const sichern = () => {
     if (!offen || gesperrt) return true
     if (name.trim()) { ablage.speichern(daten); return true }

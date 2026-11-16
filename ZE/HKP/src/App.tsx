@@ -9,6 +9,8 @@ import { ListenKarte } from './components/Listen'
 import { KZVEN, kzvNachNr } from './data/kzv'
 import { ListenStand } from './components/ListenStand'
 import { berechnen, type Listen } from './engine/berechnung'
+import { hkpKi } from './kiPlan'
+import { planKiHoeren } from './arbeitFenster'
 import { listenFuer, planMitKatalog } from './clara'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './engine/regeln'
 import { privatStufeAnwenden, regelUebernehmen } from './engine/aufwertung'
@@ -184,6 +186,9 @@ export default function App() {
   // Clara plant live (?live=1): MAS meldet jeden Schritt beim Anlegen per Sprache, hier wird er
   // sichtbar eingetragen. Ein neuer Vorgang löst vorher die Register-Verknüpfung, damit kein
   // Zwischenstand in einen anderen HKP gespeichert wird; der angelegte HKP wird danach verknüpft geladen.
+  const kiStand = useRef({ plan, ergebnis })
+  useEffect(() => { kiStand.current = { plan, ergebnis } })
+  useEffect(() => planKiHoeren(hkpKi(() => kiStand.current)), [])
   const liveAn = useMemo(() => liveModus(), [])
   const [live, setLive] = useState<{ an: boolean; stand: LiveStand | null; spielt: boolean }>({ an: false, stand: null, spielt: false })
   const planRef = useRef(plan)

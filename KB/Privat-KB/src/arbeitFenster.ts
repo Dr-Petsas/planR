@@ -3,6 +3,7 @@
  * Der zuletzt angemeldete Dienst gewinnt; ohne Anmeldung gilt die Regel-Antwort ohne Schreiben.
  */
 import { arbeitVerstehen, type ArbeitErgebnis, type ArbeitStand } from './arbeitDialog'
+import { pruefGemerkt, type KiSchritt, type PlanKiDienst } from './planKi'
 
 export const ARBEIT = 'planr-arbeit'
 
@@ -68,6 +69,7 @@ function merken(r: ArbeitErgebnis): ArbeitAntwort {
 }
 
 let custom: Dienst | null = null
+let ki: PlanKiDienst | null = null
 let lauscht = false
 
 export type PlanPunkt = { id: string; text: string }
@@ -86,7 +88,7 @@ export function planrLeiste(punkte: PlanPunkt[], aktiv: string, wahl: (id: strin
 
 function empfangen(ev: MessageEvent) {
   if (ev.source !== window.parent) return
-  const d = ev.data as { type?: string; id?: string; aktion?: string; text?: string; vorschlag?: string } | null
+  const d = ev.data as { type?: string; id?: string; aktion?: string; text?: string; vorschlag?: string; schritte?: unknown } | null
   if (!d) return
   if (d.type === 'planr-reiter' && leiste && typeof d.id === 'string') {
     leiste.wahl(d.id)
@@ -101,6 +103,19 @@ function empfangen(ev: MessageEvent) {
     return
   }
   if (d.type !== ARBEIT || typeof d.id !== 'string') return
+  if (d.aktion === 'lesen' || d.aktion === 'aendern') {
+    const zurueck = (mehr: Record<string, unknown>) => window.parent.postMessage({ type: ARBEIT, id: d.id, text: '', vorschlag: '', ...mehr }, ev.origin || '*')
+    if (!ki) return zurueck({ art: 'fremd' })
+    try {
+      if (d.aktion === 'lesen') {
+        const blick = ki.lesen()
+        return zurueck({ art: 'blick', blick: blick.hinweise.length ? blick : { ...blick, hinweise: pruefGemerkt() } })
+      }
+      return zurueck({ art: 'geaendert', ergebnis: ki.aendern(Array.isArray(d.schritte) ? d.schritte as KiSchritt[] : []) })
+    } catch {
+      return zurueck({ art: 'fremd' })
+    }
+  }
   const anfrage: Anfrage | null = d.aktion === 'vorschlag' && typeof d.text === 'string'
     ? { aktion: 'vorschlag', text: d.text }
     : (d.aktion === 'anwenden' || d.aktion === 'verwerfen')
@@ -159,4 +174,11 @@ export function arbeitHoeren(dienst: Dienst): () => void {
   sicher()
   custom = dienst
   return () => { if (custom === dienst) custom = null }
+}
+
+/** Der Plan gibt der KI-Zeile seinen Stand zu lesen und nimmt Schritte zum ?ndern an. */
+export function planKiHoeren(dienst: PlanKiDienst): () => void {
+  sicher()
+  ki = dienst
+  return () => { if (ki === dienst) ki = null }
 }

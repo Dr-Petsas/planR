@@ -12,7 +12,7 @@ import { verbundBlock, verbundLaden, verbundVerdrahten } from './verbund'
 import { logo } from './logo'
 import { aboText, fotoZuschneiden, kontoMenu, persoenlichKarte } from './konto'
 import { abmelden, anmeldePopup, anmeldePopupEntfernen, ausPickadoc, benutzerBlock, benutzerLaden, benutzerZuordnen, ichLaden, sitzungBewachen, sitzungHinweis, sitzungHinweisLoeschen, type BenutzerZeile, type Ich, type PraxisZeile } from './anmeldung'
-import { planArbeit, planGespraechVergessen, planNameGesucht } from './arbeitClient'
+import { planArbeit, planGespraechVergessen, planKiZug, planNameGesucht } from './arbeitClient'
 import { zuordnungOeffnen } from './zuordnungSeite'
 import { kastenSatz, OK, schemaVon, UK, type Kasten, type KastenGruppe } from './kasten'
 import { dauerStufen, dauerText, geschlecht, kalenderErlaubt, motivFuerPlan, motivPasst, slotBadge, terminKurz, uhrZeiger, type TerminGrund, type TerminMotiv } from './termin'
@@ -1557,7 +1557,15 @@ async function claraSenden(text: string) {
     }
     const fenster = planBlick ? document.querySelector<HTMLIFrameElement>('.plan-rahmen')?.contentWindow : null
     if (fenster && planBlick) {
-      const antwort = await planArbeit(fenster, text, `${planBlick.modul}~${planBlick.nummer}`)
+      const planKey = `${planBlick.modul}~${planBlick.nummer}`
+      claraAgent('wartet', 'Plan', 'liest den Plan')
+      const ki = await planKiZug(fenster, text, planKey)
+      if (ki) {
+        claraBlase('clara', ki.text, true)
+        claraAgent('fertig', 'Plan', ki.geaendert ? 'geändert' : 'fertig')
+        return
+      }
+      const antwort = await planArbeit(fenster, text, planKey)
       if (antwort) {
         claraBlase('clara', antwort.text, true)
         claraAgent('fertig', 'Plan', 'fertig')
