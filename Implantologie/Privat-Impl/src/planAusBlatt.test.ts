@@ -14,8 +14,23 @@ describe('Plan aus einem eingelesenen Implantat-Kostenvoranschlag', () => {
 
   it('trägt den Befund ins Zahnschema ein', () => {
     expect(Object.keys(plan.zaehne)).toHaveLength(30)
-    expect(plan.zaehne['15']).toEqual({ B: 'b', TP: '' })
+    expect(plan.zaehne['15'].B).toBe('b')
     expect(plan.zaehne['26']).toEqual({ B: 'i', TP: '' })
+  })
+
+  it('trägt die Implantate als Planung ins Zahnschema ein, ohne die Leistungen zu verdoppeln', () => {
+    const geplant = Object.keys(plan.zaehne).filter((z) => plan.zaehne[z].TP).sort()
+    expect(geplant).toEqual(['11', '13', '15'])
+    expect(plan.zaehne['13']).toEqual({ B: 'b', TP: 'I' })
+    expect(kalk.honorarGoz.filter((z) => z.nr === '9010')).toHaveLength(1)
+    expect(kalk.material.filter((z) => z.auto)).toHaveLength(0)
+  })
+
+  it('rechnet ein später nachgetragenes Implantat dazu', () => {
+    const mehr = { ...plan, zaehne: { ...plan.zaehne, '14': { B: 'x', TP: 'I' } } }
+    const neu = kalkulieren(mehr, STANDARD_EINSTELLUNGEN)
+    expect(neu.honorarGoz.filter((z) => z.nr === '9010' && z.zahn === '14')).toHaveLength(1)
+    expect(neu.gesamt).toBeGreaterThan(kalk.gesamt)
   })
 
   it('übernimmt jede Zeile und rechnet nichts dazu', () => {

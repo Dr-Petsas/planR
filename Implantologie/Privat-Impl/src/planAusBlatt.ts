@@ -1,5 +1,5 @@
 import type { Einstellungen, Plan, Position } from './types'
-import { kalkulieren } from './engine/berechnung'
+import { kalkulieren, positionen } from './engine/berechnung'
 import { runden } from './engine/listen'
 import { neuerPlan } from './planNeu'
 
@@ -24,6 +24,32 @@ function teilen(betrag: number, anzahl: number, text: string): { anzahl: number;
   const einzel = runden(betrag / anzahl)
   if (runden(einzel * anzahl) === runden(betrag)) return { anzahl, preis: einzel, text }
   return { anzahl: 1, preis: runden(betrag), text: text ? `${text}, ${anzahl} Stück` : `${anzahl} Stück` }
+}
+
+/** GOZ 9010 ist die Implantatinsertion: ihre Zähne sind die geplanten Implantate. */
+const IMPLANTAT_SETZEN = '9010'
+
+/**
+ * Trägt die Implantate des Blatts als Planung ins Zahnschema ein, ohne dass der Planer dafür eigene Zeilen rechnet.
+ * Die Leistungen stehen schon als Zeilen vom Blatt im Plan. Was der Planer aus der Planung dazu erzeugen würde, wird abgewählt.
+ * Sonst stünde jede Leistung doppelt im Kostenvoranschlag.
+ */
+export function planungEintragen(plan: Plan, einst: Einstellungen): Plan {
+  const zaehne = { ...plan.zaehne }
+  for (const p of plan.manuell) {
+    if (p.ebene !== 'GOZ' || p.nr !== IMPLANTAT_SETZEN) continue
+    for (const teil of p.zahn.split(',')) {
+      const zahn = teil.trim()
+      const nummer = Number(zahn)
+      if (zahn.length !== 2 || !Number.isInteger(nummer) || nummer < 11 || nummer > 48) continue
+      if (zaehne[zahn]?.TP) continue
+      zaehne[zahn] = { B: zaehne[zahn]?.B ?? '', TP: 'I' }
+    }
+  }
+  const mit: Plan = { ...plan, zaehne }
+  const eigene = new Set(mit.manuell.map((p) => p.id))
+  const erzeugt = positionen({ ...mit, entfernt: [] }, einst).positionen.filter((p) => !eigene.has(p.id)).map((p) => p.id)
+  return { ...mit, entfernt: [...new Set([...mit.entfernt, ...erzeugt])] }
 }
 
 /**
@@ -103,5 +129,5 @@ export function planAusBlatt(nummer: number, schema: BlattSchema, zeilen: BlattZ
       letzte.preis = neu
     }
   }
-  return plan
+  return planungEintragen(plan, einst)
 }
