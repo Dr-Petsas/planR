@@ -1,7 +1,7 @@
 import { ortStarten, ortVergessen } from './ort'
 import './style.css'
 import './thema'
-import { ausDswin, ersetzbar, faelleZusammen, hkpOffenKarten, loeschbar, nummerMitReihe, planDateiLesen, planFiltern, tagVon, type PatientKennung, type PlanDatei, type PlanKarte } from './plaene'
+import { ausDswin, betraegeUebernehmen, ersetzbar, faelleZusammen, hkpOffenKarten, loeschbar, nummerMitReihe, planDateiLesen, planFiltern, tagVon, type PatientKennung, type PlanDatei, type PlanKarte } from './plaene'
 import { BEREICHE, adresse, planerZuModul } from './planer'
 import { LEER, PVS_LISTE, pvsVon, type Einstellungen } from './einstellungen'
 import { PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, planInsPvsMoeglich } from './pvs'
@@ -183,14 +183,19 @@ function planLeisteLeeren() {
   planSpeichern = false
 }
 
+/** Liste neu holen, sobald ein Plan zu ist. Ein zweites Mal, falls das Speichern noch unterwegs war. */
+function listeNachholen() {
+  void laden().catch(() => {})
+  window.setTimeout(() => { if (!planBlick) void laden().catch(() => {}) }, 1500)
+}
+
 function planSchliessen() {
   planGespraechVergessen()
   planBlick = null
   planLeisteLeeren()
   urlSetzen('replace')
   zeichnen()
-  // Der Planer speichert beim Schließen. Die Liste holt den Stand danach neu, sonst steht dort der alte Betrag.
-  window.setTimeout(() => { if (!planBlick) void laden().catch(() => {}) }, 700)
+  listeNachholen()
 }
 
 /** Filter gehören zur Übersicht. Ein offener Plan gibt die Liste frei, sonst sieht man die Auswahl nicht. */
@@ -2200,6 +2205,7 @@ async function terminBuchen(iso: string) {
 
 ausUrl()
 window.addEventListener('popstate', () => {
+  const warPlan = !!planBlick
   const n = Number((history.state as { n?: number } | null)?.n)
   verlaufJetzt = Number.isFinite(n) ? n : 0
   ausUrl()
@@ -2207,6 +2213,7 @@ window.addEventListener('popstate', () => {
   if (!ich?.konto) return
   if (planSicht === 'offen') void offenLaden()
   else zeichnen()
+  if (warPlan && !planBlick) listeNachholen()
 })
 window.addEventListener('planr-testabo-voll', () => testaboVollOeffnen())
 
@@ -2252,8 +2259,11 @@ async function aboSenden() {
   }
 }
 
+let listeLauf = 0
 async function laden() {
+  const lauf = ++listeLauf
   const d = await (await fetch('/api/plaene', { cache: 'no-store' })).json() as { plaene?: PlanKarte[]; testabo?: Ich['testabo'] }
+  if (lauf !== listeLauf) return
   plaene = Array.isArray(d.plaene) ? d.plaene : []
   if (ich && 'testabo' in d) ich.testabo = d.testabo
   if (ich.testabo?.voll && !aboGezeigt) { aboAuf = true; aboGezeigt = true }
@@ -2413,6 +2423,16 @@ window.addEventListener('message', (ev) => {
   }
   if (d.type === 'planr-versendet' && planBlick) {
     void laden().catch(() => {})
+    return
+  }
+  if (d.type === 'planr-gespeichert' && ev.origin === location.origin) {
+    const gemeldet = (d as { plaene?: { modul?: string; nummer?: string; betrag?: number }[] }).plaene
+    const neu = betraegeUebernehmen(plaene, Array.isArray(gemeldet) ? gemeldet : [])
+    if (neu !== plaene) {
+      plaene = neu
+      if (!planBlick) zeichnen()
+    }
+    if (!planBlick) listeNachholen()
     return
   }
   if (d.type !== 'planr-blick' || !planBlick) return

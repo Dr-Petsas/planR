@@ -271,6 +271,27 @@ export const loeschbar = (k: PlanKarte) => !ausDswin(k) && (k.modul !== 'hkp' ||
 /** Import ersetzt den Planinhalt – bei HKPs nur, solange er noch auf Freigabe wartet */
 export const ersetzbar = (k: PlanKarte) => !ausDswin(k) && (k.modul !== 'hkp' || k.status === 'wartet_auf_freigabe')
 
+/** Gespeicherte Summen in die schon geladene Liste schreiben. Unbekannte Pläne bleiben unverändert. */
+export function betraegeUebernehmen(plaene: PlanKarte[], gemeldet: { modul?: string; nummer?: string; betrag?: number }[]): PlanKarte[] {
+  const neu = new Map<string, number>()
+  for (const g of gemeldet) {
+    const modul = String(g.modul ?? '')
+    const nummer = String(g.nummer ?? '')
+    const betrag = Number(g.betrag)
+    if (!modul || !nummer || !Number.isFinite(betrag)) continue
+    neu.set(`${modul}|${nummer}`, betrag)
+  }
+  if (!neu.size) return plaene
+  let anders = false
+  const liste = plaene.map((p) => {
+    const betrag = neu.get(`${p.modul}|${p.nummer}`)
+    if (betrag === undefined || betrag === p.betrag) return p
+    anders = true
+    return { ...p, betrag }
+  })
+  return anders ? liste : plaene
+}
+
 export function planFiltern(plaene: PlanKarte[], name: string, tag: string, planart = '', behandler = ''): PlanKarte[] {
   const n = name.trim().toLowerCase()
   return plaene.filter((p) => {

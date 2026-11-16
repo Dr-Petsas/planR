@@ -219,7 +219,13 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
   const body = JSON.stringify({ modul: basis, plaene, entfernt: weg })
   const init: RequestInit = { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body }
   if (body.length < 60_000) init.keepalive = true
-  fetch(hub, init).catch(() => {})
+  fetch(hub, init).then((r) => {
+    if (!r.ok || typeof window === 'undefined' || window.parent === window) return
+    window.parent.postMessage({
+      type: 'planr-gespeichert',
+      plaene: plaene.map((e) => ({ modul: basis, nummer: e.nummer, betrag: e.betrag })),
+    }, '*')
+  }).catch(() => {})
 }
 
 function lesen<P>(key: string): AblageEintrag<P>[] {

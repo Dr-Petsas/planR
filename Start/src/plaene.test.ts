@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  begraben, eingangOffen, entwurfNummer, ersetzbar, faelleZusammen, grabAnlegen, hkpKarten, hkpOffenKarten, kartePrüfen, kennungVon, loeschbar, modulErsetzen, nummerMitReihe, planDateiAus, planDateiLesen, planFiltern, planNummer, tagVon,
+  begraben, betraegeUebernehmen, eingangOffen, entwurfNummer, ersetzbar, faelleZusammen, grabAnlegen, hkpKarten, hkpOffenKarten, kartePrüfen, kennungVon, loeschbar, modulErsetzen, nummerMitReihe, planDateiAus, planDateiLesen, planFiltern, planNummer, tagVon,
   type Eingang, type PlanKarte,
 } from './plaene'
 
@@ -31,6 +31,27 @@ describe('Patient der Zeile im Praxisprogramm (Befund)', () => {
     const b = kartePrüfen({ ...kopf, modul: 'hkp', nummer: 'h1', art: 'Kasse', fall: '11111111-2222-3333-4444-555555555555', fallTitel: 'All-on-6 mit Implantation' })
     const c = kartePrüfen({ ...kopf, modul: 'privat-kons', nummer: 'PK-1' })
     expect(faelleZusammen([c!, a!, b!]).map((g) => g.karten.map((k) => k.nummer))).toEqual([['PK-1'], ['IMPL-2026-C001', 'h1']])
+  })
+})
+
+describe('betraegeUebernehmen', () => {
+  const plan = () => kartePrüfen({
+    modul: 'privat-impl', art: 'Privat', nummer: 'IMPL-2026-A001', patient: 'Pantas',
+    betrag: 5114.57, status: 'entwurf', geaendert: '2026-11-16T10:00:00.000Z', kuerzel: 'IMPL',
+  })!
+
+  it('schreibt die gespeicherte Summe in die passende Zeile', () => {
+    const p = plan()
+    const neu = betraegeUebernehmen([p], [{ modul: 'privat-impl', nummer: 'IMPL-2026-A001', betrag: 4800 }])
+    expect(neu[0].betrag).toBe(4800)
+    expect(p.betrag).toBe(5114.57)
+  })
+
+  it('lässt die Liste stehen, wenn sich die Summe nicht ändert', () => {
+    const liste = [plan()]
+    expect(betraegeUebernehmen(liste, [{ modul: 'privat-impl', nummer: 'IMPL-2026-A001', betrag: 5114.57 }])).toBe(liste)
+    expect(betraegeUebernehmen(liste, [{ modul: 'privat-kb', nummer: 'KB-1', betrag: 12 }])).toBe(liste)
+    expect(betraegeUebernehmen(liste, [{ betrag: Number.NaN }])).toBe(liste)
   })
 })
 
