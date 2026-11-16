@@ -97,7 +97,11 @@ export default function App() {
       type: 'planr-probe-stand',
       stand: {
         regler: { privatStufe: plan.regler.laborStufe, gozFaktor: plan.regler.gozFaktor || einst.gozFaktor },
-        nachher: { gesamt: kalk.gesamt, eigenanteil: kalk.gesamt, festzuschuss: 0 },
+        nachher: {
+          gesamt: kalk.gesamt, eigenanteil: kalk.gesamt, festzuschuss: 0,
+          honorar: Math.round(kalk.summeHonorar * 100) / 100,
+          material: Math.round((kalk.summeLaborNetto + kalk.mwst + kalk.summeMaterial) * 100) / 100,
+        },
       },
     }, location.origin)
   }, [plan, kalk, einst.gozFaktor])

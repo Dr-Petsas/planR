@@ -24,8 +24,8 @@ import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patient
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   BETREIBER, artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangFuerMandant, eingangListe, eingangSichtbar, eingangStand, eingangText,
-  eingangZuordnen, faelleAus, fallAnlegen, fallFinden, fallTeile, idGueltig, passwortPasst, probeEmail, probeGesperrt, standPruefen, zugangNamen,
-  type ProbeKarte,
+  eingangZuordnen, faelleAus, fallAnlegen, fallFinden, fallTeile, idGueltig, passwortPasst, probeEmail, probeGesperrt, standNachziehen, standPruefen, zugangNamen,
+  type PlanSumme, type ProbeKarte,
 } from './probeEingang.ts'
 import {
   PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, SUDO_COOKIE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, idTokenHolen, mandantVon, neuesToken, registerVon,
@@ -151,6 +151,28 @@ const graeberSchreiben = (m: string, liste: Grab[]) => jsonSchreiben(ABLAGE(m, '
 const inhalteLesen = async (m: string) => {
   const roh = await jsonLesen<unknown>(ABLAGE(m, 'inhalte'), {})
   return (roh && typeof roh === 'object' && !Array.isArray(roh) ? roh : {}) as Inhalte
+}
+
+/** Summe und Regler der gespeicherten Pläne, damit „Nachher“ bei den Importen nicht auf dem ersten Öffnen stehen bleibt. */
+async function planSummen(mandant: string): Promise<PlanSumme[]> {
+  const [plaene, inhalte] = await Promise.all([dateiLesen(mandant), inhalteLesen(mandant)])
+  return plaene.filter((k) => k.status !== 'verworfen').map((k) => {
+    const plan = inhalte[schluessel(k.modul, k.nummer)]?.plan as { regler?: Record<string, unknown> } | undefined
+    const regler = plan?.regler ?? {}
+    const stufe = typeof regler.begleitStufe === 'number' ? regler.begleitStufe : typeof regler.laborStufe === 'number' ? regler.laborStufe : undefined
+    const goz = typeof regler.gozFaktor === 'number' ? regler.gozFaktor : undefined
+    return { modul: k.modul, nummer: k.nummer, betrag: k.betrag, ...(stufe !== undefined ? { stufe } : {}), ...(goz !== undefined ? { gozFaktor: goz } : {}) }
+  })
+}
+
+async function importeMitPlan(karten: ProbeKarte[]): Promise<ProbeKarte[]> {
+  const mandanten = [...new Set(karten.map((k) => k.mandant).filter((m): m is string => !!m))]
+  const summen = new Map<string, PlanSumme[]>()
+  await Promise.all(mandanten.map(async (m) => summen.set(m, await planSummen(m).catch(() => []))))
+  return karten.map((k) => {
+    const stand = standNachziehen(k.stand, summen.get(k.mandant ?? '') ?? [])
+    return stand && stand !== k.stand ? { ...k, stand } : k
+  })
 }
 const eingangLesen = async (m: string) => {
   const roh = await jsonLesen<unknown>(ABLAGE(m, 'eingang'), [])
@@ -3329,8 +3351,31 @@ async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     return json(res, 200, { ok: true, token: fall.token })
   }
   if (req.method !== 'GET') return json(res, 405, { ok: false })
-  if (url === '/api/importe') {
+  if (url === '/api/importe/stand') {
+    if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+    const roh = JSON.parse(await lesenBody(req, 8000) || '{}') as { modul?: unknown; nummer?: unknown; regler?: unknown; nachher?: unknown }
+    const modul = String(roh.modul ?? '')
+    const nummer = String(roh.nummer ?? '')
+    if (!MODUL_RE.test(modul) || !nummer || nummer.length > 40) return json(res, 400, { ok: false })
     const karten = await eingangFuerMandant(ORDNER, w.mandant)
+    const art = modul === 'privat-impl' ? 'privat-impl' : modul === 'privat-kv' ? 'privat-ze' : modul === 'hkp' ? 'hkp' : ''
+    const gleiche = karten.filter((k) => k.stand?.planart === art)
+    const ziel = gleiche.find((k) => k.stand?.nummer === nummer) ?? (gleiche.length === 1 ? gleiche[0] : null)
+    if (!ziel?.stand) return json(res, 200, { ok: true })
+    const regler = (roh.regler && typeof roh.regler === 'object' ? roh.regler : {}) as Record<string, unknown>
+    const nachher = (roh.nachher && typeof roh.nachher === 'object' ? roh.nachher : {}) as Record<string, unknown>
+    const stand = standPruefen({
+      ...ziel.stand,
+      nummer,
+      regler: { ...ziel.stand.regler, ...regler },
+      nachher: { ...ziel.stand.nachher, ...nachher },
+    })
+    if (!stand) return json(res, 400, { ok: false })
+    await eingangStand(ORDNER, ziel.id, stand)
+    return json(res, 200, { ok: true })
+  }
+  if (url === '/api/importe') {
+    const karten = await importeMitPlan(await eingangFuerMandant(ORDNER, w.mandant))
     const namen = new Map(karten.map((k) => [k.id, k.dateiname]))
     const faelle = (await faelleAus(ORDNER, karten.map((k) => k.id))).map((f) => ({ token: f.token, zeit: f.zeit, dateien: f.ids.map((id) => namen.get(id) ?? '') }))
     return json(res, 200, { ok: true, importe: karten.map(importKurz), faelle })
@@ -3569,7 +3614,7 @@ async function probeEingangJson(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== 'GET') return json(res, 405, { ok: false })
   const wer = await betreiberDerProbe(req)
   if (!('konto' in wer)) return json(res, wer.status, { ok: false })
-  const liste = await eingangListe(ORDNER)
+  const liste = await importeMitPlan(await eingangListe(ORDNER))
   const [z, buchungen] = await Promise.all([zugaengeLesen(), buchungenStand()])
   const monat = monatVon(new Date().toISOString())
   const zahlen: Record<string, KundeZahlen> = {}

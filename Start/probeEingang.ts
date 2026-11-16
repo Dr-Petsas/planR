@@ -20,7 +20,27 @@ export interface ProbeStand {
   planer: string
   regler: { privatStufe: number; titel: string; gozFaktor: number }
   vorher: { gesamt?: number; honorar?: number; material?: number }
-  nachher: { gesamt?: number; eigenanteil?: number; festzuschuss?: number }
+  nachher: { gesamt?: number; eigenanteil?: number; festzuschuss?: number; honorar?: number; material?: number }
+  /** Gespeicherter Plan, dessen Summe „Nachher“ ist. Ohne Eintrag gilt der einzige Plan dieser Art. */
+  nummer?: string
+}
+
+/** Begleitstufen der Implantologie, gleiche Reihenfolge wie im Planer. */
+const IMPL_STUFE = ['keine', 'Modelle/Planung', '+ Nachsorge', '+ Mikroskop', '+ Laser']
+
+export const MODUL_FUER_PLANART: Record<string, string> = {
+  'privat-impl': 'privat-impl',
+  'privat-ze': 'privat-kv',
+  hkp: 'hkp',
+}
+
+/** Kopf des gespeicherten Plans, soweit die Importansicht ihn für „Nachher“ braucht. */
+export interface PlanSumme {
+  modul: string
+  nummer: string
+  betrag: number
+  stufe?: number
+  gozFaktor?: number
 }
 
 export interface ProbeKarte {
@@ -256,13 +276,44 @@ export function standPruefen(roh: unknown): ProbeStand | null {
   const vorher = (o.vorher && typeof o.vorher === 'object' ? o.vorher : {}) as Record<string, unknown>
   const nachher = (o.nachher && typeof o.nachher === 'object' ? o.nachher : {}) as Record<string, unknown>
   const stufe = Math.min(5, Math.max(0, zahl(regler.privatStufe) ?? 0))
-  return {
+  const aus: ProbeStand = {
     planart,
     planer: String(o.planer ?? '').slice(0, 40),
     regler: { privatStufe: stufe, titel: String(regler.titel ?? '').slice(0, 40), gozFaktor: zahl(regler.gozFaktor) ?? 0 },
     vorher: { gesamt: zahl(vorher.gesamt), honorar: zahl(vorher.honorar), material: zahl(vorher.material) },
-    nachher: { gesamt: zahl(nachher.gesamt), eigenanteil: zahl(nachher.eigenanteil), festzuschuss: zahl(nachher.festzuschuss) },
+    nachher: {
+      gesamt: zahl(nachher.gesamt), eigenanteil: zahl(nachher.eigenanteil), festzuschuss: zahl(nachher.festzuschuss),
+      honorar: zahl(nachher.honorar), material: zahl(nachher.material),
+    },
   }
+  const nummer = String(o.nummer ?? '')
+  if (nummer && nummer.length <= 40 && [...nummer].every((c) => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c === '-')) aus.nummer = nummer
+  return aus
+}
+
+/**
+ * „Nachher“ ist der gespeicherte Plan, nicht der Stand vom ersten Öffnen.
+ * Ein geänderter Gesamtbetrag wirft die alte Aufteilung weg. Passt er noch, bleiben Honorar und Material.
+ */
+export function standNachziehen(stand: ProbeStand | null | undefined, plaene: PlanSumme[]): ProbeStand | null {
+  if (!stand) return null
+  const modul = MODUL_FUER_PLANART[stand.planart]
+  if (!modul) return stand
+  const gleiche = plaene.filter((p) => p.modul === modul && Number.isFinite(p.betrag))
+  const plan = stand.nummer ? gleiche.find((p) => p.nummer === stand.nummer) ?? null : gleiche.length === 1 ? gleiche[0] : null
+  if (!plan) return stand
+  const betrag = Math.round(plan.betrag * 100) / 100
+  const regler = { ...stand.regler }
+  if (typeof plan.stufe === 'number' && plan.stufe >= 0 && plan.stufe <= 5) {
+    regler.privatStufe = plan.stufe
+    if (stand.planart === 'privat-impl' && IMPL_STUFE[plan.stufe]) regler.titel = IMPL_STUFE[plan.stufe]
+  }
+  if (typeof plan.gozFaktor === 'number' && plan.gozFaktor >= 0 && plan.gozFaktor <= 10) regler.gozFaktor = Math.round(plan.gozFaktor * 100) / 100
+  if (stand.planart === 'hkp') {
+    return stand.nachher.eigenanteil === betrag ? { ...stand, regler } : { ...stand, regler, nachher: { ...stand.nachher, eigenanteil: betrag } }
+  }
+  if (stand.nachher.gesamt === betrag) return { ...stand, regler, nummer: stand.nummer || plan.nummer }
+  return { ...stand, nummer: plan.nummer, regler, nachher: { gesamt: betrag, eigenanteil: betrag, festzuschuss: 0 } }
 }
 
 export async function eingangStand(wurzel: string, id: string, stand: ProbeStand): Promise<ProbeKarte | null> {

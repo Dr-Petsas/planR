@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { scryptSync, randomBytes } from 'node:crypto'
-import { BETREIBER, darfEingangSehen, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangSichtbar, eingangStand, eingangText, kontaktAusText, passwortPasst, standPruefen } from './probeEingang'
+import { BETREIBER, darfEingangSehen, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangListe, eingangSichtbar, eingangStand, eingangText, kontaktAusText, passwortPasst, standNachziehen, standPruefen, type ProbeStand } from './probeEingang'
 
 const STEMPEL = `
 Zahnarztpraxis Dr. Anna Berg
@@ -75,6 +75,46 @@ describe('standPruefen', () => {
       nachher: { gesamt: 905.13, eigenanteil: 333.84, festzuschuss: 571.29 },
     })?.regler.titel).toBe('Ästhetik')
     expect(standPruefen({ planart: 'etwas' })).toBeNull()
+  })
+})
+
+describe('standNachziehen', () => {
+  const stand = (): ProbeStand => ({
+    planart: 'privat-impl', planer: 'Privatplan',
+    regler: { privatStufe: 0, titel: 'Ästhetik', gozFaktor: 2.3 },
+    vorher: { gesamt: 5114.57, honorar: 4393.35, material: 721.22 },
+    nachher: { gesamt: 5114.57, eigenanteil: 5114.57, festzuschuss: 0 },
+  })
+  const plan = { modul: 'privat-impl', nummer: 'IMPL-2026-A001', betrag: 8642.89, stufe: 4, gozFaktor: 3.5 }
+
+  it('nimmt Summe und Regler aus dem gespeicherten Plan', () => {
+    const neu = standNachziehen(stand(), [plan])
+    expect(neu?.nachher).toEqual({ gesamt: 8642.89, eigenanteil: 8642.89, festzuschuss: 0 })
+    expect(neu?.regler).toEqual({ privatStufe: 4, titel: '+ Laser', gozFaktor: 3.5 })
+    expect(neu?.nummer).toBe('IMPL-2026-A001')
+    expect(neu?.vorher.gesamt).toBe(5114.57)
+  })
+
+  it('behält die Aufteilung, wenn der Gesamtbetrag gleich bleibt', () => {
+    const alt = stand()
+    alt.nachher = { gesamt: 8642.89, eigenanteil: 8642.89, festzuschuss: 0, honorar: 7000, material: 1642.89 }
+    const neu = standNachziehen(alt, [plan])
+    expect(neu?.nachher.honorar).toBe(7000)
+    expect(neu?.nachher.material).toBe(1642.89)
+  })
+
+  it('rät nicht, wenn zwei Pläne derselben Art da sind', () => {
+    const zweiter = { ...plan, nummer: 'IMPL-2026-A002', betrag: 1000 }
+    expect(standNachziehen(stand(), [plan, zweiter])).toEqual(stand())
+  })
+
+  it('setzt beim HKP nur den Eigenanteil aus der Liste', () => {
+    const hkp: ProbeStand = {
+      planart: 'hkp', planer: 'HKP', regler: { privatStufe: 0, titel: 'Kasse', gozFaktor: 0 },
+      vorher: { gesamt: 2000 }, nachher: { gesamt: 2000, eigenanteil: 800, festzuschuss: 1200 },
+    }
+    const neu = standNachziehen(hkp, [{ modul: 'hkp', nummer: 'HKP-2026-A001', betrag: 650 }])
+    expect(neu?.nachher).toEqual({ gesamt: 2000, eigenanteil: 650, festzuschuss: 1200 })
   })
 })
 

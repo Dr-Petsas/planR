@@ -9,7 +9,7 @@ export interface VergleichStand {
   planer: string
   regler: { privatStufe: number; titel: string; gozFaktor: number }
   vorher: { gesamt?: number; honorar?: number; material?: number }
-  nachher: { gesamt?: number; eigenanteil?: number; festzuschuss?: number }
+  nachher: { gesamt?: number; eigenanteil?: number; festzuschuss?: number; honorar?: number; material?: number }
 }
 
 export interface VergleichPlan {
@@ -40,6 +40,10 @@ function balken(vorher?: number, nachher?: number) {
   </div>`
 }
 
+function summeZeile(label: string, wert?: number) {
+  return typeof wert === 'number' ? `<div><dt>${label}</dt><dd>${euro(wert)}</dd></div>` : ''
+}
+
 function regler(stand: VergleichStand) {
   const punkte = [0, 1, 2, 3, 4, 5].map((n) => `<span class="${n <= stand.regler.privatStufe ? 'an' : ''}"></span>`).join('')
   return `<div class="sb-regler"><b>Kasse → Privat · ${esc(stand.regler.titel || 'Stufe ' + stand.regler.privatStufe)}</b><div class="sb-punkte">${punkte}</div></div>`
@@ -51,10 +55,10 @@ export function planVergleich(plan: VergleichPlan, quelle: string) {
   const gerechnet = stand
     ? `<h3>Unser Ergebnis · ${esc(stand.planer || 'PlanR')}</h3>${regler(stand)}${balken(stand.vorher.gesamt, stand.nachher.gesamt)}
        <dl class="sb-werte">
-         <div><dt>Honorar</dt><dd>${euro(stand.vorher.honorar)}</dd></div>
-         <div><dt>Material</dt><dd>${euro(stand.vorher.material)}</dd></div>
-         <div><dt>Festzuschuss</dt><dd>${euro(stand.nachher.festzuschuss)}</dd></div>
-         <div><dt>Eigenanteil</dt><dd>${euro(stand.nachher.eigenanteil)}</dd></div>
+         ${summeZeile('Honorar', stand.nachher.honorar ?? (stand.nachher.gesamt === stand.vorher.gesamt ? stand.vorher.honorar : undefined))}
+         ${summeZeile('Material', stand.nachher.material ?? (stand.nachher.gesamt === stand.vorher.gesamt ? stand.vorher.material : undefined))}
+         ${summeZeile('Festzuschuss', stand.nachher.festzuschuss)}
+         ${summeZeile('Eigenanteil', stand.nachher.eigenanteil)}
        </dl>`
     : '<h3>Unser Ergebnis</h3><p class="sb-fehl">Noch keine Rechnung. Der Plan wurde nicht bis zum Ergebnis geöffnet.</p>'
   return `<article class="sb-plan">

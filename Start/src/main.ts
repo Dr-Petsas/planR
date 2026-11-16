@@ -79,6 +79,7 @@ let katalogLaeuft = false
 let ich: Ich
 let assistentin = 'Clara'
 let planBlick: { url: string; titel: string; nummer: string; modul: string } | null = null
+let importStandTimer = 0
 let planPunkte: { id: string; text: string }[] = []
 let planAktiv = ''
 let planVersand = false
@@ -2423,6 +2424,20 @@ window.addEventListener('message', (ev) => {
   }
   if (d.type === 'planr-versendet' && planBlick) {
     void laden().catch(() => {})
+    return
+  }
+  if (d.type === 'planr-probe-stand' && planBlick && ev.origin === location.origin) {
+    const stand = (d as { stand?: { regler?: { privatStufe?: number; titel?: string; gozFaktor?: number }; nachher?: { gesamt?: number; eigenanteil?: number; festzuschuss?: number; honorar?: number; material?: number } } }).stand
+    if (!stand?.nachher || !planBlick) return
+    const modul = planBlick.modul
+    const nummer = planBlick.nummer
+    window.clearTimeout(importStandTimer)
+    importStandTimer = window.setTimeout(() => {
+      void fetch('/api/importe/stand', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modul, nummer, regler: stand.regler ?? {}, nachher: stand.nachher }),
+      }).catch(() => undefined)
+    }, 400)
     return
   }
   if (d.type === 'planr-gespeichert' && ev.origin === location.origin) {

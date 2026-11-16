@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Zahnschema } from './components/Zahnschema'
 import { ImplantatDetails } from './components/ImplantatDetails'
 import { festVomBlatt, implantateSetzen } from './implantatSystem'
+import { BEGLEIT_STUFEN } from './engine/zusatz'
 import { RegionenBoxen } from './components/RegionenBoxen'
 import { GlobalBoxen } from './components/GlobalBoxen'
 import { Leistungen } from './components/Leistungen'
@@ -81,11 +82,17 @@ export default function App() {
   const kalk = useMemo(() => kalkulieren(plan, einst), [plan, einst])
   useEffect(() => {
     if (window.parent === window) return
+    const stufe = plan.regler.begleitStufe
+    const r = (n: number) => Math.round(n * 100) / 100
     window.parent.postMessage({
       type: 'planr-probe-stand',
       stand: {
-        regler: { privatStufe: plan.regler.begleitStufe, gozFaktor: plan.regler.gozFaktor || einst.gozFaktor },
-        nachher: { gesamt: kalk.gesamt, eigenanteil: kalk.gesamt, festzuschuss: 0 },
+        regler: { privatStufe: stufe, titel: BEGLEIT_STUFEN[stufe]?.titel ?? '', gozFaktor: plan.regler.gozFaktor || einst.gozFaktor },
+        nachher: {
+          gesamt: kalk.gesamt, eigenanteil: kalk.gesamt, festzuschuss: 0,
+          honorar: r(kalk.summeGoz + kalk.summeGoae),
+          material: r(kalk.summeMaterialNetto + kalk.summeLaborNetto + kalk.mwst),
+        },
       },
     }, location.origin)
   }, [plan, kalk, einst.gozFaktor])
