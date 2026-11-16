@@ -433,7 +433,7 @@ interface Antwort { ok: boolean; meldung?: string; datei?: PlanDatei; nummer?: s
 
 function testaboVollOeffnen() {
   if (!ich) return
-  ich.testabo = { erstellt: ich.testabo?.erstellt ?? ich.testabo?.max ?? 5, max: ich.testabo?.max ?? 5, bis: ich.testabo?.bis ?? '', voll: true }
+  ich.testabo = { ...ich.testabo, erstellt: ich.testabo?.erstellt ?? ich.testabo?.max ?? 5, max: ich.testabo?.max ?? 5, bis: ich.testabo?.bis ?? '', voll: true }
   aboAuf = true
   aboGezeigt = true
   zeichnen()
@@ -527,8 +527,21 @@ function neuUrl(basis: string, p: Stammdaten): string {
 }
 
 /** Neuer Plan für einen Patienten: erst die Planart wählen */
+/** Probe-Zugang: Was zum Abo gehört, öffnet statt der Funktion das Abo. */
+function probeStoppt(was: string): boolean {
+  if (!ich?.testabo?.probe) return false
+  aboWegen = was
+  aboAuf = true
+  auswahl = false
+  neuFuer = null
+  zeichnen()
+  return true
+}
+let aboWegen = ''
+
 function testaboStoppt(): boolean {
   if (!ich?.testabo?.voll) return false
+  aboWegen = ''
   aboAuf = true
   auswahl = false
   neuFuer = null
@@ -709,10 +722,12 @@ function aboKarte(): string {
       <button type="button" class="wahl-grund" data-abo-zu aria-label="Schließen"></button>
       <form class="wahl-karte einstellungen" data-abo>
         <div class="wahl-kopf">
-          <h2>Testabo ist voll</h2>
+          <h2>${aboWegen ? `${esc(aboWegen)} gehört zum Abo` : 'Testabo ist voll'}</h2>
           <button type="button" data-abo-zu aria-label="Schließen">✕</button>
         </div>
-        <p class="abo-text">${t.erstellt} von ${t.max} Plänen sind angelegt. Weitere Pläne gibt es mit dem regulären Abo: ${PAKETE.planr_clara.monat} € PlanR plus ${DOKU_MONAT} € Sprachdokumentation im Monat, ${PRO_PLAN.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € je Plan. Die Praxisdaten aus dem Testabo bleiben.${bis}</p>
+        <p class="abo-text">${aboWegen
+          ? `Im Probe-Zugang importieren Sie Pläne und sehen sie im Planer. Einrichtung, Zuordnung, KI-Training und Patientensuche gibt es mit dem Abo: ${PAKETE.planr_clara.monat} € PlanR plus ${DOKU_MONAT} € Sprachdokumentation im Monat, ${PRO_PLAN.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € je Plan. Ihre importierten Pläne bleiben.`
+          : `${t.erstellt} von ${t.max} Plänen sind angelegt. Weitere Pläne gibt es mit dem regulären Abo: ${PAKETE.planr_clara.monat} € PlanR plus ${DOKU_MONAT} € Sprachdokumentation im Monat, ${PRO_PLAN.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € je Plan. Die Praxisdaten aus dem Testabo bleiben.${bis}`}</p>
         ${feld('sepa.inhaber', 'Kontoinhaber', 'autocomplete="cc-name"')}
         ${feld('sepa.iban', 'IBAN', 'spellcheck="false" autocomplete="off" placeholder="DE00 0000 0000 0000 0000 00"')}
         ${feld('sepa.bic', 'BIC (optional)', 'autocomplete="off"')}
@@ -774,8 +789,18 @@ async function importeOeffnen() {
     : liste.length
       ? liste.map((p) => planVergleich(p, '/api/importe/')).join('')
       : '<p class="sb-fehl">Noch kein Plan importiert.</p>'
-  popup('Importe', `<div class="sb-leiste"><a class="sb-knopf voll" href="#probe">Plan importieren</a><span class="sb-fehl">Pläne, die Sie hochgeladen haben: links das Original, rechts das Ergebnis aus PlanR.</span></div>${inhalt}`)
-    .querySelector('a[href="#probe"]')?.addEventListener('click', () => document.querySelector('.sb-popup')?.remove())
+  const fenster = popup('Importe', `<div class="sb-leiste"><a class="sb-knopf voll" href="#probe">Plan importieren</a>${liste?.length ? '<button type="button" class="sb-knopf" data-im-planer>Im Planer öffnen</button>' : ''}<span class="sb-fehl" data-importe-hinweis>Pläne, die Sie hochgeladen haben: links das Original, rechts das Ergebnis aus PlanR.</span></div>${inhalt}`)
+  fenster.querySelector('a[href="#probe"]')?.addEventListener('click', () => document.querySelector('.sb-popup')?.remove())
+  // Alle Importe als ein Fall im Planer: Reiter je Plan, mit den Reglern.
+  fenster.querySelector<HTMLButtonElement>('[data-im-planer]')?.addEventListener('click', async (ev) => {
+    const knopf = ev.currentTarget as HTMLButtonElement
+    knopf.disabled = true
+    const f = await fetch('/api/importe/fall', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((x) => x.json()).catch(() => null) as { ok?: boolean; token?: string } | null
+    if (f?.ok && f.token) { location.href = `/#fall/${f.token}`; location.reload(); return }
+    knopf.disabled = false
+    const hinweis = fenster.querySelector<HTMLElement>('[data-importe-hinweis]')
+    if (hinweis) hinweis.textContent = 'Der Planer ließ sich gerade nicht öffnen.'
+  })
 }
 
 function bridgeStand(a: NonNullable<typeof agent>, gewaehlt: string): string {
@@ -1702,7 +1727,7 @@ function zeichnen() {
         ${planBlick ? `<nav class="plan-punkte">${punkte}</nav>${planVersand ? `<button type="button" class="aktion versand plan-mail${versendet ? ' versendet' : ''}" data-versand title="${esc(versendet || 'Per E-Mail versenden')}" aria-label="Per E-Mail versenden">${versendet ? BRIEF_GESENDET : BRIEF}</button>` : ''}` : ''}
         <div class="kopf-aktionen">
         ${agent?.lokal ? `<span class="ort-marke${agent.verbunden ? '' : ' aus'}" title="Auf diesem PC läuft eine eigene PlanR-Bridge. Dieser Browser und ${esc(assistentin)} arbeiten mit dem Praxisprogramm dieses PCs.">Dieser PC · ${esc(pvsVon(einstellungen.pvs)?.name || 'Praxisprogramm')}${agent.verbunden ? '' : ' – nicht verbunden'}</span>` : ''}
-        ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
+        ${ich.konto.admin ? `<button type="button" class="import-knopf${agent?.verbunden ? '' : ' hervor'}" data-einrichtung title="Praxissystem verbinden: Bridge, Preise &amp; Positionen">${agent?.verbunden || ich.testabo?.probe ? '' : '<i class="punkt"></i>'}<span>Einrichtung</span></button>` : ''}
         ${ich.konto.admin ? `<button type="button" class="import-knopf" data-zuordnung title="GOZ-Ziffern je Behandlung prüfen">Zuordnung</button>` : ''}
         <button type="button" class="import-knopf" data-importe title="Hochgeladene Pläne: Original und Ergebnis – und neuen Plan importieren">Importe</button>
         <button type="button" class="import-knopf" data-training title="HKPs hochladen, eigene GOZ-Analogpositionen, Labor- und Materialpreise"><span>KI-Training</span></button>
@@ -1815,7 +1840,15 @@ function zeichnen() {
   app.querySelector<HTMLButtonElement>('[data-versand]')?.addEventListener('click', () => {
     document.querySelector<HTMLIFrameElement>('.plan-rahmen')?.contentWindow?.postMessage({ type: 'planr-versand' }, '*')
   })
+  if (ich.testabo?.probe) {
+    app.querySelectorAll<HTMLElement>('[data-einrichtung], [data-zuordnung], [data-training], [data-import-neu]').forEach((k) => {
+      k.classList.add('im-abo')
+      k.classList.remove('hervor')
+      k.title = 'Gehört zum Abo'
+    })
+  }
   app.querySelector<HTMLButtonElement>('[data-import-neu]')!.addEventListener('click', () => {
+    if (probeStoppt('Die Patientensuche')) return
     const ziel = pvsQuelle()
     const getrennt = !!ziel && !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && !agent?.verbunden
     patientensucheOeffnen({
@@ -1863,13 +1896,14 @@ function zeichnen() {
     if (ich.konto.admin) void benutzerLaden().then((b) => { benutzer = b; if (einstellungAuf) zeichnen() })
     if (ich.konto.admin) void verbundLaden().then(() => { if (einstellungAuf) zeichnen() })
   })
-  app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => void einrichtungZeigen())
+  app.querySelector<HTMLButtonElement>('[data-einrichtung]')?.addEventListener('click', () => { if (!probeStoppt('Die Einrichtung')) void einrichtungZeigen() })
   app.querySelector<HTMLButtonElement>('[data-importe]')?.addEventListener('click', () => void importeOeffnen())
   app.querySelector<HTMLButtonElement>('[data-zuordnung]')?.addEventListener('click', () => {
+    if (probeStoppt('Die Zuordnung')) return
     history.replaceState(null, '', `${location.pathname}${location.search}#zuordnung`)
     void zuordnungOeffnen()
   })
-  app.querySelector<HTMLButtonElement>('[data-training]')?.addEventListener('click', () => trainingOeffnen({ admin: !!ich.konto.admin }))
+  app.querySelector<HTMLButtonElement>('[data-training]')?.addEventListener('click', () => { if (!probeStoppt('Das KI-Training')) trainingOeffnen({ admin: !!ich.konto.admin }) })
   app.querySelector<HTMLButtonElement>('[data-clara-dialog]')?.addEventListener('click', () => void claraZeigen())
   app.querySelector<HTMLButtonElement>('[data-rechnungen]')?.addEventListener('click', () => void rechnungenZeigen())
   app.querySelector<HTMLButtonElement>('[data-sudo-ende]')?.addEventListener('click', () => {
@@ -2415,8 +2449,10 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
     })
   }
   // Neue Praxis ohne Praxissystem: Assistent startet von selbst (einmal je Tab), #einrichtung öffnet ihn jederzeit
-  const neu = ich.konto.admin && !einstellungen.pvs && !sessionStorage.getItem('planr-einrichtung')
-  if (location.hash === '#zuordnung' && ich.konto.admin) void zuordnungOeffnen()
+  const probe = !!ich.testabo?.probe
+  const neu = ich.konto.admin && !probe && !einstellungen.pvs && !sessionStorage.getItem('planr-einrichtung')
+  if (probe) { /* Einrichtung und Zuordnung gehören zum Abo */ }
+  else if (location.hash === '#zuordnung' && ich.konto.admin) void zuordnungOeffnen()
   else if (location.hash === '#rechnungen' && ich.konto.admin && ich.abo === 'planr') void rechnungenZeigen()
   else if (location.hash === '#einrichtung' || location.hash === '#bridge' || neu) {
     sessionStorage.setItem('planr-einrichtung', '1')

@@ -360,15 +360,18 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
     }
     if (zugangFeld.querySelector('form')) return
     zugangFeld.innerHTML = `<form data-zugang-form>
-        <p><b>Diesen Plan in Ihrem eigenen PlanR weiterbearbeiten.</b> PlanR legt Ihnen sofort einen Zugang an: voller Umfang, kostenlos zur Probe, ohne Lastschrift. Der Plan liegt dann dort unter „Importe“.</p>
+        <p><b>Ihr Plan ist gelesen.</b> ${fallToken ? 'Legen Sie einen Zugang an, dann liegt er in Ihrem PlanR.' : 'Mit E-Mail-Adresse und Passwort sehen Sie ihn im Planer, mit allen Reglern.'} Kostenlos, ohne Lastschrift. Der Plan liegt danach in Ihrem PlanR unter „Importe“, dort laden Sie auch weitere Pläne hoch.</p>
         <div class="hp-zugang-zeile">
           <input type="email" name="email" placeholder="E-Mail-Adresse der Praxis" autocomplete="email" required value="${sicher(vorschlag)}">
+          <input type="password" name="passwort" placeholder="Passwort wählen (mind. 8 Zeichen)" autocomplete="new-password" minlength="8" required>
           <input type="text" name="firma2" tabindex="-1" autocomplete="off" class="hp-zugang-falle" aria-hidden="true">
-          <button type="submit" class="hp-knopf hp-knopf-voll">Zugang anlegen</button>
+          <button type="submit" class="hp-knopf hp-knopf-voll">${fallToken ? 'Zugang anlegen' : 'Plan im Planer ansehen'}</button>
         </div>
         <label class="hp-zugang-haken"><input type="checkbox" name="zustimmung" required> Ich stimme den <a href="https://pickadoc.ai/agb.html" target="_blank" rel="noopener">AGB</a>, den <a href="https://pickadoc.ai/datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweisen</a> und der Auftragsverarbeitung zu.</label>
         <p class="hp-zugang-meldung" data-zugang-meldung></p>
       </form>`
+    // Erst der Zugang, dann das Ergebnis. Über den Link des Betreibers bleibt das Ergebnis offen.
+    if (!fallToken && !betreiber) ergebnis.classList.add('hp-vor-zugang')
     const form = zugangFeld.querySelector<HTMLFormElement>('form')!
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault()
@@ -380,19 +383,18 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
       try {
         const r = await fetch('/api/probe/zugang', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: wert('email').value.trim(), ids: abgelegteIds, fall: fallToken || undefined, zustimmung: wert('zustimmung').checked, firma2: wert('firma2').value }),
+          body: JSON.stringify({ email: wert('email').value.trim(), passwort: wert('passwort').value, ids: abgelegteIds, fall: fallToken || undefined, zustimmung: wert('zustimmung').checked, firma2: wert('firma2').value }),
         })
-        const d = await r.json() as { ok?: boolean; meldung?: string; email?: string; passwort?: string; angemeldet?: boolean; vorhanden?: boolean }
-        if (d.ok && d.passwort) {
+        const d = await r.json() as { ok?: boolean; meldung?: string; email?: string; angemeldet?: boolean; vorhanden?: boolean }
+        if (d.ok && d.email) {
           zugangFertig = true
-          zugangFeld.innerHTML = `<p><b>Ihr Zugang ist angelegt.</b> Bitte das Passwort jetzt notieren, es wird nur hier angezeigt.</p>
-            <dl class="hp-zugang-daten"><div><dt>Login</dt><dd>${sicher(d.email ?? '')}</dd></div><div><dt>Passwort</dt><dd><code>${sicher(d.passwort)}</code></dd></div></dl>
-            <p>Ihr Plan liegt in PlanR oben unter „Importe“.</p>
+          ergebnis.classList.remove('hp-vor-zugang')
+          zugangFeld.innerHTML = `<p><b>${d.vorhanden ? 'Sie sind angemeldet.' : 'Ihr Zugang ist angelegt.'}</b> Login: ${sicher(d.email)}. ${d.vorhanden ? '' : 'Die Anmeldeadresse haben wir Ihnen auch per E-Mail geschickt. '}Der Plan steht unten im Planer und liegt in Ihrem PlanR unter „Importe“.</p>
             <a class="hp-knopf hp-knopf-voll" href="${d.angemeldet ? '/' : '/#anmelden'}">${d.angemeldet ? 'PlanR öffnen' : 'Jetzt anmelden'}</a>`
           return
         }
         meldung.innerHTML = d.vorhanden
-          ? `${sicher(d.meldung ?? '')} <a href="#anmelden">Anmelden</a>`
+          ? `${sicher(d.meldung ?? '')} <a href="#anmelden">Passwort vergessen?</a>`
           : sicher(d.meldung || 'Der Zugang ließ sich gerade nicht anlegen.')
       } catch {
         meldung.textContent = 'Keine Verbindung zu PlanR.'
@@ -588,13 +590,14 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
     warten(true)
     try {
       const r = await fetch(`/api/probe/fall/${fallToken}`, { cache: 'no-store' })
-      const d = await r.json() as { ok?: boolean; meldung?: string; name?: string; betreiber?: boolean; dateien?: { id: string; name: string; art: string }[]; stand?: string | null }
+      const d = await r.json() as { ok?: boolean; meldung?: string; name?: string; betreiber?: boolean; eigen?: boolean; dateien?: { id: string; name: string; art: string }[]; stand?: string | null }
       if (!d.ok || !d.dateien?.length) {
         warten(false)
         status.textContent = d.meldung || 'Unter diesem Link liegt kein Plan.'
         return
       }
       betreiber = d.betreiber === true
+      if (d.eigen) imKonto = true
       if (d.name) wurzel.querySelector<HTMLElement>('[data-fall-titel]')!.textContent = `Plan für ${d.name}`
       wurzel.querySelector<HTMLElement>('[data-fall-originale]')!.innerHTML = d.dateien.map((x) =>
         `<li><a href="/api/probe/fall/${fallToken}/${x.id}" target="_blank" rel="noopener">${sicher(x.name)}</a></li>`).join('')

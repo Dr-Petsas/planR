@@ -373,6 +373,13 @@ export function zugangNamen(kontakt: Partial<ZahnarztKontakt>, email: string): {
 }
 
 /** Zufälliges Passwort für den Zugang aus der Probe: 12 Zeichen, ohne verwechselbare Zeichen. */
+/** Im Probe-Zugang gesperrt, bis das Abo abgeschlossen ist: Einrichtung, Zuordnung, KI-Training, Patientensuche. */
+export function probeGesperrt(methode: string, url: string): boolean {
+  const schreibt = methode !== 'GET' && methode !== 'HEAD'
+  return url === '/api/bridge-paket' || url === '/api/bridge-setup' || url.startsWith('/api/pvs/')
+    || (schreibt && (url === '/api/bridge-schluessel' || url === '/api/goz-zuordnung' || url === '/api/fallkatalog' || url === '/api/praxiskatalog'))
+}
+
 export function neuesPasswort(): string {
   const zeichen = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
   let aus = ''

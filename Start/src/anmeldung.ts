@@ -13,7 +13,8 @@ export interface Ich {
   /** 'planr' = PlanR-Abo ohne MAS (eigene Rechnungen), 'mas' = über Pickadoc MAS */
   abo?: 'planr' | 'mas' | ''
   /** Laufendes Testabo; voll = die 5 Pläne sind angelegt */
-  testabo?: { erstellt: number; max: number; bis: string; voll: boolean } | null
+  /** probe = Zugang aus der öffentlichen Probe: nur Importe, der Rest gehört zum Abo */
+  testabo?: { erstellt: number; max: number; bis: string; voll: boolean; probe?: boolean } | null
   /** Eigenes Profilfoto liegt auf dem Server */
   foto?: boolean
   /** Betreiber sieht dieses Konto; die Adresse ist sein eigenes */

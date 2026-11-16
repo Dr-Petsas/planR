@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { probeBuchung } from './buchung'
 import { kundenBauen, type ProbeKurz } from './kundenBackend'
-import { ZUORDNEN_STUNDEN, eingangAnlegen, eingangFuerMandant, eingangZuordnen, neuesPasswort, zugangNamen } from './probeEingang'
+import { ZUORDNEN_STUNDEN, eingangAnlegen, eingangFuerMandant, eingangZuordnen, neuesPasswort, probeGesperrt, zugangNamen } from './probeEingang'
 
 const ordner: string[] = []
 afterEach(async () => {
@@ -12,6 +12,26 @@ afterEach(async () => {
 })
 
 const kontakt = { name: 'Dr. Anna Berg', praxis: 'Zahnarztpraxis Dr. Anna Berg', telefon: '0211 1', email: 'anna@praxis-berg.de', anschrift: 'Bergstr. 1, 40235 Düsseldorf' }
+
+describe('Probe-Zugang: was zum Abo gehört', () => {
+  it('sperrt Einrichtung, Zuordnung, KI-Training und Patientensuche', () => {
+    expect(probeGesperrt('POST', '/api/bridge-schluessel')).toBe(true)
+    expect(probeGesperrt('GET', '/api/bridge-paket')).toBe(true)
+    expect(probeGesperrt('GET', '/api/bridge-setup')).toBe(true)
+    expect(probeGesperrt('POST', '/api/goz-zuordnung')).toBe(true)
+    expect(probeGesperrt('POST', '/api/fallkatalog')).toBe(true)
+    expect(probeGesperrt('POST', '/api/praxiskatalog')).toBe(true)
+    expect(probeGesperrt('GET', '/api/pvs/patienten')).toBe(true)
+  })
+  it('lässt Importe, Pläne und das Lesen der Kataloge offen', () => {
+    expect(probeGesperrt('GET', '/api/importe')).toBe(false)
+    expect(probeGesperrt('POST', '/api/importe/fall')).toBe(false)
+    expect(probeGesperrt('GET', '/api/plaene')).toBe(false)
+    expect(probeGesperrt('GET', '/api/goz-zuordnung')).toBe(false)
+    expect(probeGesperrt('GET', '/api/praxiskatalog')).toBe(false)
+    expect(probeGesperrt('POST', '/api/testabo/abschluss')).toBe(false)
+  })
+})
 
 describe('Zugang aus einer Probe', () => {
   it('ordnet einen Upload genau einmal einer Praxis zu', async () => {

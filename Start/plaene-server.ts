@@ -23,7 +23,7 @@ import { eigeneKalender, geschlecht, kalenderErlaubt, motiveDerKalender, patient
 import { infoAdresse, mailSenden } from './mail.ts'
 import {
   BETREIBER, artErlaubt, darfEingangSehen, dateinameSicher, eingangAnlegen, eingangDatei, eingangEinmalMelden, eingangFuerMandant, eingangListe, eingangSichtbar, eingangStand, eingangText,
-  eingangZuordnen, fallAnlegen, fallFinden, fallTeile, idGueltig, neuesPasswort, passwortPasst, standPruefen, zugangNamen,
+  eingangZuordnen, fallAnlegen, fallFinden, fallTeile, idGueltig, passwortPasst, probeGesperrt, standPruefen, zugangNamen,
   type ProbeKarte,
 } from './probeEingang.ts'
 import {
@@ -2291,12 +2291,12 @@ async function testaboMerken(clientId: string, n: number): Promise<boolean> {
   return true
 }
 
-async function testaboInfo(clientId: string): Promise<{ erstellt: number; max: number; bis: string; voll: boolean } | null> {
+async function testaboInfo(clientId: string): Promise<{ erstellt: number; max: number; bis: string; voll: boolean; probe: boolean } | null> {
   const z = await zugaengeLesen()
   const b = await buchungFuer(z, clientId)
   if (!b?.testabo || b.testabo.status !== 'laeuft') return null
   const erstellt = b.testabo.erstellt ?? 0
-  return { erstellt, max: TESTABO_PLAENE, bis: b.testabo.bis, voll: erstellt >= TESTABO_PLAENE }
+  return { erstellt, max: TESTABO_PLAENE, bis: b.testabo.bis, voll: erstellt >= TESTABO_PLAENE, probe: b.quelle === 'probe' }
 }
 
 const empfaengerAus = (b: Buchung): Empfaenger => ({
@@ -3179,7 +3179,7 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
   if (zugangBremse.gesperrt(ip(req))) return json(res, 429, { ok: false, meldung: 'Zu viele Zugänge von diesem Anschluss. Bitte rufen Sie uns an: 0211 3029 3035.' })
-  const roh = JSON.parse(await lesenBody(req, 4000)) as { email?: unknown; ids?: unknown; zustimmung?: unknown; firma2?: unknown; fall?: unknown }
+  const roh = JSON.parse(await lesenBody(req, 4000)) as { email?: unknown; passwort?: unknown; ids?: unknown; zustimmung?: unknown; firma2?: unknown; fall?: unknown }
   if (String(roh.firma2 ?? '')) return json(res, 200, { ok: true })
   if (roh.zustimmung !== true) return json(res, 400, { ok: false, meldung: 'Bitte AGB, Datenschutzhinweisen und Auftragsverarbeitung zustimmen.' })
   // Über den Link des Betreibers: die Pläne des Falls, auch wenn der Upload länger her ist.
@@ -3191,11 +3191,17 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
   const stempel = karten.find((k) => k.kontakt?.name || k.kontakt?.praxis)?.kontakt ?? karten[0].kontakt
   const b0 = probeBuchung(email, zugangNamen(stempel ?? {}, email), stempel ?? {})
   if (!b0) return json(res, 400, { ok: false, meldung: 'Bitte eine gültige E-Mail-Adresse angeben.' })
+  const passwort = String(roh.passwort ?? '')
+  if (passwort.length < 8 || passwort.length > 200) return json(res, 400, { ok: false, meldung: 'Bitte ein Passwort mit mindestens 8 Zeichen wählen.' })
   zugangBremse.fehler(ip(req))
-  const passwort = neuesPasswort()
   const konto = await kontoAnlegen(b0, passwort)
   if (konto.status === 'vorhanden') {
-    return json(res, 409, { ok: false, vorhanden: true, meldung: 'Für diese Adresse gibt es schon einen Zugang. Bitte anmelden – der Plan lässt sich dann in PlanR über „Plan importieren“ ablegen.' })
+    // Die Adresse hat schon einen Zugang: Mit dem richtigen Passwort ist das die Anmeldung, die Pläne kommen dazu.
+    const a = await einloggen(email, passwort).catch(() => null)
+    if (!a?.ok) return json(res, 409, { ok: false, vorhanden: true, meldung: 'Für diese Adresse gibt es schon einen Zugang. Bitte das Passwort dieses Zugangs eingeben.' })
+    const z = await sitzungStarten(req, res, a.wert.konto, a.wert.erneuern)
+    const uebernommen = await eingangZuordnen(ORDNER, ids, mandantVon(z, a.wert.konto), email, Date.now(), !!fall)
+    return json(res, 200, { ok: true, email, angemeldet: true, uebernommen, vorhanden: true })
   }
   if (konto.status !== 'angelegt' || !konto.clientId) {
     return json(res, 502, { ok: false, meldung: 'Der Zugang ließ sich gerade nicht anlegen. Bitte gleich noch einmal, oder rufen Sie uns an: 0211 3029 3035.' })
@@ -3218,9 +3224,9 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
   const text = [
     'Guten Tag,', '',
     `Ihr PlanR-Zugang ist angelegt. Anmeldung: https://planr.pickadoc.de mit ${email}.`,
-    'Das Passwort stand nach dem Anlegen auf der Probe-Seite. Ist es nicht mehr zur Hand: auf der Anmeldeseite „Passwort vergessen“.', '',
-    `Ihr abgelegter Plan liegt in PlanR unter „Importe“. ${b.testabo?.vermerk ?? ''}`,
-    'In der Testzeit gibt es keine Lastschrift. Danach endet der Zugang, außer Sie buchen PlanR.', '',
+    'Das Passwort haben Sie selbst gewählt. Ist es nicht mehr zur Hand: auf der Anmeldeseite „Passwort vergessen“.', '',
+    'Ihr hochgeladener Plan liegt in PlanR unter „Importe“. Dort öffnen Sie ihn im Planer und laden weitere Pläne hoch.',
+    'Einrichtung, Zuordnung, KI-Training und Patientensuche gehören zum Abo. In der Probe gibt es keine Lastschrift.', '',
     'Fragen? Antworten Sie einfach auf diese E-Mail oder rufen Sie uns an: 0211 3029 3035.', '',
     'Ihr PlanR-Team der Pickadoc GmbH',
   ].join('\n')
@@ -3228,7 +3234,7 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
     mailSenden(ORDNER, { an: infoAdresse(), betreff: `PlanR-Zugang aus der Probe: ${b.praxis.name} (${b.id})`, text: info.text, antwortAn: email }),
     mailSenden(ORDNER, { an: email, betreff: 'Ihr PlanR-Zugang', text, antwortAn: infoAdresse() }),
   ]).catch(() => undefined)
-  return json(res, 200, { ok: true, email, passwort, angemeldet, uebernommen })
+  return json(res, 200, { ok: true, email, angemeldet, uebernommen })
 }
 
 const importKurz = (k: ProbeKarte) => ({ id: k.id, zeit: k.zeit, dateiname: k.dateiname, stand: k.stand ?? null })
@@ -3236,6 +3242,15 @@ const importKurz = (k: ProbeKarte) => ({ id: k.id, zeit: k.zeit, dateiname: k.da
 /** GET /api/importe: Pläne, die diese Praxis über die Probe oder „Plan importieren“ abgelegt hat · GET /api/importe/<id>: das Original */
 async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, w: Wer) {
   res.setHeader('Cache-Control', 'no-store')
+  if (url === '/api/importe/fall') {
+    if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+    const roh = JSON.parse(await lesenBody(req, 4000) || '{}') as { ids?: unknown }
+    const eigene = (await eingangFuerMandant(ORDNER, w.mandant)).map((k) => k.id)
+    const gewollt = (Array.isArray(roh.ids) ? roh.ids : []).map((x) => String(x))
+    const fall = await fallAnlegen(ORDNER, gewollt.length ? eigene.filter((id) => gewollt.includes(id)) : eigene, w.konto.name || w.konto.email)
+    if (!fall) return json(res, 404, { ok: false, meldung: 'Zu diesen Plänen liegt keine Datei.' })
+    return json(res, 200, { ok: true, token: fall.token })
+  }
   if (req.method !== 'GET') return json(res, 405, { ok: false })
   if (url === '/api/importe') return json(res, 200, { ok: true, importe: (await eingangFuerMandant(ORDNER, w.mandant)).map(importKurz) })
   const fund = await eingangDatei(ORDNER, url.slice('/api/importe/'.length))
@@ -3291,8 +3306,11 @@ async function probeFall(req: IncomingMessage, res: ServerResponse, rest: string
   }
   if (req.method !== 'GET') return json(res, 405, { ok: false })
   const karten = (await eingangListe(ORDNER)).filter((k) => fall.ids.includes(k.id))
+  // Der Zahnarzt öffnet seine eigenen Importe: Er hat den Zugang schon.
+  const w = betreiber ? null : await werIst(req)
+  const eigen = !!w && karten.length > 0 && karten.every((k) => k.mandant === w.mandant)
   return json(res, 200, {
-    ok: true, name: fall.name, betreiber,
+    ok: true, name: fall.name, betreiber, eigen,
     dateien: karten.map((k) => ({ id: k.id, name: k.dateiname, art: k.art, zeit: k.zeit })),
     stand: fall.teile ?? null,
   })
@@ -3504,6 +3522,13 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
 }
 
 function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, query: string, w: Wer, next: () => void) {
+  if (!probeGesperrt(req.method ?? 'GET', url) || w.sudo) return angemeldetWeiter(req, res, url, query, w, next)
+  testaboInfo(w.konto.clientId).then((t) => t?.probe
+    ? json(res, 403, { ok: false, probe: true, meldung: 'Das gehört zum Abo. Im Probe-Zugang können Sie Pläne importieren und im Planer ansehen.' })
+    : angemeldetWeiter(req, res, url, query, w, next)).catch(fehler500(res))
+}
+
+function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string, query: string, w: Wer, next: () => void) {
   const m = w.mandant
   if (url === '/api/profil/foto') return void profilFoto(req, res, w).catch(fehler500(res))
   if (url === '/api/einstellungen') return einstellungen(req, res, w)

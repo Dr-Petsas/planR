@@ -315,6 +315,9 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 .hp-zugang p { margin: 0 0 12px; line-height: 1.5; }
 .hp-zugang-zeile { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 10px; }
 .hp-zugang-zeile input[type=email] { flex: 1 1 260px; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--hp-linie); background: #071a1f; color: var(--hp-text); font: inherit; }
+.hp-zugang-zeile input[type=password] { flex: 1 1 220px; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--hp-linie); background: #071a1f; color: var(--hp-text); font: inherit; }
+/* Erst der Zugang, dann der Planer */
+.hp-vor-zugang .hp-fall, .hp-vor-zugang .hp-probe-rahmen { display: none; }
 .hp-zugang-falle { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .hp-zugang-haken { display: flex; gap: 10px; align-items: flex-start; color: var(--hp-grau); font-size: 14px; }
 .hp-zugang-haken a, .hp-zugang-meldung a { color: var(--hp-mint); }
