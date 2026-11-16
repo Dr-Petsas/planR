@@ -1,7 +1,9 @@
 /* Superuser-Eingang und Import-Popup: heller PlanR-Look wie die Planliste (Zebra, Petrol-Akzent). */
-.sb {
+.sb, .sb-popup {
   --sb-akzent: var(--akzent, #2f7f8f); --sb-dunkel: var(--akzent-dunkel, #266a78); --sb-hell: var(--akzent-hell, #e4f0f1);
   --sb-text: var(--text, #1f2a30); --sb-grau: var(--grau, #6b767d); --sb-linie: var(--linie, #e6e8eb);
+}
+.sb {
   min-height: 100vh; background: #f7fbfb; color: var(--sb-text);
   font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
