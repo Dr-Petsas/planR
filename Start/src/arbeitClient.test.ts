@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { istJa, istNein, istPlanAuftrag, planNameGesucht } from './arbeitClient'
+import { istJa, istNein, istPlanAuftrag, planNameGesucht, pruefBericht, pruefOffen } from './arbeitClient'
 
 describe('Bestätigung der KI-Zeile', () => {
   it('erkennt die Zusage und lässt einen Nachsatz nicht als Ja gelten', () => {
@@ -26,5 +26,19 @@ describe('Bestätigung der KI-Zeile', () => {
     expect(istPlanAuftrag('geht 9050 2 mal?')).toBe(true)
     expect(istPlanAuftrag('Ist das Zirkon?')).toBe(false)
     expect(istPlanAuftrag('Nimm Zirkon')).toBe(true)
+  })
+})
+
+describe('Prüfmodul nach einer Änderung der KI-Zeile', () => {
+  it('zählt nur Fehler und Warnungen als offen', () => {
+    expect(pruefOffen([{ stufe: 'fehler', text: 'A' }, { stufe: 'info', text: 'B' }, { stufe: 'warnung', text: 'C' }, { stufe: 'warnung' }])).toEqual(['A', 'C'])
+    expect(pruefOffen(undefined)).toEqual([])
+  })
+  it('meldet behoben, offen und neu', () => {
+    expect(pruefBericht([], [])).toBe('')
+    expect(pruefBericht(['A', 'B'], [])).toContain('alle 2 Meldungen sind behoben')
+    expect(pruefBericht(['A', 'B'], ['B'])).toContain('1 behoben, 1 noch offen')
+    expect(pruefBericht(['A', 'B'], ['B'])).toContain('Offen: B')
+    expect(pruefBericht(['A'], ['A', 'N'])).toContain('Neu durch die Änderung: N')
   })
 })

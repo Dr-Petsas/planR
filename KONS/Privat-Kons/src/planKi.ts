@@ -30,7 +30,18 @@ export interface KiSchalter {
 }
 
 export type Stufe = 'fehler' | 'warnung' | 'info'
-export interface Meldung { stufe: Stufe; text: string }
+/** Was eine Meldung des Prüfmoduls bemängelt; daran erkennt die KI-Zeile, wie sie zu lösen ist. */
+export type PruefArt =
+  | 'anzahl_null' | 'kein_betrag' | 'kein_preis' | 'kein_text'
+  | 'faktor_ueber_35' | 'faktor_ueber_35_vereinbart' | 'faktor_unter_1' | 'begruendung_fehlt'
+  | 'doppelt' | 'ausschluss' | 'rechnung'
+export interface Meldung {
+  stufe: Stufe
+  text: string
+  art?: PruefArt
+  /** Positionen, an denen die Meldung hängt */
+  ids?: string[]
+}
 
 export type KiOp = 'schalter' | 'hinzu' | 'setze' | 'weg' | 'zurueck'
 
@@ -48,6 +59,8 @@ export interface PlanBlick {
   angaben: Record<string, string>
   schalter: KiSchalter[]
   hinweise: Meldung[]
+  /** das Prüfmodul rechnet noch (Ausschlüsse vom Server stehen aus) */
+  pruefLaeuft?: boolean
 }
 
 export type KiSchritt =
@@ -70,8 +83,10 @@ export interface PlanKiDienst {
 
 /** Was das Prüfmodul gerade zeigt; die KI-Zeile liest es mit. */
 let gemerkt: Meldung[] = []
-export const pruefMerken = (m: Meldung[]) => { gemerkt = m }
+let laeuft = false
+export const pruefMerken = (m: Meldung[], nochLaeuft = false) => { gemerkt = m; laeuft = nochLaeuft }
 export const pruefGemerkt = () => gemerkt
+export const pruefLaeuft = () => laeuft
 
 const zahl = (x: number) => x.toLocaleString('de-DE', { maximumFractionDigits: 2 })
 export const kiName = (p: { ebene: string; nr: string; zahn?: string }) =>
@@ -254,7 +269,8 @@ export function listeAnwenden<T extends ListenPos>(
         ...(s.anzahl !== undefined ? { anzahl: s.anzahl } : {}), ...(s.faktor !== undefined ? { faktor: s.faktor } : {}),
         ...(s.preis !== undefined ? { preis: s.preis } : {}),
       }
-      if (!Object.keys(aend).length) { if (s.begruendung !== undefined) nicht.push(`${kiName(z)}: die Begründung tragen Sie in diesem Planer im Dokument ein.`); continue }
+      if (s.begruendung !== undefined) nicht.push(`${kiName(z)}: die Begründung führt dieser Planer im Dokument; dort steht ein Vorschlag, den Sie anpassen können.`)
+      if (!Object.keys(aend).length) continue
       l = l.map((x) => (x.id === s.id ? { ...x, ...aend } : x))
       const was = [
         s.anzahl !== undefined ? `Anzahl ${s.anzahl}` : '', s.faktor !== undefined ? `Faktor ${zahl(s.faktor)}` : '',

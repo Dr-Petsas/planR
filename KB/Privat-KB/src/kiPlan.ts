@@ -1,10 +1,15 @@
 /** Der private KB-Plan für die KI-Zeile und das Prüfmodul. */
 import type { Einstellungen, Plan, Position, Rechnung } from './types'
 import { rechnen } from './engine/kb'
+import { begruendungText } from './engine/begruendung'
 import { listenDienst, listenZeilen, type KiPosition, type PlanKiDienst } from './planKi'
 
 const EBENEN = ['GOZ', 'GOAE', 'LABOR', 'MATERIAL']
-export const kiZeilen = (r: Rechnung): KiPosition[] => listenZeilen([...r.honorar, ...r.labor])
+// Über der Schwelle steht im Dokument der Begründungsvorschlag dieser Leistung.
+export const kiZeilen = (r: Rechnung): KiPosition[] => {
+  const mit = new Set(r.begruendung)
+  return listenZeilen([...r.honorar.map((z) => (mit.has(z) ? { ...z, begruendung: begruendungText(z) } : z)), ...r.labor])
+}
 
 export function kbKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einstellungen }, schreiben: (plan: Plan) => void): PlanKiDienst {
   const rechnung = (plan: Plan) => rechnen(plan, lesen().einst)

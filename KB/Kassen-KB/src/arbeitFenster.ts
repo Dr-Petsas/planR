@@ -3,7 +3,7 @@
  * Der zuletzt angemeldete Dienst gewinnt; ohne Anmeldung gilt die Regel-Antwort ohne Schreiben.
  */
 import { arbeitVerstehen, type ArbeitErgebnis, type ArbeitStand } from './arbeitDialog'
-import { pruefGemerkt, type KiSchritt, type PlanKiDienst } from './planKi'
+import { pruefGemerkt, pruefLaeuft, type KiSchritt, type PlanKiDienst } from './planKi'
 
 export const ARBEIT = 'planr-arbeit'
 
@@ -109,7 +109,7 @@ function empfangen(ev: MessageEvent) {
     try {
       if (d.aktion === 'lesen') {
         const blick = ki.lesen()
-        return zurueck({ art: 'blick', blick: blick.hinweise.length ? blick : { ...blick, hinweise: pruefGemerkt() } })
+        return zurueck({ art: 'blick', blick: { ...blick, hinweise: blick.hinweise.length ? blick.hinweise : pruefGemerkt(), pruefLaeuft: pruefLaeuft() } })
       }
       return zurueck({ art: 'geaendert', ergebnis: ki.aendern(Array.isArray(d.schritte) ? d.schritte as KiSchritt[] : []) })
     } catch {

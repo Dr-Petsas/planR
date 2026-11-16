@@ -3120,7 +3120,7 @@ async function planKi(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
   const key = masSchluessel()
   if (!key) return json(res, 200, { ok: false, message: 'Die KI-Zeile ist hier nicht eingerichtet.' })
-  let roh: { text?: unknown; blick?: unknown; verlauf?: unknown }
+  let roh: { text?: unknown; blick?: unknown; verlauf?: unknown; nachlauf?: unknown }
   try {
     roh = JSON.parse(await lesenBody(req, 400_000) || '{}')
   } catch {
@@ -3130,11 +3130,15 @@ async function planKi(req: IncomingMessage, res: ServerResponse) {
   if (!text || !roh.blick || typeof roh.blick !== 'object') return json(res, 400, { ok: false })
   const verlauf = (Array.isArray(roh.verlauf) ? roh.verlauf : []).slice(-6)
     .map((z) => ({ wer: (z as { wer?: unknown })?.wer === 'clara' ? 'clara' : 'ich', text: String((z as { text?: unknown })?.text ?? '').slice(0, 400) }))
+  // Zweite und dritte Runde eines Korrekturauftrags: was der Plan aus der Runde davor gemeldet hat.
+  const nl = roh.nachlauf && typeof roh.nachlauf === 'object' ? (roh.nachlauf as { runde?: unknown; getan?: unknown; nicht?: unknown }) : null
+  const saetze = (x: unknown) => (Array.isArray(x) ? x : []).slice(0, 60).map((t) => String(t ?? '').slice(0, 300))
+  const nachlauf = nl ? { runde: Number(nl.runde) || 2, getan: saetze(nl.getan), nicht: saetze(nl.nicht) } : undefined
   try {
     const r = await fetch(`${MAS}/plan-ki`, {
       method: 'POST',
       headers: { 'X-PlanR-Key': key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, blick: roh.blick, verlauf }),
+      body: JSON.stringify({ text, blick: roh.blick, verlauf, ...(nachlauf ? { nachlauf } : {}) }),
       signal: AbortSignal.timeout(60_000),
     })
     return json(res, 200, await r.json().catch(() => ({ ok: false })))

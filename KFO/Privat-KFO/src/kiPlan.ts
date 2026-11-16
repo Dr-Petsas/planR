@@ -1,13 +1,19 @@
 /** Der private KFO-Plan für die KI-Zeile und das Prüfmodul. */
 import type { Einstellungen, Plan, Position, Rechnung } from './types'
 import { rechnen } from './engine/kfo'
+import { begruendungText } from './engine/begruendung'
 import { listenDienst, listenZeilen, type KiPosition, type PlanKiDienst } from './planKi'
 
 const EBENEN = ['GOZ', 'GOAE', 'LABOR', 'MATERIAL']
-export const kiZeilen = (r: Rechnung): KiPosition[] => [
-  ...listenZeilen(r.aufgabe).map((z) => ({ ...z, auto: true })),
-  ...listenZeilen([...r.honorar, ...r.labor, ...r.mehr]),
-]
+// Über der Schwelle steht im Dokument der Begründungsvorschlag dieser Leistung.
+export const kiZeilen = (r: Rechnung): KiPosition[] => {
+  const mit = new Set(r.begruendung)
+  const text = <Z extends Rechnung['honorar'][number]>(z: Z) => (mit.has(z) ? { ...z, begruendung: begruendungText(z) } : z)
+  return [
+    ...listenZeilen(r.aufgabe.map(text)).map((z) => ({ ...z, auto: true })),
+    ...listenZeilen([...r.honorar.map(text), ...r.labor, ...r.mehr]),
+  ]
+}
 
 export function kfoKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einstellungen }, schreiben: (plan: Plan) => void): PlanKiDienst {
   const rechnung = (plan: Plan) => rechnen(plan, lesen().einst)

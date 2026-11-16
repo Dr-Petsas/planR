@@ -16,36 +16,50 @@ const istGoz = (e: string) => e === 'GOZ'
 const istHonorar = (e: string) => e === 'GOZ' || e === 'GOAE' || e === 'GOÄ'
 const f = (x: number) => x.toLocaleString('de-DE', { maximumFractionDigits: 2 })
 
+/** Jede Meldung trägt ihre Art und die Positionen, an denen sie hängt; so kann die KI-Zeile sie beheben. */
 export function planPruefen(positionen: KiPosition[], o: PruefOptionen = {}): Meldung[] {
   const m: Meldung[] = [...(o.eigene ?? [])]
-  const gesehen = new Map<string, number>()
+  const gesehen = new Map<string, string[]>()
   for (const p of positionen) {
     const name = kiName(p)
-    if (!(p.anzahl > 0)) m.push({ stufe: 'fehler', text: `${name}: Anzahl ist ${p.anzahl}. Die Position rechnet nichts.` })
+    const ids = [p.id]
+    if (!(p.anzahl > 0)) m.push({ stufe: 'fehler', art: 'anzahl_null', ids, text: `${name}: Anzahl ist ${p.anzahl}. Die Position rechnet nichts.` })
     else if (!(p.betrag > 0)) {
       m.push(istHonorar(p.ebene)
-        ? { stufe: 'fehler', text: `${name}: kein Betrag. Die Nummer ist in der Gebührenliste nicht hinterlegt oder der Faktor fehlt.` }
-        : { stufe: 'warnung', text: `${name}: kein Preis eingetragen.` })
+        ? { stufe: 'fehler', art: 'kein_betrag', ids, text: `${name}: kein Betrag. Die Nummer ist in der Gebührenliste nicht hinterlegt oder der Faktor fehlt.` }
+        : { stufe: 'warnung', art: 'kein_preis', ids, text: `${name}: kein Preis eingetragen.` })
     }
-    if (!p.text.trim() || p.text.trim() === '–') m.push({ stufe: 'warnung', text: `${name}: kein Leistungstext.` })
+    if (!p.text.trim() || p.text.trim() === '–') m.push({ stufe: 'warnung', art: 'kein_text', ids, text: `${name}: kein Leistungstext.` })
     if (istHonorar(p.ebene) && p.faktor !== undefined) {
       if (p.faktor > 3.5) {
         m.push(o.ueber35
-          ? { stufe: 'warnung', text: `${name}: Faktor ${f(p.faktor)} über 3,5. Das gilt nur mit schriftlicher Vereinbarung nach § 2 Abs. 1 und 2 GOZ vor der Behandlung.` }
-          : { stufe: 'fehler', text: `${name}: Faktor ${f(p.faktor)} über 3,5 ohne Vereinbarung nach § 2 GOZ.` })
+          ? { stufe: 'warnung', art: 'faktor_ueber_35_vereinbart', ids, text: `${name}: Faktor ${f(p.faktor)} über 3,5. Das gilt nur mit schriftlicher Vereinbarung nach § 2 Abs. 1 und 2 GOZ vor der Behandlung.` }
+          : { stufe: 'fehler', art: 'faktor_ueber_35', ids, text: `${name}: Faktor ${f(p.faktor)} über 3,5 ohne Vereinbarung nach § 2 GOZ.` })
       } else if (p.faktor < 1) {
-        m.push({ stufe: 'warnung', text: `${name}: Faktor ${f(p.faktor)} unter dem Einfachsatz.` })
+        m.push({ stufe: 'warnung', art: 'faktor_unter_1', ids, text: `${name}: Faktor ${f(p.faktor)} unter dem Einfachsatz.` })
       } else if (o.begruendung && istGoz(p.ebene) && p.faktor > 2.3 && !p.begruendung?.trim()) {
-        m.push({ stufe: 'warnung', text: `${name}: Faktor ${f(p.faktor)} über 2,3 ohne Begründung (§ 10 Abs. 3 GOZ).` })
+        m.push({ stufe: 'warnung', art: 'begruendung_fehlt', ids, text: `${name}: Faktor ${f(p.faktor)} über 2,3 ohne Begründung (§ 10 Abs. 3 GOZ).` })
       }
     }
     if (istHonorar(p.ebene)) {
       const k = `${p.ebene}|${p.nr}|${p.zahn}`
-      gesehen.set(k, (gesehen.get(k) ?? 0) + 1)
-      if (gesehen.get(k) === 2) m.push({ stufe: 'warnung', text: `${name} steht zweimal im Plan.` })
+      const da = gesehen.get(k) ?? []
+      da.push(p.id)
+      gesehen.set(k, da)
+      if (da.length === 2) m.push({ stufe: 'warnung', art: 'doppelt', ids: da, text: `${name} steht zweimal im Plan.` })
     }
   }
-  for (const h of new Set(o.hinweise ?? [])) m.push({ stufe: 'info', text: h })
+  for (const h of new Set(o.hinweise ?? [])) m.push({ stufe: 'info', art: 'rechnung', text: h })
   const rang = { fehler: 0, warnung: 1, info: 2 }
   return m.sort((a, b) => rang[a.stufe] - rang[b.stufe])
+}
+
+/** Ausschluss vom Server (Nummern a und b eines Katalogs) an die Positionen des Plans hängen. */
+export function ausschlussMeldung(x: { text?: string; a?: string; b?: string; katalog?: string }, positionen: KiPosition[]): Meldung | null {
+  if (!x.text) return null
+  const nrn = [x.a, x.b].filter(Boolean).map((n) => String(n).toLowerCase())
+  const ids = positionen
+    .filter((p) => nrn.includes(p.nr.toLowerCase()) && (!x.katalog || p.ebene === x.katalog))
+    .map((p) => p.id)
+  return { stufe: 'fehler', art: 'ausschluss', text: String(x.text), ...(ids.length ? { ids } : {}) }
 }

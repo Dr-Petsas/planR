@@ -1,12 +1,15 @@
 /** Der private PAR-Plan für die KI-Zeile und das Prüfmodul. */
 import type { Plan, Rechnung, Zusatz } from './types'
 import { rechnen } from './engine/par'
+import { begruendungText } from './engine/begruendung'
 import { kiName, listenDienst, listenZeilen, type KiPosition, type PlanKiDienst } from './planKi'
 
 const ebene = (nr: string) => (nr === 'Mat.' ? 'MATERIAL' : 'GOZ')
 export function kiZeilen(r: Rechnung, plan: Plan): KiPosition[] {
   const frei = new Set(plan.zusatz.map((z) => z.id))
-  return listenZeilen(r.zeilen, { ebene: (z) => ebene(z.nr), frei: (id) => frei.has(id) })
+  // Über 2,3 steht im Dokument der Begründungsvorschlag dieser Leistung.
+  const mit = new Set(r.begruendung)
+  return listenZeilen(r.zeilen.map((z) => (mit.has(z) ? { ...z, begruendung: begruendungText(z) } : z)), { ebene: (z) => ebene(z.nr), frei: (id) => frei.has(id) })
 }
 
 export function parKi(lesen: () => { plan: Plan; gesperrt: boolean }, schreiben: (plan: Plan) => void): PlanKiDienst {

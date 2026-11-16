@@ -102,7 +102,8 @@ export async function planArbeit(fenster: Window, text: string, plan: string): P
 
 // ?? Der Plan als Ganzes: lesen, das Modell fragen, Schritte im Plan ausführen ??????????????
 
-interface KiBlick { planart?: string; gesperrt?: boolean; kann?: string[]; summen?: Record<string, number> }
+export interface KiMeldung { stufe?: string; text?: string; art?: string; ids?: string[] }
+interface KiBlick { planart?: string; gesperrt?: boolean; kann?: string[]; summen?: Record<string, number>; hinweise?: KiMeldung[]; pruefLaeuft?: boolean }
 interface KiErgebnis { getan?: string[]; nicht?: string[]; gesamt?: number }
 type KiRueck = { art: 'blick'; blick: KiBlick } | { art: 'geaendert'; ergebnis: KiErgebnis }
 
@@ -133,8 +134,57 @@ const satz = (s: string) => (/[.!?]$/.test(s.trim()) ? s.trim() : `${s.trim()}.`
 
 let verlauf: { plan: string; zuege: { wer: 'ich' | 'clara'; text: string }[] } = { plan: '', zuege: [] }
 
+/** Fehler und Warnungen des Prüfmoduls; Hinweise der Rechnung zählen nicht als offen. */
+export function pruefOffen(hinweise: KiMeldung[] | undefined): string[] {
+  return (hinweise ?? []).filter((h) => h.text && (h.stufe === 'fehler' || h.stufe === 'warnung')).map((h) => String(h.text))
+}
+
+/** Was sich im Prüfmodul durch die Änderung getan hat. Leer, wenn es vorher und nachher nichts zeigt. */
+export function pruefBericht(vorher: string[], nachher: string[]): string {
+  if (!vorher.length && !nachher.length) return ''
+  const erledigt = vorher.filter((t) => !nachher.includes(t)).length
+  const neu = nachher.filter((t) => !vorher.includes(t))
+  if (!nachher.length) return `Prüfmodul: ${erledigt === 1 ? 'die Meldung ist' : `alle ${erledigt} Meldungen sind`} behoben, es zeigt keine Fehler oder Warnungen mehr.`
+  const liste = neu.length ? neu : nachher
+  const zeigen = liste.slice(0, 3)
+  const rest = liste.length - zeigen.length
+  const kopf = erledigt ? `Prüfmodul: ${erledigt} behoben, ${nachher.length} noch offen` : `Prüfmodul: ${nachher.length} offen`
+  return `${kopf}. ${neu.length ? 'Neu durch die Änderung' : 'Offen'}: ${zeigen.join(' ')}${rest > 0 ? ` (und ${rest} weitere)` : ''}`
+}
+
+const warten = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+/** Stand nach einer Änderung: wartet, bis das Prüfmodul des Plans den neuen Stand geprüft hat. */
+async function nachPruefung(fenster: Window): Promise<KiBlick | null> {
+  let blick: KiBlick | null = null
+  for (let i = 0; i < 12; i++) {
+    await warten(i ? 400 : 500)
+    const r = await fragenKi(fenster, { aktion: 'lesen' }, 2500)
+    if (r?.art !== 'blick') return blick
+    blick = r.blick
+    if (!blick.pruefLaeuft) return blick
+  }
+  return blick
+}
+
+type KiAntwort = { ok?: boolean; antwort?: string; schritte?: unknown[]; pruefung?: boolean; message?: string }
+
+async function modellFragen(body: unknown): Promise<KiAntwort> {
+  try {
+    const r = await fetch('/api/plan/ki', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    return (await r.json()) as KiAntwort
+  } catch {
+    return {}
+  }
+}
+
+/** Höchstens so oft arbeitet die Zeile hintereinander an den Meldungen des Prüfmoduls. */
+const RUNDEN = 3
+
 /**
  * Der Satz geht mit dem ganzen Planstand an das Modell; dessen Schritte führt der Plan selbst aus.
+ * Danach prüft das Prüfmodul den neuen Stand. Galt der Satz dem Prüfen und Korrigieren und ist noch etwas offen,
+ * bekommt das Modell den neuen Stand und arbeitet weiter.
  * null: dieser Plan gibt seinen Stand noch nicht heraus, oder ein Ja/Nein gilt einem offenen Vorschlag.
  */
 export async function planKiZug(fenster: Window, text: string, plan: string): Promise<{ text: string; geaendert: boolean } | null> {
@@ -151,37 +201,61 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
   }
   offen = null
   if (verlauf.plan !== plan) verlauf = { plan, zuege: [] }
-  let d: { ok?: boolean; antwort?: string; schritte?: unknown[]; message?: string }
-  try {
-    const r = await fetch('/api/plan/ki', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: t, blick: gelesen.blick, verlauf: verlauf.zuege.slice(-6) }),
-    })
-    d = await r.json()
-  } catch {
-    d = {}
+
+  const start = gelesen.blick
+  // Ein Plan, dessen Prüfung gerade noch läuft, wird erst fertig gelesen.
+  let blick: KiBlick = start.pruefLaeuft ? ((await nachPruefung(fenster)) ?? start) : start
+  const vorher = pruefOffen(blick.hinweise)
+  const teile: string[] = []
+  const getanAlle: string[] = []
+  let gesamt: number | undefined
+  let nachlauf: { runde: number; getan: string[]; nicht: string[] } | undefined
+  let vorschlag = false
+
+  for (let runde = 1; runde <= RUNDEN; runde++) {
+    const d = await modellFragen({ text: t, blick, verlauf: verlauf.zuege.slice(-6), ...(nachlauf ? { nachlauf } : {}) })
+    if (!d.ok || !d.antwort) {
+      if (runde === 1) return { text: d.message || 'Ich erreiche das Modell gerade nicht. Der Plan ist unverändert.', geaendert: false }
+      break
+    }
+    const schritte = Array.isArray(d.schritte) ? d.schritte : []
+    // Im Korrekturlauf zählt, was der Plan und sein Prüfmodul danach melden, nicht die Ankündigung des Modells.
+    if (!schritte.length || !d.pruefung) teile.push(satz(d.antwort))
+    if (!schritte.length) break
+    if (schritte.some((x) => typeof (x as { begruendung?: unknown })?.begruendung === 'string')) vorschlag = true
+    const r = await fragenKi(fenster, { aktion: 'aendern', schritte }, 5000)
+    if (!r || r.art !== 'geaendert') {
+      teile.push('Der Plan hat die Änderung nicht bestätigt. Bitte prüfen Sie ihn.')
+      break
+    }
+    const { getan = [], nicht = [] } = r.ergebnis
+    if (getan.length) teile.push(`Im Plan geändert: ${getan.join('; ')}.`)
+    for (const n of nicht) teile.push(satz(n))
+    if (!getan.length) {
+      if (!nicht.length) teile.push('Am Plan hat sich nichts geändert.')
+      break
+    }
+    getanAlle.push(...getan)
+    gesamt = r.ergebnis.gesamt
+    const neu = await nachPruefung(fenster)
+    if (!neu) break
+    blick = neu
+    if (!d.pruefung || !pruefOffen(blick.hinweise).length) break
+    nachlauf = { runde: runde + 1, getan, nicht }
   }
-  if (!d.ok || !d.antwort) return { text: d.message || 'Ich erreiche das Modell gerade nicht. Der Plan ist unverändert.', geaendert: false }
-  const teile = [satz(d.antwort)]
-  let geaendert = false
-  if (Array.isArray(d.schritte) && d.schritte.length) {
-    const r = await fragenKi(fenster, { aktion: 'aendern', schritte: d.schritte }, 5000)
-    if (!r || r.art !== 'geaendert') teile.push('Der Plan hat die Änderung nicht bestätigt. Bitte prüfen Sie ihn.')
-    else {
-      const { getan = [], nicht = [], gesamt } = r.ergebnis
-      geaendert = getan.length > 0
-      if (getan.length) teile.push(`Im Plan geändert: ${getan.join('; ')}.`)
-      for (const n of nicht) teile.push(satz(n))
-      if (!getan.length && !nicht.length) teile.push('Am Plan hat sich nichts geändert.')
-      if (getan.length && typeof gesamt === 'number') {
-        const vor = gelesen.blick.summen?.gesamt
-        teile.push(`Summe jetzt ${euro(gesamt)}${typeof vor === 'number' && Math.abs(vor - gesamt) >= 0.005 ? ` (vorher ${euro(vor)})` : ''}. Noch nicht gespeichert; „nimm das zurück“ macht es rückgängig.`)
-      }
+
+  if (getanAlle.length) {
+    const bericht = pruefBericht(vorher, pruefOffen(blick.hinweise))
+    if (bericht) teile.push(satz(bericht))
+    if (vorschlag) teile.push('Die Begründungen sind Vorschläge. Bitte lesen Sie sie vor dem Ausdruck.')
+    if (typeof gesamt === 'number') {
+      const vor = start.summen?.gesamt
+      teile.push(`Summe jetzt ${euro(gesamt)}${typeof vor === 'number' && Math.abs(vor - gesamt) >= 0.005 ? ` (vorher ${euro(vor)})` : ''}. Noch nicht gespeichert; „nimm das zurück“ macht die letzte Änderung rückgängig.`)
     }
   }
   const aus = teile.join(' ')
   verlauf.zuege.push({ wer: 'ich', text: t }, { wer: 'clara', text: aus })
   verlauf.zuege = verlauf.zuege.slice(-8)
-  return { text: aus, geaendert }
+  return { text: aus, geaendert: getanAlle.length > 0 }
 }
+
