@@ -112,20 +112,34 @@ const kopfMit = (z: PdfZeile, ...worte: string[]) => worte.every((w) => z.teile.
 /** Anlage Teil 2: Zahn/Gebiet, GOZ-Nummer, Anzahl, Betrag. Der Betrag gilt für die ganze Zeile. */
 function gozZeilen(zeilen: PdfZeile[]): BlattPosition[] {
   const aus: BlattPosition[] = []
-  const kopf = zeilen.findIndex((z) => kopfMit(z, 'zahn/gebiet', 'goz', 'anzahl'))
+  // Zwei Vordrucke: „Zahn/Gebiet · GOZ · Anzahl · Betrag" und „Gebiet · GOZ · Anz · Faktor · Betrag".
+  // Steht „Gebiet" unter „Zahn/" in einer eigenen Zeile, beginnt die Kopfzeile nur mit „Zahn/".
+  let mitFaktor = false
+  const kopf = zeilen.findIndex((z) => {
+    if (kopfMit(z, 'zahn/', 'goz', 'anzahl')) return true
+    if (kopfMit(z, 'gebiet', 'goz', 'anz', 'faktor', 'betrag')) { mitFaktor = true; return true }
+    return false
+  })
   if (kopf < 0) return aus
+  const istNr = (s: string) => {
+    const ziffern = s.length === 5 ? s.slice(0, 4) : s
+    return ziffern.length === 4 && nurZiffern(ziffern)
+  }
   for (const z of zeilen.slice(kopf + 1)) {
     const t = z.teile.map((e) => e.text)
-    if (t[0]?.toLowerCase().startsWith('zahnärztliches')) break
-    if (t.length < 4) continue
-    const zaehne = t[0].split(',').map((s) => s.trim()).filter(Boolean)
-    const nr = t[1].toLowerCase()
-    const ziffern = nr.length === 5 ? nr.slice(0, 4) : nr
-    if (!zaehne.length || !zaehne.every(istZahn) || ziffern.length !== 4 || !nurZiffern(ziffern)) continue
-    const anzahl = Number(t[t.length - 2])
+    const anfang = t[0]?.toLowerCase() ?? ''
+    if (anfang.startsWith('zahnärztliches') || anfang === 'summe') break
+    // Zeile ohne Zahnangabe (Beratung, Planung): Sie beginnt gleich mit der Nummer.
+    const ohneZahn = istNr(anfang)
+    if (t.length < (ohneZahn ? 3 : 4)) continue
+    const zaehne = ohneZahn ? [] : t[0].split(',').map((s) => s.trim()).filter(Boolean)
+    const nr = (ohneZahn ? t[0] : t[1]).toLowerCase()
+    if (!ohneZahn && (!zaehne.length || !zaehne.every(istZahn) || !istNr(nr))) continue
+    const anzahl = Number(t[t.length - (mitFaktor ? 3 : 2)])
     const betrag = betragVon(t[t.length - 1])
     if (!Number.isInteger(anzahl) || anzahl < 1) continue
-    if (anzahl === zaehne.length) {
+    if (mitFaktor && betragVon(t[t.length - 2]) === undefined) continue
+    if (zaehne.length && anzahl === zaehne.length) {
       for (const zahn of zaehne) {
         aus.push({ ebene: 'GOZ', nr, zahn, anzahl: 1, ...(betrag !== undefined ? { betrag: Math.round(betrag / anzahl * 100) / 100 } : {}) })
       }
@@ -137,25 +151,32 @@ function gozZeilen(zeilen: PdfZeile[]): BlattPosition[] {
 }
 
 const hatBuchstabe = (w: string) => [...w].some((c) => c.toLowerCase() !== c.toUpperCase())
-const istDatum = (w: string) => w.length === 10 && w.split('.').length === 3
+const istDatum = (w: string) => (w.length === 10 || w.length === 8) && w.split('.').length === 3 && w.split('.').every(nurZiffern)
+
+interface LaborStand { grenze: number; mengeVorn: boolean }
 
 /**
  * Eigenbeleg oder Laborrechnung: Nummer, Einzelpreis, Anzahl. Der Betrag ist hier der Einzelpreis.
  * Zeilen ohne Nummer (Zirkon, Legierung) sind Material. Läuft die Bezeichnung in die nächste Zeile, gehört sie dazu.
  */
-function laborZeilen(zeilen: PdfZeile[]): BlattPosition[] {
+function laborZeilen(zeilen: PdfZeile[], stand: LaborStand = { grenze: -1, mengeVorn: false }): BlattPosition[] {
   const aus: BlattPosition[] = []
-  let grenze = -1
+  // Die Folgeseite eines Belegs hat keinen Tabellenkopf: Spalten gelten weiter, solange dort Belegzeilen stehen.
+  let { grenze, mengeVorn } = stand
   let letzte: BlattPosition | undefined
   for (const z of zeilen) {
     const vorher = letzte
     letzte = undefined
-    if (kopfMit(z, 'nr.', 'leistungsbezeichnung', 'einzelpreis')) {
+    if (kopfMit(z, 'nr.', 'leistungsbe', 'einzelpreis')) {
       // Die Nummer beginnt in der Spalte Nr.: links von der Mitte zwischen den Anfängen von Nr. und Leistungsbezeichnung.
       const links = (t: PdfTeil) => t.x - (t.w ?? 0) / 2
       const nr = z.teile.find((t) => t.text.toLowerCase().startsWith('nr.'))!
-      const text = z.teile.find((t) => t.text.toLowerCase().startsWith('leistungsbezeichnung'))!
+      const text = z.teile.find((t) => t.text.toLowerCase().startsWith('leistungsbe'))!
       grenze = (links(nr) + links(text)) / 2
+      // Manche Belege führen die Menge vor dem Einzelpreis (Anz./Gramm · Einzelpreis · Gesamtpreis).
+      const preis = z.teile.find((t) => t.text.toLowerCase().startsWith('einzelpreis'))!
+      const menge = z.teile.find((t) => t.text.toLowerCase().startsWith('anz') || t.text.toLowerCase().startsWith('menge'))
+      mengeVorn = !!menge && menge.x < preis.x
       continue
     }
     if (grenze < 0) continue
@@ -168,7 +189,8 @@ function laborZeilen(zeilen: PdfZeile[]): BlattPosition[] {
       continue
     }
     if (hinten.length < 3) continue
-    const [preis, menge, summe] = hinten.slice(-3).map(betragVon)
+    const [eins, zwei, summe] = hinten.slice(-3).map(betragVon)
+    const [preis, menge] = mengeVorn ? [zwei, eins] : [eins, zwei]
     if (preis === undefined || menge === undefined || summe === undefined || menge <= 0) continue
     if (Math.abs(preis * menge - summe) > 0.02) continue
     const text = hinten.slice(0, -3).filter((w) => hatBuchstabe(w) || betragVon(w) === undefined).join(' ')
@@ -183,6 +205,8 @@ function laborZeilen(zeilen: PdfZeile[]): BlattPosition[] {
     }
     aus.push(letzte)
   }
+  stand.grenze = aus.length ? grenze : -1
+  stand.mengeVorn = mengeVorn
   return aus
 }
 
@@ -198,6 +222,22 @@ function mwstAus(zeilen: PdfZeile[]): NonNullable<BlattSummen['laborMwst']> {
     if (Math.abs(netto + betrag - brutto) > 0.02) continue
     aus.push({ satz, netto, betrag })
   }
+  if (aus.length) return aus
+  // Andere Schreibweise: „Summe techn. Leistungen", „Summe Metall", „Summe Material", dann „zzgl. 7% Mehrwertsteuer €: 110,44".
+  let netto = 0
+  for (const z of zeilen) {
+    const t = z.teile.map((e) => e.text)
+    const anfang = t[0]?.toLowerCase() ?? ''
+    const wert = betragVon(t[t.length - 1] ?? '')
+    if (anfang === 'summe' && wert !== undefined) { netto += wert; continue }
+    if (anfang !== 'zzgl.' || !t.some((w) => w.toLowerCase().startsWith('mehrwertsteuer'))) continue
+    const satz = betragVon(t.find((w) => w.endsWith('%')) ?? '')
+    if (satz === undefined || wert === undefined || netto <= 0) continue
+    // Gegenprobe: Der Steuerbetrag muss zum Satz und zur Nettosumme passen.
+    if (Math.abs(netto * satz / 100 - wert) > 0.05) continue
+    aus.push({ satz, netto: Math.round(netto * 100) / 100, betrag: wert })
+    netto = 0
+  }
   return aus
 }
 
@@ -210,6 +250,10 @@ const MARKEN: [Exclude<keyof BlattSummen, 'laborMwst'>, string][] = [
   ['eigenanteil', 'ihr voraussichtlicher eigenanteil'],
   ['festzuschussVoll', 'festzuschuss 100%'],
   ['laborBeleg', 'laborkosten gesamt'],
+  // Zweiter Vordruck für Teil 2 und den Praxislaborbeleg
+  ['honorarGoz', 'summe der goz-honorarleistungen'],
+  ['labor', 'material- und laborkosten ('],
+  ['laborBeleg', 'gesamtsumme praxislaborkosten'],
 ]
 
 function summenAus(zeilen: PdfZeile[]): BlattSummen {
@@ -237,6 +281,8 @@ export interface EinleseBlatt {
 /** Zahnschema, GOZ- und Laborzeilen und die Summen aus der Antwort des Einlese-Dienstes. */
 export function blattAusEinlesen(antwort: EinleseAntwort): EinleseBlatt {
   const blatt: EinleseBlatt = { schema: { B: {}, R: {}, TP: {} }, positionen: [], summen: {}, pruefen: [] }
+  const gesehen = new Set<string>()
+  const labor: LaborStand = { grenze: -1, mengeVorn: false }
   for (const seite of antwort.ergaenzung?.seiten ?? []) {
     const { zeilen } = zeilenAusSeite(seite)
     const schema = schemaAusZeilen(zeilen)
@@ -250,7 +296,14 @@ export function blattAusEinlesen(antwort: EinleseAntwort): EinleseBlatt {
         for (const wort of t.text.split(' ')) if (werte.has(wort.toLowerCase())) blatt.pruefen.push(wort)
       }
     }
-    blatt.positionen.push(...gozZeilen(zeilen), ...laborZeilen(zeilen))
+    // Teil 2 liegt oft mehrfach bei (Patient, Praxis, Kasse): Dieselbe Liste zählt nur einmal.
+    for (const liste of [gozZeilen(zeilen), laborZeilen(zeilen, labor)]) {
+      if (!liste.length) continue
+      const marke = JSON.stringify(liste)
+      if (gesehen.has(marke)) continue
+      gesehen.add(marke)
+      blatt.positionen.push(...liste)
+    }
     blatt.summen = { ...summenAus(zeilen), ...blatt.summen }
   }
   return blatt

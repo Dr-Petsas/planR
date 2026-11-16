@@ -129,7 +129,12 @@ export function blattUebernehmen(
   let positionen = plan.positionen.filter((p) => !vomBlatt(p))
 
   if (goz.length) positionen = [...positionen.filter((p) => p.ebene !== 'GOZ'), ...gozVomBlatt(plan, listen, goz, betraege)]
-  else if (summen.honorarGoz !== undefined) hinweise.push('GOZ-Zeilen von Teil 2 sind nicht gelesen: Die einzelnen GOZ-Positionen sind von PlanR gerechnet, die Summe steht wie auf dem Blatt.')
+  else if (summen.honorarGoz !== undefined) {
+    const kasse = plan.positionen.some((p) => p.ebene === 'BEMA' || p.ebene === 'GOZ')
+    hinweise.push(kasse
+      ? 'GOZ-Zeilen von Teil 2 sind nicht gelesen: Die einzelnen GOZ-Positionen sind von PlanR gerechnet, die Summe steht wie auf dem Blatt.'
+      : 'Privatplan: die Summe steht wie auf dem Blatt. Die einzelnen Gebührenzeilen sind nicht in einen Kassen-HKP übernommen.')
+  }
 
   const istLabor = (p: Position) => p.ebene === 'BEL' || p.ebene === 'BEB' || p.ebene === 'MAT'
   if (labor.length) {
@@ -145,14 +150,15 @@ export function blattUebernehmen(
         betraege[id] = m.betrag
         positionen = [...positionen, { id, ebene: 'MAT', nr: '', zahn: '', anzahl: 1, preis: m.betrag, text: `MwSt. ${String(m.satz).replace('.', ',')} % auf ${m.netto.toFixed(2).replace('.', ',')} € laut Beleg`, labor: art, auto: false }]
       })
-      const gelesen = labor.reduce((s, z) => s + (z.betrag ?? 0) * (z.anzahl && z.anzahl > 0 ? z.anzahl : 1), 0) + steuern.reduce((s, m) => s + m.betrag, 0)
+      // Grammzeilen runden auf dem Beleg anders (2,50 g × 12,27 € = 30,68 €): ein, zwei Cent sind kein fehlender Posten.
+      const gelesen = labor.reduce((s, z) => s + runden((z.betrag ?? 0) * (z.anzahl && z.anzahl > 0 ? z.anzahl : 1)), 0) + steuern.reduce((s, m) => s + m.betrag, 0)
       const rest = runden(laborZiel - gelesen)
-      if (rest > 0.005) {
+      if (rest > 0.02) {
         const id = `${BLATT}MAT-rest`
         betraege[id] = rest
         positionen = [...positionen, { id, ebene: 'MAT', nr: '', zahn: '', anzahl: 1, preis: rest, text: 'Nicht gelesene Posten laut Beleg', labor: art, auto: false }]
         hinweise.push(`Der Laborbeleg ist nicht vollständig gelesen: ${rest.toFixed(2).replace('.', ',')} € stehen als eine Summe. Bitte den Beleg gegenlesen.`)
-      } else if (rest < -0.005) {
+      } else if (rest < -0.02) {
         hinweise.push('Die gelesenen Laborzeilen ergeben mehr als die Summe auf dem Beleg. Bitte die Laborzeilen gegenlesen.')
       }
     }

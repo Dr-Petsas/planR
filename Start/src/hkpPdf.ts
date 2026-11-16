@@ -181,6 +181,8 @@ export function schemaAusZeilen(zeilen: PdfZeile[]): ZahnSchema {
   for (const z of zeilen) {
     const t = textVon(z)
     for (const m of t.matchAll(/\b(?:Zahn\s*)?([1-4][1-8])\s*[:/]?\s*(ww|kw|f|x|k|pw|e|ew|b|bw|ur|sk|t|r)\b/gi)) {
+      // „ZE-Richtlinie Nr. 36b" im Schlüsselverzeichnis ist kein Befund am Zahn 36.
+      if (t.slice(0, m.index).trimEnd().endsWith('Nr.')) continue
       if (!schema.B[m[1]]) schema.B[m[1]] = m[2].toLowerCase()
     }
   }
@@ -303,6 +305,65 @@ export function probeAusHkpZeilen(zeilen: PdfZeile[]): { befund: Record<string, 
   const positionen = positionenAusZeilen(zeilen)
   if (!Object.keys(befund).length && !positionen.length) return { fehler: 'Weder Befund noch Gebührenpositionen gefunden.' }
   return { befund, positionen }
+}
+
+export type Planart = 'hkp' | 'privat-ze' | 'privat-impl'
+export type PlanerWahl = 'hkp' | 'privat'
+
+export interface Erkennung {
+  planart: Planart | ''
+  /** HKP-Planer, auch wenn GOZ als Privatanteil dazukommt. Reiner Privatplan geht in den Privat-Planer. */
+  planer: PlanerWahl
+  /** Gesetzlicher HKP und zusätzlich GOZ-Positionen. */
+  gozAnteil: boolean
+}
+
+/** Welcher eigene Planer, und auf welcher Stufe der Regler steht, wenn der Kunde den Plan sieht. */
+export function reglerFuer(art: Planart | '', gozAnteil = false): { stufe: number; planer: string; titel: string } {
+  if (art === 'privat-impl') return { stufe: 3, planer: 'Privatplan', titel: 'Ästhetik' }
+  if (art === 'privat-ze') return { stufe: 2, planer: 'Privatplan', titel: 'Vollkeramik' }
+  if (gozAnteil) return { stufe: 0, planer: 'HKP', titel: 'Kasse + GOZ' }
+  return { stufe: 0, planer: 'HKP', titel: 'Kasse' }
+}
+
+/**
+ * Erkennungsschicht für das hochgeladene Blatt.
+ * Kasse ist, was eine Regelversorgung, einen Festzuschuss oder BEMA-Positionen trägt.
+ * GOZ daneben ist der Privatanteil und bleibt im HKP-Planer.
+ * Ohne diese Kassenanker ist es ein reiner Privatplan.
+ */
+export function planartErkennen(text: string, positionen: { ebene: string }[] = []): Erkennung {
+  const n = text.toLowerCase()
+  const hatBema = positionen.some((p) => p.ebene === 'BEMA')
+  const hatGoz = positionen.some((p) => p.ebene === 'GOZ' || p.ebene === 'GOÄ')
+  const hatKasse = hatBema || n.includes('festzuschuss') || n.includes('regelversorgung') || n.includes('therapieplanung')
+  const hatPrivat = hatGoz || n.includes('privat-pl') || n.includes('zahnarzthonorar') || n.includes('private leistung') || n.includes('kostenvoranschlag')
+  if (hatKasse) return { planart: 'hkp', planer: 'hkp', gozAnteil: hatGoz }
+  if (!hatPrivat) return { planart: '', planer: 'hkp', gozAnteil: false }
+  return { planart: n.includes('implant') ? 'privat-impl' : 'privat-ze', planer: 'privat', gozAnteil: false }
+}
+
+/** Nur die Art, für Aufrufer, die den Planer nicht brauchen. */
+export function planartAusText(text: string): Planart | '' {
+  return planartErkennen(text).planart
+}
+
+/** Summen eines privaten Kostenvoranschlags. Zwischensummen zählen nicht. */
+export function privatSummenAusText(text: string): { honorarGoz?: number; material?: number; gesamt?: number } {
+  const aus: { honorarGoz?: number; material?: number; gesamt?: number } = {}
+  const marken: [keyof typeof aus, string][] = [
+    ['honorarGoz', 'zahnarzthonorar'],
+    ['material', 'verbrauchsmaterial'],
+    ['gesamt', 'behandlungskosten insgesamt'],
+  ]
+  for (const zeile of text.split(/\r?\n/)) {
+    const n = zeile.toLowerCase().replace(/\s+/g, ' ').trim()
+    const marke = marken.find(([, anfang]) => n.startsWith(anfang))
+    if (!marke || aus[marke[0]] !== undefined) continue
+    const wert = betragAuf(zeile)
+    if (wert !== undefined) aus[marke[0]] = wert
+  }
+  return aus
 }
 
 /** Einfacher Text (txt oder Qwen-Abschrift) als Zeilen, damit derselbe Leser greift. */
