@@ -232,7 +232,14 @@ function zaehneFuerWerkstoff(plan: HkpPlan, w: Werkstoff): { zaehne: HkpPlan['za
   return { zaehne, teleskope }
 }
 
-const implantateIn = (plan: HkpPlan) => Object.values(plan.zaehne).some((z) => IMPLANTAT_TP.test((z.TP.trim() || z.R.trim()).toUpperCase()))
+/** Kronenmaterial an einem einzelnen Zahn: dasselbe Therapiekürzel wie beim ganzen Plan, die übrigen Zähne bleiben. */
+export function zahnFuerWerkstoff(plan: HkpPlan, zahn: string, w: Werkstoff): HkpPlan['zaehne'] {
+  const v = plan.zaehne[zahn]
+  if (!v) return plan.zaehne
+  return { ...plan.zaehne, ...zaehneFuerWerkstoff({ ...plan, zaehne: { [zahn]: v } }, w).zaehne }
+}
+
+export const implantateIn = (plan: HkpPlan) => Object.values(plan.zaehne).some((z) => IMPLANTAT_TP.test((z.TP.trim() || z.R.trim()).toUpperCase()))
 
 /**
  * Wendet eine Ausführung auf einen bestehenden Plan an und rechnet die Regelengine neu – wie in PlanR:
