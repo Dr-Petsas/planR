@@ -1,5 +1,5 @@
 /** Handy-Ansicht (bis 840 px) wie im Kassen-HKP: Regler hinter einem Knopf, Planblätter als echte A4-Seite auf Bildschirmbreite verkleinert. */
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 const HANDY = '(max-width: 840px)'
 const BLATT_BREITE_PX = 793.7
@@ -30,6 +30,25 @@ export function ReglerKlappe({ children }: { children: ReactNode }) {
       {(!handy || offen) && children}
     </>
   )
+}
+
+/**
+ * Einstellungen (Regler, Prüfmodul) als eigene Spalte links wie im Kassen-HKP: eigener Rollbalken, der Plan steht groß daneben.
+ * Die Höhe der Kopfleiste geht als --kopf-h ans Layout; schmal (unter 1100 px) bleibt alles wie bisher unter der Kopfleiste.
+ */
+export function Seitenleiste({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const kopf = ref.current?.parentElement
+    if (!kopf || typeof ResizeObserver === 'undefined') return
+    const kopfleiste = kopf.querySelector<HTMLElement>(':scope > .kopfleiste') ?? kopf
+    const setzen = () => document.documentElement.style.setProperty('--kopf-h', `${Math.round(kopfleiste.getBoundingClientRect().height)}px`)
+    const beobachter = new ResizeObserver(setzen)
+    beobachter.observe(kopfleiste)
+    setzen()
+    return () => beobachter.disconnect()
+  }, [])
+  return <aside ref={ref} className="seitenleiste">{children}</aside>
 }
 
 function einpassen() {

@@ -23,7 +23,7 @@ import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
-import { ReglerKlappe } from './components/Handy'
+import { ReglerKlappe, Seitenleiste } from './components/Handy'
 import { privatAnmelden } from './arbeitPlan'
 import { Befundleiste, useBefundMitPlan } from './components/Befundleiste'
 import { befundZeile, datumDe } from './befund01'
@@ -189,12 +189,14 @@ export default function App() {
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Kostenvoranschlag" onLaden={oeffnen}
             extra={<VersandKnopf anschreiben={{ patient: plan.patient, praxis: einst.praxis, nummer: plan.nummer, betrag: kalk.gesamt, thema: 'Zahnersatz' }} vorher={sichern} />} />
         </header>
-        <ReglerKlappe>
-          <fieldset className="sperre" disabled={gesperrt}>
-            <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
-          </fieldset>
-        </ReglerKlappe>
-        <Pruefmodul positionen={pruefZeilen} hinweise={kalk.hinweise} begruendung />
+        <Seitenleiste>
+          <ReglerKlappe>
+            <fieldset className="sperre" disabled={gesperrt}>
+              <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+            </fieldset>
+          </ReglerKlappe>
+          <Pruefmodul positionen={pruefZeilen} hinweise={kalk.hinweise} begruendung />
+        </Seitenleiste>
       </div>
 
       <main className="arbeitsflaeche">

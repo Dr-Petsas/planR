@@ -22,7 +22,7 @@ import Vereinbarung from './components/Vereinbarung'
 import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
-import { ReglerKlappe } from './components/Handy'
+import { ReglerKlappe, Seitenleiste } from './components/Handy'
 
 type Reiter = 'patient' | 'planung' | 'einstellungen'
 
@@ -118,14 +118,16 @@ export default function App() {
           </div>
           <AblageKnoepfe ablage={ablage} daten={daten} eintrag={eintrag} offen={offen} onNeu={() => neu()} neuText="Neuer Plan" onLaden={oeffnen} />
         </header>
-        <Pruefmodul positionen={pruefZeilen} hinweise={rechnung.hinweise} begruendung />
-        {reiter === 'planung' && (
-          <ReglerKlappe>
-            <fieldset className="sperre" disabled={gesperrt}>
-              <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />
-            </fieldset>
-          </ReglerKlappe>
-        )}
+        <Seitenleiste>
+          <Pruefmodul positionen={pruefZeilen} hinweise={rechnung.hinweise} begruendung />
+          {reiter === 'planung' && (
+            <ReglerKlappe>
+              <fieldset className="sperre" disabled={gesperrt}>
+                <Regler plan={plan} setPlan={setPlan} einst={einst} setEinst={setEinst} rechnung={rechnung} />
+              </fieldset>
+            </ReglerKlappe>
+          )}
+        </Seitenleiste>
       </div>
 
       <div className="arbeitsflaeche">

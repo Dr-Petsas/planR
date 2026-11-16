@@ -19,7 +19,7 @@ import { AblageKnoepfe, Sperrhinweis } from './components/Ablage'
 import { VersandKnopf } from './components/Versenden'
 import { MandantKarte, MandantName } from './components/Mandant'
 import { PlanrLeiste, PlanrZurueck } from './PlanrZurueck'
-import { ReglerKlappe } from './components/Handy'
+import { ReglerKlappe, Seitenleiste } from './components/Handy'
 import { implAnmelden } from './arbeitPlan'
 import { implKi, kiZeilen } from './kiPlan'
 import { planKiHoeren } from './arbeitFenster'
@@ -171,12 +171,14 @@ export default function App() {
             <b>{euro(kalk.gesamt)}</b>
           </div>
         </header>
-        <ReglerKlappe>
-          <fieldset className="sperre" disabled={gesperrt}>
-            <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
-          </fieldset>
-        </ReglerKlappe>
-        <Pruefmodul positionen={pruefZeilen} hinweise={kalk.hinweise} begruendung ueber35={einst.erlaubeUeber35} />
+        <Seitenleiste>
+          <ReglerKlappe>
+            <fieldset className="sperre" disabled={gesperrt}>
+              <Kostenleiste plan={plan} einst={einst} kalk={kalk} onChange={setPlan} />
+            </fieldset>
+          </ReglerKlappe>
+          <Pruefmodul positionen={pruefZeilen} hinweise={kalk.hinweise} begruendung ueber35={einst.erlaubeUeber35} />
+        </Seitenleiste>
       </div>
 
       <main className="arbeitsflaeche">

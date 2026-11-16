@@ -92,6 +92,40 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
 .kv-begruendung h2 { font-size: 12px; margin: 0 0 4px; }
 .kv-begruendung p { margin: 3px 0; font-size: 11px; }
 
+/* Einstellungen links wie im Kassen-HKP (components/Handy.tsx, Seitenleiste): eigene Spalte mit eigenem Rollbalken, der Plan groß daneben */
+@media screen and (min-width: 1100px) {
+  :root { --seite-b: clamp(244px, 19vw, 300px); }
+  .kopfbereich:has(> .seitenleiste) { position: sticky; top: 0; }
+  .seitenleiste {
+    position: absolute; top: 100%; left: 0; width: var(--seite-b); box-sizing: border-box;
+    height: calc(100vh - var(--kopf-h, 56px)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+    display: flex; flex-direction: column; gap: 10px; padding: 12px 10px 28px 12px;
+    background: var(--grund, #f6f3ee); border-right: 1px solid var(--linie, #e3ddd3);
+  }
+  .seitenleiste > fieldset.sperre { display: block; border: 0; margin: 0; padding: 0; min-width: 0; }
+  .seitenleiste .kostenleiste, .seitenleiste .reglerleiste { grid-template-columns: minmax(0, 1fr); padding: 0; gap: 10px; }
+  .seitenleiste .kl-block { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+  .seitenleiste .regler-info:not(.begruendung) { display: block; }
+  .seitenleiste .kl-werte .kl-summe { font-size: 15px; }
+  .seitenleiste label { white-space: normal; }
+  .seitenleiste .pruefmodul { margin: 0; order: 9; }
+  .seitenleiste .pruefmodul > summary { flex-wrap: wrap; }
+  .seitenleiste .pruefmodul ul { max-height: none; }
+  .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche { margin-left: var(--seite-b); padding-left: 16px; column-gap: 18px; }
+}
+/* Ab hier stehen Eingabe und Blatt nebeneinander; das Blatt bekommt den Platz, den die Eingabe nicht braucht. */
+@media screen and (min-width: 1100px) and (max-width: 1299.98px) {
+  .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche { grid-template-columns: minmax(0, 1fr); }
+  .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche > .vorschau { position: static; max-height: none; }
+}
+@media screen and (min-width: 1300px) {
+  .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche { grid-template-columns: minmax(640px, 1fr) minmax(340px, 800px); }
+  .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche > .vorschau {
+    position: sticky; top: calc(var(--kopf-h, 56px) + 12px); max-height: calc(100vh - var(--kopf-h, 56px) - 24px);
+  }
+}
+@media print { .seitenleiste { display: none !important; } }
+
 /* Handy (components/Handy.tsx) wie im Kassen-HKP: Regler hinter dem Knopf, Blatt bleibt A4 und wird verkleinert */
 .regler-knopf { display: none; }
 @media (max-width: 840px) {
