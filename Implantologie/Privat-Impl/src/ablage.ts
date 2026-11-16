@@ -200,6 +200,12 @@ function behandlerVon(key: string, plan: unknown): string {
   }
 }
 
+/** Rückmeldung an die Knöpfe: Ist der Stand bei PlanR angekommen? Ohne Übersicht zählt die Ablage im Browser. */
+export const ABLAGE_GEMELDET = 'planr-ablage-gemeldet'
+function gemeldet(ok: boolean) {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(ABLAGE_GEMELDET, { detail: { ok } }))
+}
+
 /**
  * Ablage an die PlanR-Übersicht melden (Kopf für die Liste, Inhalt für den Export). Die Übersicht führt
  * die Meldungen aller Browser zusammen; was hier fehlt, bleibt dort stehen, bis es gelöscht gemeldet wird.
@@ -207,7 +213,7 @@ function behandlerVon(key: string, plan: unknown): string {
 function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
   const basis = modulVon(key)
   const meta = HUB_MODUL[basis]
-  if (!meta || typeof fetch !== 'function') return
+  if (!meta || typeof fetch !== 'function') return gemeldet(true)
   const weg = entfernt.get(key) ?? []
   if (!liste.length && !weg.length) return
   const hub = hubAdresse()
@@ -220,12 +226,13 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
   const init: RequestInit = { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body }
   if (body.length < 60_000) init.keepalive = true
   fetch(hub, init).then((r) => {
+    gemeldet(r.ok)
     if (!r.ok || typeof window === 'undefined' || window.parent === window) return
     window.parent.postMessage({
       type: 'planr-gespeichert',
       plaene: plaene.map((e) => ({ modul: basis, nummer: e.nummer, betrag: e.betrag })),
     }, '*')
-  }).catch(() => {})
+  }).catch(() => gemeldet(false))
 }
 
 function lesen<P>(key: string): AblageEintrag<P>[] {

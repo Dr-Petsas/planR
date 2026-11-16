@@ -1,5 +1,5 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
-import { datumZeit, type Ablage, type AblageDaten, type AblageEintrag } from '../ablage'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { ABLAGE_GEMELDET, datumZeit, type Ablage, type AblageDaten, type AblageEintrag } from '../ablage'
 
 const betragText = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 
@@ -67,11 +67,39 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
   freiRef.current = frei
   const tun = useRef(ablage.speichern)
   tun.current = ablage.speichern
+  // Rückmeldung nach „Speichern“: erst wenn PlanR den Stand angenommen hat, heißt es „Gespeichert“.
+  const [rueck, setRueck] = useState<'' | 'laeuft' | 'ok' | 'fehler'>('')
+  const rueckRef = useRef(rueck)
+  rueckRef.current = rueck
+  const jetztSpeichern = () => {
+    setRueck('laeuft')
+    tun.current(stand.current)
+  }
   useEffect(() => {
-    const speichern = () => { if (!freiRef.current) tun.current(stand.current) }
+    const speichern = () => { if (!freiRef.current) jetztSpeichern() }
     window.addEventListener('planr-speichern', speichern)
     return () => window.removeEventListener('planr-speichern', speichern)
   }, [])
+  useEffect(() => {
+    let t = 0
+    const gemeldet = (ev: Event) => {
+      const ok = (ev as CustomEvent<{ ok?: boolean }>).detail?.ok === true
+      if (!ok) return setRueck('fehler')
+      if (rueckRef.current === 'fehler') return setRueck('')
+      if (rueckRef.current !== 'laeuft') return
+      setRueck('ok')
+      // Kurzes Vibrieren, wo der Browser es kann (Android); iPhones lassen Webseiten nicht vibrieren.
+      try { navigator.vibrate?.(40) } catch { /* ohne Vibration */ }
+      window.clearTimeout(t)
+      t = window.setTimeout(() => setRueck((r) => (r === 'ok' ? '' : r)), 2500)
+    }
+    window.addEventListener(ABLAGE_GEMELDET, gemeldet)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener(ABLAGE_GEMELDET, gemeldet)
+    }
+  }, [])
+  const uhr = eintrag?.geaendert ? new Date(eintrag.geaendert).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : ''
   const zu = () => fenster.current?.close()
   return (
     <div className="aktionen">
@@ -93,8 +121,8 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
           </dialog>
         </>
       )}
-      <span className={`ablage-stand ${frei ? 'frei' : offen ? 'ungespeichert' : ''}`}>
-        {frei ? 'freigegeben' : offen ? 'nicht gespeichert' : 'gespeichert'}
+      <span className={`ablage-stand ${frei ? 'frei' : offen || rueck === 'fehler' ? 'ungespeichert' : ''}`} role="status" aria-live="polite">
+        {frei ? 'freigegeben' : rueck === 'fehler' ? 'nicht übertragen – keine Verbindung zu PlanR' : offen ? 'nicht gespeichert' : `gespeichert${uhr ? ` ${uhr} Uhr` : ''}`}
       </span>
       {frei ? (
         <button className="sekundaer" onClick={() => confirm('Freigabe zurücknehmen? Der Plan kann danach wieder geändert werden.') && ablage.zuruecknehmen(daten.nummer)}>
@@ -102,7 +130,10 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
         </button>
       ) : (
         <>
-          <button className="primaer" type="button" onClick={() => ablage.speichern(daten)}>Speichern</button>
+          <button className="primaer" type="button" onClick={jetztSpeichern}
+            style={rueck === 'ok' ? { background: '#2e7d4f', borderColor: '#2e7d4f', color: '#fff' } : undefined}>
+            {rueck === 'laeuft' ? 'Speichert …' : rueck === 'ok' ? '✓ Gespeichert' : 'Speichern'}
+          </button>
           <button className="sekundaer" onClick={() => confirm(`${daten.nummer} freigeben? Danach ist der Plan gesperrt.`) && ablage.freigeben(daten)}>Freigeben</button>
         </>
       )}
