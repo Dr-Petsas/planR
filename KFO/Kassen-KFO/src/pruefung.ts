@@ -42,12 +42,20 @@ export function planPruefen(positionen: KiPosition[], o: PruefOptionen = {}): Me
       }
     }
     if (istHonorar(p.ebene)) {
-      const k = `${p.ebene}|${p.nr}|${p.zahn}`
+      // Dieselbe Nummer an anderem Zahn oder in anderer Sitzung ist keine Doppelung.
+      const k = `${p.ebene}|${p.nr}|${p.zahn}|${p.sitzung ?? ''}`
       const da = gesehen.get(k) ?? []
       da.push(p.id)
       gesehen.set(k, da)
-      if (da.length === 2) m.push({ stufe: 'warnung', art: 'doppelt', ids: da, text: `${name} steht zweimal im Plan.` })
     }
+  }
+  const auto = new Map(positionen.map((p) => [p.id, !!p.auto]))
+  for (const da of gesehen.values()) {
+    // Was der Planer selbst mehrfach errechnet (je Implantat, je Stelle), ist so gewollt.
+    if (da.length < 2 || da.every((id) => auto.get(id))) continue
+    const p = positionen.find((x) => x.id === da[0])!
+    const mal = da.length === 2 ? 'zweimal' : `${da.length}-mal`
+    m.push({ stufe: 'warnung', art: 'doppelt', ids: da, text: `${kiName(p)} steht ${mal} im Plan${p.zahn ? ' am selben Zahn oder Gebiet' : ' ohne Zahnangabe'}. Zulässig, wenn die Leistung dort mehrfach erbracht wird (je Implantat, Stelle oder Sitzung); sonst ist eine Zeile zu viel.` })
   }
   for (const h of new Set(o.hinweise ?? [])) m.push({ stufe: 'info', art: 'rechnung', text: h })
   const rang = { fehler: 0, warnung: 1, info: 2 }

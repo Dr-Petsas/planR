@@ -35,7 +35,7 @@ const SAETZE = {
     'stammdaten.ts', 'stammdaten.test.ts', 'components/Stammdaten.tsx',
     'daten.ts', 'components/Listen.tsx', 'gemeinsam.css', 'thema.ts',
     'arbeitDialog.ts', 'arbeitFenster.ts', 'PlanrZurueck.tsx', 'components/Handy.tsx',
-    'planKi.ts', 'pruefung.ts', 'components/Pruefmodul.tsx',
+    'planKi.ts', 'pruefung.ts', 'kiProbe.ts', 'components/Pruefmodul.tsx',
   ],
   ablage: ['ablage.ts', 'ablage.test.ts', 'components/Ablage.tsx', 'arzt.ts', 'components/Arztstempel.tsx'],
   befund: ['befund01.ts', 'befund01.test.ts', 'components/Befundleiste.tsx'],

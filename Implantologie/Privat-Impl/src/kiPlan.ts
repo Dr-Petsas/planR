@@ -80,7 +80,9 @@ export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Pl
   const alt = plan.zaehne[zahn] ?? { B: '', TP: '' }
   const neu = { ...alt, ...(w.befund !== undefined ? { B: String(w.befund) } : {}), ...(w.planung !== undefined ? { TP: String(w.planung) } : {}) }
   const detail: Partial<ImplantatDetail> = {}
-  for (const k of DETAIL) if (w[k] !== undefined) (detail as Record<string, unknown>)[k] = w[k]
+  // Fällt die Implantatplanung in diesem Schritt weg, gehen mitgeschickte Angaben zum Implantat einfach mit.
+  const faelltWeg = w.planung !== undefined && !istImplantat(neu.TP)
+  if (!faelltWeg) for (const k of DETAIL) if (w[k] !== undefined) (detail as Record<string, unknown>)[k] = w[k]
   const mitDetail = Object.keys(detail).length > 0
   if (mitDetail && !istImplantat(neu.TP)) return `Zahn ${zahn}: dort ist kein Implantat geplant. System, Maße, Zeitpunkt und Einheilung gibt es nur mit Implantat.`
   const vorher = plan.implantate[zahn]
@@ -92,9 +94,10 @@ export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Pl
   let p: Plan = { ...plan, zaehne }
   const implantate = { ...plan.implantate }
   if (!istImplantat(neu.TP)) {
-    if (!implantate[zahn]) return { plan: p, text: zahnText(ZAHNFELDER, zahn, w) }
+    const ohne = Object.fromEntries(Object.entries(w).filter(([k]) => !(DETAIL as readonly string[]).includes(k)))
+    if (!implantate[zahn]) return { plan: p, text: zahnText(ZAHNFELDER, zahn, ohne) }
     delete implantate[zahn]
-    return { plan: { ...p, implantate }, text: zahnText(ZAHNFELDER, zahn, w) }
+    return { plan: { ...p, implantate }, text: zahnText(ZAHNFELDER, zahn, ohne) }
   }
   const systeme = [...new Set(implantatZaehne(plan).filter((z) => z !== zahn).map((z) => plan.implantate[z]?.system).filter(Boolean))]
   const basis = vorher ?? { ...STANDARD_IMPLANTAT, ...(systeme.length === 1 ? { system: systeme[0] as string } : {}) }
