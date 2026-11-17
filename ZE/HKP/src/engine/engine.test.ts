@@ -605,6 +605,18 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
     expect(r.positionen.filter((x) => x.zahn === '16' && /^(2190|2001)$/.test(x.nr)).every((x) => x.nachtraeglich)).toBe(true)
   })
 
+  it('Kieferhälfte oder Frontzahnbereich: höchstens zweimal je Kiefer (BZÄK-Kommentar zu GOZ 0065, Beratungsforum Nr. 24)', () => {
+    const p0 = planMit({ '16': 'ww', '11': 'ww', '26': 'ww' }, { '16': 'KM', '11': 'KM', '26': 'KM' })
+    const p = regelUebernehmen(p0, therapieAnwenden(regelversorgungErmitteln(p0.zaehne), p0.zaehne))
+    p.einstellungen.gozZusatzStufe = 3
+    const zusatz = berechnen(p, LISTEN).positionen.filter((x) => x.zusatz).map((x) => `${x.nr} ${x.zahn}`)
+    for (const nr of ['2030', '2040', '0065']) expect(zusatz.filter((x) => x.startsWith(nr))).toEqual([`${nr} 18-14`, `${nr} 24-28`])
+
+    const q = { ...planMit({ 16: 'ww', 11: 'ww', 26: 'ww' }), abformung: 'scan' as const }
+    const scan = therapieAnwenden(regelversorgungErmitteln(q.zaehne, regelOptionen(q)), q.zaehne, q)
+    expect(scan.positionen.filter((x) => x.ebene === 'GOZ' && x.nr === '0065').map((x) => x.zahn).sort()).toEqual(['OK links', 'OK rechts', 'UK links', 'UK rechts'])
+  })
+
   it('Abformung: Intraoralscan an einer Einzelkrone – GOZ 0065 mit Gegenkiefer, gedruckte Modelle statt Gips', () => {
     const rechne = (abformung: HkpPlan['abformung']) => {
       const p = { ...planMit({ 11: 'ww' }), abformung }
@@ -708,7 +720,7 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
     expect(ueber.hinweise.some((h) => h.includes('Überabdruck mit individuellem Löffel'))).toBe(true)
 
     const zweimal = rechne('scan', 'scan')
-    expect(scan0065(zweimal)).toEqual(['OK links', 'OK links', 'OK rechts', 'OK rechts', 'OK-Front', 'UK links', 'UK rechts'])
+    expect(scan0065(zweimal)).toEqual(['OK links', 'OK links', 'OK rechts', 'OK rechts', 'UK links', 'UK rechts'])
     expect(zweimal.positionen.filter((x) => x.ebene === 'BEB' && x.nr === '0009' && x.zahn === 'OK')).toHaveLength(2)
     expect(hat(zweimal, 'BEMA', '98a', 'OK')).toBe(false)
 
@@ -716,7 +728,7 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
     expect(hat(offen, 'BEMA', '98a', 'OK')).toBe(false)
     expect(offen.hinweise.some((h) => h.includes('zweite Abformung (Scan oder Überabdruck) noch offen'))).toBe(true)
     expect(rechne('abdruck', '').positionen.some((x) => x.nr === '0065' || x.nr === '98a')).toBe(false)
-    expect(scan0065(rechne('abdruck', 'scan'))).toEqual(['OK links', 'OK rechts', 'OK-Front'])
+    expect(scan0065(rechne('abdruck', 'scan'))).toEqual(['OK links', 'OK rechts'])
 
     const restzahn = rechne('scan', 'abdruck', ['18', '17', '16', '15', '14', '12', '11', '21', '22', '24', '25', '26', '27', '28'])
     expect(hat(restzahn, 'BEMA', '98b', 'OK') && !hat(restzahn, 'BEMA', '98a', 'OK')).toBe(true)
@@ -736,7 +748,7 @@ describe('Weitere Befunde: klinische Angaben, 6.10, 4.8, 7.5/7.6, Wiederherstell
     expect(modelle(abdruck)).toBe(2)
 
     for (const scan of [rechne('scan', '', 'abformung'), rechne('abdruck', 'scan', 'abformung')]) {
-      expect(scan.positionen.filter((x) => x.ebene === 'GOZ' && x.nr === '0065').map((x) => x.zahn).sort()).toEqual(['OK links', 'OK rechts', 'OK-Front'])
+      expect(scan.positionen.filter((x) => x.ebene === 'GOZ' && x.nr === '0065').map((x) => x.zahn).sort()).toEqual(['OK links', 'OK rechts'])
       expect(scan.positionen.filter((x) => x.ebene === 'BEB' && x.nr === '0009' && x.zahn === 'OK')).toHaveLength(1)
       expect(modelle(scan)).toBe(1)
       expect(hat(scan, 'BEMA', '98b', 'OK') && hat(scan, 'BEL', '0211', 'OK')).toBe(true)

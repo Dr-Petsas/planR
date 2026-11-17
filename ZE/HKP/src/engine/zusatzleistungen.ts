@@ -40,6 +40,22 @@ export function bereich(zahn: string): string {
   return { '1': 'OK rechts', '2': 'OK links', '3': 'UK links', '4': 'UK rechts' }[q] ?? q
 }
 
+/**
+ * »Je Kieferhälfte oder Frontzahnbereich« heißt höchstens zweimal je Kiefer, also viermal je Sitzung
+ * (BZÄK-Kommentar zu GOZ 0065 und 4030, Beratungsforum Nr. 24 zu 2030). Sind in einem Kiefer alle drei
+ * Bereiche betroffen, zählen die beiden Kieferhälften. `schon` = im Kiefer bereits angesetzte Bereiche.
+ */
+export function zweiJeKiefer(bereiche: string[], schon: string[] = []): string[] {
+  const out: string[] = []
+  for (const k of ['OK', 'UK']) {
+    const da = [...new Set(schon.filter((b) => b.startsWith(k)))]
+    let neu = [...new Set(bereiche.filter((b) => b.startsWith(k) && !da.includes(b)))]
+    if (da.length + neu.length > 2) neu = neu.filter((b) => !b.endsWith('-Front'))
+    out.push(...neu.slice(0, Math.max(0, 2 - da.length)))
+  }
+  return out
+}
+
 const BEREICH_ZAEHNE: Record<string, string> = {
   'OK rechts': '18-14', 'OK-Front': '13-23', 'OK links': '24-28', 'UK links': '34-38', 'UK-Front': '33-43', 'UK rechts': '44-48',
 }
@@ -77,9 +93,9 @@ export function zusatzleistungen(plan: HkpPlan): ZusatzErgebnis {
     const p: Zusatz = { id: `zusatz-${nr}-${zahn}`, ebene: 'GOZ', nr, zahn, anzahl, auto: true, zusatz: true, begruendung }
     if (!vorhanden.has(zusatzSchluessel(p)) && !aus.has(zusatzSchluessel(p))) positionen.push(p)
   }
-  const bereicheVon = (liste: string[]) => [...new Set(liste.map(bereich))]
+  const bereicheVon = (liste: string[]) => zweiJeKiefer(liste.map(bereich))
 
-  // Stufe 1: besondere Maßnahmen beim Präparieren – höchstens einmal je Bereich und Sitzung
+  // Stufe 1: besondere Maßnahmen beim Präparieren – einmal je Bereich und Sitzung, höchstens zwei Bereiche je Kiefer
   if (stufe >= 1) {
     if (!praepariert.length) nichtAngesetzt.push('2030: keine zu präparierenden Zähne')
     for (const b of bereicheVon(praepariert))
@@ -101,8 +117,8 @@ export function zusatzleistungen(plan: HkpPlan): ZusatzErgebnis {
     if (!praepariert.length) nichtAngesetzt.push(implantatKronen.length ? '0065: Implantatabformung laut Implantatangaben (Scan oder Löffel)' : '0065: kein festsitzender Zahnersatz')
     const konventionell = new Set(plan.positionen.filter((p) => p.ebene === 'GOZ' && /^(5170|5180|5190)$/.test(p.nr)).map((p) => p.zahn))
     const gescannt = new Set(plan.positionen.filter((p) => p.ebene === 'GOZ' && p.nr === '0065').map((p) => p.zahn))
-    for (const b of bereicheVon(praepariert))
-      if (!konventionell.has(BEREICH_ZAEHNE[b]) && !gescannt.has(b)) neu('0065', BEREICH_ZAEHNE[b], `Digitale Abformung (${b}) statt konventioneller Abformung`)
+    for (const b of zweiJeKiefer(praepariert.map(bereich), [...gescannt]))
+      if (!konventionell.has(BEREICH_ZAEHNE[b])) neu('0065', BEREICH_ZAEHNE[b], `Digitale Abformung (${b}) statt konventioneller Abformung`)
   }
 
   // Stufe 7 ersetzt 8020 und 8050: nicht neben 8035 bzw. 8065 berechnungsfähig

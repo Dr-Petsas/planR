@@ -1,7 +1,7 @@
 import type { Ebene, ImplantatAngaben, Labor, Position, ZahnZeilen } from '../types'
 import { KOMPONENTEN, implantatsystem, type Komponente } from '../data/implantatsysteme'
 import { ALLE_ZAEHNE, kieferVon } from './zahnschema'
-import { bereich } from './zusatzleistungen'
+import { bereich, zweiJeKiefer } from './zusatzleistungen'
 
 /** Kürzel (TP, sonst R) einer implantatgetragenen Krone, eines Implantat-Teleskops oder -Verbindungselements (Steg, Locator) */
 export const IMPLANTAT_TP = /^S[KTO]|^ZAS$/
@@ -61,7 +61,7 @@ export function implantatPositionen(zaehne: Record<string, ZahnZeilen>, a: Impla
   for (const z of imp) positionen.push(pos('GOZ', '9050', z, 2))
 
   if (a.abformung === 'scan') {
-    const regionen = [...new Set([...haelften, ...haelften.map((h) => GEGENUEBER[h])])]
+    const regionen = zweiJeKiefer([...haelften, ...haelften.map((h) => GEGENUEBER[h])])
     for (const r of regionen) positionen.push(pos('GOZ', '0065', r))
     for (const k of kiefer) positionen.push(pos('BEB', '0009', k), pos('BEB', '0018', k))
     for (const z of imp) positionen.push(pos('BEB', '0224', z), mat('scanbody', z), mat('laboranalog', z))
