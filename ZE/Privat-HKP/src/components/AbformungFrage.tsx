@@ -18,7 +18,7 @@ export const ABFORMUNG_ARTEN: Art[] = [
 export const PROTHESE_ARTEN: Art[] = [
   {
     id: 'scan', titel: 'Intraoralscan (2. Sitzung)',
-    text: 'Erneut GOZ 0065 je Kieferhälfte/Frontzahnbereich des Kiefers (3 je Kiefer) und gedrucktes Modell (BEB 0009).',
+    text: 'Erneut GOZ 0065 je Kieferhälfte/Frontzahnbereich des Kiefers (2 je Kiefer) und gedrucktes Modell (BEB 0009).',
   },
   {
     id: 'abdruck', titel: 'Überabdruck',

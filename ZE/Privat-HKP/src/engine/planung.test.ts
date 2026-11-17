@@ -115,6 +115,14 @@ describe('Privatplanung', () => {
     expect(n.some((x) => x.startsWith('GOZ 2270') || x.startsWith('GOZ 5'))).toBe(false)
   })
 
+  it('Intraoralscan: Kronen in beiden Seiten und der Front eines Kiefers zählen 0065 zweimal, nicht dreimal (BZÄK: höchstens viermal je Sitzung)', () => {
+    const z: Record<string, Zahn> = {}
+    for (const t of ['16', '11', '26']) z[t] = { B: '', TP: 'KM' }
+    expect(nummern(z, 'scan').filter((x) => x.startsWith('GOZ 0065'))).toEqual(['GOZ 0065 x3'])
+    for (const t of ['36', '41', '46']) z[t] = { B: '', TP: 'KM' }
+    expect(nummern(z, 'scan').filter((x) => x.startsWith('GOZ 0065'))).toEqual(['GOZ 0065 x4'])
+  })
+
   it('Kombinationsarbeit Teleskope: Pfeiler scannen, zweite Abformung für die Prothese als Überabdruck oder zweiter Scan', () => {
     const z: Record<string, Zahn> = {}
     for (const t of ['13', '23']) z[t] = { B: '', TP: 'T' }
@@ -127,7 +135,7 @@ describe('Privatplanung', () => {
     expect(ueber).not.toContain('BEB 0021 OK')
 
     const zweimal = nummern(z, 'scan', 'scan')
-    expect(zweimal).toEqual(expect.arrayContaining(['GOZ 0065 x2', 'GOZ 0065 OK x3']))
+    expect(zweimal).toEqual(expect.arrayContaining(['GOZ 0065 x2', 'GOZ 0065 OK x2']))
     expect(zweimal.filter((x) => x === 'BEB 0009 OK')).toHaveLength(2)
     expect(zweimal).not.toContain('BEB 1006 OK')
 
@@ -135,7 +143,7 @@ describe('Privatplanung', () => {
     expect(offen.positionen.some((p) => p.nr === '1006' || p.nr === '0004')).toBe(false)
     expect(offen.hinweise.some((h) => h.includes('zweite Abformung (Scan oder Überabdruck) noch offen'))).toBe(true)
     expect(nummern(z, 'abdruck')).not.toContain('GOZ 0065')
-    expect(nummern(z, 'abdruck', 'scan')).toContain('GOZ 0065 OK x3')
+    expect(nummern(z, 'abdruck', 'scan')).toContain('GOZ 0065 OK x2')
   })
 
   it('Zahnlose Prothese: Funktionsabformung enthalten, keine zweite Abformung', () => {

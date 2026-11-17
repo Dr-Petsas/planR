@@ -305,7 +305,9 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
   }
   if (abformung === 'scan' && scanBereiche.size) {
     const gegenkiefer = (['OK', 'UK'] as const).filter((k) => !scanKiefer.has(k)).length
-    pos('GOZ', '0065', '', scanBereiche.size + gegenkiefer)
+    // »je Kieferhälfte oder Frontzahnbereich«: je Kiefer höchstens zweimal, je Sitzung höchstens viermal (BZÄK-Kommentar zu 0065)
+    const jeKiefer = (k: 'OK' | 'UK') => Math.min(2, [...scanBereiche].filter((b) => (k === 'OK' ? /^(OK|Q[12])/ : /^(UK|Q[34])/).test(b)).length)
+    pos('GOZ', '0065', '', jeKiefer('OK') + jeKiefer('UK') + gegenkiefer)
   }
   const impScan = abformung === 'scan' ? [...OBERKIEFER, ...UNTERKIEFER].filter((z) => IMPLANTAT.test(P(z))) : []
   const digital = abformung === 'scan' ? digitalerAblauf(positionen, pos, stuempfe, impScan, geplant.filter((z) => VENEER.test(P(z)))) : ''
@@ -326,10 +328,10 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
     if (!zahnloseKiefer.length) hinweise.push('Zweite Abformung gewählt, aber kein herausnehmbarer Teil geplant – sie bringt keine zusätzlichen Leistungen.')
   } else if (prothese === 'scan') {
     for (const k of zweite) {
-      pos('GOZ', '0065', k, 3, { text: `Optisch-elektronische Abformung (2. Sitzung, herausnehmbarer Teil ${k}), je Kieferhälfte/Frontzahnbereich` })
+      pos('GOZ', '0065', k, 2, { text: `Optisch-elektronische Abformung (2. Sitzung, herausnehmbarer Teil ${k}), je Kieferhälfte/Frontzahnbereich` })
       pos('BEB', '0009', k)
     }
-    hinweise.push(`Zweiter Intraoralscan für den herausnehmbaren Teil ${zweite.join(', ')} in eigener Sitzung: GOZ 0065 erneut je Kieferhälfte/Frontzahnbereich (3 je Kiefer) und gedrucktes Modell (BEB 0009).`)
+    hinweise.push(`Zweiter Intraoralscan für den herausnehmbaren Teil ${zweite.join(', ')} in eigener Sitzung: GOZ 0065 erneut je Kieferhälfte (2 je Kiefer) und gedrucktes Modell (BEB 0009).`)
   } else {
     for (const k of zweite) {
       if (!positionen.some((p) => p.ebene === 'GOZ' && p.nr === '5170' && p.zahn === k)) pos('GOZ', '5170', k)

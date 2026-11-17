@@ -97,7 +97,12 @@ export function zusatzleistungen({ zaehne, abformung, basis, gozStufe, laborStuf
   }
   const TP = (z: string) => (zaehne[z]?.TP ?? '').trim().toUpperCase()
   const anZahn = (z: string) => basis.filter((p) => p.zahn === z)
-  const bereicheVon = (liste: string[]) => [...new Set(liste.map(bereich))]
+  // »je Kieferhälfte oder Frontzahnbereich«: je Kiefer höchstens zwei Bereiche – sind beide Seiten und die Front betroffen,
+  // zählt die Front nicht als dritter Bereich (BZÄK-Kommentar zu 0065 und 4030, Beratungsforum Nr. 24 zu 2030)
+  const bereicheVon = (liste: string[]) => {
+    const alle = [...new Set(liste.map(bereich))]
+    return alle.filter((b) => !b.endsWith('-Front') || alle.filter((x) => x.startsWith(b.slice(0, 2))).length < 3)
+  }
   const einzelzaehne = [...new Set(basis.map((p) => p.zahn).filter((z) => /^[1-4][1-8]$/.test(z)))]
 
   // Nummern stehen in der Wissensbasis (exoten.json). Der Regler liest sie.
