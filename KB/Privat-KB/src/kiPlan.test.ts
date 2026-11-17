@@ -21,7 +21,7 @@ describe('KI-Zeile am privaten KB-Plan', () => {
     const { d } = dienst()
     const vor = d.lesen()
     const nr = ['0030', '8000', '8010', '7010'].find((n) => !vor.positionen.some((p) => p.nr === n))!
-    const r = d.aendern([{ op: 'hinzu', ebene: 'GOZ', nr, anzahl: 1 }])
+    const r = d.aendern([{ op: 'hinzu', ebene: 'GOZ', nr, zahn: '', anzahl: 1 }])
     expect(r.getan).toHaveLength(1)
     expect(d.lesen().positionen.some((p) => p.nr === nr)).toBe(true)
     expect(r.gesamt).toBeGreaterThan(vor.summen.gesamt)
@@ -30,7 +30,7 @@ describe('KI-Zeile am privaten KB-Plan', () => {
   it('weist eine unbekannte Nummer ab und laesst den Plan unveraendert', () => {
     const { d, plan } = dienst()
     const vor = JSON.stringify(plan())
-    const r = d.aendern([{ op: 'hinzu', ebene: 'GOZ', nr: '99999', anzahl: 1 }])
+    const r = d.aendern([{ op: 'hinzu', ebene: 'GOZ', nr: '99999', zahn: '', anzahl: 1 }])
     expect(r.getan).toHaveLength(0)
     expect(r.nicht.length).toBeGreaterThan(0)
     expect(d.lesen().positionen.some((p) => p.nr === '99999')).toBe(false)

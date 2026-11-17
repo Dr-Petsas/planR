@@ -95,6 +95,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     hinweise.push('7080/7090 setzen ein Langzeitprovisorium mit mindestens drei Monaten Tragezeit voraus; sonst 2260/2270 bzw. 5120/5140.')
   }
   if (hat('7070')) hinweise.push('Entfernung der Schienung später nach GOÄ 2702 je Kiefer.')
+  if (anzahlVon(plan, '0065') > 4) warnungen.push('GOZ 0065 je Kieferhälfte oder Frontzahnbereich: höchstens viermal je Sitzung (BZÄK-Kommentar zu 0065) – mehr nur bei eigener Indikation in einer weiteren Sitzung.')
   if (hat('0065') && hat('0060')) hinweise.push('Neben 0065 keine konventionelle Abformung derselben Kieferhälfte bzw. desselben Frontzahnbereichs.')
   if (labor.some((z) => z.ohnePreis)) warnungen.push('Für einzelne Laborpositionen ist kein Preis hinterlegt – Preis in der Zeile oder in den Einstellungen eintragen.')
   if (plan.positionen.some((p) => p.ebene === 'LABOR' && p.nr === '7602')) {

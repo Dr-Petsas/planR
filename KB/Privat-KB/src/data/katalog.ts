@@ -160,7 +160,7 @@ const UKPS_DIAGNOSTIK = [
   G('0040'),
   A('8050', 'Dreidimensionale Registrierung der Startprotrusionsposition'),
 ]
-const UKPS_SCAN = [...UKPS_DIAGNOSTIK, G('0065', 6), A('UKPS', UKPS_TEXT)]
+const UKPS_SCAN = [...UKPS_DIAGNOSTIK, G('0065', 4), A('UKPS', UKPS_TEXT)]
 export const VORLAGEN_GRUPPEN: VorlagenGruppe[] = ['Schienen', 'UKPS bei OSAS', 'Funktion und Nachsorge']
 
 /** Typische Behandlungen – fügen GOZ- und Laborpositionen hinzu, alles bleibt einzeln änderbar. */
@@ -239,8 +239,8 @@ export const VORLAGEN: Vorlage[] = [
 export const LABOR_GIPSMODELLE = ['0001', '0002']
 /** Entfallen beim Intraoralscan */
 export const LABOR_NUR_ABDRUCK = ['0241']
-/** 0065 je Kieferhälfte bzw. Frontzahnbereich: beide Kiefer = 6 */
-export const SCAN_BEREICHE_BEIDE_KIEFER = 6
+/** 0065 je Kieferhälfte bzw. Frontzahnbereich: beide Kiefer = 4 (BZÄK-Kommentar zu 0065: bis zu viermal je Sitzung) */
+export const SCAN_BEREICHE_BEIDE_KIEFER = 4
 
 export const LABOR_KLASSE_FAKTOR = [0.85, 1, 1.2, 1.5, 1.8]
 export const LABOR_KLASSE_NAMEN = ['günstig', 'Standard', 'hochwertig', 'Premium', 'Spitzenlabor']

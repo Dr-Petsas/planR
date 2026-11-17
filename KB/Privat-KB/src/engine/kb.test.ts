@@ -203,7 +203,7 @@ describe('Privat-KB-Rechnung', () => {
     const p = { ...neuerPlan('T-1', einst), positionen: vorlageAnwenden([], VORLAGEN.find((v) => v.id === 'ukps')!.pos, einst) }
     const scan = abformungAnwenden(p.positionen, 'scan')
     expect(scan.some((x) => x.nr === '0060' || x.nr === '0002' || x.nr === '0701')).toBe(false)
-    expect(scan.find((x) => x.nr === '0065')!.anzahl).toBe(6)
+    expect(scan.find((x) => x.nr === '0065')!.anzahl).toBe(4)
     expect(scan.find((x) => x.nr === '0009')!.anzahl).toBe(2)
     expect(scan.find((x) => x.nr === '0036')!.anzahl).toBe(1)
     expect(scan.some((x) => x.analog && x.nr === '6070')).toBe(true)
