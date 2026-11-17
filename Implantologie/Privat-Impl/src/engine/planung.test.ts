@@ -248,22 +248,27 @@ describe('OP-Zuschlag', () => {
     expect(zuschlaege[0].nr).toBe('0530') // höchste Leistung 9100
   })
 
-  it('Stufe nach Punktzahl: Implantat 9010 (1545 Punkte) → 0530, Freilegung 9040 (626 Punkte) → 0510', () => {
+  it('nur zu den in Abschnitt L genannten Leistungen: Implantat 9010 → 0530, Freilegung 9040 ohne Zuschlag', () => {
     const k = kalkulieren(plan({ zaehne: { '36': { B: 'f', TP: 'I' } } }), E)
     const zuschlag = (nr: string) => {
       const s = k.honorarGoz.find((z) => z.nr === nr)?.sitzung
       return k.honorarGoz.filter((z) => OP_ZUSCHLAEGE.includes(z.nr as never) && z.sitzung === s).map((z) => z.nr)
     }
     expect(zuschlag('9010')).toEqual(['0530'])
-    expect(zuschlag('9040')).toEqual(['0510'])
+    expect(zuschlag('9040')).toEqual([])
   })
 
-  it('unter 250 Punkten kein Zuschlag, 4090 und 4130 lösen 0500 aus', () => {
-    expect(opZuschlagStufe('3000', 70)).toBeNull()
-    expect(opZuschlagStufe('4090', 180)).toBe('0500')
-    expect(opZuschlagStufe('3020', 270)).toBe('0500')
-    expect(opZuschlagStufe('9140', 650)).toBe('0510')
-    expect(opZuschlagStufe('4133', 880)).toBe('0520')
+  it('Zuordnung nach der amtlichen Liste: 9040 und 4120 nie, 4090 und 4130 lösen 0500 aus', () => {
+    expect(opZuschlagStufe('3000')).toBeNull()
+    expect(opZuschlagStufe('9040')).toBeNull()
+    expect(opZuschlagStufe('4120')).toBeNull()
+    expect(opZuschlagStufe('3200')).toBe('0510')
+    expect(opZuschlagStufe('9170')).toBe('0510')
+    expect(opZuschlagStufe('9120')).toBe('0530')
+    expect(opZuschlagStufe('4090')).toBe('0500')
+    expect(opZuschlagStufe('3020')).toBe('0500')
+    expect(opZuschlagStufe('9140')).toBe('0510')
+    expect(opZuschlagStufe('4133')).toBe('0520')
   })
 })
 

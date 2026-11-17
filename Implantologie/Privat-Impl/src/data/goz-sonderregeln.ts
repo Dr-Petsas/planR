@@ -51,13 +51,17 @@ export const OP_LEISTUNGEN = new Set([
 ])
 
 /**
- * OP-Zuschlag nach der Punktzahl der Leistung (GOZ Abschnitt L): 250–499 → 0500 (sowie 4090, 4130),
- * 500–799 → 0510, 800–1199 → 0520, ab 1200 → 0530; unter 250 Punkten kein Zuschlag.
+ * OP-Zuschlag (GOZ Abschnitt L). Die Zuschläge gelten nur für die dort ausdrücklich genannten Leistungen,
+ * nicht für jede Leistung ab 250 Punkten – 9040 (Freilegung, 626 Punkte) und 4120 sind nicht zuschlagsfähig.
+ * Quelle: Allgemeine Bestimmungen zu Abschnitt L und BZÄK-Kommentar zu 0500, 0510, 0520, 0530.
  */
-export function opZuschlagStufe(nr: string, punkte: number): (typeof OP_ZUSCHLAEGE)[number] | null {
-  if (punkte >= 1200) return '0530'
-  if (punkte >= 800) return '0520'
-  if (punkte >= 500) return '0510'
-  if (punkte >= 250 || nr === '4090' || nr === '4130') return '0500'
-  return null
+const OP_ZUSCHLAG_ZU: Record<(typeof OP_ZUSCHLAEGE)[number], readonly string[]> = {
+  '0500': ['3020', '3030', '3090', '3100', '3110', '3130', '3190', '3230', '3250', '3280', '4090', '4100', '4130', '9090', '9160'],
+  '0510': ['3040', '3045', '3120', '3140', '3160', '3200', '3240', '3260', '3270', '9020', '9140', '9150', '9170'],
+  '0520': ['4133'],
+  '0530': ['9010', '9100', '9110', '9120', '9130'],
+}
+
+export function opZuschlagStufe(nr: string): (typeof OP_ZUSCHLAEGE)[number] | null {
+  return OP_ZUSCHLAEGE.find((z) => OP_ZUSCHLAG_ZU[z].includes(nr)) ?? null
 }

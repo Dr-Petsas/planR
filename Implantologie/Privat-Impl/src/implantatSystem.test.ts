@@ -17,7 +17,7 @@ const netto = (plan: Parameters<typeof kalkulieren>[0]) => kalkulieren(plan, E).
  */
 describe('Wahl des Implantatsystems', () => {
   it('ändert im neuen Plan den Materialpreis', () => {
-    const plan = { ...neuerPlan(E), zaehne: { '14': { B: 'x', TP: 'I' } } }
+    const plan = { ...neuerPlan(1), zaehne: { '14': { B: 'x', TP: 'I' } } }
     const camlog = implantateSetzen(plan, { '14': mit('camlog') })
     const icx = implantateSetzen(camlog, { '14': mit('medentis-icx') })
     expect(kalkulieren(camlog, E).gesamt).toBeGreaterThan(kalkulieren(icx, E).gesamt)
@@ -72,7 +72,7 @@ describe('Wahl des Implantatsystems', () => {
   })
 
   it('verwirft einen von Hand gesetzten Preis für das Implantat', () => {
-    const basis = implantateSetzen({ ...neuerPlan(E), zaehne: { '14': { B: 'x', TP: 'I' } } }, { '14': mit('camlog') })
+    const basis = implantateSetzen({ ...neuerPlan(1), zaehne: { '14': { B: 'x', TP: 'I' } } }, { '14': mit('camlog') })
     const hand = { ...basis, anpassungen: { 'mat:koerper:14': { preis: 1, anzahl: 2 } } }
     const neu = implantateSetzen(hand, { '14': mit('straumann-bl') })
     expect(neu.anpassungen['mat:koerper:14']).toEqual({ anzahl: 2 })

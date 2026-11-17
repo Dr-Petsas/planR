@@ -52,9 +52,9 @@ export function sitzungenErgaenzen(plan: Plan, eingang: Position[], _einst: Eins
     if (anae) positionen.push({ id: `mat:anae:${s}`, ebene: 'MAT', nr: anae.id, zahn: '', anzahl: Math.max(1, kiefer.size) * 2, sitzung: s, text: `${anae.titel}`, material: true, auto: true, grund: 'Lokalanästhetikum' })
 
     // OP-Zuschlag: nur der höchste (nach der höchstbewerteten Einzelleistung)
-    const stufe = (p: Position) => OP_ZUSCHLAEGE.indexOf(opZuschlagStufe(p.nr, punkte(p.nr)) ?? ('' as never))
+    const stufe = (p: Position) => OP_ZUSCHLAEGE.indexOf(opZuschlagStufe(p.nr) ?? ('' as never))
     const hoechste = inSitzung.slice().sort((a, b) => stufe(b) - stufe(a) || punkte(b.nr) - punkte(a.nr))[0]
-    const zuschlag = hoechste && opZuschlagStufe(hoechste.nr, punkte(hoechste.nr))
+    const zuschlag = hoechste && opZuschlagStufe(hoechste.nr)
     if (hoechste && zuschlag) {
       positionen.push({ id: `auto:opzuschlag:${s}`, ebene: 'GOZ', nr: zuschlag, zahn: '', anzahl: 1, sitzung: s, grund: `OP-Zuschlag (höchste Leistung: GOZ ${hoechste.nr})`, auto: true })
     }
