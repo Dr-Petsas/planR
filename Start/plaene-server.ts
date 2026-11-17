@@ -3128,6 +3128,34 @@ async function probeEinordnen(req: IncomingMessage, res: ServerResponse) {
   }
 }
 
+/** Hilfe-Zeile im Einrichtungsassistenten: Frage samt Lage des Assistenten an das eigene Modell (MAS). Kein Patient dabei. */
+async function einrichtungKi(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
+  const key = masSchluessel()
+  if (!key) return json(res, 200, { ok: false, message: 'Die Hilfe ist hier nicht eingerichtet.' })
+  let roh: { text?: unknown; lage?: unknown; verlauf?: unknown }
+  try {
+    roh = JSON.parse(await lesenBody(req, 60_000) || '{}')
+  } catch {
+    return json(res, 400, { ok: false })
+  }
+  const text = String(roh.text ?? '').trim().slice(0, 800)
+  if (!text) return json(res, 400, { ok: false })
+  const verlauf = (Array.isArray(roh.verlauf) ? roh.verlauf : []).slice(-8)
+    .map((z) => ({ wer: (z as { wer?: unknown })?.wer === 'ki' ? 'ki' : 'ich', text: String((z as { text?: unknown })?.text ?? '').slice(0, 500) }))
+  try {
+    const r = await fetch(`${MAS}/einrichtung-ki`, {
+      method: 'POST',
+      headers: { 'X-PlanR-Key': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, lage: roh.lage && typeof roh.lage === 'object' ? roh.lage : {}, verlauf }),
+      signal: AbortSignal.timeout(60_000),
+    })
+    return json(res, 200, await r.json().catch(() => ({ ok: false })))
+  } catch {
+    return json(res, 200, { ok: false, message: 'Die Hilfe antwortet gerade nicht.' })
+  }
+}
+
 /** KI-Zeile im offenen Plan: Satz samt Planstand an das eigene Modell (MAS). Der Stand trägt keinen Patienten. */
 async function planKi(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
@@ -3743,6 +3771,7 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
   if (url === '/api/importe' || url.startsWith('/api/importe/')) return void importeEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/clara/text') return void claraText(req, res, w).catch(fehler500(res))
   if (url === '/api/plan/ki') return void planKi(req, res).catch(fehler500(res))
+  if (url === '/api/einrichtung-ki') return void einrichtungKi(req, res).catch(fehler500(res))
   if (url === '/api/plan/pruefen') return void planPruefen(req, res).catch(fehler500(res))
   if (url === '/api/clara' || url === '/api/clara/kopplung') return void claraEndpunkt(req, res, url, w).catch(fehler500(res))
   if (url === '/api/versand' || url === '/api/versand/kontakt' || url === '/api/versand/senden' || url === '/api/versand/vermerk') return void versandEndpunkt(req, res, url, w).catch(fehler500(res))
