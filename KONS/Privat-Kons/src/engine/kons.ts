@@ -183,7 +183,8 @@ function grundleistung(zahn: string, z: ZahnLeistung, faktor: number, einst: Ein
       return { titel: 'Fissurenversiegelung', zeilen: [gozZeile('2000', faktor, 1)] }
     case 'aufbau': {
       // Ummantelung des Stiftes mit Aufbaumaterial ist 2180 (BZÄK zu 2195); 2197 je adhäsiv befestigtem Teil
-      const aufbau = [...(mehrschicht ? [] : [gozZeile('2180', faktor, 1)]), gozZeile('2197', faktor, 1, `${gozText('2197')} – Aufbau`)]
+      // 2120a ist »in Adhäsivtechnik« beschrieben – daneben keine 2197 für den Aufbau
+      const aufbau = mehrschicht ? [] : [gozZeile('2180', faktor, 1), gozZeile('2197', faktor, 1, `${gozText('2197')} – Aufbau`)]
       const titel = mehrschicht ? 'Mehrschichtiger Kompositaufbau' : 'Plastischer Aufbau'
       if (z.aufbauStift) {
         const stift = einst.materialPreise.find((m) => m.id === 'glasfaser')

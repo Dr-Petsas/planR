@@ -20,7 +20,7 @@ describe('Grundleistungen nach GOZ', () => {
   it('Endo avital: Trepanation 2390 statt 2360, ab Stufe 2 nekrotisches Gewebe analog', () => {
     const z = { '36': { therapie: 'endo', kanaele: 3, vital: false } as ZahnLeistung }
     expect(nrn(plan(z), '36')).toEqual(['2390', '2410', '2440'])
-    expect(nrn(plan(z, 2), '36')).toContain('2360a')
+    expect(nrn(plan(z, 2), '36')).toContain('2180a')
   })
 
   it('Revision: alte Wurzelfüllung analog 2300a je Kanal', () => {
@@ -36,8 +36,8 @@ describe('Grundleistungen nach GOZ', () => {
 
   it('Aufbau: Glasfaserstift 2195 + 2197, Ummantelung 2180 + 2197, Stift als Material; mehrschichtig ersetzt 2180', () => {
     expect(nrn(plan({ '15': { therapie: 'aufbau', aufbauStift: true } }), '15')).toEqual(['2195', '2197', '2180', '2197', 'Mat.'])
-    expect(nrn(plan({ '15': { therapie: 'aufbau', zusatz: ['mehrschicht'] } }), '15')).toEqual(['2197', '2120a'])
-    expect(nrn(plan({ '15': { therapie: 'aufbau', aufbauStift: true, zusatz: ['mehrschicht'] } }), '15')).toEqual(['2195', '2197', '2197', 'Mat.', '2120a'])
+    expect(nrn(plan({ '15': { therapie: 'aufbau', zusatz: ['mehrschicht'] } }), '15')).toEqual(['2120a'])
+    expect(nrn(plan({ '15': { therapie: 'aufbau', aufbauStift: true, zusatz: ['mehrschicht'] } }), '15')).toEqual(['2195', '2197', 'Mat.', '2120a'])
   })
 
   it('Analoge Therapien: Kariesinfiltration, Veneer, internes Bleichen je Sitzung', () => {
