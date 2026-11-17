@@ -17,7 +17,7 @@ describe('Privat-Kons fürs Praxisprogramm', () => {
     expect(rest).toEqual([])
     expect(kva).toMatchObject({ planart: 'kva', art: 'KO', datum: '2026-10-15' })
     expect(kva.zaehne).toBeUndefined()
-    expect(kva.positionen.map((x) => x.nr)).toContain('2360a')
+    expect(kva.positionen.map((x) => x.nr)).toContain('2180a')
     expect(kva.positionen.some((x) => x.nr === 'MwSt.')).toBe(false)
     expect(kva.summen.gesamt).toBeCloseTo(r.summe, 2)
     expect(kva.summen.honorar).toBeCloseTo(kva.positionen.filter((x) => x.ebene === 'GOZ' || x.ebene === 'GOAE').reduce((s, x) => s + x.betrag, 0), 2)

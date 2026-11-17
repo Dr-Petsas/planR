@@ -72,7 +72,7 @@ const MIT_KANAELEN = new Set<Therapie>(['endo', 'revision'])
 const VORRANG: Therapie[] = ['revision', 'endo', 'aufbau', 'inlay', 'goldhaemmer', 'veneer', 'komposit', 'vital', 'infiltration', 'versiegelung', 'bleaching']
 const NAME: Record<Therapie, string> = {
   komposit: 'Kompositfüllung', inlay: 'Inlay', goldhaemmer: 'Goldhämmerfüllung', endo: 'Wurzelbehandlung', revision: 'Revision',
-  vital: 'Überkappung', versiegelung: 'Versiegelung', aufbau: 'Aufbau', infiltration: 'Kariesinfiltration', veneer: 'Veneer', bleaching: 'Bleaching',
+  vital: 'Überkappung', versiegelung: 'Versiegelung', aufbau: 'Aufbau', infiltration: 'Kariesinfiltration', veneer: 'Veneer', bleaching: 'Bleaching', wsr: 'Wurzelspitzenresektion',
 }
 const KEIN_ARTIKEL = new Set<Therapie>(['inlay', 'aufbau', 'veneer', 'bleaching'])
 const NUR_VERBINDUNG = /^[\s,]*(?:(?:und|sowie|auch|plus|bei|an|auf|zahn|zähnen|zaehnen|jeweils|je)[\s,]*)*$/i

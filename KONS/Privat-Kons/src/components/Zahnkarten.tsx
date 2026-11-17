@@ -80,8 +80,8 @@ export default function Zahnkarten({ plan, setPlan, einst, rechnung }: Props) {
               {['komposit', 'inlay', 'goldhaemmer'].includes(z.therapie) && (
                 <Stepper label="Flächen" wert={z.flaechen ?? 2} min={1} max={z.therapie === 'komposit' ? 5 : 3} onChange={(n) => aendern(e.zahn, { flaechen: n })} />
               )}
-              {(z.therapie === 'endo' || z.therapie === 'revision') && (
-                <Stepper label="Kanäle" wert={z.kanaele ?? 1} min={1} max={5} onChange={(n) => aendern(e.zahn, { kanaele: n })} />
+              {(z.therapie === 'endo' || z.therapie === 'revision' || z.therapie === 'wsr') && (
+                <Stepper label={z.therapie === 'wsr' ? 'Wurzelspitzen' : 'Kanäle'} wert={z.kanaele ?? 1} min={1} max={5} onChange={(n) => aendern(e.zahn, { kanaele: n })} />
               )}
               {['endo', 'revision', 'inlay', 'bleaching'].includes(z.therapie) && (
                 <Stepper label="Sitzungen" wert={z.sitzungen ?? 2} min={1} max={6} onChange={(n) => aendern(e.zahn, { sitzungen: n })} />

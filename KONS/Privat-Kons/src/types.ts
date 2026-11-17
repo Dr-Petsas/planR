@@ -10,7 +10,7 @@ export type { Patient, Praxis } from './stammdaten'
 export type Therapie =
   | 'komposit' | 'inlay' | 'goldhaemmer'
   | 'endo' | 'revision' | 'vital'
-  | 'versiegelung' | 'aufbau' | 'infiltration' | 'veneer' | 'bleaching'
+  | 'versiegelung' | 'aufbau' | 'infiltration' | 'veneer' | 'bleaching' | 'wsr'
 
 /**
  * pkv: Privatpatient (Kostenvoranschlag).
@@ -35,7 +35,7 @@ export interface ListenEintrag {
 export interface ZahnLeistung {
   therapie: Therapie
   flaechen?: number // Füllung, Inlay, Veneer
-  kanaele?: number // Endo, Revision
+  kanaele?: number // Endo, Revision; WSR: resezierte Wurzelspitzen
   sitzungen?: number // Endo, Revision, Bleaching
   vital?: boolean // Endo: vitale Pulpa (2360) oder avital
   vitalArt?: VitalArt

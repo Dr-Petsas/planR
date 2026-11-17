@@ -5,15 +5,15 @@
 // zusammengefasst (Kofferdam einmal je Kieferhälfte und Sitzung, Mikroskop-
 // Zuschlag einmal je Behandlungstag usw.).
 
-import { KLASSE_FAKTOR, THERAPIE, ZUSATZ, ZUSAETZE, type Zusatz } from '../data/katalog'
+import { KLASSE_FAKTOR, STANDARD_MATERIAL, THERAPIE, ZUSATZ, ZUSAETZE, type Zusatz } from '../data/katalog'
 import type { Begruendung, Einstellungen, Plan, Rechnung, Region, ZahnErgebnis, ZahnLeistung, Zeile } from '../types'
 import { standardBegruendung } from './begruendung'
 import {
-  BEB, GOAE, GOAE_FAKTOR_TECHNIK, GOAE_PUNKTWERT, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE,
+  BEB, GOAE, GOAE_FAKTOR_TECHNIK, GOAE_NUR_EINFACH, GOAE_PUNKTWERT, GOZ_HOECHSTSATZ, GOZ_PUNKTWERT, GOZ_SCHWELLE,
   LASER_HOECHSTBETRAG, eigenKatalog, gozEinfach, gozPunkte, gozText, mwstZeile, runden,
 } from './listen'
 import { inlayLabor, type InlayAuftrag } from './inlaylabor'
-import { ALLE_ZAEHNE, kieferVon, regionVon } from './zahnschema'
+import { ALLE_ZAEHNE, istFrontzahn, kieferVon, regionVon } from './zahnschema'
 
 export const euro = (x: number) =>
   x.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -53,7 +53,7 @@ export const laserZuschlag = () => Math.min(LASER_HOECHSTBETRAG, gozEinfach('241
 
 /** Grundleistungen, neben denen der Mikroskop-Zuschlag 0110 stehen darf. */
 function mikroskopFaehig(z: ZahnLeistung) {
-  if (z.therapie === 'endo' || z.therapie === 'revision') return true
+  if (z.therapie === 'endo' || z.therapie === 'revision' || z.therapie === 'wsr') return true
   if (z.therapie === 'vital') return (z.vitalArt ?? 'indirekt') !== 'pulpotomie'
   if (z.therapie === 'aufbau') return !!z.aufbauStift
   return false
@@ -65,8 +65,10 @@ function verfuegbar(zu: Zusatz, z: ZahnLeistung, plan: Plan): boolean {
   const neben = plan.vereinbarung === 'gkvZusatz' && THERAPIE[z.therapie].kasse === 'bema'
   if (neben ? !zu.neben : zu.nurNeben) return false
   if (zu.id === 'nekrose') return z.therapie === 'endo' && z.vital === false
+  // avitale Endo führt die Trepanation 2390 schon als Grundleistung
+  if (zu.id === 'trepanation') return !(z.therapie === 'endo' && z.vital === false)
   if (zu.id === 'mikroskop') return mikroskopFaehig(z)
-  if ((zu.id === 'einlage' || zu.id === 'verschluss') && anzahlFuer(zu, z) === 0) return false
+  if ((zu.id === 'einlage' || zu.id === 'verschluss') && anzahlFuer(zu, z, plan.regler.stufe) === 0) return false
   return true
 }
 
@@ -74,6 +76,8 @@ function verfuegbar(zu: Zusatz, z: ZahnLeistung, plan: Plan): boolean {
 function vorgeschlagen(zu: Zusatz, z: ZahnLeistung, plan: Plan) {
   if (!zu.auto || plan.regler.stufe < zu.stufe) return false
   if (zu.id === 'anaesthesie' && z.therapie === 'endo') return z.vital !== false
+  // PDT schlägt der Planer nur bei der Wurzelbehandlung vor, an der Füllung bleibt sie Handwahl
+  if (zu.id === 'pdt') return z.therapie === 'endo' || z.therapie === 'revision'
   return true
 }
 
@@ -99,10 +103,12 @@ export function zusatzUmschalten(z: ZahnLeistung, stand: ZusatzStand): ZahnLeist
   return { ...z, zusatz, abgewaehlt }
 }
 
-function anzahlFuer(zu: Zusatz, z: ZahnLeistung): number {
-  const je = zu.anzahl ?? 1
-  switch (zu.menge) {
+function anzahlFuer(zu: Zusatz, z: ZahnLeistung, stufe: number): number {
+  const mehr = zu.mehr && stufe >= zu.mehr.stufe ? zu.mehr : undefined
+  const je = mehr?.anzahl ?? zu.anzahl ?? 1
+  switch (mehr?.menge ?? zu.menge) {
     case 'kanal': return kanaele(z) * je
+    case 'kanalSitzung': return kanaele(z) * sitzungen(z) * je
     case 'sitzung': return sitzungen(z) * je
     case 'zwischen': return (z.therapie === 'bleaching' ? sitzungen(z) : sitzungen(z) - 1) * je
     default: return je
@@ -115,11 +121,12 @@ function zusatzZeile(zu: Zusatz, anzahl: number, faktor: number, einst: Einstell
     case 'ANALOG': return analogZeile(zu.nr, faktor, anzahl, zu.titel)
     case 'GOAE': {
       const e = GOAE[zu.nr]
-      const einzel = runden(e.punkte * GOAE_PUNKTWERT * GOAE_FAKTOR_TECHNIK)
-      return { ebene: 'GOAE', nr: `Ä${zu.nr}`, text: `${e.text} (GOÄ)`, anzahl, faktor: GOAE_FAKTOR_TECHNIK, einzel, summe: runden(einzel * anzahl) }
+      const f = GOAE_NUR_EINFACH.has(zu.nr) ? 1 : GOAE_FAKTOR_TECHNIK
+      const einzel = runden(e.punkte * GOAE_PUNKTWERT * f)
+      return { ebene: 'GOAE', nr: `Ä${zu.nr}`, text: `${e.text} (GOÄ)`, anzahl, faktor: f, einzel, summe: runden(einzel * anzahl) }
     }
     case 'MAT': {
-      const m = einst.materialPreise.find((x) => x.id === zu.nr)
+      const m = einst.materialPreise.find((x) => x.id === zu.nr) ?? STANDARD_MATERIAL.find((x) => x.id === zu.nr)
       return preisZeile('MAT', 'Mat.', m?.name ?? zu.titel, (m?.preis ?? 0) * (KLASSE_FAKTOR[klasse] ?? 1), anzahl)
     }
     case 'ZUSCHLAG': {
@@ -132,7 +139,7 @@ function zusatzZeile(zu: Zusatz, anzahl: number, faktor: number, einst: Einstell
   }
 }
 
-function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, klasse: number, mehrschicht: boolean, laborEinzeln?: Zeile[]): { titel: string; zeilen: Zeile[] } {
+function grundleistung(zahn: string, z: ZahnLeistung, faktor: number, einst: Einstellungen, klasse: number, mehrschicht: boolean, laborEinzeln?: Zeile[]): { titel: string; zeilen: Zeile[] } {
   const f = flaechen(z)
   const k = kanaele(z)
   const kl = KLASSE_FAKTOR[klasse] ?? 1
@@ -188,12 +195,16 @@ function grundleistung(z: ZahnLeistung, faktor: number, einst: Einstellungen, kl
       return { titel: 'Kariesinfiltration', zeilen: [analogZeile('2060', faktor, 1, 'Kariesinfiltration')] }
     case 'veneer':
       return { titel: 'Direktes Kompositveneer', zeilen: [analogZeile('2120', faktor, 1, 'Direktes Kompositveneer')] }
+    case 'wsr': {
+      const nr = istFrontzahn(zahn) ? '3110' : '3120'
+      return { titel: `Wurzelspitzenresektion, ${k} ${k === 1 ? 'Wurzelspitze' : 'Wurzelspitzen'}`, zeilen: [gozZeile(nr, faktor, k)] }
+    }
     case 'bleaching':
       return { titel: `Internes Bleichen, ${sitzungen(z)} Sitzung${sitzungen(z) === 1 ? '' : 'en'}`, zeilen: [analogZeile('2360', faktor, sitzungen(z), 'Internes Bleichen eines devitalen Zahnes, je Sitzung')] }
   }
 }
 
-const ZAHNWEISE = new Set(['zahn', 'kanal', 'sitzung', 'zwischen'])
+const ZAHNWEISE = new Set(['zahn', 'kanal', 'kanalSitzung', 'sitzung', 'zwischen'])
 
 export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Einstellungen, laborEinzeln?: Zeile[]): ZahnErgebnis {
   const t = THERAPIE[z.therapie]
@@ -208,12 +219,12 @@ export function zahnRechnen(zahn: string, z: ZahnLeistung, plan: Plan, einst: Ei
   const faktor = z.faktor ?? plan.regler.faktor
   const chips = zusaetzeFuer(z, plan).filter((c) => c.aktiv)
   const mehrschicht = chips.some((c) => c.zusatz.id === 'mehrschicht')
-  const g = grundleistung(z, faktor, einst, plan.regler.materialKlasse, mehrschicht, laborEinzeln)
+  const g = grundleistung(zahn, z, faktor, einst, plan.regler.materialKlasse, mehrschicht, laborEinzeln)
   const neben = plan.vereinbarung === 'gkvZusatz' && t.kasse === 'bema'
   const zeilen = neben ? [] : g.zeilen
   for (const c of chips) {
     if (!ZAHNWEISE.has(c.zusatz.menge)) continue
-    const n = anzahlFuer(c.zusatz, z)
+    const n = anzahlFuer(c.zusatz, z, plan.regler.stufe)
     if (n > 0) zeilen.push({ ...zusatzZeile(c.zusatz, n, faktor, einst, plan.regler.materialKlasse), zusatz: c.zusatz.id })
   }
   for (const x of zeilen) x.zahn = zahn
@@ -298,6 +309,13 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     if (kiefer.has(zu.id)) neu(zu.id, kiefer.get(zu.id)!.size, zu.id)
     if (einmal.has(zu.id)) neu(zu.id, zu.menge === 'tag' ? (plan.behandlungstage > 0 ? tage : einmal.get(zu.id)!) : 1, zu.id)
   }
+  // OP-Zuschlag bei ambulantem Eingriff: einer je Behandlungstag, einfacher Satz, nach der höchstbewerteten Leistung (3110: 0500, 3120: 0510)
+  const wsrZaehne = plan.vereinbarung === 'gkvZusatz' ? [] : zaehneIds.filter((z) => plan.zaehne[z].therapie === 'wsr')
+  if (wsrZaehne.length && plan.regler.stufe >= 1) {
+    const nr = wsrZaehne.some((z) => !istFrontzahn(z)) ? '0510' : '0500'
+    const einzel = gozEinfach(nr)
+    begleit.push({ ebene: 'ZUSCHLAG', nr, text: 'Zuschlag bei nichtstationärer Durchführung zahnärztlich-chirurgischer Leistungen, einfacher Satz, je Behandlungstag', anzahl: 1, faktor: 1, einzel, summe: einzel, zusatz: 'opZuschlag' })
+  }
   const inlayZaehne = zaehneIds.filter((z) => inlayImPlan(plan, z))
   if (plan.abformung === 'scan' && inlayZaehne.length) {
     const bereiche = new Set(inlayZaehne.map(regionVon)).size
@@ -328,7 +346,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   if (alle.some((x) => x.ebene === 'ANALOG')) {
     hinweise.push('Analogleistungen nach § 6 Abs. 1 GOZ: die Bezugsziffer ist ein Vorschlag (BZÄK-Analogkatalog) und kann von der Praxis anders gewählt werden.')
   }
-  if (begleit.some((x) => x.ebene === 'ZUSCHLAG')) hinweise.push('Zuschläge 0110/0120 einmal je Behandlungstag, einfacher Satz.')
+  if (begleit.some((x) => x.ebene === 'ZUSCHLAG')) hinweise.push('Zuschläge (0110, 0120, 0500/0510) einmal je Behandlungstag, einfacher Satz.')
   if (zaehne.some((z) => z.ausgeschlossen)) hinweise.push('Füllungen bei Kassenpatienten gehören in den Füllungs-MKV-Planer – sie sind hier nicht berechnet.')
   if (labor.jeZahn.size) {
     hinweise.push(plan.abformung === 'scan'

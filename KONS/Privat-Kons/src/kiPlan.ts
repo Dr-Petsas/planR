@@ -30,7 +30,7 @@ export const FELDER: KiFeld<Plan>[] = [
 export const ZAHNFELDER: KiZahnFeld[] = [
   { name: 'therapie', text: 'Therapie an diesem Zahn', werte: { '': 'Zahn aus dem Plan nehmen', ...Object.fromEntries(THERAPIEN.map((t) => [t.id, t.titel])) } },
   { name: 'flaechen', text: 'Flächen (Komposit bis 5, Inlay, Goldhämmer und Veneer bis 3)', von: 1, bis: 5 },
-  { name: 'kanaele', text: 'Wurzelkanäle (Endo, Revision)', von: 1, bis: 5 },
+  { name: 'kanaele', text: 'Wurzelkanäle (Endo, Revision); bei wsr die Zahl der resezierten Wurzelspitzen', von: 1, bis: 5 },
   { name: 'sitzungen', text: 'Sitzungen (Endo, Revision, Inlay, Bleaching)', von: 1, bis: 6 },
   { name: 'vital', text: 'Endo an vitaler Pulpa (nein = avital)', ja: true },
   { name: 'vitalArt', text: 'Art der Vitalerhaltung', werte: { indirekt: 'indirekte Überkappung', direkt: 'direkte Überkappung', pulpotomie: 'Pulpotomie' } },
@@ -42,7 +42,7 @@ export const ZAHNFELDER: KiZahnFeld[] = [
 /** Welche Angaben zu welcher Therapie gehören. */
 const PASST: Record<string, Therapie[]> = {
   flaechen: ['komposit', 'inlay', 'goldhaemmer', 'veneer'],
-  kanaele: ['endo', 'revision'],
+  kanaele: ['endo', 'revision', 'wsr'],
   sitzungen: ['endo', 'revision', 'inlay', 'bleaching'],
   vital: ['endo'],
   vitalArt: ['vital'],

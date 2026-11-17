@@ -62,5 +62,9 @@ export const LASER_HOECHSTBETRAG = 68
 export const GOAE_PUNKTWERT = 0.0582873
 export const GOAE: Record<string, ListenEintrag> = {
   '5000': { nr: '5000', text: 'Röntgen Zähne, je Projektion', punkte: 50 },
+  '5370': { nr: '5370', text: 'Computergesteuerte Tomographie im Kopfbereich (digitale Volumentomografie)', punkte: 2000 },
+  '5377': { nr: '5377', text: 'Zuschlag für computergesteuerte Analyse einschließlich 3D-Rekonstruktion', punkte: 800 },
 }
+/** GOÄ-Zuschläge, die nur mit dem einfachen Satz berechnungsfähig sind. */
+export const GOAE_NUR_EINFACH = new Set(['5377'])
 export const GOAE_FAKTOR_TECHNIK = 1.8

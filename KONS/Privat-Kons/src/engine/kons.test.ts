@@ -20,7 +20,7 @@ describe('Grundleistungen nach GOZ', () => {
   it('Endo avital: Trepanation 2390 statt 2360, ab Stufe 2 nekrotisches Gewebe analog', () => {
     const z = { '36': { therapie: 'endo', kanaele: 3, vital: false } as ZahnLeistung }
     expect(nrn(plan(z), '36')).toEqual(['2390', '2410', '2440'])
-    expect(nrn(plan(z, 2), '36')).toContain('2360a')
+    expect(nrn(plan(z, 2), '36')).toContain('2180a')
   })
 
   it('Revision: alte Wurzelfüllung analog 2300a je Kanal', () => {
@@ -166,5 +166,54 @@ describe('Inlay-Labor aus dem Praxiskatalog', () => {
     expect(chairside.zaehne[0].zeilen.map((x) => x.nr)).toEqual(['2160', '2197', 'Labor'])
     expect(chairside.begleit.filter((x) => x.ebene === 'LABOR').map((x) => x.nr)).toEqual(['MwSt.'])
     expect(rechnen(plan(inlays, 0, 'gkvZusatz'), mitKatalog).begleit.filter((x) => x.ebene === 'LABOR')).toEqual([])
+  })
+})
+
+describe('Röntgen, Exoten und WSR', () => {
+  const zeilen = (p: Plan) => { const r = rechnen(p, einst); return [...r.zaehne.flatMap((z) => z.zeilen), ...r.begleit] }
+  const finde = (p: Plan, nr: string) => zeilen(p).find((x) => x.nr === nr)
+
+  it('Füllung: ab Stufe 1 ein Röntgenbild je Kieferhälfte', () => {
+    expect(finde(plan({ '36': { therapie: 'komposit', flaechen: 3 }, '37': { therapie: 'komposit', flaechen: 2 } }, 1), 'Ä5000')).toMatchObject({ anzahl: 1, faktor: 1.8 })
+    expect(finde(plan({ '36': { therapie: 'komposit', flaechen: 3 } }, 0), 'Ä5000')).toBeUndefined()
+  })
+
+  it('Endo: 2400 und 2420 ab Stufe 2 je Kanal und Sitzung, Trepanation nur am vitalen Zahn zusätzlich', () => {
+    const z = { '16': { therapie: 'endo', kanaele: 4, vital: true, sitzungen: 2 } as ZahnLeistung }
+    expect(finde(plan(z, 1), '2400')).toMatchObject({ anzahl: 4 })
+    expect(finde(plan(z, 2), '2400')).toMatchObject({ anzahl: 8 })
+    expect(finde(plan(z, 2), '2420')).toMatchObject({ anzahl: 8 })
+    expect(finde(plan(z, 2), '2390')).toMatchObject({ anzahl: 1 })
+    const avital = { '16': { ...z['16'], vital: false } }
+    expect(zeilen(plan(avital, 2)).filter((x) => x.nr === '2390')).toHaveLength(1)
+  })
+
+  it('Endo Stufe 3: DVT mit 5377 nur einfach, PDT nur an der Wurzelbehandlung', () => {
+    const p = plan({ '16': { therapie: 'endo', kanaele: 4, vital: true, sitzungen: 2 }, '36': { therapie: 'komposit', flaechen: 3 } }, 3)
+    expect(finde(p, 'Ä5370')).toMatchObject({ anzahl: 1, faktor: 1.8, summe: 209.83 })
+    expect(finde(p, 'Ä5377')).toMatchObject({ anzahl: 1, faktor: 1, summe: 46.63 })
+    expect(zeilen(p).filter((x) => x.nr === '2430a')).toHaveLength(1)
+  })
+
+  it('WSR: 3120 je Wurzelspitze am Seitenzahn, 3110 am Frontzahn, retrograd 2410/2440, OP-Zuschlag einmal', () => {
+    const r = rechnen(plan({ '26': { therapie: 'wsr', kanaele: 3 }, '11': { therapie: 'wsr', kanaele: 1 } }, 1), einst)
+    const z26 = r.zaehne.find((z) => z.zahn === '26')!.zeilen
+    expect(z26.find((x) => x.nr === '3120')).toMatchObject({ anzahl: 3 })
+    expect(z26.find((x) => x.nr === '2410')).toMatchObject({ anzahl: 3 })
+    expect(z26.find((x) => x.nr === '2440')).toMatchObject({ anzahl: 3 })
+    expect(r.zaehne.find((z) => z.zahn === '11')!.zeilen[0]).toMatchObject({ nr: '3110', anzahl: 1 })
+    expect(r.begleit.filter((x) => x.nr === '0510' || x.nr === '0500')).toMatchObject([{ nr: '0510', anzahl: 1, faktor: 1 }])
+  })
+
+  it('WSR: Defektauffüllung 4110 mit Knochenersatzmaterial ab Stufe 2, Membran ab Stufe 3; Zyste und Eigenknochen nur von Hand', () => {
+    const z = { '26': { therapie: 'wsr', kanaele: 2 } as ZahnLeistung }
+    expect(finde(plan(z, 1), '4110')).toBeUndefined()
+    expect(finde(plan(z, 2), '4110')).toMatchObject({ anzahl: 1 })
+    expect(zeilen(plan(z, 2)).some((x) => x.ebene === 'MAT' && x.summe === 85)).toBe(true)
+    expect(finde(plan(z, 2), '4138')).toBeUndefined()
+    expect(finde(plan(z, 3), '4138')).toMatchObject({ anzahl: 1 })
+    expect(finde(plan(z, 3), '3190')).toBeUndefined()
+    expect(finde(plan({ '26': { ...z['26'], zusatz: ['zyste', 'eigenknochen'] } }, 3), '3190')).toBeDefined()
+    expect(finde(plan({ '26': { ...z['26'], zusatz: ['zyste', 'eigenknochen'] } }, 3), '9090')).toBeDefined()
   })
 })

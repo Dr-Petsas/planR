@@ -14,6 +14,7 @@ export const ZIFFER: Partial<Record<Therapie, { feld: 'flaechen' | 'kanaele' | '
   goldhaemmer: { feld: 'flaechen', max: 3 },
   endo: { feld: 'kanaele', max: 5 },
   revision: { feld: 'kanaele', max: 5 },
+  wsr: { feld: 'kanaele', max: 4 },
   bleaching: { feld: 'sitzungen', max: 6 },
 }
 
@@ -24,6 +25,7 @@ export function standardLeistung(therapie: Therapie, zahn: string): ZahnLeistung
     case 'goldhaemmer': return { therapie, flaechen: 1 }
     case 'endo': return { therapie, kanaele: kanaeleTypisch(zahn), vital: true, sitzungen: 2 }
     case 'revision': return { therapie, kanaele: kanaeleTypisch(zahn), sitzungen: 2 }
+    case 'wsr': return { therapie, kanaele: 1 }
     case 'vital': return { therapie, vitalArt: 'indirekt' }
     case 'bleaching': return { therapie, sitzungen: 2 }
     default: return { therapie }
