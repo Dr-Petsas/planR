@@ -9,7 +9,7 @@ import {
 import { planerZuModul } from './src/planer.ts'
 import { behandlungsschritte, positionenAusFassung, schritteAnzahl } from './src/schritte.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
-import { einstellungenPruefen, LEER, MANDANT_RE, pvsVon } from './src/einstellungen.ts'
+import { einstellungenPruefen, LEER, MANDANT_RE, pvsFreiKonten, pvsStehtFest, pvsVon } from './src/einstellungen.ts'
 import {
   PVS_BEFUND, PVS_OFFEN, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, bridgePvsGemeldet, bridgeSollPvs, planInsPvsMoeglich, pvsFuerBridge, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk, type PvsWahl,
 } from './src/pvs.ts'
@@ -1561,6 +1561,10 @@ const eigeneSeite = (req: IncomingMessage) =>
   !req.headers.origin || String(req.headers.origin) === `${req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http'}://${req.headers.host}`
 
 /** Einstellungen lesen (auch die Planer) und speichern (nur die Übersicht). */
+const PVS_FREI = pvsFreiKonten(process.env.PLANR_PVS_FREI)
+/** Entwicklerkonto: darf zwischen allen Praxisprogrammen wechseln */
+const pvsFrei = (w: Wer) => PVS_FREI.has(w.konto.email.toLowerCase())
+
 function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
   const mandant = w.mandant
   if (req.method === 'GET') {
@@ -1568,7 +1572,8 @@ function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
       .then(([e, bridge]) => {
         const stand = bridge?.stand
         const agent = bridge ? { verbunden: !!stand, pvs: stand?.pvs, version: stand?.version, lokal: !!w.ort } : null
-        json(res, 200, { ok: true, mandant, einstellungen: e, agent, admin: w.konto.admin })
+        const pvsFest = pvsStehtFest({ pvs: e.pvs, bridge: !!bridge, frei: pvsFrei(w) })
+        json(res, 200, { ok: true, mandant, einstellungen: e, agent, admin: w.konto.admin, pvsFest })
       })
       .catch(() => json(res, 500, { ok: false }))
     return
@@ -1577,6 +1582,10 @@ function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
   if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Einstellungen ändern dürfen nur Praxis-Admins.' })
   lesenBody(req, 20_000).then((text) => exklusiv(async () => {
     const neu = { ...einstellungenPruefen(JSON.parse(text)), geaendert: new Date().toISOString() }
+    const [bisher, bridge] = await Promise.all([einstellungenImVerbund(pvsOrt(w)), bridgeFuer(pvsOrt(w))])
+    if (neu.pvs !== bisher.pvs && pvsStehtFest({ pvs: bisher.pvs, bridge: !!bridge, frei: pvsFrei(w) })) {
+      return json(res, 403, { ok: false, meldung: `Das Praxisprogramm ist fest eingestellt (${pvsVon(bisher.pvs)?.name ?? bisher.pvs}). Für einen Wechsel rufen Sie uns an: 0211 3029 3035.` })
+    }
     const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
     await jsonSchreiben(EINSTELLUNGEN, { ...alle, [pvsOrt(w)]: neu })
     json(res, 200, { ok: true, mandant, einstellungen: neu })

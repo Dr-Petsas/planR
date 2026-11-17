@@ -121,7 +121,7 @@ const SCHRITTE_VOLL = ['Praxissystem', 'Installieren', 'Verbindung', 'Preise & P
  * Assistent als eigenes Fenster über der Planliste. `geaendert` meldet neue Einstellungen bzw. Katalog an die Übersicht,
  * `importieren` öffnet am Ende die Patientensuche.
  */
-export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellungen; geaendert: () => void; importieren: () => void; bridgeLaden?: boolean }) {
+export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellungen; geaendert: () => void; importieren: () => void; bridgeLaden?: boolean; pvsFest?: boolean }) {
   document.querySelector('.ein-schleier')?.remove()
   let schritt = 0
   let einst = o.einstellungen
@@ -180,7 +180,9 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
   function inhalt(): string {
     const p = pvs()
     switch (schrittName()) {
-      case 'Praxissystem': return `
+      case 'Praxissystem': return o.pvsFest && p ? `
+        <h3>Ihr Praxisverwaltungssystem: ${esc(p.name)}</h3>
+        <p class="ein-text">PlanR holt Patienten und HKPs von dort und gibt fertige Pläne zurück. Das Praxissystem ist fest eingestellt – für einen Wechsel rufen Sie uns an: 0211 3029 3035.</p>` : `
         <h3>Welches Praxisverwaltungssystem nutzen Sie?</h3>
         <p class="ein-text">PlanR holt Patienten und HKPs von dort und gibt fertige Pläne zurück.</p>
         <div class="ein-pvs">${PVS_LISTE.map((x) => `<button type="button" class="ein-pvs-wahl${x.id === einst.pvs ? ' an' : ''}" data-pvs="${x.id}">

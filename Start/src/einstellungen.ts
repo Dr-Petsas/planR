@@ -48,4 +48,14 @@ export function einstellungenPruefen(roh: unknown): Einstellungen {
   }
 }
 
+/** Konten, die das Praxisprogramm jederzeit wechseln dürfen (Entwicklung); kommagetrennte E-Mail-Adressen */
+export const pvsFreiKonten = (liste: string | undefined) =>
+  new Set((liste ?? 'contact@maik-music.io').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean))
+
+/**
+ * Eine Praxis hat genau ein Praxisprogramm: Ist es gewählt und die Bridge eingerichtet, steht es fest.
+ * Davor bleibt die Wahl offen, damit ein Fehlgriff im Assistenten korrigierbar ist.
+ */
+export const pvsStehtFest = (o: { pvs: string; bridge: boolean; frei: boolean }) => !!o.pvs && o.bridge && !o.frei
+
 export const MANDANT_RE = /^[a-z0-9-]{1,40}$/

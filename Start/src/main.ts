@@ -60,6 +60,8 @@ const aboFeld: Record<string, string | boolean> = {}
 /** Cache-Bruch fürs Profilfoto nach Hochladen oder Entfernen */
 let fotoStand = 0
 let einstellungen: Einstellungen = LEER
+/** Praxisprogramm steht fest (Bridge eingerichtet, kein Entwicklerkonto): Anzeige statt Auswahl */
+let pvsFest = false
 /** Bearbeitungsstand im offenen Dialog */
 let entwurf: Einstellungen = LEER
 /** PlanR-Bridge auf dem Praxisserver (null = für diesen Mandanten keine eingerichtet) */
@@ -839,12 +841,14 @@ function einstellungKarte(): string {
           <h2>Einstellungen${ich.konto.admin ? '' : ' <small>nur lesen – ändern darf der Praxis-Admin</small>'}</h2>
           <button type="button" data-wahl-zu aria-label="Schließen">✕</button>
         </div>
-        <label class="feld">Praxisverwaltungssystem (PVS)
+        ${pvsFest && p
+    ? `<p class="feld">Praxisverwaltungssystem (PVS)<br><b>${esc(p.name)}</b> · ${esc(p.hersteller)}</p>`
+    : `<label class="feld">Praxisverwaltungssystem (PVS)
           <select data-pvs>
             <option value=""${e.pvs ? '' : ' selected'}>– bitte wählen –</option>
             ${optionen}
           </select>
-        </label>
+        </label>`}
         ${p ? `<p class="pvs-info">Übergabe: ${esc(p.weg)}<span class="marke-bridge ${p.bereit ? 'bereit' : 'bald'}">${p.bereit ? 'Anbindung verfügbar' : 'Anbindung in Vorbereitung'}</span></p>` : ''}
         <label class="schalter${p ? '' : ' aus'}">
           <input type="checkbox" data-bridge${e.bridge ? ' checked' : ''}${p ? '' : ' disabled'}>
@@ -1942,7 +1946,7 @@ function zeichnen() {
   const form = app.querySelector<HTMLFormElement>('[data-einst]')
   if (form) {
     form.addEventListener('submit', (ev) => { ev.preventDefault(); void einstellungenSpeichern() })
-    form.querySelector<HTMLSelectElement>('[data-pvs]')!.addEventListener('change', (ev) => {
+    form.querySelector<HTMLSelectElement>('[data-pvs]')?.addEventListener('change', (ev) => {
       const pvs = (ev.target as HTMLSelectElement).value
       entwurf = { ...entwurf, pvs, bridge: pvs ? entwurf.bridge : false }
       zeichnen()
@@ -2301,8 +2305,9 @@ async function katalogLaden() {
 
 async function einstellungenLaden() {
   try {
-    const d = await (await fetch('/api/einstellungen', { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent }
+    const d = await (await fetch('/api/einstellungen', { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent; pvsFest?: boolean }
     if (d.einstellungen) einstellungen = d.einstellungen
+    pvsFest = d.pvsFest === true
     agent = d.agent ?? null
   } catch { /* Maske startet leer */ }
   await katalogLaden()
@@ -2314,6 +2319,7 @@ async function einrichtungZeigen(bridgeLaden = false) {
   einrichtungOeffnen({
     admin: ich.konto.admin,
     bridgeLaden,
+    pvsFest,
     einstellungen,
     geaendert: () => void einstellungenLaden().then(zeichnen),
     importieren: () => app.querySelector<HTMLButtonElement>('[data-import-neu]')?.click(),
