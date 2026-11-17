@@ -94,10 +94,10 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
 
 /* Eine linke Spalte wie im Kassen-HKP (components/Handy.tsx, Seitenleiste): Einstellungen und Eingabe untereinander mit eigenem Rollbalken, der Plan groß daneben */
 .seitenleiste[hidden] { display: none; }
-@media screen and (min-width: 1280px) {
+@media screen and (min-width: 1024px) {
   .kopfbereich:has(> .seitenleiste) { position: sticky; top: 0; }
   .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche {
-    grid-template-columns: clamp(560px, 43vw, 690px) minmax(0, 1fr); gap: 0 20px; padding: 0 20px 0 0; align-items: start;
+    grid-template-columns: clamp(440px, 43vw, 690px) minmax(0, 1fr); gap: 0 20px; padding: 0 20px 0 0; align-items: start;
   }
   .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche > .editor {
     position: sticky; top: var(--kopf-h, 56px); box-sizing: border-box;
@@ -119,6 +119,16 @@ html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: 
   .seitenleiste label { white-space: normal; }
   .seitenleiste .pruefmodul { margin: 0; order: 9; }
   .seitenleiste .pruefmodul > summary { flex-wrap: wrap; }
+}
+/* Tablet (841 bis 1279 px): dieselbe Aufteilung, das Blatt bleibt A4 und wird in seine Spalte eingepasst (Handy.tsx, einpassen) */
+@media screen and (min-width: 841px) and (max-width: 1279px) {
+  .kv-blatt, .ef2, .a4 { zoom: var(--handy-zoom, 1); }
+  .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche { gap: 0 12px; padding: 0 12px 0 0; }
+  .kopfbereich:has(> .seitenleiste) ~ .arbeitsflaeche > .editor { padding: 10px 8px 24px 10px; }
+  .kopfbereich:has(> .seitenleiste) > .kopfleiste { flex-wrap: wrap; gap: 6px 14px; padding: 8px 14px; }
+  .kopfbereich:has(> .seitenleiste) > .kopfleiste .aktionen { flex-wrap: wrap; }
+  .editor .zs-reihe { grid-template-columns: 26px repeat(16, minmax(0, 1fr)); gap: 2px; }
+  .editor .zs-feld { font-size: 10px; border-radius: 4px; }
 }
 @media print { .seitenleiste { display: none !important; } }
 

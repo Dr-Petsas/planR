@@ -2,8 +2,8 @@
 import type { Einstellungen, Plan } from './types'
 import { kalkulieren, positionen, type Kalkulation } from './engine/berechnung'
 import { kronenEinheiten, werkstoffVon, WERKSTOFFE, WERKSTOFFE_FUER, type KronenEinheit, type Werkstoff } from './engine/material'
-import { BEFUND_KUERZEL, PLANUNG_KUERZEL } from './engine/zahnschema'
-import { freiAnwenden, kiDienst, zahnText, type KiPosition, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
+import { BEFUND_KUERZEL, OBERKIEFER, PLANUNG_KUERZEL, UNTERKIEFER } from './engine/zahnschema'
+import { freiAnwenden, kiDienst, zahnText, zielSchalter, zielSetzen, type KiZiel, type KiPosition, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
 
 export function kiZeilen(kalk: Kalkulation): KiPosition[] {
   return [...kalk.honorar, ...kalk.labor, ...kalk.material].map((z) => ({
@@ -21,6 +21,13 @@ const WERKSTOFF_NAMEN = Object.keys(WERKSTOFFE) as Werkstoff[]
 /** Einheiten mit Kronenmaterial, wie die Karte »Kronenmaterial« der Seite sie zeigt. */
 const einheitenVon = (plan: Plan): KronenEinheit[] => kronenEinheiten(positionen(plan).positionen.filter((p) => p.ebene === 'BEB'))
 
+const zielVon = (einst: Einstellungen): KiZiel<Plan> => ({
+  was: 'GOZ-Faktor', gesamt: (p) => kalkulieren(p, einst).gesamt,
+  lesen: (p) => (p.regler.gozFaktor > 0 ? p.regler.gozFaktor : einst.gozFaktor),
+  setzen: (p, f) => ({ ...p, regler: { ...p.regler, gozFaktor: f <= einst.gozFaktor ? 0 : f } }),
+  von: einst.gozFaktor,
+})
+
 function schalter(plan: Plan): KiSchalter[] {
   const einheiten = einheitenVon(plan)
   const stoffe = [...new Set(einheiten.map((e) => werkstoffVon(e, plan.werkstoffe ?? {}).werkstoff))]
@@ -32,7 +39,43 @@ function schalter(plan: Plan): KiSchalter[] {
     { name: 'implantat.loeffel', text: 'Löffel bei Implantatabformung', wert: plan.implantat.loeffel, werte: ['geschlossen', 'offen'] },
     { name: 'implantat.abutment', text: 'Abutment auf Implantaten', wert: plan.implantat.abutment, werte: ['standard', 'individuell', 'keramik'] },
     { name: 'bemerkung', text: 'Bemerkung auf dem Plan (freier Text)', wert: plan.bemerkung ?? '' },
+    { name: 'bruecke', text: 'Brücke "von A auf B" in EINEM Schritt, statt einzelner Zahn-Schritte. Wert: beide Pfeilerzähne mit Bindestrich, z. B. "14-16"; nur wenn der Arzt die Ausführung nennt, dahinter K (Metall), KV (verblendet) oder KM (vollkeramisch), z. B. "14-16 KM"', wert: '' },
   ]
+}
+
+const GLIED: Record<string, string> = { K: 'B', KV: 'BV', KM: 'BM' }
+const LUECKE = ['f', 'x', 'b', 'bw', 'e', 'ew']
+
+/** Die Zähne der Spanne in Kieferreihenfolge; leer, wenn die Angabe keine Spanne in einem Kiefer ist. */
+function brueckeReihe(wert: string): string[] {
+  const [a = '', b = ''] = (wert.trim().split(' ')[0] ?? '').split('-').map((x) => x.trim())
+  const kiefer = [OBERKIEFER, UNTERKIEFER].find((k) => k.includes(a) && k.includes(b))
+  if (!kiefer || a === b) return []
+  const [von, bis] = [kiefer.indexOf(a), kiefer.indexOf(b)].sort((x, y) => x - y)
+  return kiefer.slice(von, bis + 1)
+}
+
+/** Brücke über eine Spanne: Endzähne werden Pfeiler, alles dazwischen Brückenglied; eine Ausführung für die ganze Brücke. */
+export function brueckeSetzen(plan: Plan, wert: string): { plan: Plan; text: string } | string {
+  const [spanne = '', art = ''] = wert.trim().split(' ').filter(Boolean)
+  const reihe = brueckeReihe(spanne)
+  if (!reihe.length) return 'Für die Brücke brauche ich zwei Pfeilerzähne im selben Kiefer, zum Beispiel 14 und 16.'
+  if (reihe.length < 3) return `Zwischen ${reihe[0]} und ${reihe[reihe.length - 1]} liegt kein Zahn: dort gibt es nichts zu überbrücken.`
+  const pfeiler = [reihe[0], reihe[reihe.length - 1]]
+  for (const z of pfeiler) if (LUECKE.includes(plan.zaehne[z]?.B ?? '')) return `Zahn ${z} fehlt laut Befund und kann kein Brückenpfeiler sein.`
+  const klasse = art.toUpperCase()
+  if (klasse && !GLIED[klasse]) return 'Als Ausführung der Brücke kenne ich K (Metall), KV (vestibulär verblendet) und KM (vollkeramisch / vollverblendet).'
+  const k = klasse || pfeiler.map((z) => plan.zaehne[z]?.TP ?? '').find((tp) => GLIED[tp]) || 'KM'
+  const zaehne = { ...plan.zaehne }
+  const werkstoffe = { ...(plan.werkstoffe ?? {}) }
+  for (const z of reihe) {
+    const alt = zaehne[z] ?? { B: '', TP: '' }
+    const tp = pfeiler.includes(z) ? k : GLIED[k]
+    if (alt.TP !== tp) delete werkstoffe[z]
+    zaehne[z] = { B: pfeiler.includes(z) ? alt.B : (LUECKE.includes(alt.B) ? alt.B : 'f'), TP: tp }
+  }
+  const mitte = reihe.slice(1, -1)
+  return { plan: { ...plan, zaehne, werkstoffe }, text: `Brücke ${reihe[0]}–${reihe[reihe.length - 1]}: Pfeiler ${pfeiler.join(' und ')} (${k}), Brückenglied ${mitte.join(', ')} (${GLIED[k]})` }
 }
 
 export const ZAHNFELDER: KiZahnFeld[] = [
@@ -91,11 +134,11 @@ export function zeBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): Pl
     angaben: {
       zaehne: zaehne.join('; ') || 'im Zahnschema ist noch nichts eingetragen',
       kronenmaterial: einheitenVon(plan).map((x) => { const w = werkstoffVon(x, plan.werkstoffe ?? {}); return `${x.zahn}: ${WERKSTOFFE[w.werkstoff].kurz}${w.gewaehlt ? '' : ' (Vorgabe, noch nicht gewählt)'}` }).join('; ') || 'keine Einheit mit Kronenmaterial',
-      faktor: `Standard GOZ ${einst.gozFaktor}`,
+      faktor: `GOZ-Faktor des Plans ${plan.regler.gozFaktor > 0 ? plan.regler.gozFaktor : einst.gozFaktor}`,
       ...(kalk.nichtAngesetzt.length ? { nichtAngesetzt: kalk.nichtAngesetzt.join('; ') } : {}),
       ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
     },
-    schalter: schalter(plan),
+    schalter: [...schalter(plan), ...zielSchalter(plan, zielVon(einst))],
     zahnfelder: ZAHNFELDER,
     hinweise: [],
   }
@@ -104,6 +147,7 @@ export function zeBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): Pl
 function schalterSetzen(plan: Plan, name: string, wert: boolean | string | number): { plan: Plan; text: string } | string {
   const jetzt = schalter(plan).find((s) => s.name === name)
   if (!jetzt) return 'Diese Einstellung gibt es in diesem Plan nicht.'
+  if (name === 'bruecke') return brueckeSetzen(plan, String(wert))
   if (name === 'bemerkung') {
     const neu = String(wert).trim().slice(0, 600)
     if (neu === (plan.bemerkung ?? '')) return 'Die Bemerkung steht schon so im Plan.'
@@ -128,7 +172,10 @@ function schalterSetzen(plan: Plan, name: string, wert: boolean | string | numbe
 
 export function zeAnwenden(plan: Plan, einst: Einstellungen, schritte: KiSchritt[]): { plan: Plan; getan: string[]; nicht: string[] } {
   const vorher = kalkulieren(plan, einst)
-  const r = freiAnwenden(plan, schritte, kiZeilen(vorher), { ebenen: ['GOZ', 'BEB', 'MAT'], maxFaktor: 3.5, schalter: schalterSetzen, zahnfelder: () => ZAHNFELDER, zahn: zahnSetzen })
+  // Die Brücke plant ihre Spanne selbst: Zahn-Schritte für dieselben Zähne im selben Zug würden ihr Befunde wegnehmen.
+  const spannen = schritte.flatMap((s) => (s.op === 'schalter' && s.name === 'bruecke' ? [brueckeReihe(String(s.wert))] : []))
+  schritte = schritte.filter((s) => !(s.op === 'zahn' && spannen.some((r) => r.includes(s.zahn))))
+  const r = freiAnwenden(plan, schritte, kiZeilen(vorher), { ebenen: ['GOZ', 'BEB', 'MAT'], maxFaktor: 3.5, schalter: (p, name, wert) => (name === 'zielbetrag' ? zielSetzen(p, zielVon(einst), wert) : schalterSetzen(p, name, wert)), zahnfelder: () => ZAHNFELDER, zahn: zahnSetzen })
   let neu = r.plan
   let kalk = kalkulieren(neu, einst)
   const alt = new Set(plan.manuell.map((m) => m.id))

@@ -2,7 +2,7 @@
 import type { Einstellungen, Plan, Rechnung, Therapie, ZahnLeistung } from './types'
 import { THERAPIE, THERAPIEN } from './data/katalog'
 import { rechnen } from './engine/mkv'
-import { feldSetzen, felderSchalter, type KiFeld } from './planKi'
+import { feldSetzen, felderSchalter, zielSchalter, zielSetzen, type KiFeld, type KiZiel } from './planKi'
 import { kiDienst, listenZeilen, zahnText, zahnWerte, type KiPosition, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
 
 const ebene = (e: string) => (e === 'ANALOG' ? 'GOZ' : e)
@@ -78,13 +78,16 @@ export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Pl
 
 export function mkvKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einstellungen }, schreiben: (plan: Plan) => void): PlanKiDienst {
   const rechnung = (plan: Plan) => rechnen(plan, lesen().einst)
+  const summe = (plan: Plan) => { const r = rechnung(plan); return r.mehrkosten + r.privat7Summe }
+  // Beide GOZ-Regler (plastische Füllungen und Inlays) laufen gemeinsam; in den Festbetrags-Modellen ändert der Faktor nichts, dann fehlt der Schalter.
+  const ziel: KiZiel<Plan> = { was: 'GOZ-Faktor (Füllungen und Inlays gemeinsam)', gesamt: summe, lesen: (p) => p.regler.faktor, setzen: (p, f) => ({ ...p, regler: { ...p.regler, faktor: f, inlayFaktor: f } }) }
   const anwenden = (plan: Plan, schritte: KiSchritt[]) => {
     let p = plan
     const getan: string[] = []
     const nicht: string[] = []
     for (const s of schritte) {
       if (s.op === 'schalter') {
-        const r = feldSetzen(FELDER, p, s.name, s.wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.'
+        const r = s.name === 'zielbetrag' ? zielSetzen(p, ziel, s.wert) : feldSetzen(FELDER, p, s.name, s.wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.'
         if (typeof r === 'string') nicht.push(r)
         else { p = r.plan; getan.push(r.text) }
         continue
@@ -99,7 +102,7 @@ export function mkvKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einst
   }
   return kiDienst<Plan>({
     lesen, schreiben, anwenden,
-    gesamt: (plan) => { const r = rechnung(plan); return r.mehrkosten + r.privat7Summe },
+    gesamt: summe,
     blick: (plan, gesperrt): PlanBlick => {
     const r = rechnung(plan)
     return {
@@ -114,7 +117,7 @@ export function mkvKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einst
         aufbau: 'Alle Zeilen errechnet der Planer aus Therapie und Flächen je Zahn und den Reglern. Freie Positionen nimmt dieser Plan nicht auf. Ich kann Füllungen je Zahn eintragen, ändern und herausnehmen und die Regler und Angaben aus SCHALTER setzen.',
         ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
       },
-      schalter: felderSchalter(FELDER, plan), zahnfelder: ZAHNFELDER, hinweise: [],
+      schalter: [...felderSchalter(FELDER, plan), ...zielSchalter(plan, ziel)], zahnfelder: ZAHNFELDER, hinweise: [],
     }
     },
   })

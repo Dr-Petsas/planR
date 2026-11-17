@@ -343,6 +343,60 @@ export function feldSetzen<P>(felder: KiFeld<P>[], plan: P, name: string, wert: 
   return { plan: f.setzen(plan, neu as never), text }
 }
 
+/**
+ * Zielbetrag eines privaten Plans: die Gesamtsumme folgt einem Faktor des Plans (dem Regler der Seite).
+ * Die KI-Zeile nennt den Wunschbetrag, der Planer stellt den Faktor passend ein.
+ */
+export interface KiZiel<P> {
+  gesamt: (plan: P) => number
+  lesen: (plan: P) => number
+  setzen: (plan: P, faktor: number) => P
+  /** Name des Faktors in der Antwort, z. B. »GOZ-Faktor« */
+  was: string
+  von?: number
+  bis?: number
+}
+const geld = (x: number) => `${x.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+const zielStufen = <P>(z: KiZiel<P>) => {
+  const von = z.von ?? 1
+  const bis = z.bis ?? 3.5
+  return Array.from({ length: Math.round((bis - von) * 10) + 1 }, (_, i) => Math.round((von + i / 10) * 10) / 10)
+}
+
+/** SCHALTER »zielbetrag«; fehlt, wenn der Faktor an der Summe dieses Plans nichts ändert. */
+export function zielSchalter<P>(plan: P, z: KiZiel<P>): KiSchalter[] {
+  const stufen = zielStufen(z)
+  const min = z.gesamt(z.setzen(plan, stufen[0]))
+  const max = z.gesamt(z.setzen(plan, stufen[stufen.length - 1]))
+  if (!(max - min > 0.005)) return []
+  return [{
+    name: 'zielbetrag',
+    text: `Zielbetrag: gewünschte Gesamtsumme dieses Plans in Euro; der Planer stellt dafür den ${z.was} zwischen ${zahl(stufen[0])} und ${zahl(stufen[stufen.length - 1])} passend ein (möglich ${geld(min)} bis ${geld(max)}; Labor, Material und Positionen mit eigenem Faktor oder festem Preis bleiben)`,
+    wert: Math.round(z.gesamt(plan) * 100) / 100,
+  }]
+}
+
+/** Stellt den Faktor so, dass die Gesamtsumme dem Wunschbetrag am nächsten kommt. */
+export function zielSetzen<P>(plan: P, z: KiZiel<P>, wert: boolean | string | number): { plan: P; text: string } | string {
+  if (typeof wert !== 'number' || !(wert > 0)) return 'Zielbetrag: ich brauche die gewünschte Gesamtsumme als Betrag in Euro.'
+  const stufen = zielStufen(z)
+  const stand = stufen.map((f) => ({ f, summe: z.gesamt(z.setzen(plan, f)) }))
+  const min = stand[0].summe
+  const max = stand[stand.length - 1].summe
+  if (!(max - min > 0.005)) return `Zielbetrag: der ${z.was} ändert an der Summe dieses Plans nichts.`
+  if (wert < min - 0.005 || wert > max + 0.005) {
+    return `Zielbetrag ${geld(wert)}: über den ${z.was} sind ${geld(min)} bis ${geld(max)} möglich. Für ${wert < min ? 'weniger' : 'mehr'} müsste sich am Umfang des Plans etwas ändern. Ich habe nichts verstellt.`
+  }
+  const best = stand.reduce((a, b) => (Math.abs(b.summe - wert) < Math.abs(a.summe - wert) ? b : a))
+  const jetzt = z.lesen(plan)
+  if (best.f === jetzt && Math.abs(z.gesamt(plan) - best.summe) < 0.005) return `Zielbetrag ${geld(wert)}: näher als ${geld(best.summe)} (${z.was} ${zahl(best.f)}) geht es in Zehntelschritten nicht; der Plan steht schon so.`
+  const genau = Math.abs(best.summe - wert) < 0.005
+  return {
+    plan: z.setzen(plan, best.f),
+    text: `Zielbetrag ${geld(wert)}: ${z.was} ${zahl(best.f)}, Gesamtsumme ${geld(best.summe)}${genau ? '' : ' (näher geht es in Zehntelschritten des Faktors nicht)'}`,
+  }
+}
+
 /** Zeile einer Rechnung, wie sie die Planer mit Positionsliste liefern. */
 export interface ListenZeile {
   id?: string; ebene?: string; nr: string; zahn?: string; text: string; anzahl: number

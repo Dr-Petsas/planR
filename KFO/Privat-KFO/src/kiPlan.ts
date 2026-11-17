@@ -3,7 +3,7 @@ import type { Einstellungen, Plan, Position, Rechnung } from './types'
 import { rechnen } from './engine/kfo'
 import { begruendungText } from './engine/begruendung'
 import { KRITERIEN_REGELBISS, KRITERIEN_UMFORMUNG } from './data/katalog'
-import { feldSetzen, felderSchalter, listenDienst, listenZeilen, type KiFeld, type KiPosition, type PlanKiDienst } from './planKi'
+import { feldSetzen, felderSchalter, listenDienst, listenZeilen, zielSchalter, zielSetzen, type KiFeld, type KiZiel, type KiPosition, type PlanKiDienst } from './planKi'
 
 type A = Plan['aufgabe']
 const aufgabe = (k: 'umformungOk' | 'umformungUk' | 'regelbiss' | 'alveolaerOk' | 'alveolaerUk') => ({
@@ -57,12 +57,14 @@ export const kiZeilen = (r: Rechnung): KiPosition[] => {
 
 export function kfoKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einstellungen }, schreiben: (plan: Plan) => void): PlanKiDienst {
   const rechnung = (plan: Plan) => rechnen(plan, lesen().einst)
+  // Beide GOZ-Regler (Abschnitt G und übrige Leistungen) laufen gemeinsam.
+  const ziel: KiZiel<Plan> = { was: 'GOZ-Faktor (Abschnitt G und übrige Leistungen gemeinsam)', gesamt: (p) => rechnung(p).gesamt, lesen: (p) => p.regler.kfoFaktor, setzen: (p, f) => ({ ...p, regler: { ...p.regler, kfoFaktor: f, faktor: f } }) }
   return listenDienst<Plan, Position>({
     planart: 'privat-kfo', name: 'privater kieferorthopädischer Behandlungsplan (GOZ Abschnitt G, GOÄ, Labor, Mehrleistungen)',
     ebenen: EBENEN, tarif: ['GOZ', 'GOAE'], maxFaktor: 3.5,
     lesen, schreiben,
-    schalter: (plan) => felderSchalter(FELDER, plan),
-    schalterSetzen: (plan, name, wert) => feldSetzen(FELDER, plan, name, wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.',
+    schalter: (plan) => [...felderSchalter(FELDER, plan), ...zielSchalter(plan, ziel)],
+    schalterSetzen: (plan, name, wert) => (name === 'zielbetrag' ? zielSetzen(plan, ziel, wert) : feldSetzen(FELDER, plan, name, wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.'),
     liste: (plan) => plan.positionen,
     mitListe: (plan, positionen) => ({ ...plan, positionen }),
     neu: (s, id) => ({

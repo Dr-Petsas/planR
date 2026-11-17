@@ -38,7 +38,9 @@ export function ReglerKlappe({ children }: { children: ReactNode }) {
  * unter einem Rollbalken wie im Kassen-HKP; der Plan steht groß daneben. Dafür wandert der Inhalt in die Eingabespalte.
  * Die Höhe der Kopfleiste geht als --kopf-h ans Layout; schmaler bleibt alles wie bisher unter der Kopfleiste.
  */
-const BREIT = '(min-width: 1280px)'
+const BREIT = '(min-width: 1024px)'
+/** Bis hier wird das A4-Blatt in seine Spalte eingepasst (Handy und Tablet); darüber steht es in voller Größe. */
+const EINPASSEN = '(max-width: 1279px)'
 
 export function Seitenleiste({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null)
@@ -75,7 +77,7 @@ export function Seitenleiste({ children }: { children: ReactNode }) {
 }
 
 function einpassen() {
-  const handy = istHandy()
+  const handy = typeof window !== 'undefined' && window.matchMedia(EINPASSEN).matches
   const eltern = new Set<HTMLElement>()
   document.querySelectorAll<HTMLElement>(BLAETTER).forEach((blatt) => {
     if (blatt.parentElement) eltern.add(blatt.parentElement)
@@ -99,7 +101,7 @@ export function blaetterEinpassen() {
   const planen = () => {
     if (!geplant) geplant = requestAnimationFrame(() => { geplant = 0; einpassen() })
   }
-  const mq = window.matchMedia(HANDY)
+  const mq = window.matchMedia(EINPASSEN)
   const beobachter = new MutationObserver(planen)
   beobachter.observe(document.body, { childList: true, subtree: true })
   window.addEventListener('resize', planen)

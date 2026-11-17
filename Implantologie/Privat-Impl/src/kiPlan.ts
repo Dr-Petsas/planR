@@ -7,7 +7,7 @@ import { IMPLANTATKOERPER } from './data/implantatkoerper'
 import { BEFUND_KUERZEL, PLANUNG_KUERZEL, istImplantat } from './engine/zahnschema'
 import { STANDARD_IMPLANTAT } from './components/ImplantatDetails'
 import { implantateSetzen } from './implantatSystem'
-import { freiAnwenden, kiDienst, zahnText, type KiPosition, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
+import { freiAnwenden, kiDienst, zahnText, zielSchalter, zielSetzen, type KiZiel, type KiPosition, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
 
 export function kiZeilen(kalk: Kalkulation): KiPosition[] {
   return [...kalk.honorarGoz, ...kalk.honorarGoae, ...kalk.material, ...kalk.labor].map((z) => ({
@@ -104,6 +104,14 @@ export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Pl
   return { plan: p, text: zahnText(ZAHNFELDER, zahn, w) + sys }
 }
 
+/** Zielbetrag: GOZ- und GOÄ-Regler des Plans laufen gemeinsam (GOÄ höchstens bis zu ihrem Rahmen, das regelt die Rechnung). */
+const zielVon = (einst: Einstellungen): KiZiel<Plan> => ({
+  was: 'Honorarfaktor (GOZ und GOÄ gemeinsam)', gesamt: (p) => kalkulieren(p, einst).gesamt,
+  lesen: (p) => (p.regler.gozFaktor > 0 ? p.regler.gozFaktor : einst.gozFaktor),
+  setzen: (p, f) => ({ ...p, regler: { ...p.regler, gozFaktor: f <= einst.gozFaktor ? 0 : f, goaeFaktor: f <= einst.goaeFaktor ? 0 : f } }),
+  von: einst.gozFaktor,
+})
+
 export function implBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): PlanBlick {
   const kalk = kalkulieren(plan, einst)
   const zaehne = Object.entries(plan.zaehne).filter(([, z]) => z.B || z.TP)
@@ -134,7 +142,7 @@ export function implBlick(plan: Plan, einst: Einstellungen, gesperrt: boolean): 
       ...(kalk.nichtAngesetzt.length ? { nichtAngesetzt: kalk.nichtAngesetzt.join('; ') } : {}),
       ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
     },
-    schalter: schalter(plan),
+    schalter: [...schalter(plan), ...zielSchalter(plan, zielVon(einst))],
     zahnfelder: ZAHNFELDER,
     hinweise: [],
   }
@@ -162,7 +170,7 @@ export function implAnwenden(plan: Plan, einst: Einstellungen, schritte: KiSchri
   const r = freiAnwenden(plan, schritte, kiZeilen(vorher), {
     ebenen: ['GOZ', 'GOAE', 'MAT', 'BEB'],
     maxFaktor: einst.erlaubeUeber35 ? undefined : 3.5,
-    schalter: schalterSetzen,
+    schalter: (p, name, wert) => (name === 'zielbetrag' ? zielSetzen(p, zielVon(einst), wert) : schalterSetzen(p, name, wert)),
     zahnfelder: () => ZAHNFELDER,
     zahn: zahnSetzen,
   })

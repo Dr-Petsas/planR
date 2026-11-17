@@ -2,7 +2,7 @@
 import type { Plan, Rechnung, Zusatz } from './types'
 import { rechnen } from './engine/par'
 import { begruendungText } from './engine/begruendung'
-import { kiName, listenDienst, listenZeilen, type KiPosition, type KiZahnFeld, type KiZahnWerte, type PlanKiDienst } from './planKi'
+import { feldSetzen, felderSchalter, kiName, listenDienst, listenZeilen, zielSchalter, zielSetzen, type KiFeld, type KiPosition, type KiZiel, type KiZahnFeld, type KiZahnWerte, type PlanKiDienst } from './planKi'
 
 const ebene = (nr: string) => (nr === 'Mat.' ? 'MATERIAL' : 'GOZ')
 export function kiZeilen(r: Rechnung, plan: Plan): KiPosition[] {
@@ -11,6 +11,28 @@ export function kiZeilen(r: Rechnung, plan: Plan): KiPosition[] {
   const mit = new Set(r.begruendung)
   return listenZeilen(r.zeilen.map((z) => (mit.has(z) ? { ...z, begruendung: begruendungText(z) } : z)), { ebene: (z) => ebene(z.nr), frei: (id) => frei.has(id) })
 }
+
+const option = (k: keyof Plan['optionen']) => ({
+  lesen: (p: Plan) => p.optionen[k],
+  setzen: (p: Plan, w: boolean) => ({ ...p, optionen: { ...p.optionen, [k]: w } }),
+})
+
+/** Regler und Angaben des Plans, wie sie in der Leiste links stehen. */
+export const FELDER: KiFeld<Plan>[] = [
+  { name: 'faktor', text: 'GOZ-Faktor für Honorar und Analogleistungen (Zuschläge bleiben beim einfachen Satz)', von: 1, bis: 3.5, lesen: (p) => p.faktor, setzen: (p, w: number) => ({ ...p, faktor: w }) },
+  { name: 'variante', text: 'Bewertung der Analogleistungen (aktuell = BZÄK-Neubewertung 2026, beratungsforum = Beschlüsse mit PKV und Beihilfe)', werte: ['aktuell', 'beratungsforum'], lesen: (p) => p.variante, setzen: (p, w: Plan['variante']) => ({ ...p, variante: w }) },
+  { name: 'stadium', text: 'Stadium der Parodontitis', werte: ['I', 'II', 'III', 'IV'], lesen: (p) => p.stadium, setzen: (p, w: Plan['stadium']) => ({ ...p, stadium: w }) },
+  { name: 'grad', text: 'Grad der Parodontitis (bestimmt die Häufigkeit der UPT)', werte: ['A', 'B', 'C'], lesen: (p) => p.grad, setzen: (p, w: Plan['grad']) => ({ ...p, grad: w }) },
+  { name: 'uptJahre', text: 'UPT-Jahre im Plan', von: 0, bis: 5, lesen: (p) => p.uptJahre, setzen: (p, w: number) => ({ ...p, uptJahre: Math.round(w) }) },
+  { name: 'resttaschen', text: 'Anteil der Zähne mit Resttaschen in der UPT in Prozent', von: 0, bis: 100, lesen: (p) => p.resttaschen, setzen: (p, w: number) => ({ ...p, resttaschen: Math.round(w) }) },
+  { name: 'gkv', text: 'Patient ist gesetzlich versichert (dann Privatvereinbarung nach § 8 Abs. 7 BMV-Z)', lesen: (p) => p.gkv, setzen: (p, w: boolean) => ({ ...p, gkv: w }) },
+  { name: 'optionen.hkp', text: 'schriftlicher Heil- und Kostenplan (GOZ 0030)', ...option('hkp') },
+  { name: 'optionen.pzrAit', text: 'GOZ 1040 neben der subgingivalen Instrumentierung (AIT)', ...option('pzrAit') },
+  { name: 'optionen.bevCpt', text: 'Befundevaluation nach der chirurgischen Therapie', ...option('bevCpt') },
+  { name: 'diagnose', text: 'Diagnose (freier Text)', lesen: (p) => p.diagnose ?? '', setzen: (p, w: string) => ({ ...p, diagnose: w }) },
+  { name: 'bemerkung', text: 'Bemerkung auf dem Plan (freier Text)', lesen: (p) => p.bemerkung ?? '', setzen: (p, w: string) => ({ ...p, bemerkung: w }) },
+]
+const ziel: KiZiel<Plan> = { was: 'GOZ-Faktor', gesamt: (p) => rechnen(p).gesamt, lesen: (p) => p.faktor, setzen: (p, f) => ({ ...p, faktor: f }) }
 
 export const ZAHNFELDER: KiZahnFeld[] = [
   { name: 'fehlt', text: 'Zahn fehlt', ja: true },
@@ -38,6 +60,8 @@ export function parKi(lesen: () => { plan: Plan; gesperrt: boolean }, schreiben:
     ebenen: ['GOZ', 'MATERIAL'], tarif: ['GOZ'], maxFaktor: 3.5,
     lesen, schreiben,
     zahnfelder: () => ZAHNFELDER, zahnSetzen,
+    schalter: (plan) => [...felderSchalter(FELDER, plan), ...zielSchalter(plan, ziel)],
+    schalterSetzen: (plan, name, wert) => (name === 'zielbetrag' ? zielSetzen(plan, ziel, wert) : feldSetzen(FELDER, plan, name, wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.'),
     liste: (plan) => plan.zusatz.map((z) => ({ ...z, ebene: ebene(z.nr) })),
     mitListe: (plan, liste) => ({ ...plan, zusatz: liste.map(({ ebene: _e, ...z }) => z) }),
     neu: (s, id) => ({
@@ -62,7 +86,7 @@ export function parKi(lesen: () => { plan: Plan; gesperrt: boolean }, schreiben:
       diagnose: `${plan.diagnose || 'nicht eingetragen'}; Stadium ${plan.stadium}, Grad ${plan.grad}`,
       befund: `fehlende Zähne: ${plan.fehlend.join(', ') || 'keine'}; chirurgische Therapie an: ${plan.cpt.join(', ') || 'keinem Zahn'}`,
       strecke: `Variante ${plan.variante}, UPT über ${plan.uptJahre} Jahre, Standardfaktor ${plan.faktor}`,
-      aufbau: 'Die Zeilen der Strecke errechnet der Planer aus dem Befund. Ich kann Zähne als fehlend oder vorhanden eintragen und die chirurgische Therapie je Zahn setzen, weitere GOZ-Leistungen und Material ergänzen und den Faktor je Nummer ändern.',
+      aufbau: 'Die Zeilen der Strecke errechnet der Planer aus dem Befund. Ich kann Zähne als fehlend oder vorhanden eintragen und die chirurgische Therapie je Zahn setzen, weitere GOZ-Leistungen und Material ergänzen, den Faktor je Nummer ändern und die Regler und Angaben aus SCHALTER setzen (Faktor, Variante, Stadium, Grad, UPT-Jahre, Zielbetrag, Bemerkung).',
       ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
     }),
   })

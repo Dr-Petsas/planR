@@ -3,7 +3,7 @@ import type { Einstellungen, FreiePosition, Plan, Rechnung, Therapie, ZahnLeistu
 import { THERAPIE, THERAPIEN, ZUSAETZE } from './data/katalog'
 import { standardLeistung, ZIFFER } from './components/Zahnschema'
 import { rechnen, zusaetzeFuer, zusatzUmschalten } from './engine/kons'
-import { feldSetzen, felderSchalter, listenDienst, listenZeilen, zahnText, type KiFeld, type KiPosition, type KiZahnFeld, type KiZahnWerte, type PlanKiDienst } from './planKi'
+import { feldSetzen, felderSchalter, listenDienst, listenZeilen, zahnText, zielSchalter, zielSetzen, type KiFeld, type KiZiel, type KiPosition, type KiZahnFeld, type KiZahnWerte, type PlanKiDienst } from './planKi'
 
 type Frei = FreiePosition & { id: string }
 const ebene = (e: string) => (e === 'ANALOG' ? 'GOZ' : e)
@@ -87,13 +87,14 @@ const zusatzListe = (z: ZahnLeistung, plan: Plan) => {
 
 export function konsKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einstellungen }, schreiben: (plan: Plan) => void): PlanKiDienst {
   const rechnung = (plan: Plan) => rechnen(plan, lesen().einst)
+  const ziel: KiZiel<Plan> = { was: 'GOZ-Faktor', gesamt: (p) => rechnung(p).summe, lesen: (p) => p.regler.faktor, setzen: (p, f) => ({ ...p, regler: { ...p.regler, faktor: f } }) }
   return listenDienst<Plan, Frei>({
     planart: 'privat-kons', name: 'privater Plan Zahnerhaltung (Füllungen, Endodontie, Inlays nach GOZ)',
     ebenen: ['GOZ'], tarif: ['GOZ'], maxFaktor: 3.5,
     lesen, schreiben,
     zahnfelder: () => ZAHNFELDER, zahnSetzen,
-    schalter: (plan) => felderSchalter(FELDER, plan),
-    schalterSetzen: (plan, name, wert) => feldSetzen(FELDER, plan, name, wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.',
+    schalter: (plan) => [...felderSchalter(FELDER, plan), ...zielSchalter(plan, ziel)],
+    schalterSetzen: (plan, name, wert) => (name === 'zielbetrag' ? zielSetzen(plan, ziel, wert) : feldSetzen(FELDER, plan, name, wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.'),
     liste: (plan) => plan.frei.map((f) => ({ ...f, id: f.key })),
     mitListe: (plan, liste) => ({ ...plan, frei: liste.map(({ id, ...f }) => ({ ...f, key: id })) }),
     neu: (s, id) => ({ id, key: id, nr: s.nr, anzahl: s.anzahl || 1, faktor: s.faktor || lesen().plan.regler.faktor, ...(s.zahn ? { zahn: s.zahn } : {}) }),
