@@ -199,7 +199,11 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
       const m = markiert.find((b) => l.zaehne.every((z) => b.zaehne.includes(z)))
       return { ...l, anker: m ? pfeilerIm(m, P) : [l.links, l.rechts].filter(istPfeiler) }
     })
-    const brueckenAnker = new Set(bruecken.flatMap((b) => b.anker))
+    // Brückenanker im Sinne der GOZ sind nur Kronen unmittelbar neben der Lücke (BZÄK-Kommentar zu 5000/5010 und 5120);
+    // weitere verblockte Kronen im Brückenverband bleiben 2200–2220 mit Provisorium 2270.
+    const brueckenAnker = new Set(bruecken.flatMap((b) => [b.links, b.rechts].filter(istPfeiler)))
+    for (const b of bruecken) for (const a of b.anker) if (!brueckenAnker.has(a) && ZUORDNUNG[P(a)]?.anker)
+      hinweise.push(`Zahn ${a}: verblockte Krone im Brückenverband ${spanne(b.zaehne)}, nicht unmittelbar an der Lücke – als Krone (GOZ ${ZUORDNUNG[P(a)].goz}) mit Provisorium 2270 berechnet, nicht als Brückenanker (BZÄK-Kommentar zu GOZ 5010 und 5120).`)
     const stege = laeufe((z) => STEGZAHN.test(P(z)))
     const stegAnker = new Set(stege.flatMap((s) => [s.links, s.rechts]).filter((x): x is string => !!x))
     const prothesenZaehne = sitz.filter((z) => PROTHESENZAHN.test(P(z)) && P(z) !== 'SO')
@@ -281,6 +285,8 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
         pos('BEB', '6302', kiefer, n)
       } else {
         pos('GOZ', '5210', kiefer)
+        // GOZ 5070 je Sattel, auch Freiendsattel, auch ohne überkronte Ankerzähne (BZÄK-Kommentar zu 5070 und 5210)
+        for (const s of laeufe((z) => PROTHESENZAHN.test(P(z)) && P(z) !== 'SO')) pos('GOZ', '5070', spanne(s.zaehne))
         pos('GOZ', '5170', kiefer)
         pos('BEB', '4001', kiefer)
         pos('BEB', '6001', kiefer)

@@ -37,15 +37,40 @@ describe('Privatplanung', () => {
     expect(n).not.toContain('GOZ 2270 14')
   })
 
-  it('Doppelanker: -KM KM BM KM- macht 13 zum Brückenanker, ohne Markierung bleibt 13 Einzelkrone', () => {
+  it('Doppelanker: -KM KM BM KM- – 13 grenzt nicht an die Lücke und bleibt Krone 2210 mit 2270 (BZÄK-Kommentar zu 5010/5120)', () => {
     const z = (anfang: boolean): Record<string, Zahn> => ({
       '13': { B: '', TP: 'KM', bAnfang: anfang }, '14': { B: '', TP: 'KM' }, '15': { B: 'f', TP: 'BM' }, '16': { B: '', TP: 'KM', bEnde: anfang },
     })
     const mit = nummern(z(true))
-    expect(mit).toEqual(expect.arrayContaining(['GOZ 5010 13', 'GOZ 5120 13', 'GOZ 5010 14', 'GOZ 5010 16']))
-    expect(mit).not.toContain('GOZ 2210 13')
+    expect(mit).toEqual(expect.arrayContaining(['GOZ 2210 13', 'GOZ 2270 13', 'GOZ 5010 14', 'GOZ 5120 14', 'GOZ 5010 16', 'GOZ 5120 16']))
+    expect(mit).not.toContain('GOZ 5010 13')
+    expect(mit).not.toContain('GOZ 5120 13')
+    expect(planen(z(true), 'abdruck').hinweise.join(' | ')).toMatch(/Zahn 13: verblockte Krone im Brückenverband/)
     const ohne = nummern(z(false))
     expect(ohne).toEqual(expect.arrayContaining(['GOZ 2210 13', 'GOZ 2270 13', 'GOZ 5010 14']))
+    expect(planen(z(false), 'abdruck').hinweise.join(' | ')).not.toMatch(/verblockte Krone/)
+  })
+
+  it('Teilprothese: GOZ 5070 je Sattel neben 5210, auch Freiendsattel (BZÄK-Kommentar zu 5070)', () => {
+    const z: Record<string, Zahn> = {}
+    for (const n of ['18', '28']) z[n] = { B: 'f', TP: '' }
+    for (const n of ['17', '16', '15']) z[n] = { B: 'f', TP: 'E' }
+    for (const n of ['14', '13', '12', '11', '21', '22', '23']) z[n] = { B: '', TP: '' }
+    z['13'] = { B: '', TP: 'T' }
+    z['23'] = { B: '', TP: 'T' }
+    for (const n of ['24', '25']) z[n] = { B: 'f', TP: 'E' }
+    for (const n of ['26', '27']) z[n] = { B: '', TP: '' }
+    const n = nummern(z)
+    expect(n).toEqual(expect.arrayContaining(['GOZ 5210 OK', 'GOZ 5070 17-15', 'GOZ 5070 24-25', 'GOZ 5040 13', 'GOZ 5040 23']))
+    expect(n.filter((x) => x.startsWith('GOZ 5070'))).toHaveLength(2)
+  })
+
+  it('Totalprothese im zahnlosen Kiefer: keine GOZ 5070', () => {
+    const z: Record<string, Zahn> = {}
+    for (const n of ['17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27']) z[n] = { B: 'f', TP: 'E' }
+    const n = nummern(z)
+    expect(n).toContain('GOZ 5220 OK')
+    expect(n.some((x) => x.startsWith('GOZ 5070'))).toBe(false)
   })
 
   it('Implantatkrone mit Scan', () => {
