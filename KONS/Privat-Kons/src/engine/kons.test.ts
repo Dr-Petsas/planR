@@ -217,3 +217,20 @@ describe('Röntgen, Exoten und WSR', () => {
     expect(finde(plan({ '26': { ...z['26'], zusatz: ['zyste', 'eigenknochen'] } }, 3), '9090')).toBeDefined()
   })
 })
+
+describe('Zystektomie', () => {
+  it('selbstständig: GOZ 3200 einmal, OP-Zuschlag nach Punktzahl, Röntgen und Anästhesie ab Stufe 1', () => {
+    const r = rechnen(plan({ '36': { therapie: 'zyste' } }, 1), einst)
+    const z = r.zaehne[0].zeilen
+    expect(z[0]).toMatchObject({ nr: '3200', anzahl: 1 })
+    expect(z.map((x) => x.nr)).toEqual(expect.arrayContaining(['0090', 'Ä5000']))
+    expect(z.some((x) => x.nr === '2410' || x.nr === '3190')).toBe(false)
+    expect(r.begleit.filter((x) => /^05[0-3]0$/.test(x.nr))).toHaveLength(1)
+  })
+  it('Defektauffüllung 4110 ab Stufe 2, Membran ab Stufe 3', () => {
+    const nr = (s: number) => rechnen(plan({ '36': { therapie: 'zyste' } }, s), einst).zaehne[0].zeilen.map((x) => x.nr)
+    expect(nr(2)).toContain('4110')
+    expect(nr(2)).not.toContain('4138')
+    expect(nr(3)).toContain('4138')
+  })
+})

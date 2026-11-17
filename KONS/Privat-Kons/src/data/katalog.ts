@@ -48,6 +48,8 @@ export const THERAPIEN: TherapieEintrag[] = [
     hinweis: 'Analog § 6 Abs. 1 GOZ je Sitzung, Vorschlag Bezug GOZ 2360.' },
   { id: 'wsr', kuerzel: 'S', titel: 'Wurzelspitzenresektion', kurz: 'WSR', kasse: 'bema',
     hinweis: 'GOZ 3110 (Frontzahn) bzw. 3120 (Seitenzahn) je resezierter Wurzelspitze; retrograde Aufbereitung 2410 und Füllung 2440, Defektauffüllung 4110, Membran 4138 gesondert (BZÄK-Kommentar zu 3120).' },
+  { id: 'zyste', kuerzel: 'Z', titel: 'Zystektomie', kurz: 'Zystektomie', kasse: 'bema',
+    hinweis: 'GOZ 3200 als selbstständige Leistung. Zusammen mit einer Wurzelspitzenresektion am selben Zahn: Therapie WSR wählen und dort »Zystektomie« (GOZ 3190) anklicken. Kleine Zysten oder Granulationsgewebe bei Extraktion, Osteotomie oder WSR sind nicht gesondert berechnungsfähig.' },
 ]
 
 export const THERAPIE: Record<Therapie, TherapieEintrag> = Object.fromEntries(THERAPIEN.map((t) => [t.id, t])) as Record<Therapie, TherapieEintrag>
@@ -83,7 +85,8 @@ export interface Zusatz {
 
 const FUELLUNG: Therapie[] = ['komposit', 'inlay', 'goldhaemmer']
 const ENDO: Therapie[] = ['endo', 'revision']
-const ALLE: Therapie[] = ['komposit', 'inlay', 'goldhaemmer', 'endo', 'revision', 'vital', 'versiegelung', 'aufbau', 'infiltration', 'veneer', 'bleaching', 'wsr']
+const OP: Therapie[] = ['wsr', 'zyste']
+const ALLE: Therapie[] = ['komposit', 'inlay', 'goldhaemmer', 'endo', 'revision', 'vital', 'versiegelung', 'aufbau', 'infiltration', 'veneer', 'bleaching', 'wsr', 'zyste']
 
 export const ZUSAETZE: Zusatz[] = [
   // ---------- Stufe 1: Standard ----------
@@ -91,7 +94,7 @@ export const ZUSAETZE: Zusatz[] = [
     therapien: [...FUELLUNG, ...ENDO, 'vital', 'aufbau', 'veneer', 'infiltration'], neben: true,
     quelle: 'GOZ 2040 je Kieferhälfte oder Frontzahnbereich und Sitzung; neben Kassen-Endo privat vereinbar (BEMA kennt keinen Kofferdam).' },
   { id: 'anaesthesie', titel: 'Infiltrationsanästhesie', ebene: 'GOZ', nr: '0090', menge: 'sitzung', stufe: 1, auto: true,
-    therapien: [...FUELLUNG, 'endo', 'vital', 'aufbau', 'veneer', 'wsr'], neben: false,
+    therapien: [...FUELLUNG, 'endo', 'vital', 'aufbau', 'veneer', ...OP], neben: false,
     quelle: 'GOZ 0090 je Injektion; bei Kassen-Endo ist die Anästhesie BEMA-Leistung.' },
   { id: 'vitalitaet', titel: 'Vitalitätsprüfung', ebene: 'GOZ', nr: '0070', menge: 'tag', stufe: 1, auto: true,
     therapien: [...ENDO, 'vital'], neben: false, quelle: 'GOZ 0070 je Sitzung, auch mehrere Zähne.' },
@@ -102,7 +105,7 @@ export const ZUSAETZE: Zusatz[] = [
     therapien: [...FUELLUNG, 'vital', 'aufbau', 'veneer', 'infiltration'], neben: false,
     quelle: 'GOÄ 5000 je Projektion, Faktor 1,8; eine Aufnahme je Kieferhälfte oder Frontzahnbereich mit geplanter Behandlung. Rechtfertigende Indikation nach § 83 StrlSchG.' },
   { id: 'roentgenOp', titel: 'Röntgen (vor und nach dem Eingriff)', ebene: 'GOAE', nr: '5000', menge: 'zahn', anzahl: 2, stufe: 1, auto: true,
-    therapien: ['wsr'], neben: false, quelle: 'GOÄ 5000 je Projektion, Faktor 1,8; neben 3110/3120 berechnungsfähig (BZÄK-Kommentar).' },
+    therapien: OP, neben: false, quelle: 'GOÄ 5000 je Projektion, Faktor 1,8; neben 3110/3120 und 3200 berechnungsfähig (BZÄK-Kommentar).' },
   { id: 'retroAufbereitung', titel: 'Retrograde Aufbereitung', ebene: 'GOZ', nr: '2410', menge: 'kanal', stufe: 1, auto: true,
     therapien: ['wsr'], neben: false, quelle: 'GOZ 2410 (auch retrograd) je Kanal; neben 3110/3120 gesondert berechnungsfähig (BZÄK-Kommentar zu 3120).' },
   { id: 'retroFuellung', titel: 'Retrograde Wurzelfüllung', ebene: 'GOZ', nr: '2440', menge: 'kanal', stufe: 1, auto: true,
@@ -129,15 +132,15 @@ export const ZUSAETZE: Zusatz[] = [
   { id: 'deckfuellung', titel: 'Adhäsiver Verschluss der Zugangskavität', ebene: 'GOZ', nr: '2060', menge: 'zahn', stufe: 2, auto: true,
     therapien: ENDO, neben: false, quelle: 'GOZ 2060: definitive einflächige Kompositrestauration nach der Wurzelfüllung, eigenständige Leistung.' },
   { id: 'kontrolleOp', titel: 'Kontrolle nach dem Eingriff', ebene: 'GOZ', nr: '3290', menge: 'region', stufe: 2, auto: true,
-    therapien: ['wsr'], neben: false, quelle: 'GOZ 3290 als selbstständige Leistung in einer Folgesitzung, je Kieferhälfte oder Frontzahnbereich.' },
+    therapien: OP, neben: false, quelle: 'GOZ 3290 als selbstständige Leistung in einer Folgesitzung, je Kieferhälfte oder Frontzahnbereich.' },
   { id: 'defekt', titel: 'Auffüllen des Knochendefekts', ebene: 'GOZ', nr: '4110', menge: 'zahn', stufe: 2, auto: true,
-    therapien: ['wsr'], neben: true,
+    therapien: OP, neben: true,
     quelle: 'GOZ 4110 je Zahn, auch neben Wurzelspitzenresektion und Zystektomie, solange der Defekt die Zahnregion nicht übersteigt (BZÄK-Kommentar zu 4110). Größere Augmentation: 9100.' },
   { id: 'kem', titel: 'Knochenersatzmaterial', ebene: 'MAT', nr: 'kem', menge: 'zahn', stufe: 2, auto: true,
-    therapien: ['wsr'], neben: true, quelle: 'Knochenersatzmaterial ist gesondert berechnungsfähig (Allgemeine Bestimmungen GOZ, ZKN Knochenmanagement). Preis in den Einstellungen.' },
+    therapien: OP, neben: true, quelle: 'Knochenersatzmaterial ist gesondert berechnungsfähig (Allgemeine Bestimmungen GOZ, ZKN Knochenmanagement). Preis in den Einstellungen.' },
   { id: 'mikroskop', titel: 'OP-Mikroskop (Zuschlag)', ebene: 'ZUSCHLAG', nr: '0110', menge: 'tag', stufe: 2, auto: true,
-    therapien: [...ENDO, 'vital', 'aufbau', 'wsr'], neben: false, ersatzNeben: 'mikroskopAnalog',
-    quelle: 'GOZ 0110 einmal je Behandlungstag, einfacher Satz, u. a. neben 2195, 2330, 2340, 2360, 2410, 2440, 3110, 3120.' },
+    therapien: [...ENDO, 'vital', 'aufbau', ...OP], neben: false, ersatzNeben: 'mikroskopAnalog',
+    quelle: 'GOZ 0110 einmal je Behandlungstag, einfacher Satz, u. a. neben 2195, 2330, 2340, 2360, 2410, 2440, 3110, 3120, 3190, 3200.' },
   { id: 'mikroskopAnalog', titel: 'Intrakanaläre Diagnostik mit Dentalmikroskop', ebene: 'ANALOG', nr: '2340', menge: 'sitzung', stufe: 2, auto: true,
     therapien: ENDO, neben: true, nurNeben: true,
     quelle: 'BZÄK-Analogkatalog: eigenständige Leistung neben Kassen-Endo, analog § 6 Abs. 1 GOZ (Bezug Vorschlag 2340).' },
@@ -148,7 +151,7 @@ export const ZUSAETZE: Zusatz[] = [
   { id: 'besondere', titel: 'Besondere Maßnahmen (Separieren, Blutstillung)', ebene: 'GOZ', nr: '2030', menge: 'region', stufe: 2, auto: true,
     therapien: [...FUELLUNG, 'veneer'], neben: false, quelle: 'GOZ 2030 je Kieferhälfte oder Frontzahnbereich.' },
   { id: 'oberflaeche', titel: 'Oberflächenanästhesie', ebene: 'GOZ', nr: '0080', menge: 'region', stufe: 3, auto: true,
-    therapien: [...FUELLUNG, 'endo', 'vital', 'aufbau', 'veneer', 'wsr'], neben: false, quelle: 'GOZ 0080 je Kieferhälfte oder Frontzahnbereich.' },
+    therapien: [...FUELLUNG, 'endo', 'vital', 'aufbau', 'veneer', ...OP], neben: false, quelle: 'GOZ 0080 je Kieferhälfte oder Frontzahnbereich.' },
   { id: 'polieren', titel: 'Finieren/Polieren in separater Sitzung', ebene: 'GOZ', nr: '2130', menge: 'zahn', stufe: 2, auto: false,
     therapien: ['komposit', 'veneer', 'goldhaemmer', 'inlay'], neben: false, quelle: 'GOZ 2130 je Restauration, nur in separater Sitzung.' },
   { id: 'desensibilisierung', titel: 'Behandlung überempfindlicher Zahnflächen', ebene: 'GOZ', nr: '2010', menge: 'kiefer', stufe: 2, auto: false,
@@ -160,10 +163,10 @@ export const ZUSAETZE: Zusatz[] = [
   { id: 'kostenplan', titel: 'Schriftlicher Heil- und Kostenplan', ebene: 'GOZ', nr: '0030', menge: 'plan', stufe: 3, auto: true,
     therapien: ALLE, neben: false, quelle: 'GOZ 0030: Aufstellung eines schriftlichen Heil- und Kostenplans nach Befundaufnahme, einmal je Plan.' },
   { id: 'dvt', titel: 'DVT (digitale Volumentomografie)', ebene: 'GOAE', nr: '5370', menge: 'plan', stufe: 3, auto: true,
-    therapien: [...ENDO, 'wsr'], neben: true,
+    therapien: [...ENDO, ...OP], neben: true,
     quelle: 'GOÄ 5370 (2000 Punkte), Faktor 1,8; DVT-Fachkunde nötig, rechtfertigende Indikation (BZÄK-Stellungnahme Digitale Volumentomografie).' },
   { id: 'dvtAnalyse', titel: 'DVT: computergesteuerte Analyse mit 3D-Rekonstruktion', ebene: 'GOAE', nr: '5377', menge: 'plan', stufe: 3, auto: true,
-    therapien: [...ENDO, 'wsr'], neben: true,
+    therapien: [...ENDO, ...OP], neben: true,
     quelle: 'GOÄ 5377 (800 Punkte), nur einfacher Satz; nur für den Behandler, der das DVT selbst erstellt (BZÄK, BGH III ZR 241/21).' },
   { id: 'cp', titel: 'Indirekte Überkappung bei pulpanaher Karies', ebene: 'GOZ', nr: '2330', menge: 'zahn', stufe: 3, auto: true,
     therapien: [...FUELLUNG, 'aufbau'], neben: false, quelle: 'GOZ 2330 je Kavität neben der Füllung, wenn die Pulpa gefährdet ist (Caries profunda). Ohne diese Indikation abwählen.' },
@@ -171,15 +174,15 @@ export const ZUSAETZE: Zusatz[] = [
     therapien: [...FUELLUNG, 'vital', 'aufbau'], neben: true,
     quelle: 'Analog § 6 Abs. 1 GOZ; als Analogleistung gerichtlich anerkannt (BZÄK-Urteilsdatenbank: Kariesdetektor und Ozon sind Analogleistungen). Bezug 2030 ist ein Vorschlag.' },
   { id: 'wundverschluss', titel: 'Plastischer Wundverschluss', ebene: 'GOZ', nr: '3100', menge: 'zahn', stufe: 3, auto: true,
-    therapien: ['wsr'], neben: false, quelle: 'GOZ 3100 je Operationsgebiet, neben 3110/3120 berechnungsfähig (BZÄK-Kommentar zu 3120).' },
+    therapien: OP, neben: false, quelle: 'GOZ 3100 je Operationsgebiet, neben 3110/3120 berechnungsfähig (BZÄK-Kommentar zu 3120).' },
   { id: 'membran', titel: 'Membran über dem Knochendefekt', ebene: 'GOZ', nr: '4138', menge: 'zahn', stufe: 3, auto: true,
-    therapien: ['wsr'], neben: true, quelle: 'GOZ 4138 je Zahn einschließlich Fixierung, neben 4110 berechnungsfähig (BZÄK-Kommentar, ZKN Knochenmanagement).' },
+    therapien: OP, neben: true, quelle: 'GOZ 4138 je Zahn einschließlich Fixierung, neben 4110 berechnungsfähig (BZÄK-Kommentar, ZKN Knochenmanagement).' },
   { id: 'membranMat', titel: 'Membran (Material)', ebene: 'MAT', nr: 'membran', menge: 'zahn', stufe: 3, auto: true,
-    therapien: ['wsr'], neben: true, quelle: 'Membranen sind gesondert berechnungsfähig (Allgemeine Bestimmungen GOZ). Preis in den Einstellungen.' },
+    therapien: OP, neben: true, quelle: 'Membranen sind gesondert berechnungsfähig (Allgemeine Bestimmungen GOZ). Preis in den Einstellungen.' },
   { id: 'zyste', titel: 'Zystektomie in Verbindung mit der WSR', ebene: 'GOZ', nr: '3190', menge: 'zahn', stufe: 3, auto: false,
     therapien: ['wsr'], neben: false, quelle: 'GOZ 3190, nur wenn eine Zyste entfernt wird.' },
   { id: 'eigenknochen', titel: 'Eigenknochen gewinnen und einbringen', ebene: 'GOZ', nr: '9090', menge: 'zahn', stufe: 3, auto: false,
-    therapien: ['wsr'], neben: true, quelle: 'GOZ 9090 bei autologem Knochen aus dem Operationsgebiet (BZÄK-Kommentar zu 4110, ZKN Knochenmanagement).' },
+    therapien: OP, neben: true, quelle: 'GOZ 9090 bei autologem Knochen aus dem Operationsgebiet (BZÄK-Kommentar zu 4110, ZKN Knochenmanagement).' },
   { id: 'laser', titel: 'Laser bei der Aufbereitung (Zuschlag)', ebene: 'ZUSCHLAG', nr: '0120', menge: 'tag', stufe: 3, auto: true,
     therapien: ENDO, neben: false, ersatzNeben: 'laserAnalog',
     quelle: 'GOZ 0120 einmal je Behandlungstag: 100 % des einfachen Satzes der Leistung (2410), höchstens 68 €.' },

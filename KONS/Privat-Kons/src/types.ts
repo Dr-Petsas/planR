@@ -10,7 +10,7 @@ export type { Patient, Praxis } from './stammdaten'
 export type Therapie =
   | 'komposit' | 'inlay' | 'goldhaemmer'
   | 'endo' | 'revision' | 'vital'
-  | 'versiegelung' | 'aufbau' | 'infiltration' | 'veneer' | 'bleaching' | 'wsr'
+  | 'versiegelung' | 'aufbau' | 'infiltration' | 'veneer' | 'bleaching' | 'wsr' | 'zyste'
 
 /**
  * pkv: Privatpatient (Kostenvoranschlag).

@@ -37,7 +37,7 @@ const hatInhalt = (p: Plan) => Boolean(patientName(p.patient) || Object.keys(p.z
 
 const BEFUND_ART: Record<Therapie, KonsArt> = {
   komposit: 'fuellung', inlay: 'fuellung', goldhaemmer: 'fuellung', versiegelung: 'fuellung', infiltration: 'fuellung', veneer: 'fuellung',
-  aufbau: 'aufbau', endo: 'endo', revision: 'endo', vital: 'endo', bleaching: 'endo', wsr: 'endo',
+  aufbau: 'aufbau', endo: 'endo', revision: 'endo', vital: 'endo', bleaching: 'endo', wsr: 'endo', zyste: 'endo',
 }
 
 /** „Neuer Plan für …“ aus der PlanR-Übersicht (?neu=1#patient=…) */

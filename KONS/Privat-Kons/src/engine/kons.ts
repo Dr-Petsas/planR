@@ -53,7 +53,7 @@ export const laserZuschlag = () => Math.min(LASER_HOECHSTBETRAG, gozEinfach('241
 
 /** Grundleistungen, neben denen der Mikroskop-Zuschlag 0110 stehen darf. */
 function mikroskopFaehig(z: ZahnLeistung) {
-  if (z.therapie === 'endo' || z.therapie === 'revision' || z.therapie === 'wsr') return true
+  if (z.therapie === 'endo' || z.therapie === 'revision' || z.therapie === 'wsr' || z.therapie === 'zyste') return true
   if (z.therapie === 'vital') return (z.vitalArt ?? 'indirekt') !== 'pulpotomie'
   if (z.therapie === 'aufbau') return !!z.aufbauStift
   return false
@@ -199,6 +199,8 @@ function grundleistung(zahn: string, z: ZahnLeistung, faktor: number, einst: Ein
       const nr = istFrontzahn(zahn) ? '3110' : '3120'
       return { titel: `Wurzelspitzenresektion, ${k} ${k === 1 ? 'Wurzelspitze' : 'Wurzelspitzen'}`, zeilen: [gozZeile(nr, faktor, k)] }
     }
+    case 'zyste':
+      return { titel: 'Zystektomie', zeilen: [gozZeile('3200', faktor, 1)] }
     case 'bleaching':
       return { titel: `Internes Bleichen, ${sitzungen(z)} Sitzung${sitzungen(z) === 1 ? '' : 'en'}`, zeilen: [analogZeile('2360', faktor, sitzungen(z), 'Internes Bleichen eines devitalen Zahnes, je Sitzung')] }
   }
@@ -310,9 +312,13 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     if (einmal.has(zu.id)) neu(zu.id, zu.menge === 'tag' ? (plan.behandlungstage > 0 ? tage : einmal.get(zu.id)!) : 1, zu.id)
   }
   // OP-Zuschlag bei ambulantem Eingriff: einer je Behandlungstag, einfacher Satz, nach der höchstbewerteten Leistung (3110: 0500, 3120: 0510)
-  const wsrZaehne = plan.vereinbarung === 'gkvZusatz' ? [] : zaehneIds.filter((z) => plan.zaehne[z].therapie === 'wsr')
-  if (wsrZaehne.length && plan.regler.stufe >= 1) {
-    const nr = wsrZaehne.some((z) => !istFrontzahn(z)) ? '0510' : '0500'
+  const opPunkte = plan.vereinbarung === 'gkvZusatz' ? [] : zaehneIds.flatMap((z) => {
+    const t = plan.zaehne[z].therapie
+    return t === 'wsr' ? [gozPunkte(istFrontzahn(z) ? '3110' : '3120')] : t === 'zyste' ? [gozPunkte('3200')] : []
+  })
+  const hoechste = Math.max(0, ...opPunkte)
+  if (hoechste >= 250 && plan.regler.stufe >= 1) {
+    const nr = hoechste >= 1200 ? '0530' : hoechste >= 800 ? '0520' : hoechste >= 500 ? '0510' : '0500'
     const einzel = gozEinfach(nr)
     begleit.push({ ebene: 'ZUSCHLAG', nr, text: 'Zuschlag bei nichtstationärer Durchführung zahnärztlich-chirurgischer Leistungen, einfacher Satz, je Behandlungstag', anzahl: 1, faktor: 1, einzel, summe: einzel, zusatz: 'opZuschlag' })
   }

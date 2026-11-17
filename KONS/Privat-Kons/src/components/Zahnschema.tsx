@@ -26,6 +26,7 @@ export function standardLeistung(therapie: Therapie, zahn: string): ZahnLeistung
     case 'endo': return { therapie, kanaele: kanaeleTypisch(zahn), vital: true, sitzungen: 2 }
     case 'revision': return { therapie, kanaele: kanaeleTypisch(zahn), sitzungen: 2 }
     case 'wsr': return { therapie, kanaele: 1 }
+    case 'zyste': return { therapie }
     case 'vital': return { therapie, vitalArt: 'indirekt' }
     case 'bleaching': return { therapie, sitzungen: 2 }
     default: return { therapie }
