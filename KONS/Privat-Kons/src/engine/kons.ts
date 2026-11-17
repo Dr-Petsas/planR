@@ -65,6 +65,8 @@ function verfuegbar(zu: Zusatz, z: ZahnLeistung, plan: Plan): boolean {
   const neben = plan.vereinbarung === 'gkvZusatz' && THERAPIE[z.therapie].kasse === 'bema'
   if (neben ? !zu.neben : zu.nurNeben) return false
   if (zu.id === 'nekrose') return z.therapie === 'endo' && z.vital === false
+  // 9090 heißt: Defekt größer als eine Zahnregion – dann ist 4110 nicht berechnungsfähig (BZÄK-Kommentar zu 3190)
+  if (zu.id === 'defekt' && z.zusatz?.includes('eigenknochen')) return false
   // avitale Endo führt die Trepanation 2390 schon als Grundleistung
   if (zu.id === 'trepanation') return !(z.therapie === 'endo' && z.vital === false)
   if (zu.id === 'mikroskop') return mikroskopFaehig(z)
@@ -72,10 +74,14 @@ function verfuegbar(zu: Zusatz, z: ZahnLeistung, plan: Plan): boolean {
   return true
 }
 
+const ZYSTE_NUR_VON_HAND = new Set(['defekt', 'kem', 'membran', 'membranMat'])
+
 /** Wird sie ab der eingestellten Stufe von selbst vorgeschlagen? */
 function vorgeschlagen(zu: Zusatz, z: ZahnLeistung, plan: Plan) {
   if (!zu.auto || plan.regler.stufe < zu.stufe) return false
   if (zu.id === 'anaesthesie' && z.therapie === 'endo') return z.vital !== false
+  // selbstständige Zystektomie 3200: ob 4110 gilt, hängt von Defektgröße und Zystenart ab – nie von selbst
+  if (z.therapie === 'zyste' && ZYSTE_NUR_VON_HAND.has(zu.id)) return false
   // PDT schlägt der Planer nur bei der Wurzelbehandlung vor, an der Füllung bleibt sie Handwahl
   if (zu.id === 'pdt') return z.therapie === 'endo' || z.therapie === 'revision'
   return true

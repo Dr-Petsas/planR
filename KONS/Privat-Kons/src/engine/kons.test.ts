@@ -20,7 +20,7 @@ describe('Grundleistungen nach GOZ', () => {
   it('Endo avital: Trepanation 2390 statt 2360, ab Stufe 2 nekrotisches Gewebe analog', () => {
     const z = { '36': { therapie: 'endo', kanaele: 3, vital: false } as ZahnLeistung }
     expect(nrn(plan(z), '36')).toEqual(['2390', '2410', '2440'])
-    expect(nrn(plan(z, 2), '36')).toContain('2180a')
+    expect(nrn(plan(z, 2), '36')).toContain('2360a')
   })
 
   it('Revision: alte Wurzelfüllung analog 2300a je Kanal', () => {
@@ -109,7 +109,9 @@ describe('Kassenpatient mit BEMA-Grundleistung (§ 8 Abs. 7 BMV-Z)', () => {
     expect(zeilen).not.toContain('2410')
     expect(zeilen).not.toContain('0090')
     expect(zeilen).not.toContain('Ä5000')
-    expect(zeilen).toEqual(expect.arrayContaining(['2400', '2420', 'Mat.', '2340a']))
+    expect(zeilen).toEqual(expect.arrayContaining(['2400', '2420', 'Mat.']))
+    // Beratungsforum Nr. 50: Mikroskop-Untersuchung nicht in einer Sitzung mit Aufbereitung/Wurzelfüllung – nie von selbst
+    expect(zeilen.some((nr) => /^(2340|2290)a$/.test(nr))).toBe(false)
   })
 
   it('keine Zuschläge 0110/0120 neben BEMA – dafür die eigenständige Analogleistung', () => {
@@ -215,6 +217,11 @@ describe('Röntgen, Exoten und WSR', () => {
     expect(finde(plan(z, 3), '3190')).toBeUndefined()
     expect(finde(plan({ '26': { ...z['26'], zusatz: ['zyste', 'eigenknochen'] } }, 3), '3190')).toBeDefined()
     expect(finde(plan({ '26': { ...z['26'], zusatz: ['zyste', 'eigenknochen'] } }, 3), '9090')).toBeDefined()
+    // 9090 = Defekt größer als eine Zahnregion: 4110 daneben nicht berechnungsfähig
+    expect(finde(plan({ '26': { ...z['26'], zusatz: ['zyste', 'eigenknochen'] } }, 3), '4110')).toBeUndefined()
+    // plastische Deckung 3100 nur von Hand – der einfache Wundverschluss ist in der WSR enthalten
+    expect(finde(plan(z, 3), '3100')).toBeUndefined()
+    expect(finde(plan({ '26': { ...z['26'], zusatz: ['wundverschluss'] } }, 3), '3100')).toBeDefined()
   })
 })
 
@@ -227,10 +234,13 @@ describe('Zystektomie', () => {
     expect(z.some((x) => x.nr === '2410' || x.nr === '3190')).toBe(false)
     expect(r.begleit.filter((x) => /^05[0-3]0$/.test(x.nr))).toHaveLength(1)
   })
-  it('Defektauffüllung 4110 ab Stufe 2, Membran ab Stufe 3', () => {
-    const nr = (s: number) => rechnen(plan({ '36': { therapie: 'zyste' } }, s), einst).zaehne[0].zeilen.map((x) => x.nr)
-    expect(nr(2)).toContain('4110')
-    expect(nr(2)).not.toContain('4138')
-    expect(nr(3)).toContain('4138')
+  it('Defektauffüllung 4110 und Membran nie von selbst (hängt von Defektgröße und Zystenart ab), von Hand wählbar', () => {
+    const nr = (s: number, zusatz?: string[]) => rechnen(plan({ '36': { therapie: 'zyste', zusatz } }, s), einst).zaehne[0].zeilen.map((x) => x.nr)
+    expect(nr(3)).not.toContain('4110')
+    expect(nr(3)).not.toContain('4138')
+    expect(nr(3)).not.toContain('3100')
+    expect(nr(1, ['defekt', 'membran'])).toEqual(expect.arrayContaining(['4110', '4138']))
+    expect(nr(1, ['defekt', 'eigenknochen'])).toContain('9090')
+    expect(nr(1, ['defekt', 'eigenknochen'])).not.toContain('4110')
   })
 })
