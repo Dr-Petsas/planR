@@ -19,7 +19,7 @@ export const ZAHNFELDER: KiZahnFeld[] = [
   { name: 'furkation', text: 'Furkationsbefall', werte: GRAD },
 ]
 
-/** Trägt den Befund eines Zahns in den Anfangsbefund ein wie Blatt 2; Diagnose, Prüfung und Strecke rechnen daraus neu. */
+/** Trägt den Befund eines Zahns in den Anfangsbefund ein wie Blatt 2; Diagnose, Prüfung und Strecke rechnen daraus neu. Eine einzelne BEMA- oder GOZ-Nummer in einen Termin legen oder daraus nehmen kann ich nicht; ein Befundeintrag bewirkt das auch nicht. Messwerte trage ich nur ein, wenn die Praxis sie nennt. */
 export function zahnSetzen(fall: ParFall, zahn: string, w: KiZahnWerte): { plan: ParFall; text: string } | string {
   const befund = initialBefund(fall)
   const alt: ZahnBefund = befund.zaehne[zahn] ?? leererZahnBefund()
@@ -123,7 +123,7 @@ export function parKi(lesen: () => { fall: ParFall; gesperrt: boolean; preise: P
         cpt: fall.mitCPT ? 'chirurgische Therapie vorgesehen' : 'keine chirurgische Therapie vorgesehen',
         anfangsbefund: zaehne.join('; ') || 'noch nichts eingetragen',
         diagnose: `Stadium ${diag.stadium}, Grad ${diag.grad}`,
-        aufbau: 'Einzelne Leistungen je Termin wählt die Praxis über die Kacheln der Strecke. Ich kann die Planung der Strecke stellen (Sitzungen, CPT, PZR, Umsatz, Zielumsatz, Bemerkung) und den Zahnbefund des Anfangsbefunds je Zahn ändern (Zahnstatus, Sondierungstiefen, Bluten, Lockerung, Furkation); Diagnose, Prüfung und Strecke rechnen daraus neu.',
+        aufbau: 'Einzelne Leistungen je Termin wählt die Praxis über die Kacheln der Strecke. Ich kann die Planung der Strecke stellen (Sitzungen, CPT, PZR, Umsatz, Zielumsatz, Bemerkung) und den Zahnbefund des Anfangsbefunds je Zahn ändern (Zahnstatus, Sondierungstiefen, Bluten, Lockerung, Furkation); Diagnose, Prüfung und Strecke rechnen daraus neu. Eine einzelne BEMA- oder GOZ-Nummer in einen Termin legen oder daraus nehmen kann ich nicht; ein Befundeintrag bewirkt das auch nicht. Messwerte trage ich nur ein, wenn die Praxis sie nennt.',
       },
       schalter: [...felderSchalter(FELDER, fall), ...zielSchalter(fall, preise)], zahnfelder: ZAHNFELDER,
       hinweise: meldungen.map((m) => ({ stufe: m.art === 'hinweis' ? 'info' as const : m.art, text: `${m.bereich}: ${m.text}` })),

@@ -13,7 +13,7 @@ export function kfoKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einst
   const rechnung = (plan: Plan) => rechnen(plan, lesen().einst)
   return listenDienst<Plan, Position>({
     planart: 'kassen-kfo', name: 'Kassen-Behandlungsplan Kieferorthopädie (BEMA Teil 3, BEL II, Mehr- und Zusatzleistungen)',
-    ebenen: EBENEN, tarif: ['BEMA'],
+    ebenen: EBENEN, tarif: ['BEMA', 'BEL'],
     lesen, schreiben,
     liste: (plan) => plan.positionen,
     mitListe: (plan, positionen) => ({ ...plan, positionen }),

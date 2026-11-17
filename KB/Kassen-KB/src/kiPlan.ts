@@ -28,7 +28,7 @@ export function kbKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einste
   const rechnung = (plan: Plan) => rechnen(plan, lesen().einst)
   return listenDienst<Plan, Position>({
     planart: 'kassen-kb', name: 'Kassen-Behandlungsplan Kieferbruch / Kiefergelenkserkrankungen (BEMA Teil 2, BEL II)',
-    ebenen: EBENEN, tarif: ['BEMA'],
+    ebenen: EBENEN, tarif: ['BEMA', 'BEL'],
     lesen, schreiben,
     schalter: (plan) => felderSchalter(FELDER, plan),
     schalterSetzen: (plan, name, wert) => feldSetzen(FELDER, plan, name, wert) ?? 'Diese Einstellung gibt es in diesem Plan gerade nicht.',
