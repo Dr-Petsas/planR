@@ -15,6 +15,21 @@ import {
 import { inlayLabor, type InlayAuftrag } from './inlaylabor'
 import { ALLE_ZAEHNE, istFrontzahn, kieferVon, regionVon } from './zahnschema'
 
+/**
+ * »je Kieferhälfte oder Frontzahnbereich«: ein Kiefer zählt höchstens zweimal, alle vier Kieferhälften höchstens viermal
+ * je Sitzung (BZÄK-Kommentar zu 0065 und 4030, Beratungsforum für Gebührenordnungsfragen Nr. 24 zu 2030).
+ * Der Frontzahnbereich steht für eine Kieferhälfte, er kommt nicht als dritter Bereich dazu.
+ */
+export function bereicheJeKiefer(werte: Map<Region, number>): number {
+  let summe = 0
+  for (const k of ['OK', 'UK']) {
+    const imKiefer = [...werte].filter(([r]) => r.startsWith(k)).map(([, n]) => n).sort((a, b) => b - a)
+    summe += imKiefer.slice(0, 2).reduce((x, n) => x + n, 0)
+  }
+  return summe
+}
+const einfach = (regionen: Iterable<Region>) => new Map([...regionen].map((r) => [r, 1] as [Region, number]))
+
 export const euro = (x: number) =>
   x.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -313,8 +328,9 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     if (anzahl > 0) begleit.push({ ...zusatzZeile(ZUSATZ[id], anzahl, faktor, einst, plan.regler.materialKlasse), zusatz })
   }
   for (const zu of ZUSAETZE) {
-    if (regionSitzung.has(zu.id)) neu(zu.id, [...regionSitzung.get(zu.id)!.values()].reduce((s, n) => s + n, 0), zu.id)
-    if (regionen.has(zu.id)) neu(zu.id, regionen.get(zu.id)!.size, zu.id)
+    if (regionSitzung.has(zu.id)) neu(zu.id, bereicheJeKiefer(regionSitzung.get(zu.id)!), zu.id)
+    // Röntgenbilder (GOÄ) zählen je Bereich, die GOZ-Leistungen »je Kieferhälfte oder Frontzahnbereich« höchstens zweimal je Kiefer
+    if (regionen.has(zu.id)) neu(zu.id, zu.ebene === 'GOAE' ? regionen.get(zu.id)!.size : bereicheJeKiefer(einfach(regionen.get(zu.id)!)), zu.id)
     if (kiefer.has(zu.id)) neu(zu.id, kiefer.get(zu.id)!.size, zu.id)
     if (einmal.has(zu.id)) neu(zu.id, zu.menge === 'tag' ? (plan.behandlungstage > 0 ? tage : einmal.get(zu.id)!) : 1, zu.id)
   }
@@ -331,7 +347,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   }
   const inlayZaehne = zaehneIds.filter((z) => inlayImPlan(plan, z))
   if (plan.abformung === 'scan' && inlayZaehne.length) {
-    const bereiche = new Set(inlayZaehne.map(regionVon)).size
+    const bereiche = bereicheJeKiefer(einfach(new Set(inlayZaehne.map(regionVon))))
     const gegenkiefer = 2 - new Set(inlayZaehne.map(kieferVon)).size
     begleit.push({ ...gozZeile('0065', faktor, bereiche + gegenkiefer), zusatz: 'scan' })
   }

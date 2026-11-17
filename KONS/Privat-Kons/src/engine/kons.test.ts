@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { laserZuschlag, rechnen, zusaetzeFuer, zusatzUmschalten } from './kons'
+import { bereicheJeKiefer, laserZuschlag, rechnen, zusaetzeFuer, zusatzUmschalten } from './kons'
 import { neuerPlan, STANDARD_EINSTELLUNGEN as einst } from '../store'
 import type { Plan, Vereinbarungsart, ZahnLeistung } from '../types'
 
@@ -153,6 +153,16 @@ describe('Inlay-Labor aus dem Praxiskatalog', () => {
     const labor = [...r.zaehne.flatMap((z) => z.zeilen), ...r.begleit].filter((x) => x.ebene === 'LABOR' && x.nr !== 'MwSt.')
     expect(r.begleit.at(-1)?.summe).toBeCloseTo(labor.reduce((s, x) => s + x.summe, 0) * 0.07, 2)
     expect(r.hinweise.some((h) => h.includes('Abdruck angenommen'))).toBe(true)
+  })
+
+  it('je Kieferhälfte oder Frontzahnbereich: höchstens zweimal je Kiefer, auch wenn Front und beide Seiten behandelt werden', () => {
+    const alle = { '16': { therapie: 'komposit', flaechen: 2 }, '11': { therapie: 'komposit', flaechen: 1 }, '26': { therapie: 'komposit', flaechen: 2 } } as Record<string, ZahnLeistung>
+    const r = begleit(plan(alle, 2))
+    expect(r.find((x) => x.nr === '2040')?.anzahl).toBe(2)
+    expect(r.find((x) => x.nr === '2030')?.anzahl).toBe(2)
+    const beide = begleit(plan({ ...alle, '36': { therapie: 'komposit', flaechen: 2 }, '41': { therapie: 'komposit', flaechen: 1 }, '46': { therapie: 'komposit', flaechen: 2 } }, 2))
+    expect(beide.find((x) => x.nr === '2040')?.anzahl).toBe(4)
+    expect(bereicheJeKiefer(new Map([['OK-R', 2], ['OK-F', 1], ['OK-L', 1], ['UK-F', 1]]))).toBe(4)
   })
 
   it('Intraoralscan: GOZ 0065 für zwei Kieferhälften plus Gegenkiefer, digitaler Ablauf im Labor', () => {
