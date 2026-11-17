@@ -45,12 +45,17 @@ describe('Privat-PAR-Rechnung', () => {
     expect(zeile(p, '5070a', 'bev')!.anzahl).toBe(2)
   })
 
-  it('UPT Grad C: 3 Sitzungen, ab der dritten Index-Erhebung analog', () => {
+  it('UPT Grad C: 3 Sitzungen, Index nur in den zwei Sitzungen ohne Befundevaluation (Beratungsforum Nr. 59)', () => {
     const p = plan({ grad: 'C', uptJahre: 1, resttaschen: 50 })
     const r = rechnen(p)
     expect(r.uptSitzungen).toBe(3)
     expect(zeile(p, '4005', 'upt')!.anzahl).toBe(2)
-    expect(zeile(p, '4005a', 'upt')!.anzahl).toBe(1)
+    expect(zeile(p, '4005a', 'upt')).toBeUndefined()
+    expect(zeile(p, '5070a', 'upt')!.anzahl).toBe(1)
+    expect(r.hinweise.some((h) => h.includes('Beratungsforum Nr. 59'))).toBe(true)
+    // Grad B: zwei Sitzungen, eine davon mit Befundevaluation → ein Index; Grad A: nur die Befundevaluation
+    expect(zeile(plan({ grad: 'B', uptJahre: 2 }), '4005', 'upt')!.anzahl).toBe(2)
+    expect(zeile(plan({ grad: 'A', uptJahre: 1 }), '4005', 'upt')).toBeUndefined()
     // Resttaschen 50 %: 9 von 18 ein-, 5 von 10 mehrwurzeligen Zähnen je Sitzung
     expect(zeile(p, '0090a', 'upt')!.anzahl).toBe(27)
     expect(zeile(p, '2197a', 'upt')!.anzahl).toBe(15)

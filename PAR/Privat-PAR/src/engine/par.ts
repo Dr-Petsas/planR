@@ -95,9 +95,11 @@ export function rechnen(plan: Plan): Rechnung {
     const anteil = Math.min(100, Math.max(0, plan.resttaschen)) / 100
     gozZeile('upt', '1010', uptSitzungen)
     gozZeile('upt', '1040', n * uptSitzungen)
-    // PSI: zweimal im Jahr original, darüber analog
-    gozZeile('upt', '4005', Math.min(2, proJahr) * jahre)
-    analogZeile('upt', 'psiMehr', Math.max(0, proJahr - 2) * jahre)
+    // Index nur in den UPT-Sitzungen ohne Befundevaluation: 4005 und 4005a sind neben 5070a nicht berechnungsfähig
+    // (Beratungsforum Nr. 59). Zweimal im Jahr original, darüber analog (Beratungsforum Nr. 54).
+    const indexProJahr = Math.max(0, proJahr - 1)
+    gozZeile('upt', '4005', Math.min(2, indexProJahr) * jahre)
+    analogZeile('upt', 'psiMehr', Math.max(0, indexProJahr - 2) * jahre)
     analogZeile('upt', 'uptEin', Math.round(ein * anteil) * uptSitzungen)
     analogZeile('upt', 'uptMehr', Math.round(mehr * anteil) * uptSitzungen)
     analogZeile('upt', 'bev', jahre)
@@ -130,7 +132,8 @@ export function rechnen(plan: Plan): Rechnung {
   if (zusatzNr('4070') || zusatzNr('4075')) hinweise.push('4070/4075 nicht zahn- und sitzungsgleich neben der analogen subgingivalen Instrumentierung.')
   if (zusatzNr('4050') || zusatzNr('4055')) hinweise.push('4050/4055 nicht neben 1040 am selben Zahn und nicht neben 4090/4100 in derselben Sitzung.')
   if (zusatzNr('0110') || zusatzNr('0500')) hinweise.push('Zuschläge 0110 und 0500 ff. je Behandlungstag nur einmal und nur mit dem einfachen Satz.')
-  if (proJahr > 2 && jahre) hinweise.push(`Grad C: ab der dritten Index-Erhebung im Jahr analog ${analogNr('psiMehr', v)}.`)
+  if (jahre) hinweise.push(`UPT: Index (GOZ 4005) nur in den Sitzungen ohne Befundevaluation gerechnet – neben ${analogNr('bev', v)} sind 4000, 4005 und Beratungsleistungen nicht berechnungsfähig (Beratungsforum Nr. 59).`)
+  if (zusatzNr('4005')) warnungen.push('GOZ 4005 höchstens zweimal im Jahr und nicht in derselben Sitzung wie die Befundevaluation (Beratungsforum Nr. 59).')
   if (v === 'aktuell') hinweise.push('BZÄK-Neubewertung 2026: PKV und Beihilfe kennen vertraglich nur die Beratungsforum-Werte – Erstattungsrisiko beim Patienten (Aufklärung).')
   hinweise.push('Analogleistungen: auf der Rechnung die Leistung, "entsprechend GOZ …" und den Text der Referenzleistung angeben (§ 10 Abs. 4 GOZ).')
   if (plan.gkv) hinweise.push('Gesetzlich versichert: Privatbehandlung nur mit schriftlicher Vereinbarung vor Behandlungsbeginn (§ 8 Abs. 7 BMV-Z).')
