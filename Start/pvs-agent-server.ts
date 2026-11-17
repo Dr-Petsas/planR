@@ -209,7 +209,8 @@ export async function accessSchluessel(team: string): Promise<Jwk[]> {
 
 export interface Auftrag { id: string; method: 'GET' | 'POST'; pfad: string; body?: unknown; headers?: Record<string, string>; ms: number }
 export interface Antwort { ok: boolean; status: number; daten: Record<string, unknown> }
-export interface AgentStand { am: number; pvs?: string; version?: string; status?: string }
+/** kann: Praxisprogramme, die auf dem Rechner der Bridge liegen (ab Bridge 1.26) */
+export interface AgentStand { am: number; pvs?: string; version?: string; status?: string; kann?: string[] }
 
 /**
  * Ab Bridge 1.3 schickt der Dienst bei jeder Abfrage seinen Zustand mit; ohne Zustand fragt nur die Prüfung im

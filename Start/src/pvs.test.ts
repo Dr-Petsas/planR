@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgePvsGemeldet, bridgeSollPvs, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, pvsFuerBridge, vermerkText } from './pvs'
+import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgeKann, bridgeKannGemeldet, bridgePvsGemeldet, bridgeSollPvs, bridgeWaehlen, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, pvsFuerBridge, vermerkText } from './pvs'
 
 describe('PVS-Vermerk', () => {
   it('ein Plan bzw. MKV und Privatvereinbarung als zwei DS-Win-Pläne', () => {
@@ -41,14 +41,52 @@ describe('PVS-Vermerk', () => {
       standard: { pvs: 'dens', geaendert: '2026-11-14T19:00:00.000Z' },
       'p-kkz': { pvs: 'dampsoft', geaendert: '2026-11-14T12:00:00.000Z' },
     }
-    const verbunden = (m: string) => m === 'p-kkz'
+    const verbunden = (m: string) => (m === 'p-kkz' ? { pvs: 'dampsoft' } : null)
     expect(pvsFuerBridge('p-kkz', ablagen, verbunden, einstellung)).toBe('dens')
     expect(pvsFuerBridge('p-kkz', ablagen, verbunden, {
       ...einstellung, standard: { pvs: 'cgm-z1pro', geaendert: '2026-11-14T19:05:00.000Z' },
     })).toBe('cgm-z1pro')
-    expect(pvsFuerBridge('pc-1', {}, () => false, { 'pc-1': { pvs: 'dens', geaendert: '' } })).toBe('dens')
+    expect(pvsFuerBridge('pc-1', {}, () => null, { 'pc-1': { pvs: 'dens', geaendert: '' } })).toBe('dens')
     expect(bridgeSollPvs(pvsFuerBridge('p-kkz', ablagen, verbunden, einstellung), 'dampsoft')).toBe('dens')
     expect(bridgeSollPvs(pvsFuerBridge('p-kkz', ablagen, verbunden, einstellung), 'dens')).toBeUndefined()
+  })
+
+  it('im Verbund bedient die Bridge, die das eingestellte Programm hat – die andere wird nicht umgestellt', () => {
+    const bruecken = ['standard', 'p-kkz']
+    const beide = (m: string) => (m === 'standard' ? { pvs: 'dens' } : { pvs: 'dampsoft' })
+    expect(bridgeWaehlen(bruecken, 'dens', beide)).toBe('standard')
+    expect(bridgeWaehlen(bruecken, 'dampsoft', beide)).toBe('p-kkz')
+    // Keine fährt es: eine, die es auf dem Rechner hat, geht vor einer älteren ohne Angabe, die vor einer ohne das Programm
+    const z1 = (m: string) => (m === 'standard' ? { pvs: 'dens', kann: ['dens'] } : { pvs: 'dampsoft', kann: ['dampsoft', 'cgm-z1pro'] })
+    expect(bridgeWaehlen(bruecken, 'cgm-z1pro', z1)).toBe('p-kkz')
+    expect(bridgeWaehlen(bruecken, 'cgm-z1pro', (m) => (m === 'standard' ? { pvs: 'dens', kann: ['dens'] } : { pvs: 'dampsoft' }))).toBe('p-kkz')
+    // Nur eine verbunden, keine verbunden, keine eingerichtet
+    expect(bridgeWaehlen(bruecken, 'dampsoft', (m) => (m === 'standard' ? { pvs: 'dens' } : null))).toBe('standard')
+    expect(bridgeWaehlen(bruecken, 'dampsoft', () => null)).toBe('standard')
+    expect(bridgeWaehlen([], 'dens', () => null)).toBeUndefined()
+    expect(bridgeWaehlen(bruecken, '', (m) => (m === 'p-kkz' ? { pvs: 'dampsoft' } : null))).toBe('p-kkz')
+
+    const ablagen = { standard: bruecken }
+    const aufDampsoft = { standard: { pvs: 'dampsoft', geaendert: '2' }, 'p-kkz': { pvs: 'dampsoft', geaendert: '1' } }
+    // Die DENS-Bridge bleibt DENS, solange die DS-Win-Bridge die Ablage bedient
+    expect(bridgeSollPvs(pvsFuerBridge('standard', ablagen, beide, aufDampsoft), 'dens')).toBeUndefined()
+    expect(bridgeSollPvs(pvsFuerBridge('p-kkz', ablagen, beide, aufDampsoft), 'dampsoft')).toBeUndefined()
+    // Zurück auf DENS: die DS-Win-Bridge folgt nicht ihrer eigenen alten Einstellung und nicht der Ablage
+    const aufDens = { ...aufDampsoft, standard: { pvs: 'dens', geaendert: '3' } }
+    expect(pvsFuerBridge('p-kkz', ablagen, beide, aufDens)).toBe('')
+    expect(pvsFuerBridge('standard', ablagen, beide, aufDens)).toBe('dens')
+  })
+
+  it('eine Bridge wird nie auf ein Programm gestellt, das auf ihrem Rechner fehlt', () => {
+    expect(bridgeSollPvs('dampsoft', 'dens', ['dens'])).toBeUndefined()
+    expect(bridgeSollPvs('dampsoft', 'dens', ['dens', 'dampsoft'])).toBe('dampsoft')
+    expect(bridgeSollPvs('dampsoft', 'dens')).toBe('dampsoft')
+    expect(bridgeKannGemeldet(null)).toBeUndefined()
+    expect(bridgeKannGemeldet('dens,charly, dampsoft')).toEqual(['dens', 'dampsoft'])
+    expect(bridgeKannGemeldet('')).toEqual([])
+    expect(bridgeKann({ pvs: 'dens', kann: ['dens'] }, 'dampsoft')).toBe(false)
+    expect(bridgeKann({ pvs: 'dens' }, 'dampsoft')).toBe(true)
+    expect(bridgeKann({ pvs: 'dens', kann: [] }, 'dens')).toBe(true)
   })
 })
 

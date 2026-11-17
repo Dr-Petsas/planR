@@ -11,7 +11,7 @@ import { behandlungsschritte, positionenAusFassung, schritteAnzahl } from './src
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsFreiKonten, pvsStehtFest, pvsVon } from './src/einstellungen.ts'
 import {
-  PVS_BEFUND, PVS_OFFEN, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, bridgePvsGemeldet, bridgeSollPvs, planInsPvsMoeglich, pvsFuerBridge, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk, type PvsWahl,
+  PVS_BEFUND, PVS_OFFEN, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, bridgeKann, bridgeKannGemeldet, bridgePvsGemeldet, bridgeSollPvs, bridgeWaehlen, planInsPvsMoeglich, pvsFuerBridge, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk, type PvsWahl,
 } from './src/pvs.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
@@ -971,10 +971,11 @@ const stumm = (c: PvsWeg, e?: unknown) => e instanceof Error && e.message === 'n
  * Verbunden geht vor eingerichtet; null = im ganzen Verbund keine eingerichtet.
  */
 async function bridgeFuer(mandant: string): Promise<{ m: string; stand: AgentStand | null } | null> {
-  const [z, agenten] = await Promise.all([zugaengeLesen(), agentenLesen()])
+  const [z, agenten, e] = await Promise.all([zugaengeLesen(), agentenLesen(), einstellungenImVerbund(mandant)])
   const eingerichtet = bridgeMandanten(z, mandant).filter((k) => agenten[k])
-  if (!eingerichtet.length) return null
-  const m = eingerichtet.find((k) => hub.verbunden(k)) ?? eingerichtet[0]
+  // Mehrere Bridges im Verbund: die nehmen, die das eingestellte Praxisprogramm hat – nicht eine andere umstellen.
+  const m = bridgeWaehlen(eingerichtet, e.pvs, (k) => hub.verbunden(k))
+  if (!m) return null
   return { m, stand: hub.verbunden(m) }
 }
 
@@ -1012,7 +1013,7 @@ async function pvsDasDieseBridgeFaerht(bridge: string): Promise<string> {
     const e = einstellungenPruefen(roh)
     if (e.pvs) einstellung[k] = { pvs: e.pvs, geaendert: e.geaendert }
   }
-  return pvsFuerBridge(bridge, ablagen, (m) => !!hub.verbunden(m), einstellung)
+  return pvsFuerBridge(bridge, ablagen, (m) => hub.verbunden(m), einstellung)
 }
 
 /**
@@ -1033,7 +1034,9 @@ async function pvsConnector(req: IncomingMessage, w: Wer, zweck: 'suche' | 'hkp'
   const stand = bridge?.stand ?? null
   if (w.ort && !stand) return { status: 503, name: pvs.name, fehler: 'Die PlanR-Bridge auf diesem PC ist nicht verbunden – läuft der Dienst „PlanR-Bridge“ hier?' }
   if (stand?.pvs && stand.pvs !== pvs.id) {
-    const fehler = bridgeFolgtEinstellung(stand.version)
+    const fehler = !bridgeKann(stand, pvs.id)
+      ? `Auf dem Rechner der PlanR-Bridge ist ${pvs.name} nicht zu finden – sie arbeitet mit ${pvsVon(stand.pvs)?.name ?? stand.pvs}. Für ${pvs.name} braucht es die Bridge auf dem Rechner, auf dem ${pvs.name} liegt.`
+      : bridgeFolgtEinstellung(stand.version)
       ? `Die PlanR-Bridge stellt gerade auf ${pvs.name} um. Bitte in einer Minute erneut versuchen.`
       : `Die PlanR-Bridge der Praxis arbeitet mit ${stand.pvs}, eingestellt ist ${pvs.name}.`
     return { status: 409, name: pvs.name, fehler }
@@ -1633,14 +1636,15 @@ async function agentEndpunkt(req: IncomingMessage, res: ServerResponse, url: str
     if (status === 'bereit') await ortEinstellungAnlegen(mandant, q.get('pvs') ?? '')
     // Solange der Connector noch startet, kurz warten: „bereit“ soll Setup und Assistent sofort erreichen.
     const ms = status && status !== 'bereit' ? 5_000 : 25_000
-    const auftrag = await hub.abholen(mandant, ms, { pvs, version, status }, (weg) => res.on('close', weg))
+    const kann = bridgeKannGemeldet(q.get('kann'))
+    const auftrag = await hub.abholen(mandant, ms, { pvs, version, status, kann }, (weg) => res.on('close', weg))
     if (res.writableEnded || res.destroyed) {
       if (auftrag) hub.zurueckstellen(mandant, auftrag)
     return
   }
     // Die Einstellung in PlanR ist der Schalter. Die Bridge, die eine Ablage gerade bedient,
     // folgt deren Einstellung – nicht einer älteren eigenen, sonst bleibt sie auf Dampsoft stehen.
-    const soll = bridgeSollPvs(await pvsDasDieseBridgeFaerht(mandant), pvs)
+    const soll = bridgeSollPvs(await pvsDasDieseBridgeFaerht(mandant), pvs, kann)
     if (!auftrag) {
       if (soll) return json(res, 200, { pvs: soll })
       res.statusCode = 204

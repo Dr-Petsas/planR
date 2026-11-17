@@ -142,9 +142,45 @@ export const planInsPvsMoeglich = (pvs: string | undefined, modul: string) => !!
  * Praxisprogramm, das die Bridge starten soll, wenn es von dem abweicht, mit dem sie sich meldet.
  * Leer, wenn die Einstellung kein angebundener Connector ist oder schon übereinstimmt.
  */
-export function bridgeSollPvs(eingestellt: string, gemeldet?: string): string | undefined {
+export function bridgeSollPvs(eingestellt: string, gemeldet?: string, kann?: string[]): string | undefined {
   if (!PVS_CONNECTOR[eingestellt] || eingestellt === gemeldet) return undefined
+  // Die Bridge hat gemeldet, welche Programme auf ihrem Rechner liegen: ein anderes kann sie nicht starten.
+  if (kann && !kann.includes(eingestellt)) return undefined
   return eingestellt
+}
+
+/** Was eine verbundene Bridge meldet: laufendes Praxisprogramm und (ab Bridge 1.26) die auf ihrem Rechner vorhandenen */
+export interface BridgeMeldung { pvs?: string; kann?: string[] }
+
+/** Vorhandene Praxisprogramme aus der Meldung der Bridge; undefined = ältere Bridge, die das nicht meldet */
+export function bridgeKannGemeldet(roh: string | null | undefined): string[] | undefined {
+  if (roh == null) return undefined
+  return roh.split(',').map((s) => s.trim()).filter((s) => !!PVS_CONNECTOR[s])
+}
+
+/** Kann diese Bridge das Praxisprogramm fahren? Ältere Bridges (ohne Angabe) gelten als umstellbar. */
+export const bridgeKann = (stand: BridgeMeldung, pvs: string) => stand.pvs === pvs || !stand.kann || stand.kann.includes(pvs)
+
+/**
+ * Bridge einer Ablage für das eingestellte Praxisprogramm. Im Verbund können mehrere Bridges an verschiedenen
+ * Praxisprogrammen hängen: Es gilt die, die das Programm schon fährt, dann eine, die es auf ihrem Rechner hat,
+ * dann eine ältere, die sich umstellen lässt. Zuletzt irgendeine verbundene, sonst die erste eingerichtete.
+ */
+export function bridgeWaehlen(bruecken: string[], pvs: string, stand: (mandant: string) => BridgeMeldung | null): string | undefined {
+  const rang = (m: string) => {
+    const s = stand(m)
+    if (!s) return 4
+    if (!pvs || s.pvs === pvs) return 0
+    if (s.kann?.includes(pvs)) return 1
+    return s.kann ? 3 : 2
+  }
+  let beste: string | undefined
+  let bester = 5
+  for (const m of bruecken) {
+    const r = rang(m)
+    if (r < bester) { beste = m; bester = r }
+  }
+  return beste
 }
 
 /** Gemeldetes Praxisprogramm der Bridge; nur ein angebundener Connector zählt. */
@@ -157,24 +193,25 @@ export interface PvsWahl { pvs: string; geaendert: string }
 
 /**
  * Praxisprogramm, das diese Bridge fahren muss.
- * Sie bedient jede Ablage, deren gerade verbundene Bridge sie ist.
- * Bei mehreren gilt die zuletzt geänderte Einstellung. Ohne solche Ablage die eigene.
+ * Sie bedient jede Ablage, für deren eingestelltes Programm sie die gewählte Bridge ist (bridgeWaehlen).
+ * Bei mehreren gilt die zuletzt geänderte Einstellung. Bedient eine andere Bridge die Ablage, bleibt diese,
+ * wie sie ist – sonst stellten sich zwei Bridges im Verbund gegenseitig um. Ohne Ablage mit Einstellung die eigene.
  */
 export function pvsFuerBridge(
   bridge: string,
   ablagen: Record<string, string[]>,
-  verbunden: (mandant: string) => boolean,
+  stand: (mandant: string) => BridgeMeldung | null,
   einstellung: Record<string, PvsWahl | undefined>,
 ): string {
   const treffer: PvsWahl[] = []
+  let andereBedient = false
   for (const [ablage, bruecken] of Object.entries(ablagen)) {
-    if (!bruecken.length) continue
-    const aktiv = bruecken.find((m) => verbunden(m)) ?? bruecken[0]
-    if (aktiv !== bridge) continue
     const e = einstellung[ablage]
-    if (e?.pvs) treffer.push(e)
+    if (!e?.pvs || !bruecken.includes(bridge)) continue
+    if (bridgeWaehlen(bruecken, e.pvs, stand) === bridge) treffer.push(e)
+    else andereBedient = true
   }
-  if (!treffer.length && einstellung[bridge]?.pvs) treffer.push(einstellung[bridge])
+  if (!treffer.length && !andereBedient && einstellung[bridge]?.pvs) treffer.push(einstellung[bridge])
   treffer.sort((a, b) => (b.geaendert || '').localeCompare(a.geaendert || ''))
   return treffer[0]?.pvs ?? ''
 }
