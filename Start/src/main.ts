@@ -2460,6 +2460,10 @@ window.addEventListener('message', (ev) => {
     }, 400)
     return
   }
+  if (d.type === 'planr-zur-liste' && planBlick) {
+    planSchliessen()
+    return
+  }
   if (d.type === 'planr-gespeichert' && ev.origin === location.origin) {
     const gemeldet = (d as { plaene?: { modul?: string; nummer?: string; betrag?: number }[] }).plaene
     const neu = betraegeUebernehmen(plaene, Array.isArray(gemeldet) ? gemeldet : [])

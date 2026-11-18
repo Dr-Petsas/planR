@@ -77,8 +77,11 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
   const [rueck, setRueck] = useState<'' | 'laeuft' | 'ok' | 'fehler'>('')
   const rueckRef = useRef(rueck)
   rueckRef.current = rueck
+  // Nur der Speichern-Klick: danach zurück in die Übersicht. Das automatische Speichern bleibt im Plan.
+  const zurListe = useRef(false)
   const jetztSpeichern = () => {
     setRueck('laeuft')
+    zurListe.current = window.parent !== window
     tun.current(stand.current)
   }
   useEffect(() => {
@@ -90,10 +93,17 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
     let t = 0
     const gemeldet = (ev: Event) => {
       const ok = (ev as CustomEvent<{ ok?: boolean }>).detail?.ok === true
-      if (!ok) return setRueck('fehler')
+      if (!ok) {
+        zurListe.current = false
+        return setRueck('fehler')
+      }
       if (rueckRef.current === 'fehler') return setRueck('')
       if (rueckRef.current !== 'laeuft') return
       setRueck('ok')
+      if (zurListe.current) {
+        zurListe.current = false
+        window.parent.postMessage({ type: 'planr-zur-liste' }, '*')
+      }
       // Kurzes Vibrieren, wo der Browser es kann (Android); iPhones lassen Webseiten nicht vibrieren.
       try { navigator.vibrate?.(40) } catch { /* ohne Vibration */ }
       window.clearTimeout(t)
