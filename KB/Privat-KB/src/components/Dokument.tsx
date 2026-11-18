@@ -1,4 +1,6 @@
+import { Fragment } from 'react'
 import type { Einstellungen, Plan, Rechnung, Zeile } from '../types'
+import { mitUeberschrift } from '../rechnungGliederung'
 import { euro, faktorText, istUkps } from '../engine/kb'
 import { begruendungen } from '../engine/begruendung'
 import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
@@ -50,7 +52,11 @@ const Unterschriften = ({ praxis }: { praxis: Praxis }) => (
   </div>
 )
 
-function Tabelle({ zeilen, mitFaktor }: { zeilen: Zeile[]; mitFaktor: boolean }) {
+function Tabelle({ zeilen, mitFaktor, gliedern = false }: { zeilen: Zeile[]; mitFaktor: boolean; gliedern?: boolean }) {
+  const spalten = 5 + (mitFaktor ? 1 : 0)
+  const liste = gliedern
+    ? mitUeberschrift(zeilen, (z) => ({ ebene: z.ebene, nr: z.nr }))
+    : zeilen.map((zeile) => ({ zeile, ueberschrift: undefined as string | undefined }))
   return (
     <table className="kv-tabelle kv-leistung">
       <thead>
@@ -60,15 +66,18 @@ function Tabelle({ zeilen, mitFaktor }: { zeilen: Zeile[]; mitFaktor: boolean })
         </tr>
       </thead>
       <tbody>
-        {zeilen.map((z) => (
-          <tr key={z.id}>
-            <td className="mono">{z.ebene === 'GOAE' ? `Ä${z.nr}` : z.nr}</td>
-            <td>{z.text}</td>
-            <td className="r">{z.anzahl}</td>
-            {mitFaktor && <td className="r">{z.faktor ? faktorText(z.faktor) : ''}</td>}
-            <td className="r">{euro(z.einzel)}</td>
-            <td className="r">{euro(z.summe)}</td>
-          </tr>
+        {liste.map(({ zeile: z, ueberschrift }) => (
+          <Fragment key={z.id}>
+            {ueberschrift && <tr className="kv-gliederung"><td colSpan={spalten}>{ueberschrift}</td></tr>}
+            <tr>
+              <td className="mono">{z.ebene === 'GOAE' ? `Ä${z.nr}` : z.nr}</td>
+              <td>{z.text}</td>
+              <td className="r">{z.anzahl}</td>
+              {mitFaktor && <td className="r">{z.faktor ? faktorText(z.faktor) : ''}</td>}
+              <td className="r">{euro(z.einzel)}</td>
+              <td className="r">{euro(z.summe)}</td>
+            </tr>
+          </Fragment>
         ))}
       </tbody>
     </table>
@@ -95,7 +104,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           <p className="leer">Noch keine Leistung geplant.</p>
         ) : (
           <>
-            {rechnung.honorar.length > 0 && (<><h2>Zahnärztliches Honorar</h2><Tabelle zeilen={rechnung.honorar} mitFaktor /></>)}
+            {rechnung.honorar.length > 0 && (<><h2>Zahnärztliches Honorar</h2><Tabelle zeilen={rechnung.honorar} mitFaktor gliedern /></>)}
             {rechnung.labor.length > 0 && (
               <>
                 <h2 style={{ marginTop: 12 }}>Material- und Laborkosten{labor ? ` (${labor})` : ''}</h2>
@@ -150,7 +159,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           <Kopf plan={plan} einst={einst} />
           <h1>Vereinbarung nach § 2 Abs. 1 und 2 GOZ</h1>
           <p className="kv-untertitel">abweichende Höhe der Vergütung</p>
-          <Tabelle zeilen={rechnung.vereinbarung2} mitFaktor />
+          <Tabelle zeilen={rechnung.vereinbarung2} mitFaktor gliedern />
           <p className="kv-erstattung">
             Eine Erstattung der Vergütung durch Erstattungsstellen ist möglicherweise nicht in vollem Umfang gewährleistet.
           </p>

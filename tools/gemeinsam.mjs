@@ -29,13 +29,13 @@ const PLANER = {
 }
 
 const SAETZE = {
-  start: ['thema.ts', 'data/kzv.ts', 'arbeitClient.ts', 'arbeitClient.test.ts'],
+  start: ['thema.ts', 'data/kzv.ts', 'arbeitClient.ts', 'arbeitClient.test.ts', 'rechnungGliederung.ts'],
   basis: [
     'mandant.ts', 'mandant.test.ts', 'components/Mandant.tsx',
     'stammdaten.ts', 'stammdaten.test.ts', 'components/Stammdaten.tsx',
     'daten.ts', 'components/Listen.tsx', 'gemeinsam.css', 'thema.ts',
     'arbeitDialog.ts', 'arbeitFenster.ts', 'PlanrZurueck.tsx', 'components/Handy.tsx',
-    'planKi.ts', 'pruefung.ts', 'kiProbe.ts', 'kiMatrix.ts', 'components/Pruefmodul.tsx',
+    'planKi.ts', 'pruefung.ts', 'kiProbe.ts', 'kiMatrix.ts', 'components/Pruefmodul.tsx', 'rechnungGliederung.ts',
     'arbeitClient.ts', 'arbeitClient.test.ts', 'components/KiZeile.tsx',
   ],
   ablage: ['ablage.ts', 'ablage.test.ts', 'zentral.ts', 'zentral.test.ts', 'components/Ablage.tsx', 'arzt.ts', 'components/Arztstempel.tsx'],

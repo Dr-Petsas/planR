@@ -1,8 +1,9 @@
+import { Fragment } from 'react'
 import type { Einstellungen, Plan } from '../types'
+import { mitUeberschrift } from '../rechnungGliederung'
 import { plzOrt, praxisZeile } from '../stammdaten'
 import Arztstempel from './Arztstempel'
 import { BEB_NAME, euro, type Kalkulation, type Zeile } from '../engine/berechnung'
-import { ALLE_ZAEHNE, BEFUND_KUERZEL, PLANUNG_KUERZEL } from '../engine/zahnschema'
 
 interface Props {
   plan: Plan
@@ -21,20 +22,27 @@ function gueltigBis(iso: string, monate: number) {
 
 export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
   const { praxis, patient } = { praxis: einst.praxis, patient: plan.patient }
-  const versorgt = ALLE_ZAEHNE.filter((z) => plan.zaehne[z]?.TP || plan.zaehne[z]?.B)
   const begruendungen = kalk.honorar.filter((z) => z.begruendung)
 
-  const zeilen = (liste: Zeile[], goz: boolean) => liste.map((z) => (
-    <tr key={z.id}>
-      <td className="mono">{goz ? z.nr : z.ebene === 'MAT' ? '' : z.eigen ?? z.nr}</td>
-      <td>{z.zahn}</td>
-      <td>{z.text}</td>
-      <td className="r">{z.anzahl.toLocaleString('de-DE')}</td>
-      {goz && <td className="r">{faktorText(z.faktor)}</td>}
-      <td className="r">{euro(z.einzel)}</td>
-      <td className="r">{euro(z.betrag)}</td>
-    </tr>
-  ))
+  const zeilen = (liste: Zeile[], goz: boolean) => {
+    const gezeigt = goz
+      ? mitUeberschrift(liste, (z) => ({ ebene: z.ebene, nr: z.nr }))
+      : liste.map((zeile) => ({ zeile, ueberschrift: undefined as string | undefined }))
+    return gezeigt.map(({ zeile: z, ueberschrift }) => (
+      <Fragment key={z.id}>
+        {ueberschrift && <tr className="kv-gliederung"><td colSpan={goz ? 7 : 6}>{ueberschrift}</td></tr>}
+        <tr>
+          <td className="mono">{goz ? z.nr : z.ebene === 'MAT' ? '' : z.eigen ?? z.nr}</td>
+          <td>{z.zahn}</td>
+          <td>{z.text}</td>
+          <td className="r">{z.anzahl.toLocaleString('de-DE')}</td>
+          {goz && <td className="r">{faktorText(z.faktor)}</td>}
+          <td className="r">{euro(z.einzel)}</td>
+          <td className="r">{euro(z.betrag)}</td>
+        </tr>
+      </Fragment>
+    ))
+  }
 
   return (
     <article className="kv-blatt">
@@ -70,28 +78,6 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
         <br />
         für die besprochene Versorgung erhalten Sie nachfolgend die voraussichtlichen Kosten. Die Behandlung erfolgt als Privatleistung.
       </p>
-
-      {versorgt.length > 0 && (
-        <section>
-          <h2>Befund und geplante Versorgung</h2>
-          <table className="kv-tabelle kv-zaehne">
-            <thead><tr><th>Zahn</th><th>Befund</th><th>Geplante Versorgung</th></tr></thead>
-            <tbody>
-              {versorgt.map((z) => {
-                const b = plan.zaehne[z]?.B ?? ''
-                const tp = plan.zaehne[z]?.TP ?? ''
-                return (
-                  <tr key={z}>
-                    <td className="mono">{z}</td>
-                    <td>{b ? BEFUND_KUERZEL[b] ?? b : '–'}</td>
-                    <td>{tp ? PLANUNG_KUERZEL[tp] ?? tp : '–'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </section>
-      )}
 
       <section>
         <h2>1. Zahnärztliches Honorar</h2>

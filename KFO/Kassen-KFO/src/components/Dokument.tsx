@@ -1,4 +1,6 @@
+import { Fragment } from 'react'
 import type { Einstellungen, Plan, Rechnung, Stufen, Zeile } from '../types'
+import { mitUeberschrift } from '../rechnungGliederung'
 import { BEHANDLUNGSART_NAME, PLANART_NAME, RASTER_119, RASTER_120, kigText } from '../data/katalog'
 import { euro, faktorText, pwText, rasterPunkte } from '../engine/kfo'
 import { FORMULAR_NAME } from '../engine/listen'
@@ -40,7 +42,11 @@ function Kopf({ plan, einst }: Omit<Props, 'rechnung'>) {
   )
 }
 
-function Tabelle({ zeilen, mitPunkten }: { zeilen: Zeile[]; mitPunkten: boolean }) {
+function Tabelle({ zeilen, mitPunkten, gliedern = false }: { zeilen: Zeile[]; mitPunkten: boolean; gliedern?: boolean }) {
+  const spalten = 5 + (mitPunkten ? 1 : 0)
+  const liste = gliedern
+    ? mitUeberschrift(zeilen, (z) => ({ ebene: z.ebene, nr: z.nr }))
+    : zeilen.map((zeile) => ({ zeile, ueberschrift: undefined as string | undefined }))
   return (
     <table className="kv-tabelle kv-leistung">
       <thead>
@@ -50,15 +56,18 @@ function Tabelle({ zeilen, mitPunkten }: { zeilen: Zeile[]; mitPunkten: boolean 
         </tr>
       </thead>
       <tbody>
-        {zeilen.map((z) => (
-          <tr key={z.id}>
-            <td className="mono">{z.nr}</td>
-            <td>{z.text}{z.ohneEigenanteil && <span className="analog-text">ohne Eigenanteil</span>}</td>
-            <td className="r">{z.anzahl}</td>
-            {mitPunkten && <td className="r">{z.punkte ?? ''}</td>}
-            <td className="r">{euro(z.einzel)}</td>
-            <td className="r">{euro(z.summe)}</td>
-          </tr>
+        {liste.map(({ zeile: z, ueberschrift }) => (
+          <Fragment key={z.id}>
+            {ueberschrift && <tr className="kv-gliederung"><td colSpan={spalten}>{ueberschrift}</td></tr>}
+            <tr>
+              <td className="mono">{z.nr}</td>
+              <td>{z.text}{z.ohneEigenanteil && <span className="analog-text">ohne Eigenanteil</span>}</td>
+              <td className="r">{z.anzahl}</td>
+              {mitPunkten && <td className="r">{z.punkte ?? ''}</td>}
+              <td className="r">{euro(z.einzel)}</td>
+              <td className="r">{euro(z.summe)}</td>
+            </tr>
+          </Fragment>
         ))}
       </tbody>
     </table>
@@ -140,7 +149,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
           <p className="leer">Noch keine Leistung geplant.</p>
         ) : (
           <>
-            {rechnung.honorar.length > 0 && (<><h2 style={{ marginTop: 12 }}>Zahnärztliche Leistungen</h2><Tabelle zeilen={rechnung.honorar} mitPunkten /></>)}
+            {rechnung.honorar.length > 0 && (<><h2 style={{ marginTop: 12 }}>Zahnärztliche Leistungen</h2><Tabelle zeilen={rechnung.honorar} mitPunkten gliedern /></>)}
             {rechnung.labor.length > 0 && (
               <><h2 style={{ marginTop: 12 }}>Labor nach {rechnung.belListe} ({plan.labor === 'praxis' ? 'Praxislabor' : 'gewerbliches Labor'})</h2><Tabelle zeilen={rechnung.labor} mitPunkten={false} /></>
             )}

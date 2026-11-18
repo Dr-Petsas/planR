@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { behandlungsschritte, positionenAusFassung, schritteAnzahl, type SchrittPosition } from './schritte'
+import { alleRegelOrte, behandlungsschritte, positionenAusFassung, schritteAnzahl, zuschlaege, type SchrittPosition } from './schritte'
+import { RECHNUNG_ORT, mitUeberschrift, nachSchritten } from './rechnungGliederung'
 
 const p = (ebene: string, nr: string, zahn = '', mehr: Partial<SchrittPosition> = {}): SchrittPosition => ({ ebene, nr, zahn, anzahl: 1, ...mehr })
 
@@ -111,5 +112,31 @@ describe('Schienenplan in der Reihenfolge der Behandlung', () => {
     expect(k.vor.map((x) => x.leistung)).toEqual(['BEMA 4', 'BEMA ATG', 'BEMA MHU'])
     expect(k.haupt.map((x) => x.leistung)).toEqual(['BEMA AITa', 'BEMA K1'])
     expect(k.kontrolle.map((x) => x.leistung)).toEqual(['BEMA BEVa', 'BEMA K7', 'BEMA UPTa'])
+  })
+})
+
+describe('Rechnungsgliederung', () => {
+  it('kennt dieselben Leistungen wie die Schritte', () => {
+    const regeln = alleRegelOrte()
+    expect(Object.keys(RECHNUNG_ORT).sort()).toEqual(Object.keys(regeln).sort())
+    for (const [k, v] of Object.entries(regeln)) expect(RECHNUNG_ORT[k]).toEqual([v.a, v.rang])
+    expect([...zuschlaege].every((k) => !(k in RECHNUNG_ORT))).toBe(true)
+  })
+
+  it('ordnet die Rechnung wie die Schritte und setzt nur Überschriften', () => {
+    const zeilen = [
+      { nr: '2200' }, { nr: '0010' }, { nr: '3290' }, { nr: '6190' }, { nr: '0090' }, { nr: '0530' },
+    ]
+    const folge = nachSchritten(zeilen, (z) => ({ ebene: 'GOZ', nr: z.nr })).map((z) => z.nr)
+    expect(folge).toEqual(['0010', '0090', '0530', '2200', '6190', '3290'])
+    const titel = mitUeberschrift(zeilen, (z) => ({ ebene: 'GOZ', nr: z.nr })).map((z) => z.ueberschrift).filter(Boolean)
+    expect(titel).toEqual([
+      'Vorbereitende Maßnahmen',
+      'Hauptbehandlung · Betäubung und Arbeitsfeld',
+      'Hauptbehandlung · Chirurgischer Eingriff',
+      'Hauptbehandlung · Eingliederung',
+      'Abschließende Maßnahmen',
+      'Kontrollen',
+    ])
   })
 })

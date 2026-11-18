@@ -1,8 +1,9 @@
+import { Fragment } from 'react'
 import type { Einstellungen, Plan } from '../types'
+import { mitUeberschrift } from '../rechnungGliederung'
 import { plzOrt, praxisZeile } from '../stammdaten'
 import Arztstempel from './Arztstempel'
 import { euro, type Kalkulation, type Zeile } from '../engine/berechnung'
-import { ALLE_ZAEHNE, BEFUND_KUERZEL, PLANUNG_KUERZEL } from '../engine/zahnschema'
 import { SITZUNG_NAME } from '../engine/planung'
 import { standardProtokoll } from '../data/blutprotokolle'
 
@@ -23,8 +24,6 @@ function gueltigBis(iso: string, monate: number) {
 export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
   const { praxis } = einst
   const { patient } = plan
-  // Der Befund steht im Zahnschema. Hier erscheinen nur Zähne, an denen etwas geplant ist.
-  const versorgt = ALLE_ZAEHNE.filter((z) => plan.zaehne[z]?.TP)
   const begruendungen = [...kalk.honorarGoz, ...kalk.honorarGoae].filter((z) => z.begruendung && (z.faktor ?? 0) > 2.3)
   const analoge = [...kalk.honorarGoz, ...kalk.honorarGoae].filter((z) => z.analog)
   const ueber35 = kalk.honorarGoz.some((z) => (z.faktor ?? 0) > 3.5)
@@ -84,22 +83,10 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
         <br />für den besprochenen implantatchirurgischen Eingriff erhalten Sie nachfolgend die voraussichtlichen Kosten.
       </p>
 
-      {(versorgt.length > 0 || sitzungen.length > 0) && (
+      {sitzungen.length > 0 && (
         <section>
-          <h2>{versorgt.length > 0 ? 'Befund und geplante Behandlung' : 'Geplante Behandlung'}</h2>
-          {versorgt.length > 0 && <table className="kv-tabelle kv-zaehne">
-            <thead><tr><th>Zahn</th><th>Befund</th><th>Geplant</th></tr></thead>
-            <tbody>
-              {versorgt.map((z) => (
-                <tr key={z}>
-                  <td className="mono">{z}</td>
-                  <td>{plan.zaehne[z]?.B ? BEFUND_KUERZEL[plan.zaehne[z]!.B] ?? plan.zaehne[z]!.B : '–'}</td>
-                  <td>{plan.zaehne[z]?.TP ? PLANUNG_KUERZEL[plan.zaehne[z]!.TP] ?? plan.zaehne[z]!.TP : '–'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>}
-          {sitzungen.length > 0 && <p className="kv-ablauf"><b>Behandlungsablauf:</b> {sitzungen.map((s) => SITZUNG_NAME[s] ?? `Sitzung ${s}`).join(' → ')}</p>}
+          <h2>Behandlungsablauf</h2>
+          <p className="kv-ablauf">{sitzungen.map((s) => SITZUNG_NAME[s] ?? `Sitzung ${s}`).join(' → ')}</p>
         </section>
       )}
 
@@ -107,7 +94,9 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
         <h2>1. Zahnärztliches Honorar (GOZ)</h2>
         <table className="kv-tabelle">
           <thead><tr><th>GOZ</th><th>Region</th><th>Leistung</th><th className="r">Anz.</th><th className="r">Faktor</th><th className="r">Einzel</th><th className="r">Betrag</th></tr></thead>
-          <tbody>{kalk.honorarGoz.map((z) => honorarZeile(z, true))}</tbody>
+          <tbody>{mitUeberschrift(kalk.honorarGoz, (z) => ({ ebene: 'GOZ', nr: z.nr, sitzung: z.sitzung }), true).map(({ zeile, ueberschrift }) => (
+            <Fragment key={zeile.id}>{ueberschrift && <tr className="kv-gliederung"><td colSpan={7}>{ueberschrift}</td></tr>}{honorarZeile(zeile, true)}</Fragment>
+          ))}</tbody>
           <tfoot><tr><td colSpan={6}>Summe GOZ</td><td className="r">{euro(kalk.summeGoz)}</td></tr></tfoot>
         </table>
         <p className="kv-fuss">„A" = Analogberechnung nach § 6 Abs. 1 GOZ (entsprechend der angegebenen Ziffer, § 10 Abs. 4 GOZ). „½/⅓" = reduzierter Gebührenanteil nach GOZ-Bestimmung.</p>
@@ -118,7 +107,9 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
           <h2>2. Ärztliche Leistungen (GOÄ)</h2>
           <table className="kv-tabelle">
             <thead><tr><th>GOÄ</th><th>Region</th><th>Leistung</th><th className="r">Anz.</th><th className="r">Faktor</th><th className="r">Einzel</th><th className="r">Betrag</th></tr></thead>
-            <tbody>{kalk.honorarGoae.map((z) => honorarZeile(z, true))}</tbody>
+            <tbody>{mitUeberschrift(kalk.honorarGoae, (z) => ({ ebene: 'GOAE', nr: z.nr, sitzung: z.sitzung }), true).map(({ zeile, ueberschrift }) => (
+              <Fragment key={zeile.id}>{ueberschrift && <tr className="kv-gliederung"><td colSpan={7}>{ueberschrift}</td></tr>}{honorarZeile(zeile, true)}</Fragment>
+            ))}</tbody>
             <tfoot><tr><td colSpan={6}>Summe GOÄ</td><td className="r">{euro(kalk.summeGoae)}</td></tr></tfoot>
           </table>
         </section>

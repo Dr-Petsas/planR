@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import type { HkpPlan } from '../types'
+import { mitUeberschrift } from '../rechnungGliederung'
 import type { Ergebnis } from '../engine/berechnung'
 import { euro, euroGanz } from '../format'
 
@@ -36,8 +37,9 @@ export function Teil2({ plan, ergebnis }: { plan: HkpPlan; ergebnis: Ergebnis })
           </thead>
           <tbody>
             {goz.length === 0 && <tr><td colSpan={6} className="leer">Keine GOZ-Leistungen geplant.</td></tr>}
-            {goz.map((p) => (
+            {mitUeberschrift(goz, (p) => ({ ebene: 'GOZ', nr: p.nr })).map(({ zeile: p, ueberschrift }) => (
               <Fragment key={p.id}>
+                {ueberschrift && <tr className="kv-gliederung"><td colSpan={6}>{ueberschrift}</td></tr>}
                 <tr>
                   <td>{p.zahn}</td><td>{p.nr}</td><td>{p.bezeichnung}{p.nachtraeglich ? ' (nachträglich)' : ''}</td>
                   <td className="r">{p.anzahl}</td><td className="r">{String(p.faktor ?? '').replace('.', ',')}</td>

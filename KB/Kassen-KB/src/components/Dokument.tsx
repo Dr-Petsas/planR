@@ -1,4 +1,6 @@
+import { Fragment } from 'react'
 import type { Einstellungen, Plan, Rechnung, Zeile } from '../types'
+import { mitUeberschrift } from '../rechnungGliederung'
 import { euro } from '../engine/kb'
 import { plzOrt } from '../stammdaten'
 
@@ -30,36 +32,45 @@ function Linien({ text, hoehe }: { text: string; hoehe: number }) {
 }
 
 function Kosten({ rechnung, laborwer }: { rechnung: Rechnung; laborwer: string }) {
-  const block = (titel: string, zeilen: Zeile[], punkte: boolean) => zeilen.length > 0 && (
-    <>
-      <h3>{titel}</h3>
-      <table className="ef2-kosten">
-        <thead>
-          <tr>
-            <th>Nr.</th><th>Leistung</th><th className="r">Anz.</th>
-            {punkte && <th className="r">Punkte</th>}<th className="r">Einzel</th><th className="r">Betrag</th>
-          </tr>
-        </thead>
-        <tbody>
-          {zeilen.map((z) => (
-            <tr key={z.id}>
-              <td className="mono">{z.nr}</td>
-              <td>{z.text}</td>
-              <td className="r">{z.anzahl}</td>
-              {punkte && <td className="r">{z.punkte ?? ''}</td>}
-              <td className="r">{euro(z.einzel)}</td>
-              <td className="r">{euro(z.summe)}</td>
+  const block = (titel: string, zeilen: Zeile[], punkte: boolean, gliedern = false) => {
+    const spalten = 5 + (punkte ? 1 : 0)
+    const liste = gliedern
+      ? mitUeberschrift(zeilen, (z) => ({ ebene: z.ebene, nr: z.nr }))
+      : zeilen.map((zeile) => ({ zeile, ueberschrift: undefined as string | undefined }))
+    return zeilen.length > 0 && (
+      <>
+        <h3>{titel}</h3>
+        <table className="ef2-kosten">
+          <thead>
+            <tr>
+              <th>Nr.</th><th>Leistung</th><th className="r">Anz.</th>
+              {punkte && <th className="r">Punkte</th>}<th className="r">Einzel</th><th className="r">Betrag</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
-  )
+          </thead>
+          <tbody>
+            {liste.map(({ zeile: z, ueberschrift }) => (
+              <Fragment key={z.id}>
+                {ueberschrift && <tr className="kv-gliederung"><td colSpan={spalten}>{ueberschrift}</td></tr>}
+                <tr>
+                  <td className="mono">{z.nr}</td>
+                  <td>{z.text}</td>
+                  <td className="r">{z.anzahl}</td>
+                  {punkte && <td className="r">{z.punkte ?? ''}</td>}
+                  <td className="r">{euro(z.einzel)}</td>
+                  <td className="r">{euro(z.summe)}</td>
+                </tr>
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </>
+    )
+  }
   return (
     <div className="ef2 ef2-folge">
       <p className="ef2-amt">Kostenaufstellung für die Praxis – nicht Teil des eFormulars 2</p>
       <p className="ef2-hinweis">Labor und Material gehen mit dem elektronischen Beleg an die KZV. Die Beträge sind voraussichtlich.</p>
-      {block('Zahnärztliche Leistungen', rechnung.honorar, true)}
+      {block('Zahnärztliche Leistungen', rechnung.honorar, true, true)}
       {block(`Labor nach ${rechnung.belListe} (${laborwer})`, rechnung.labor, false)}
       {block('Material', rechnung.material, false)}
       <div className="ef2-summe">

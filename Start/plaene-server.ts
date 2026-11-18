@@ -8,6 +8,7 @@ import {
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
 import { behandlungsschritte, positionenAusFassung, schritteAnzahl } from './src/schritte.ts'
+import { nachSchritten } from './src/rechnungGliederung.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsFreiKonten, pvsStehtFest, pvsVon } from './src/einstellungen.ts'
 import {
@@ -887,8 +888,14 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
     const wahl = await pvsPatient(c, patient)
     if (!wahl.id) return json(res, wahl.status ?? 409, { ok: false, meldung: wahl.meldung })
     for (const voll of plaene) {
+      // Dieselbe Folge wie die Behandlungsschritte. Überschriften gibt es nur auf der Rechnung, nicht in dieser Übergabe.
       // Die Sitzung gehört den Behandlungsschritten, das Praxisprogramm kennt das Feld nicht.
-      const plan = { ...voll, positionen: (Array.isArray(voll.positionen) ? voll.positionen as Record<string, unknown>[] : []).map(({ sitzung: _s, ...rest }) => rest) }
+      const roh = Array.isArray(voll.positionen) ? voll.positionen as Record<string, unknown>[] : []
+      const plan = {
+        ...voll,
+        positionen: nachSchritten(roh, (p) => ({ ebene: String(p.ebene ?? ''), nr: String(p.nr ?? ''), sitzung: Number(p.sitzung) || 0 }), modul === 'privat-impl')
+          .map(({ sitzung: _s, ...rest }) => rest),
+      }
       const anlage = await c.rufen<{ number?: number; label?: string; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/plaene/import`, {
         method: 'POST', body: { json: JSON.stringify(plan) }, ms: SCHREIB_MS, headers: { 'X-DSWIN-EDIT': '1' },
       })
@@ -3652,11 +3659,11 @@ async function probeNachtragen(req: IncomingMessage, res: ServerResponse, id: st
   let email = ''
   if (text) {
     const karte = await eingangText(ORDNER, id, text)
-    if (!karte) return json(res, 404, { ok: false })
+  if (!karte) return json(res, 404, { ok: false })
     // Adresse aus dem Praxisstempel: füllt auf der Probe-Seite das Feld für den Zugang vor.
     email = karte.kontakt?.email ?? ''
-    const meldung = await eingangEinmalMelden(ORDNER, id)
-    if (meldung) await probeHinweis({ ...meldung, kontakt: karte.kontakt }).catch(() => undefined)
+  const meldung = await eingangEinmalMelden(ORDNER, id)
+  if (meldung) await probeHinweis({ ...meldung, kontakt: karte.kontakt }).catch(() => undefined)
   }
   if (stand) {
     const karte = await eingangStand(ORDNER, id, stand)

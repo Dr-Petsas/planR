@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import type { Einstellungen, Plan, Rechnung, Vereinbarungsart, Zeile } from '../types'
 import { euro, faktorText } from '../engine/kons'
+import { mitUeberschrift } from '../rechnungGliederung'
 import { anschrift, patientName, plzOrt, type Praxis } from '../stammdaten'
 import Arztstempel from './Arztstempel'
 
@@ -70,17 +71,21 @@ const Unterschriften = ({ praxis }: { praxis: Praxis }) => (
 )
 
 function Zeilen({ zeilen, zahnTitel }: { zeilen: Zeile[]; zahnTitel?: string }) {
+  const liste = mitUeberschrift(zeilen, (z) => ({ ebene: z.ebene, nr: z.nr }))
   return (
     <>
-      {zeilen.map((x, i) => (
-        <tr key={`${x.zahn}-${x.nr}-${i}`}>
-          <td>{i === 0 || x.zahn !== zeilen[i - 1].zahn ? x.zahn ?? '' : ''}</td>
-          <td className="mono">{x.nr}</td>
-          <td>{i === 0 && zahnTitel ? <><b>{zahnTitel}</b><br />{x.text}</> : x.text}</td>
-          <td className="r">{x.anzahl}</td>
-          <td className="r">{x.faktor ? faktorText(x.faktor) : ''}</td>
-          <td className="r">{euro(x.summe)}</td>
-        </tr>
+      {liste.map(({ zeile: x, ueberschrift }, i) => (
+        <Fragment key={`${x.zahn}-${x.nr}-${i}`}>
+          {ueberschrift && <tr className="kv-gliederung"><td colSpan={6}>{ueberschrift}</td></tr>}
+          <tr>
+            <td>{i === 0 || x.zahn !== liste[i - 1]?.zeile.zahn ? x.zahn ?? '' : ''}</td>
+            <td className="mono">{x.nr}</td>
+            <td>{i === 0 && zahnTitel ? <><b>{zahnTitel}</b><br />{x.text}</> : x.text}</td>
+            <td className="r">{x.anzahl}</td>
+            <td className="r">{x.faktor ? faktorText(x.faktor) : ''}</td>
+            <td className="r">{euro(x.summe)}</td>
+          </tr>
+        </Fragment>
       ))}
     </>
   )

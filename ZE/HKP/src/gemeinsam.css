@@ -3,6 +3,13 @@
 /* In Sophie eingebettet (thema.ts): html.thema-sophie schlägt :root der Planer */
 html.thema-sophie { --akzent: #2b6fd6; --akzent-dunkel: #1c4f9e; --akzent-hell: #e7f0fd; --stahl: #3b76c9; }
 
+/* Gliederung auf der Rechnung. Die Überschrift ist keine Position und geht nicht ans Praxisprogramm. */
+.kv-gliederung td, .ef2-kosten tr.kv-gliederung td, .tabelle tr.kv-gliederung td {
+  font-weight: 700; font-size: 12px; letter-spacing: .01em;
+  background: var(--akzent-hell, #eef4f5); color: var(--akzent-dunkel, #1f4d57);
+  padding: 7px 8px; border-bottom: 1px solid var(--linie, #e3ddd3);
+}
+
 /* Mandant */
 .mandant-chip { display: inline-block; font-style: normal; letter-spacing: 0; text-transform: none; line-height: 1.5; margin-left: 8px; padding: 1px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--akzent-hell, #e4f0f1); color: var(--akzent-dunkel, #266a78); border: 1px solid #c4dfe2; vertical-align: middle; white-space: nowrap; }
 .mandant-karte { background: #fff; border: 1px solid var(--linie, #e3ddd3); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }

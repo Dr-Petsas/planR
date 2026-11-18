@@ -1,4 +1,5 @@
 import type { Einstellungen, Phase, Plan, Rechnung, Zeile } from '../types'
+import { nachSchritten } from '../rechnungGliederung'
 import { PHASE_NAME, VARIANTE_NAME } from '../data/katalog'
 import { euro, faktorText } from '../engine/par'
 import { begruendungen } from '../engine/begruendung'
@@ -90,7 +91,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
         {phasen.map((ph) => (
           <div key={ph}>
             <h2>{PHASE_NAME[ph]}</h2>
-            <Tabelle zeilen={rechnung.zeilen.filter((z) => z.phase === ph)} />
+            <Tabelle zeilen={nachSchritten(rechnung.zeilen.filter((z) => z.phase === ph), (z) => ({ ebene: 'GOZ', nr: z.nr }))} />
           </div>
         ))}
 

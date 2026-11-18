@@ -382,6 +382,13 @@ export function behandlungsschritte(positionen: SchrittPosition[], impl = false)
 
 export const schritteAnzahl = (s: Schritte) => s.vor.length + s.haupt.length + s.kontrolle.length
 
+/** Abschnitt und Rang jeder bekannten Leistung, zum Abgleich mit der Rechnungsgliederung. */
+export function alleRegelOrte(): Record<string, { a: Abschnitt; rang: number }> {
+  return Object.fromEntries(Object.entries(REGELN).map(([k, v]) => [k, { a: v.a, rang: v.rang }]))
+}
+
+export const zuschlaege = KEIN_SCHRITT
+
 /** Positionen aus der gespeicherten Fassung eines Plans (ein oder zwei Pläne fürs Praxisprogramm). */
 export function positionenAusFassung(pvs: unknown): SchrittPosition[] {
   if (!Array.isArray(pvs)) return []
