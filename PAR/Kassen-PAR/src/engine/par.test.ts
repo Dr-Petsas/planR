@@ -195,6 +195,21 @@ describe('Regler', () => {
     const summe = neu.reduce((s, t) => s + terminRechnen({ ...g, termine: neu }, t, preise).summe, 0)
     expect(summe).toBeGreaterThanOrEqual(basis + 50)
   })
+  it('gesetzlich versichert: der Regler schaltet nichts zu, was Inhalt der Kassen-PAR ist (Chef 18.11.2026)', () => {
+    const upt = f.termine.find((t) => t.schluessel === 'upt-1')!
+    for (const t of [ait, upt, f.termine.find((x) => x.art === 'atg')!]) {
+      const voll = reglerTermin(f, t, preise, 100000)
+      for (const id of ['spuelung', 'psi', 'gewohnheiten', 'beratung', 'sensibel', 'biofilm']) expect(voll.auto).not.toContain(id)
+    }
+    expect(reglerTermin(f, ait, preise, 100000).auto).toContain('pdt')
+    const alle = reglerGesamt(f, preise, 1e6).flatMap((t) => t.auto)
+    expect(alle).not.toContain('spuelung')
+    // alter Plan mit zugeschalteter Spülung: sie rechnet nicht mehr mit; von Hand gewählt bleibt sie und wird gemeldet
+    const alt = terminRechnen(f, { ...ait, auto: ['spuelung'] }, preise)
+    expect(alt.positionen.map((p) => p.nr)).not.toContain('4020')
+    const hand = terminRechnen(f, { ...ait, auswahl: ['spuelung'] }, preise)
+    expect(hand.positionen.map((p) => p.nr)).toContain('4020')
+  })
   it('Modus BEMA bietet keine privaten Kacheln an', () => {
     const r = terminRechnen({ ...f, modus: 'bema' }, ait, preise)
     expect(r.kacheln.every((k) => k.kachel.stufe !== 'zusatz')).toBe(true)

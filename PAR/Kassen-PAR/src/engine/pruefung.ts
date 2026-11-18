@@ -1,5 +1,6 @@
 import type { Befund, DiagnoseErgebnis, Einstellungen, ParFall } from '../types'
 import { befundFuer, cptZaehne, initialBefund } from './strecke'
+import { aktiveIds, kachelnFuer } from './leistungen'
 import { fristenPruefen } from './termine'
 import { hatFbFeld, istBehandelbar } from './zahnschema'
 
@@ -83,6 +84,17 @@ export function pruefeFall(fall: ParFall, _einst: Einstellungen, diag: DiagnoseE
   for (const t of fall.termine) {
     if (t.erbracht && !t.datum) add('fehler', 'Strecke', `${t.titel}: als erbracht markiert, aber ohne Datum.`)
   }
+  // Private Leistungen beim gesetzlich Versicherten
+  let privat = false
+  for (const t of fall.termine) {
+    const kacheln = kachelnFuer(t, fall.modus)
+    for (const k of kacheln) {
+      if (k.stufe !== 'zusatz' || !aktiveIds(t, kacheln).has(k.id)) continue
+      privat = true
+      if (k.kasseGrund) add('warnung', 'Strecke', `${t.titel}: „${k.label}“ ist neben der Kassen-PAR nicht privat berechenbar – ${k.kasseGrund}.`)
+    }
+  }
+  if (privat) add('hinweis', 'Strecke', 'Private Zusatzleistungen beim gesetzlich Versicherten: nur auf Wunsch des Patienten und mit schriftlicher Vereinbarung vor der Behandlung (§ 8 Abs. 7 BMV-Z); Analogleistungen nach § 6 Abs. 1 GOZ.')
   return m
 }
 

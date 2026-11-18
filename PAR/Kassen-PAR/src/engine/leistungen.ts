@@ -229,7 +229,8 @@ export function grundIds(t: Termin, kacheln: Kachel[]): Set<string> {
 
 export function aktiveIds(t: Termin, kacheln: Kachel[]): Set<string> {
   const ids = grundIds(t, kacheln)
-  for (const id of t.auto) if (kacheln.some((k) => k.id === id) && !t.abgewaehlt.includes(id)) ids.add(id)
+  // Was neben der Kassenleistung nicht privat berechenbar ist, schaltet der Regler nicht zu – auch nicht aus alten Plänen
+  for (const id of t.auto) if (kacheln.some((k) => k.id === id && !k.kasseGrund) && !t.abgewaehlt.includes(id)) ids.add(id)
   return ids
 }
 
@@ -293,7 +294,7 @@ export function terminRechnen(fall: ParFall, t: Termin, preise: Preise): TerminR
   return {
     ctx, kacheln: stand, positionen, summe, privat, kasse: summe - privat,
     basis: stand.filter((s) => grund.has(s.kachel.id)).reduce((x, s) => x + s.wert, 0),
-    potential: vertraeglich(stand).reduce((x, s) => x + s.wert, 0),
+    potential: vertraeglich(stand).filter((s) => s.aktiv || !s.kachel.kasseGrund).reduce((x, s) => x + s.wert, 0),
     punkteKasse: positionen.filter((p) => !p.privat).reduce((s, p) => s + p.punkte * p.menge, 0),
   }
 }
@@ -308,7 +309,7 @@ const STUFE_RANG: Record<Stufe, number> = { kern: 0, begleit: 1, zusatz: 2 }
 function kandidaten(r: TerminRechnung, t: Termin): KachelStand[] {
   const grund = new Set(r.kacheln.filter((s) => s.aktiv && !s.auto).map((s) => s.kachel.id))
   return r.kacheln
-    .filter((s) => !grund.has(s.kachel.id) && !t.abgewaehlt.includes(s.kachel.id) && s.wert > 0)
+    .filter((s) => !grund.has(s.kachel.id) && !t.abgewaehlt.includes(s.kachel.id) && s.wert > 0 && !s.kachel.kasseGrund)
     .sort((a, b) => STUFE_RANG[a.kachel.stufe] - STUFE_RANG[b.kachel.stufe] || b.wert - a.wert)
 }
 

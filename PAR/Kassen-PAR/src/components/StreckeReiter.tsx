@@ -405,12 +405,13 @@ function Kachelknopf({ s, t, r, onKlick, onRoentgen }: {
   s: KachelStand; t: Termin; r: TerminRechnung; onKlick: () => void; onRoentgen: (nr: string) => void
 }) {
   const k = s.kachel
-  const gesperrt = !s.aktiv && !!s.konflikt
+  const gesperrt = !s.aktiv && (!!s.konflikt || !!k.kasseGrund)
   const istRoentgen = k.id === 'roentgen'
   const autoNr = roentgenWahl(r.ctx.roentgen)
   const titel = [
     k.hinweis,
-    gesperrt ? `nicht neben „${s.konflikt}"` : '',
+    s.konflikt && !s.aktiv ? `nicht neben „${s.konflikt}"` : '',
+    k.kasseGrund ? `neben der Kassen-PAR nicht privat berechenbar: ${k.kasseGrund} – der Regler schaltet das nicht zu` : '',
     ...s.positionen.map((p) => `${p.sys} ${p.nr}: ${p.menge} × ${p.titel}`),
   ].filter(Boolean).join('\n')
   return (

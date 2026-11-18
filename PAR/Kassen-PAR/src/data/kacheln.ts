@@ -62,6 +62,12 @@ export interface Kachel {
   /** nicht neben diesen Kacheln (IDs) im selben Termin */
   nichtNeben?: string[]
   hinweis?: string
+  /**
+   * Beim gesetzlich Versicherten neben der Kassen-PAR nicht privat berechenbar: die Leistung ist Inhalt einer
+   * BEMA-Leistung der Strecke oder hat eine eigene BEMA-Nummer. Der Regler schaltet sie nie zu; von Hand gewählt
+   * steht sie mit Warnung in den Prüfhinweisen.
+   */
+  kasseGrund?: string
 }
 
 const k = (
@@ -114,9 +120,15 @@ const mmp8 = k('mmp8', 'aMMP-8-Test', 'zusatz', 'Diagnostik privat', [AN('mmp8')
 const speicheltest = k('speicheltest', 'Speicheltest / Risikoanalyse', 'zusatz', 'Diagnostik privat', [AN('speicheltest')])
 const fluorid = k('fluorid', 'Fluoridierung', 'zusatz', 'Prophylaxe privat', [G('1020')])
 const zunge = k('zunge', 'Zungenreinigung', 'zusatz', 'Prophylaxe privat', [AN('zungenreinigung')])
-const sensibel = k('sensibel', 'Überempfindliche Zahnflächen', 'zusatz', 'Prophylaxe privat', [G('2010', 'kiefer')])
-const kanten = k('kanten', 'Scharfe Zahnkanten beseitigen', 'zusatz', 'Prophylaxe privat', [G('4030', 'haelften')])
-const spuelung = k('spuelung', 'Antiseptische Taschenspülung', 'zusatz', 'Adjuvante Therapie privat', [G('4020')])
+const sensibel = k('sensibel', 'Überempfindliche Zahnflächen', 'zusatz', 'Prophylaxe privat', [G('2010', 'kiefer')], {
+  kasseGrund: 'Kassenleistung (BEMA 10)',
+})
+const kanten = k('kanten', 'Scharfe Zahnkanten beseitigen', 'zusatz', 'Prophylaxe privat', [G('4030', 'haelften')], {
+  kasseGrund: 'Kassenleistung (BEMA 106)',
+})
+const spuelung = k('spuelung', 'Antiseptische Taschenspülung', 'zusatz', 'Adjuvante Therapie privat', [G('4020')], {
+  kasseGrund: 'lokale Behandlung der Taschen gehört zur Kassen-PAR (AIT, UPT, Nachbehandlung 111, BEMA 105)',
+})
 const medikament = (anteil: number) =>
   k('medikament', 'Lokale Medikamentenapplikation', 'zusatz', 'Adjuvante Therapie privat', [G('4025', { anteil })], {
     hinweis: `je Zahn, vorgeschlagen für ${Math.round(anteil * 100)} % der behandelten Zähne`,
@@ -128,9 +140,12 @@ const laser = k('laser', 'Laser-Dekontamination', 'zusatz', 'Adjuvante Therapie 
 const schienung = k('schienung', 'Parodontale Schienung (adhäsiv)', 'zusatz', 'Adjuvante Therapie privat', [AN('schienung', 'eins')], {
   hinweis: 'je Interdentalraum – Menge eintragen',
 })
-const gewohnheiten = k('gewohnheiten', 'Beratung schädliche Gewohnheiten (Rauchstopp)', 'zusatz', 'Beratung privat', [G('6190')])
+const gewohnheiten = k('gewohnheiten', 'Beratung schädliche Gewohnheiten (Rauchstopp)', 'zusatz', 'Beratung privat', [G('6190')], {
+  kasseGrund: 'Beratung zu Risikofaktoren ist Inhalt von ATG, MHU und UPT b',
+})
 const psi = k('psi', 'PSI / Gingivalindex (3. und 4. Mal im Jahr)', 'zusatz', 'Diagnostik privat', [AN('psi')], {
   hinweis: 'BZÄK 08/2026: 3210a, erst ab der dritten Erhebung im Jahr',
+  kasseGrund: 'Sondierungstiefen und Bluten erhebt die Kassen-UPT (UPT d, UPT g)',
 })
 const zungenindex = k('zungenindex', 'Zungenbelag-Index / Halitosis-Messung', 'zusatz', 'Diagnostik privat', [AN('zungenindex')])
 const hba1c = k('hba1c', 'Diabetes-Screening (HbA1c-Schnelltest)', 'zusatz', 'Diagnostik privat', [AN('hba1c')], {
@@ -138,6 +153,7 @@ const hba1c = k('hba1c', 'Diabetes-Screening (HbA1c-Schnelltest)', 'zusatz', 'Di
 })
 const biofilm = k('biofilm', 'Subgingivale Biofilmentfernung (Pulverstrahl)', 'zusatz', 'Prophylaxe privat', [AN('biofilm', { anteil: 0.3 })], {
   hinweis: 'nicht in GOZ 1040 enthalten; je Zahn mit Taschen, vorgeschlagen für 30 %',
+  kasseGrund: 'subgingivale Instrumentierung ist Inhalt von AIT und UPT e/f',
 })
 const hyaluron = (anteil: number) =>
   k('hyaluron', 'Hyaluronsäure subgingival', 'zusatz', 'Adjuvante Therapie privat', [AN('hyaluron', { anteil })], {
@@ -156,6 +172,7 @@ const periimplantitis = [implReinigung, implMed, implPdt]
 
 const beratungPrivat = k('beratung', 'Eingehende Beratung (Ernährung, Risiko)', 'zusatz', 'Beratung privat', [A('3')], {
   hinweis: 'GOÄ 3, mind. 10 Minuten',
+  kasseGrund: 'Aufklärung und Beratung sind Inhalt von ATG und MHU',
 })
 
 // Katalog --------------------------------------------------------------------
@@ -224,11 +241,11 @@ export const KATALOG: Record<TerminArt, Kachel[]> = {
     infiltration(true),
     leitung(true),
     oberflaeche,
-    k('mikroskop', 'OP-Mikroskop (Zuschlag 0110)', 'zusatz', 'Chirurgie privat', [G('0110', 'eins')]),
+    k('mikroskop', 'OP-Mikroskop (Zuschlag 0110)', 'zusatz', 'Chirurgie privat', [G('0110', 'eins')], { kasseGrund: 'Zuschlag nur zu den in der GOZ genannten Leistungen, nicht zu einer BEMA-Leistung' }),
     k('knochen', 'Knochendefekte auffüllen (4110)', 'zusatz', 'Chirurgie privat', [G('4110', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
     k('membran', 'Membran / GTR (4138)', 'zusatz', 'Chirurgie privat', [G('4138', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
     k('osteoplastik', 'Osteoplastik (4136)', 'zusatz', 'Chirurgie privat', [G('4136', { anteil: 0.25 })], { hinweis: 'je Zahn' }),
-    k('lappen', 'Gestielter Schleimhautlappen (4120)', 'zusatz', 'Chirurgie privat', [G('4120', 'eins')], { hinweis: 'je Kieferhälfte' }),
+    k('lappen', 'Gestielter Schleimhautlappen (4120)', 'zusatz', 'Chirurgie privat', [G('4120', 'eins')], { hinweis: 'je Kieferhälfte', kasseGrund: 'Lappenbildung ist Inhalt der CPT' }),
     k('fst', 'Schleimhauttransplantat (4130)', 'zusatz', 'Chirurgie privat', [G('4130', 'eins')]),
     k('bgt', 'Bindegewebstransplantat (4133)', 'zusatz', 'Chirurgie privat', [G('4133', 'eins')]),
     k('emdogain', 'Schmelzmatrixproteine (Emdogain)', 'zusatz', 'Chirurgie privat', [AN('emdogain', { anteil: 0.25 })], { hinweis: 'regenerative Therapie, je Zahn' }),
