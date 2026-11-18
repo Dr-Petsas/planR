@@ -132,9 +132,10 @@ describe('Kassen-KB-Rechnung', () => {
     expect(pos.some((x) => x.ebene === 'BEL' && x.nr === '4010')).toBe(true)
     expect(privat(abformungAnwenden(pos, 'scan'))).toEqual(privat(pos))
     const r = rechnen({ ...p, abformung: 'scan', positionen: pos }, bayern)
-    expect(r.summePrivat).toBe(129)
+    expect(r.summePrivat).toBe(46)
     expect(r.hinweise.some((h) => h.includes('§ 8 Abs. 7 BMV-Z'))).toBe(true)
     expect(r.hinweise.some((h) => h.includes('CAD/CAM'))).toBe(true)
+    expect(r.warnungen.some((h) => h.includes('ohne Betrag'))).toBe(true)
     // nicht adjustierte Schiene (K2): kein CAD/CAM-Anteil
     expect(privat(abformungAnwenden(mit(['k2']).positionen, 'scan'))).toEqual({ '0009': 1 })
     expect(abformungAnwenden(pos, 'abdruck').some((x) => x.ebene === 'PRIVAT')).toBe(false)

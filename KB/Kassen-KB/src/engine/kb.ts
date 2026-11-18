@@ -108,7 +108,10 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     }
   }
   if (plan.positionen.some((p) => p.ebene === 'PRIVAT' && p.nr === PRIVAT_CADCAM && p.anzahl > 0)) {
-    hinweise.push('Konstruktion und Fräsen (CAD/CAM) stehen nicht in der BEL II. Die Kasse zahlt den Aufbissbehelf nach BEL 401 0; der Privatanteil darf nur den Mehraufwand des Labors gegenüber der Kassenleistung enthalten, nicht die Herstellung ein zweites Mal. Betrag an die Laborrechnung anpassen oder die Zeile löschen.')
+    hinweise.push('Konstruktion und Fräsen (CAD/CAM) stehen nicht in der BEL II. Die Kasse zahlt den Aufbissbehelf nach BEL 401 0; als Privatanteil darf nur der Mehraufwand stehen, den das Labor gegenüber der Kassenleistung gesondert ausweist – nie die Herstellung ein zweites Mal. Die Zeile ist deshalb ohne Betrag vorbelegt: Mehrbetrag laut Laborrechnung eintragen oder die Zeile löschen.')
+  }
+  if (privat.some((z) => z.nr === PRIVAT_CADCAM && z.summe === 0)) {
+    warnungen.push('Mehraufwand CAD/CAM (BEB 2960) steht ohne Betrag im Plan – Mehrbetrag laut Laborrechnung eintragen oder die Zeile löschen.')
   }
   if (privat.length) {
     hinweise.push('Laborleistungen ohne BEL-II-Nummer sind keine Kassenleistung: Privatanteil vor Behandlungsbeginn schriftlich mit dem Patienten vereinbaren (§ 8 Abs. 7 BMV-Z).')
