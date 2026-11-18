@@ -135,6 +135,15 @@ describe('Sprach-Entwürfe von Clara in der Übersicht', () => {
     expect(a.eingang[0].plan).toMatchObject({ nummer: `IMPL-${JAHR}-C001`, zaehne: { 46: { TP: 'I' } }, regionen: { 'UK-R': { augmentation: true } } })
   })
 
+  it('Kostenvoranschlag Schiene: Privatkarte mit PKB-Nummer im Eingang des Privat-KB-Planers', async () => {
+    const kbPlan = { nummer: '', abformung: 'abdruck', positionen: [{ id: 'p1', art: 'GOZ', nr: '7010', anzahl: 1 }] }
+    offen = [{ id: 's1', modul: 'privat-kb', patient: 'Petra Privattest', betrag: 612.3, plan: kbPlan }]
+    const d = await holen('/api/plaene') as { plaene: Record<string, unknown>[] }
+    expect(d.plaene.find((k) => k.modul === 'privat-kb')).toMatchObject({ kuerzel: 'KB', art: 'Privat', nummer: `PKB-${JAHR}-C001`, status: 'entwurf' })
+    const a = await holen('/api/plaene?nur=abgleich&modul=privat-kb') as { eingang: { plan: Record<string, unknown> }[] }
+    expect(a.eingang[0].plan).toMatchObject({ nummer: `PKB-${JAHR}-C001`, positionen: [{ nr: '7010' }] })
+  })
+
   it('MAS nicht erreichbar: die Übersicht kommt trotzdem', async () => {
     masKaputt = true
     try {

@@ -1429,6 +1429,7 @@ const ENTWURF_PLANER: Record<string, { kuerzel: string; praefix: string; art: 'K
   'kons-mkv': { kuerzel: 'MKV', praefix: 'FMKV', art: 'Kasse' },
   'privat-kons': { kuerzel: 'KONS', praefix: 'PK', art: 'Privat' },
   'privat-impl': { kuerzel: 'IMPL', praefix: 'IMPL', art: 'Privat' },
+  'privat-kb': { kuerzel: 'KB', praefix: 'PKB', art: 'Privat' },
 }
 
 async function entwuerfeAbholen(w: Wer): Promise<void> {

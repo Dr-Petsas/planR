@@ -1,7 +1,7 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
 import { BEB_POSITIONEN, GOZ_POSITIONEN, UKPS_BEMESSUNG_STANDARD, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
-import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden, vorlageEinfuegen, vorlageEnthalten, vorlageEntfernen } from '../engine/kb'
+import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageEinfuegen, vorlageEnthalten, vorlageEntfernen } from '../engine/kb'
 import { GOAE_POSITIONEN, goaeText, gozText } from '../engine/listen'
 import { vorschlaege, vorschlagAnwenden } from '../engine/vorschlaege'
 

@@ -89,7 +89,7 @@ export function KiZeile() {
     } catch {
       antwort = 'Das hat nicht geklappt. Der Plan ist unverändert.'
     }
-    setZuege((z) => [...z, { wer: 'ki', text: antwort || 'Dazu kann ich an diesem Plan nichts tun. Ich habe nichts geändert.' }].slice(-12))
+    setZuege((z) => [...z, { wer: 'ki' as const, text: antwort || 'Dazu kann ich an diesem Plan nichts tun. Ich habe nichts geändert.' }].slice(-12))
     setLaeuft(false)
   }
 

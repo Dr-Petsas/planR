@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:engine": "vite build -c vite.engine.config.ts && node tools/engine-nach-mas.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "oxlint"
