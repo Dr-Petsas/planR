@@ -61,7 +61,7 @@ function Tabelle({ zeilen }: { zeilen: Zeile[] }) {
       <tbody>
         {zeilen.map((z) => (
           <tr key={z.id}>
-            <td className="mono">{z.nr}</td>
+            <td className="mono">{z.katalog === 'GOAE' ? `Ä${z.nr}` : z.nr}</td>
             <td>{z.text}{z.analog && <span className="analog-text">{z.analog}</span>}</td>
             <td className="r">{z.anzahl}</td>
             <td className="r">{z.nr === 'Mat.' ? '' : faktorText(z.faktor)}</td>
@@ -91,7 +91,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
         {phasen.map((ph) => (
           <div key={ph}>
             <h2>{PHASE_NAME[ph]}</h2>
-            <Tabelle zeilen={nachSchritten(rechnung.zeilen.filter((z) => z.phase === ph), (z) => ({ ebene: 'GOZ', nr: z.nr }))} />
+            <Tabelle zeilen={nachSchritten(rechnung.zeilen.filter((z) => z.phase === ph), (z) => ({ ebene: z.katalog === 'GOAE' ? 'GOAE' : 'GOZ', nr: z.nr }))} />
           </div>
         ))}
 
@@ -105,7 +105,7 @@ export default function Dokument({ plan, einst, rechnung }: Props) {
         {begr.length > 0 && (
           <section className="kv-begruendung">
             <h2>Begründung der Faktoren über 2,3 (§ 10 Abs. 3 GOZ)</h2>
-            {begr.map(({ zeile: z, text }) => <p key={z.id}><b>GOZ {z.nr}, Faktor {faktorText(z.faktor)}:</b> {text}</p>)}
+            {begr.map(({ zeile: z, text }) => <p key={z.id}><b>{z.katalog === 'GOAE' ? 'GOÄ' : 'GOZ'} {z.nr}, Faktor {faktorText(z.faktor)}:</b> {text}</p>)}
           </section>
         )}
 

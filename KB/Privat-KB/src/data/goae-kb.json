@@ -4,6 +4,11 @@
   "punktwert": 0.0582873,
   "quelle": "https://www.gesetze-im-internet.de/go__1982/anlage.html",
   "eintraege": [
+    { "nr": "1", "punkte": 80, "kat": "B", "text": "Beratung – auch mittels Fernsprecher" },
+    { "nr": "3", "punkte": 150, "kat": "B", "text": "Eingehende, das gewöhnliche Maß übersteigende Beratung – auch mittels Fernsprecher –, mindestens 10 Minuten" },
+    { "nr": "5", "punkte": 80, "kat": "B", "text": "Symptombezogene Untersuchung" },
+    { "nr": "6", "punkte": 100, "kat": "B", "text": "Vollständige Untersuchung mindestens eines Organsystems (Kauorgan)" },
+    { "nr": "34", "punkte": 300, "kat": "B", "text": "Erörterung der Auswirkungen einer Erkrankung auf die Lebensgestaltung, mindestens 20 Minuten (Aufklärungsgespräch)" },
     { "nr": "5004", "punkte": 400, "kat": "O", "text": "Panoramaschichtaufnahme der Kiefer (OPG)" },
     { "nr": "5090", "punkte": 400, "kat": "O", "text": "Schädel-Übersicht in zwei Ebenen (Fernröntgenseitenbild)" }
   ]

@@ -60,7 +60,7 @@ export default function App() {
       for (const [zahn, befund] of Object.entries(daten.schema.B ?? {})) zaehne[zahn] = { B: befund, TP: daten.schema.TP?.[zahn] ?? '' }
       const manuell: Plan['manuell'] = []
       for (const [i, p] of (daten.positionen ?? []).entries()) {
-        const ebene = p.ebene === 'BEB' || p.ebene === 'MAT' || p.ebene === 'GOZ' ? p.ebene : null
+        const ebene = p.ebene === 'BEB' || p.ebene === 'MAT' || p.ebene === 'GOZ' || p.ebene === 'GOAE' ? p.ebene : null
         if (!ebene) continue
         manuell.push({ id: `blatt-${i}`, ebene, nr: p.nr ?? '', zahn: p.zahn ?? '', anzahl: p.anzahl && p.anzahl > 0 ? p.anzahl : 1, ...(p.faktor ? { faktor: p.faktor } : {}), auto: false })
       }

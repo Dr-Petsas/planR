@@ -1,6 +1,6 @@
 import type { Aufgabe as AufgabeT, KriteriumRegelbiss, KriteriumUmformung, Plan, Rechnung } from '../types'
 import { KRITERIEN_REGELBISS, KRITERIEN_UMFORMUNG, regelbissNr, umformungNr, UMFANG } from '../data/katalog'
-import { euro } from '../engine/kfo'
+import { euro, vorlageMitEingang } from '../engine/kfo'
 
 interface Props {
   plan: Plan
@@ -24,7 +24,12 @@ function Kriterien<K extends string>({ liste, gewaehlt, onChange }: { liste: Rec
 
 export default function Aufgabe({ plan, setPlan, rechnung }: Props) {
   const a = plan.aufgabe
-  const setA = (patch: Partial<AufgabeT>) => setPlan({ ...plan, aufgabe: { ...a, ...patch } })
+  const setA = (patch: Partial<AufgabeT>) => {
+    const aufgabe = { ...a, ...patch }
+    const behandelt = aufgabe.umformungOk || aufgabe.umformungUk || aufgabe.regelbiss || aufgabe.alveolaerOk || aufgabe.alveolaerUk
+    const positionen = behandelt ? vorlageMitEingang(plan.positionen, [], 'aufgabe') : plan.positionen
+    setPlan({ ...plan, aufgabe, positionen })
+  }
   const ergebnis = (nr: string) => <span className="umfang">→ GOZ {nr} · {UMFANG[nr]}</span>
 
   return (

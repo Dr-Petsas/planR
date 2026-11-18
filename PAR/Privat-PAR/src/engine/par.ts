@@ -40,6 +40,17 @@ export function rechnen(plan: Plan): Rechnung {
     const einzel = gozEinzel(nr, faktor)
     zeilen.push({ id, phase, nr, text: gozText(nr), anzahl, faktor, einzel, summe: runden(einzel * anzahl), fest: ZUSCHLAEGE.has(nr) })
   }
+  const GOAE_B: Record<string, { punkte: number; text: string }> = {
+    '3': { punkte: 150, text: 'Eingehende, das gewöhnliche Maß übersteigende Beratung – auch mittels Fernsprecher –, mindestens 10 Minuten' },
+    '6': { punkte: 100, text: 'Vollständige Untersuchung mindestens eines Organsystems (Kauorgan)' },
+    '34': { punkte: 300, text: 'Erörterung der Auswirkungen einer Erkrankung auf die Lebensgestaltung, mindestens 20 Minuten (Aufklärungsgespräch)' },
+  }
+  const goaeZeile = (phase: Phase, nr: string) => {
+    const e = GOAE_B[nr]
+    const faktor = plan.faktor
+    const einzel = runden(e.punkte * 0.0582873 * faktor)
+    zeilen.push({ id: `${phase}-ae${nr}`, phase, nr, katalog: 'GOAE', text: e.text, anzahl: 1, faktor, einzel, summe: einzel })
+  }
   const analogZeile = (phase: Phase, a: Analog, anzahl: number) => {
     if (anzahl <= 0) return
     const nr = analogNr(a, v)
@@ -57,7 +68,11 @@ export function rechnen(plan: Plan): Rechnung {
   const cpt = plan.cpt.filter((z) => vorhanden.includes(z))
   const o = plan.optionen
 
-  // Diagnostik und Planung
+  // Erstuntersuchung und Aufklärung, einmal je Plan, danach die PAR-Diagnostik
+  gozZeile('diagnostik', '0010', 1)
+  goaeZeile('diagnostik', '3')
+  goaeZeile('diagnostik', '6')
+  goaeZeile('diagnostik', '34')
   gozZeile('diagnostik', '4005', 1)
   analogZeile('diagnostik', 'diagnostik', 1)
   analogZeile('diagnostik', 'formblatt', 1)

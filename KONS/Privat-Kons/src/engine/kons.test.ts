@@ -51,7 +51,7 @@ describe('Grundleistungen nach GOZ', () => {
 describe('Zusatzleistungen und Stufen', () => {
   it('Stufe 0: nur die Grundleistung, Stufe 1 bringt Standard-Begleitleistungen', () => {
     const z = { '36': { therapie: 'endo', kanaele: 2, vital: true, sitzungen: 2 } as ZahnLeistung }
-    expect(begleit(plan(z, 0))).toEqual([])
+    expect(begleit(plan(z, 0)).map((x) => x.nr)).toEqual(['0010', '3', '6', '34'])
     const s1 = nrn(plan(z, 1), '36')
     expect(s1).toEqual(expect.arrayContaining(['0090', 'Ä5000', '2400', '2430', '2020']))
     expect(s1).not.toContain('2420')

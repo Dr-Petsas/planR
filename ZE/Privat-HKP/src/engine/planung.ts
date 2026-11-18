@@ -161,6 +161,10 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
 
   const geplant = [...OBERKIEFER, ...UNTERKIEFER].filter((z) => P(z))
   if (!geplant.length) return { positionen, hinweise: ['Noch keine Planung eingetragen – Kürzel in der Zeile „Planung“ eintragen (z. B. KM, BM, SK, T, E).'] }
+  pos('GOZ', '0010', '')
+  pos('GOAE', '3', '')
+  pos('GOAE', '6', '')
+  pos('GOAE', '34', '')
   for (const z of geplant) if (P(z) !== ')(' && !ZUORDNUNG[P(z)] && !PROTHESENZAHN.test(P(z)) && !['H', 'R'].includes(P(z)))
     hinweise.push(`Kürzel „${P(z)}“ an Zahn ${z} ist unbekannt.`)
   hinweise.push(...befundAbgleich(geplant, B, P))

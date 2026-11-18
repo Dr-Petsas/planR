@@ -49,7 +49,7 @@ export function Leistungen({ plan, kalk, gozFaktor, eigenlabor, onChange }: Prop
               const angepasst = z.auto && plan.anpassungen[z.id]
               return (
                 <tr key={z.id} className={`${angepasst ? 'angepasst' : ''} ${z.zusatz ? 'zeile-zusatz' : ''}`} title={z.grund}>
-                  <td className="mono">{z.ebene === 'MAT' ? '–' : z.nr}</td>
+                  <td className="mono">{z.ebene === 'GOAE' ? `Ä${z.nr}` : z.ebene === 'MAT' ? '–' : z.nr}</td>
                   <td>{z.auto ? z.zahn : <input className="klein" value={z.zahn} onChange={(e) => aendern(z, 'zahn', e.target.value)} />}</td>
                   <td className="text">
                     {ebene === 'MAT' && !z.auto ? <input value={z.text} onChange={(e) => aendern(z, 'text', e.target.value)} /> : z.text}
@@ -84,7 +84,7 @@ export function Leistungen({ plan, kalk, gozFaktor, eigenlabor, onChange }: Prop
         )}
       </div>
       <Hinzufuegen gozFaktor={gozFaktor} eigenlabor={eigenlabor} onAdd={hinzufuegen} />
-      {tabelle('Zahnärztliches Honorar (GOZ)', kalk.honorar, 'GOZ')}
+      {tabelle('Zahnärztliches Honorar (GOZ und GOÄ)', kalk.honorar, 'GOZ')}
       {tabelle('Zahntechnische Leistungen (BEB)', kalk.labor, 'BEB')}
       {tabelle('Material und Implantatteile', kalk.material, 'MAT')}
     </div>

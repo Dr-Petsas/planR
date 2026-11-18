@@ -50,6 +50,14 @@ function gozZeile(nr: string, faktor: number, anzahl: number, text?: string): Ze
   return { ebene: 'GOZ', nr, text: text ?? gozText(nr), anzahl, faktor, einzel, summe: runden(einzel * anzahl) }
 }
 
+/** GOÄ Abschnitt B (Beratung, Untersuchung, Aufklärung): Faktorrahmen 1,0–3,5, nicht der Röntgenfaktor. */
+function goaeBeratung(nr: string, faktor: number): Zeile {
+  const e = GOAE[nr]
+  const f = Math.min(Math.max(faktor, 1), GOZ_HOECHSTSATZ)
+  const einzel = runden(e.punkte * GOAE_PUNKTWERT * f)
+  return { ebene: 'GOAE', nr, text: e.text, anzahl: 1, faktor: f, einzel, summe: einzel }
+}
+
 function analogZeile(bezug: string, faktor: number, anzahl: number, titel: string): Zeile {
   const einzel = runden(gozPunkte(bezug) * GOZ_PUNKTWERT * faktor)
   return {
@@ -350,6 +358,14 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     const bereiche = bereicheJeKiefer(einfach(new Set(inlayZaehne.map(regionVon))))
     const gegenkiefer = 2 - new Set(inlayZaehne.map(kieferVon)).size
     begleit.push({ ...gozZeile('0065', faktor, bereiche + gegenkiefer), zusatz: 'scan' })
+  }
+  if (zaehne.some((z) => !z.ausgeschlossen)) {
+    begleit.unshift(
+      gozZeile('0010', faktor, 1),
+      goaeBeratung('3', faktor),
+      goaeBeratung('6', faktor),
+      goaeBeratung('34', faktor),
+    )
   }
   begleit.push(...labor.auftrag)
 

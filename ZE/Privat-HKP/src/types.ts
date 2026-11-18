@@ -4,7 +4,7 @@ export type { Patient, Praxis } from './stammdaten'
 import type { EigenPosition } from './engine/eigenlabor'
 import type { Werkstoff } from './engine/material'
 
-export type Ebene = 'GOZ' | 'BEB' | 'MAT'
+export type Ebene = 'GOZ' | 'GOAE' | 'BEB' | 'MAT'
 
 export interface Zahn {
   /** Befund (Status), Kürzel wie im HKP: k, kw, ww, f, x … */

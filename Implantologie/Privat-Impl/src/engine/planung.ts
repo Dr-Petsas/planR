@@ -192,5 +192,16 @@ export function planen(plan: Plan, _einst: Einstellungen): PlanungsErgebnis {
   if (positionen.some((p) => p.nr === '9110' || p.nr === '9120')) {
     hinweise.push('Sinuslift: das Einbringen von Knochenersatz und Membran steckt in 9110/9120, berechnet wird nur das Material. Der Kammaufbau 9100 gilt daneben nur anteilig und verdrängt 9090 und die plastische Deckung 3100. Der Verschluss der Höhle steckt in 9120, deshalb keine 3090. Die Spülung GOÄ 1479 ist eine spätere Sitzung.')
   }
+  if (positionen.length) {
+    const da = (ebene: Position['ebene'], nr: string) => positionen.some((p) => p.ebene === ebene && p.nr === nr)
+    const vorn: Position[] = []
+    if (!da('GOZ', '0010')) vorn.push(goz('0010', '', S_PLANUNG, 'Eingehende Untersuchung'))
+    const gespraech = (nr: string, grund: string): Position =>
+      ({ id: `auto:goae:${nr}::${S_PLANUNG}`, ebene: 'GOAE', nr, zahn: '', anzahl: 1, sitzung: S_PLANUNG, grund, auto: true })
+    if (!da('GOAE', '3')) vorn.push(gespraech('3', 'Eingehende Beratung, mindestens 10 Minuten'))
+    if (!da('GOAE', '6')) vorn.push(gespraech('6', 'Untersuchung des Kauorgans'))
+    if (!da('GOAE', '34')) vorn.push(gespraech('34', 'Aufklärungsgespräch, mindestens 20 Minuten'))
+    positionen.unshift(...vorn)
+  }
   return { positionen, hinweise }
 }

@@ -38,6 +38,14 @@ export function eigenKatalog(k: readonly EigenPosition[] = LEER): EigenPosition[
 }
 
 export const SCHWELLENWERT = 2.3
+const GOAE_PUNKTWERT = 0.0582873
+const GOAE_B: Record<string, { punkte: number; text: string }> = {
+  '1': { punkte: 80, text: 'Beratung – auch mittels Fernsprecher' },
+  '3': { punkte: 150, text: 'Eingehende, das gewöhnliche Maß übersteigende Beratung – auch mittels Fernsprecher –, mindestens 10 Minuten' },
+  '5': { punkte: 80, text: 'Symptombezogene Untersuchung' },
+  '6': { punkte: 100, text: 'Vollständige Untersuchung mindestens eines Organsystems (Kauorgan)' },
+  '34': { punkte: 300, text: 'Erörterung der Auswirkungen einer Erkrankung auf die Lebensgestaltung, mindestens 20 Minuten (Aufklärungsgespräch)' },
+}
 export const HOECHSTSATZ = 3.5
 
 export interface Zeile extends Position {
@@ -113,6 +121,18 @@ export function kalkulieren(plan: Plan, e: Einstellungen): Kalkulation {
         ...p, faktor, einzel, punkte: eintrag?.punkte,
         text: p.text || eintrag?.text || '–',
         begruendung: faktor > SCHWELLENWERT ? p.begruendung || standardBegruendung(p.nr) : undefined,
+        betrag: runden(einzel * p.anzahl),
+      })
+    } else if (p.ebene === 'GOAE') {
+      const eintrag = GOAE_B[p.nr]
+      const faktor = p.faktor ?? standardFaktor
+      const einzel = runden((eintrag?.punkte ?? 0) * GOAE_PUNKTWERT * faktor)
+      if (!eintrag) hinweise.push(`GOÄ ${p.nr} ist im Gebührenverzeichnis nicht vorhanden.`)
+      if (faktor > HOECHSTSATZ) hinweise.push(`GOÄ ${p.nr}: Faktor ${faktor.toFixed(1).replace('.', ',')} über 3,5 erfordert eine schriftliche Vereinbarung nach § 2 GOÄ vor Behandlungsbeginn.`)
+      honorar.push({
+        ...p, faktor, einzel, punkte: eintrag?.punkte,
+        text: p.text || eintrag?.text || '–',
+        begruendung: faktor > SCHWELLENWERT ? p.begruendung : undefined,
         betrag: runden(einzel * p.anzahl),
       })
     } else if (p.ebene === 'BEB') {

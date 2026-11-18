@@ -79,7 +79,7 @@ export default function Leistungen({ plan, setPlan, rechnung }: Props) {
                 <tr className="gruppe" key={ph}><td colSpan={4}>{PHASE_NAME[ph]}</td><td className="r">{euro(rechnung.summen[ph])}</td></tr>,
                 ...zs.map((z) => (
                   <tr key={z.id}>
-                    <td className="mono nr">{z.nr}</td>
+                    <td className="mono nr">{z.katalog === 'GOAE' ? `Ä${z.nr}` : z.nr}</td>
                     <td>{z.text}{z.analog && <span className="analog-text">{z.analog}</span>}</td>
                     <td className="r">{z.anzahl}</td>
                     <td className="r">

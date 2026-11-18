@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung, Zeile } from '../types'
 import { ANALOG_LEISTUNGEN, GOAE_POSITIONEN, GOZ_POSITIONEN, LABOR_POSITIONEN, MEHR_MATERIAL, VORLAGEN } from '../data/katalog'
-import { euro, grenzen, istZuschlag, laborGrundpreis, mehrPreise, neueId, positionsFaktor, vorlageAnwenden } from '../engine/kfo'
+import { euro, grenzen, istZuschlag, laborGrundpreis, mehrPreise, neueId, positionsFaktor, vorlageMitEingang } from '../engine/kfo'
 import { bezugNr, goaeEintrag, gozText, istAnalog, laborText } from '../engine/listen'
 import Aufgabe from './Aufgabe'
 
@@ -76,7 +76,7 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
         <p className="hilfe">Jeder Baustein fügt typische Einzelleistungen hinzu – Anzahl, Faktor und Preis bleiben einzeln änderbar. Abformung und Eingliederung herausnehmbarer Geräte sind in der Behandlungsaufgabe enthalten; die Bausteine bringen dafür nur das Labor.</p>
         <div className="vorlagen">
           {VORLAGEN.map((v) => (
-            <button key={v.id} className="vorlage" onClick={() => setPos(vorlageAnwenden(plan.positionen, v.pos))}>
+            <button key={v.id} className="vorlage" onClick={() => setPos(vorlageMitEingang(plan.positionen, v.pos, v.id))}>
               <b>{v.titel}</b>
               <small>{v.text}</small>
             </button>

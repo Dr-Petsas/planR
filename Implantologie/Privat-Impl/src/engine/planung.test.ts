@@ -39,8 +39,8 @@ describe('Implantat-Grundfall', () => {
       global: { bildgebung: 'dvt' },
       regler: { schabloneStufe: 3 },
     })
-    expect(gozNrs(p)).toEqual(expect.arrayContaining(['9000', '9010', '9040', '9005']))
-    expect(goaeNrs(p)).toEqual(expect.arrayContaining(['5370', '5377']))
+    expect(gozNrs(p)).toEqual(expect.arrayContaining(['0010', '9000', '9010', '9040', '9005']))
+    expect(goaeNrs(p)).toEqual(expect.arrayContaining(['3', '6', '34', '5370', '5377']))
   })
 })
 

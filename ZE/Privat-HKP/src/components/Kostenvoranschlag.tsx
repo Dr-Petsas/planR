@@ -32,7 +32,7 @@ export function Kostenvoranschlag({ plan, einst, kalk }: Props) {
       <Fragment key={z.id}>
         {ueberschrift && <tr className="kv-gliederung"><td colSpan={goz ? 7 : 6}>{ueberschrift}</td></tr>}
         <tr>
-          <td className="mono">{goz ? z.nr : z.ebene === 'MAT' ? '' : z.eigen ?? z.nr}</td>
+          <td className="mono">{goz && z.ebene === 'GOAE' ? `Ä${z.nr}` : goz ? z.nr : z.ebene === 'MAT' ? '' : z.eigen ?? z.nr}</td>
           <td>{z.zahn}</td>
           <td>{z.text}</td>
           <td className="r">{z.anzahl.toLocaleString('de-DE')}</td>

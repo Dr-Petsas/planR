@@ -61,6 +61,11 @@ export const LASER_HOECHSTBETRAG = 68
 /** GOÄ für die Röntgen-Messaufnahmen der Endo (technische Leistung, Faktor 1,8). */
 export const GOAE_PUNKTWERT = 0.0582873
 export const GOAE: Record<string, ListenEintrag> = {
+  '1': { nr: '1', text: 'Beratung – auch mittels Fernsprecher', punkte: 80 },
+  '3': { nr: '3', text: 'Eingehende, das gewöhnliche Maß übersteigende Beratung – auch mittels Fernsprecher –, mindestens 10 Minuten', punkte: 150 },
+  '5': { nr: '5', text: 'Symptombezogene Untersuchung', punkte: 80 },
+  '6': { nr: '6', text: 'Vollständige Untersuchung mindestens eines Organsystems (Kauorgan)', punkte: 100 },
+  '34': { nr: '34', text: 'Erörterung der Auswirkungen einer Erkrankung auf die Lebensgestaltung, mindestens 20 Minuten (Aufklärungsgespräch)', punkte: 300 },
   '5000': { nr: '5000', text: 'Röntgen Zähne, je Projektion', punkte: 50 },
   '5370': { nr: '5370', text: 'Computergesteuerte Tomographie im Kopfbereich (digitale Volumentomografie)', punkte: 2000 },
   '5377': { nr: '5377', text: 'Zuschlag für computergesteuerte Analyse einschließlich 3D-Rekonstruktion', punkte: 800 },

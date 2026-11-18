@@ -34,7 +34,9 @@ const istPlatzhalter = (p: Position, einst: Einstellungen) =>
   p.preis == null && einst.laborPreise[p.nr] == null && !!BEB.get(p.nr)?.fremd
 
 export const positionsFaktor = (p: Position, plan: Plan) =>
-  p.faktor ?? (p.ebene === 'GOAE' ? roentgenFaktor(plan.regler.faktor) : istFunktionsanalyse(p.nr) ? plan.regler.faFaktor : plan.regler.faktor)
+  p.faktor ?? (p.ebene === 'GOAE'
+    ? (istRoentgen(p.nr) ? roentgenFaktor(plan.regler.faktor) : plan.regler.faktor)
+    : istFunktionsanalyse(p.nr) ? plan.regler.faFaktor : plan.regler.faktor)
 
 /** Begründungsschwelle und Höchstsatz der Zeile (GOÄ-Röntgen 1,8/2,5, sonst GOZ 2,3/3,5) */
 export const grenzen = (z: { ebene: Zeile['ebene']; nr: string }) =>
@@ -193,10 +195,32 @@ export function vorlageEntfernen(positionen: Position[], vorlage: VorlagenPositi
 /** Vorlage, die einen Intraoralscan voraussetzt (GOZ 0065) – der Plan stellt dann auf Scan um. */
 export const vorlageMitScan = (vorlage: VorlagenPosition[]) => vorlage.some((v) => v.ebene === 'GOZ' && !v.analog && v.nr === '0065')
 
+/** Erstuntersuchung und Aufklärung, einmal je Plan. Kontrollen und Nacharbeiten bringen sie nicht noch einmal. */
+const EINGANG: VorlagenPosition[] = [
+  { ebene: 'GOZ', nr: '0010', anzahl: 1 },
+  { ebene: 'GOAE', nr: '3', anzahl: 1 },
+  { ebene: 'GOAE', nr: '6', anzahl: 1 },
+  { ebene: 'GOAE', nr: '34', anzahl: 1 },
+]
+const FOLGE_NR = new Set(['7040', '7050'])
+
+const istFolgevorlage = (vorlage: VorlagenPosition[]) => {
+  const honorar = vorlage.filter((p) => p.ebene === 'GOZ' || p.ebene === 'GOAE')
+  return honorar.length > 0 && honorar.every((p) => p.analog || FOLGE_NR.has(p.nr))
+}
+
+const mitEingang = (positionen: Position[], vorlage: VorlagenPosition[]): VorlagenPosition[] => {
+  if (istFolgevorlage(vorlage)) return vorlage
+  const da = (e: VorlagenPosition) =>
+    positionen.some((p) => p.ebene === e.ebene && p.nr === e.nr && !p.analog)
+    || vorlage.some((p) => p.ebene === e.ebene && p.nr === e.nr && !p.analog)
+  return [...EINGANG.filter((e) => !da(e)), ...vorlage]
+}
+
 /** Fügt eine Vorlage ein; eine Scan-Vorlage stellt den Plan auf Intraoralscan um, im Scan-Plan läuft alles digital. */
 export function vorlageEinfuegen(positionen: Position[], vorlage: VorlagenPosition[], abformung: Abformung, einst?: Einstellungen): { positionen: Position[]; abformung: Abformung } {
   const ziel: Abformung = abformung === 'scan' || vorlageMitScan(vorlage) ? 'scan' : 'abdruck'
-  const neu = vorlageAnwenden(positionen, vorlage, einst)
+  const neu = vorlageAnwenden(positionen, mitEingang(positionen, vorlage), einst)
   return { positionen: ziel === 'scan' ? abformungAnwenden(neu, 'scan') : neu, abformung: ziel }
 }
 

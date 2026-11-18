@@ -6,7 +6,10 @@
   "hinweis": "Abschnitt O (Röntgen): Spanne 1,0–2,5, Begründung ab 1,8, keine abweichende Vereinbarung (§ 5 Abs. 3, § 2 Abs. 3 GOÄ). Übrige: 2,3 / 3,5. Zuschlag 5298 = 25 % des einfachen Satzes der Leistungen 5010–5290.",
   "eintraege": [
     { "nr": "1", "text": "Beratung – auch mittels Fernsprecher", "punkte": 80, "kat": "B" },
+    { "nr": "3", "text": "Eingehende, das gewöhnliche Maß übersteigende Beratung – auch mittels Fernsprecher –, mindestens 10 Minuten", "punkte": 150, "kat": "B" },
     { "nr": "5", "text": "Symptombezogene Untersuchung", "punkte": 80, "kat": "B" },
+    { "nr": "6", "text": "Vollständige Untersuchung mindestens eines Organsystems (Kauorgan)", "punkte": 100, "kat": "B" },
+    { "nr": "34", "text": "Erörterung der Auswirkungen einer Erkrankung auf die Lebensgestaltung, mindestens 20 Minuten (Aufklärungsgespräch)", "punkte": 300, "kat": "B" },
     { "nr": "2702", "text": "Wiederanbringung einer gelösten Apparatur oder kleine Änderungen, teilweise Erneuerung von Schienen oder Stützapparaten – auch Entfernung von Schienen oder Stützapparaten –, je Kiefer", "punkte": 300, "kat": "L" },
     { "nr": "5004", "text": "Panoramaschichtaufnahme der Kiefer (OPG)", "punkte": 400, "kat": "O" },
     { "nr": "5020", "text": "Röntgen Handgelenk, Mittelhand, Finger – jeweils in zwei Ebenen", "punkte": 220, "kat": "O" },

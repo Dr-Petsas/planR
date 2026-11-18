@@ -1,5 +1,5 @@
 import type { Abformung, Einstellungen, Plan, Rechnung, Regler as ReglerT, Thema } from '../types'
-import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen, umfangAnwenden, vorlageAnwenden, vorlageMitScan } from '../engine/kb'
+import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen, umfangAnwenden, vorlageEinfuegen, vorlageMitScan } from '../engine/kb'
 import LaborXmlKnopf from './LaborXmlKnopf'
 import { goaeText, GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX, gozText } from '../engine/listen'
 import { LABOR_KLASSE_FAKTOR, LABOR_KLASSE_NAMEN, laborKlasseName, THEMEN, VORLAGEN } from '../data/katalog'
@@ -46,7 +46,11 @@ export default function Regler({ plan, setPlan, einst, setEinst, rechnung }: Pro
     let abformung = plan.abformung
     if (th && !eigene.length) {
       const vor = th.vorlagen.map((id) => VORLAGEN.find((v) => v.id === id)?.pos ?? [])
-      positionen = vor.reduce((pos, v) => vorlageAnwenden(pos, v, einst), eigene)
+      for (const v of vor) {
+        const eingefuegt = vorlageEinfuegen(positionen, v, abformung, einst)
+        positionen = eingefuegt.positionen
+        abformung = eingefuegt.abformung
+      }
       if (abformung === 'scan' || vor.some(vorlageMitScan)) { abformung = 'scan'; positionen = abformungAnwenden(positionen, 'scan') }
       vorlagen = th.vorlagen
     }

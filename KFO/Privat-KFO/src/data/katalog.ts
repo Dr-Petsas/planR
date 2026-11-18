@@ -74,7 +74,7 @@ export const GOZ_POSITIONEN: GozPosition[] = [
   { nr: '0510', gruppe: 'Begleitend' },
 ]
 
-export const GOAE_POSITIONEN = ['1', '5', '5004', '5090', '5095', '5037', '5020', '2702']
+export const GOAE_POSITIONEN = ['1', '3', '5', '6', '34', '5004', '5090', '5095', '5037', '5020', '2702']
 
 export interface AnalogLeistung {
   id: string

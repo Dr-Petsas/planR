@@ -70,6 +70,8 @@ export interface Zeile {
   id: string
   phase: Phase
   nr: string
+  /** GOÄ-Zeilen (Beratung, Untersuchung, Aufklärung); ohne Angabe gilt GOZ */
+  katalog?: 'GOZ' | 'GOAE'
   text: string
   /** "entsprechend GOZ … " bei Analogleistungen (§ 10 Abs. 4 GOZ) */
   analog?: string

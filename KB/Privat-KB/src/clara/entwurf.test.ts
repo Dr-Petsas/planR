@@ -12,7 +12,7 @@ describe('kbEntwurf', () => {
   it('Knirscherschiene: Positionen der Vorlage, Summe aus der Engine', () => {
     const r = kbEntwurf({ vorlagen: ['knirscher'] }, { patient: { vorname: 'Eva', name: 'Muster' } })
     if (r.status !== 'ok') throw new Error('kein Entwurf')
-    expect(nrn(r)).toEqual(['GOZ 7010 x1', 'LABOR 0002 x2', 'LABOR 0402 x1', 'LABOR 7604 x1', 'LABOR 0732 x2'])
+    expect(nrn(r)).toEqual(['GOZ 0010 x1', 'GOAE 3 x1', 'GOAE 6 x1', 'GOAE 34 x1', 'GOZ 7010 x1', 'LABOR 0002 x2', 'LABOR 0402 x1', 'LABOR 7604 x1', 'LABOR 0732 x2'])
     expect(r.plan.patient.name).toBe('Muster')
     expect(r.plan.vorlagen).toEqual(['knirscher'])
     expect(r.zusammenfassung.summe).toBe(r.rechnung.gesamt)

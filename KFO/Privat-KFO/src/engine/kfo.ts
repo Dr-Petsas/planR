@@ -204,6 +204,27 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
   }
 }
 
+/** Erstuntersuchung und Aufklärung, einmal je Plan. Reine Zusatzbausteine (Scan, Skelettalter) lösen sie nicht aus. */
+const EINGANG = [
+  { ebene: 'GOZ' as const, nr: '0010', anzahl: 1 },
+  { ebene: 'GOAE' as const, nr: '3', anzahl: 1 },
+  { ebene: 'GOAE' as const, nr: '6', anzahl: 1 },
+  { ebene: 'GOAE' as const, nr: '34', anzahl: 1 },
+]
+const OHNE_EINGANG = new Set(['scan', 'skelett'])
+
+export function vorlageMitEingang(
+  positionen: Position[],
+  neu: { ebene: Position['ebene']; nr: string; anzahl: number; text?: string }[],
+  vorlageId = '',
+): Position[] {
+  if (OHNE_EINGANG.has(vorlageId)) return vorlageAnwenden(positionen, neu)
+  const da = (ebene: Position['ebene'], nr: string) =>
+    positionen.some((p) => p.ebene === ebene && p.nr === nr)
+    || neu.some((p) => p.ebene === ebene && p.nr === nr)
+  return vorlageAnwenden(positionen, [...EINGANG.filter((e) => !da(e.ebene, e.nr)), ...neu])
+}
+
 /** Fügt die Positionen einer Vorlage an; gleiche Positionen werden zusammengezählt. */
 export function vorlageAnwenden(positionen: Position[], neu: { ebene: Position['ebene']; nr: string; anzahl: number; text?: string }[]): Position[] {
   const out = positionen.map((p) => ({ ...p }))
