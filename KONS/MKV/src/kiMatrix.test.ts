@@ -14,8 +14,8 @@ kiMatrix<any>({
   start: start,
   aendern: 'Die Füllung an 16 wird doch dreiflächig.',
   fragen: [
-    { text: 'Welche BEMA-Position zieht die Kasse hier ab und mit welchem Betrag?' },
+    { text: 'Welche BEMA-Position zieht die Kasse hier ab und mit welchem Betrag?', erwartet: [/13\s?[abcd]/, /\d+,\d\d/], verboten: /2685|BEMA 2\d{3}/ },
     { text: 'Welche GOZ-Nummer rechnen wir für die Füllung ab und mit welchem Faktor?', erwartet: /\d{4}/ },
-    { text: 'Muss der Patient die Vereinbarung vor der Behandlung unterschreiben?' },
+    { text: 'Muss der Patient die Vereinbarung vor der Behandlung unterschreiben?', erwartet: /vor/i },
   ],
 })

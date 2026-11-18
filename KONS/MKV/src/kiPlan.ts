@@ -114,6 +114,7 @@ export function mkvKi(lesen: () => { plan: Plan; gesperrt: boolean; einst: Einst
         zaehne: Object.entries(plan.zaehne).map(([nr, z]) => `${nr}: ${z.therapie}, ${z.flaechen} Flächen${z.austausch ? ', Austausch intakter Füllung' : ''}`).join('; ') || 'noch kein Zahn geplant',
         regler: `Modell ${plan.regler.modell}, Faktor ${plan.regler.faktor}, Inlay-Faktor ${plan.regler.inlayFaktor}, Laborklasse ${plan.regler.laborKlasse}`,
         punktwert: `${r.punktwert}; ${r.punktwertHinweis}`,
+        kassenabzug: r.zaehne.map((z) => (z.kasse ? `${z.zahn}: BEMA ${z.kasse.nr} (${z.kasse.text}), ${z.kasse.summe.toFixed(2)} EUR` : `${z.zahn}: kein Kassenanteil`)).join('; ') || 'noch kein Zahn geplant',
         aufbau: 'Alle Zeilen errechnet der Planer aus Therapie und Flächen je Zahn und den Reglern. Freie Positionen nimmt dieser Plan nicht auf. Ich kann Füllungen je Zahn eintragen, ändern und herausnehmen und die Regler und Angaben aus SCHALTER setzen.',
         ...(plan.bemerkung ? { bemerkung: plan.bemerkung.slice(0, 400) } : {}),
       },

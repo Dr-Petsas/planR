@@ -14,7 +14,7 @@ kiMatrix<any>({
   start: start,
   aendern: 'Schreib als Bemerkung dazu: Patient ist Raucher.',
   fragen: [
-    { text: 'Welche BEMA-Positionen stecken in der Strecke und wie oft?' },
+    { text: 'Welche BEMA-Positionen stecken in der Strecke und wie oft?', erwartet: [/AIT/, /UPT/, /ATG/], verboten: /\b(4000|1040|4070|4075|4080|4005)\b/ },
     { text: 'Wie lange läuft die UPT und wovon hängt ihre Frequenz ab?', erwartet: /Grad/i },
     { text: 'Muss die Strecke von der Kasse genehmigt werden?', erwartet: /genehmig/i },
   ],

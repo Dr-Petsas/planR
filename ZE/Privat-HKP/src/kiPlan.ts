@@ -106,6 +106,13 @@ export function zahnSetzen(plan: Plan, zahn: string, w: KiZahnWerte): { plan: Pl
   if (!neu.B && !neu.TP) delete zaehne[zahn]
   else zaehne[zahn] = neu
   let p: Plan = gleich ? plan : { ...plan, zaehne }
+  // Wer die Planung herausnimmt, scheitert nicht an einem mitgeschickten Material: ohne Einheit gibt es keins.
+  if (!neu.TP && !gleich) {
+    const werkstoffe = { ...(p.werkstoffe ?? {}) }
+    delete werkstoffe[zahn]
+    const { werkstoff: _, ...rest } = w
+    return { plan: { ...p, werkstoffe }, text: zahnText(ZAHNFELDER, zahn, rest) }
+  }
   if (w.werkstoff !== undefined) {
     // Erst mit der (neuen) Planung steht fest, welche Einheit der Zahn trägt.
     const stoff = String(w.werkstoff) as Werkstoff

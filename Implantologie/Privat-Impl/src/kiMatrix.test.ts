@@ -13,7 +13,7 @@ kiMatrix<any>({
   aendern: 'Setz die 9010 auf Faktor 3,2 wegen sehr schmalem Kieferkamm.',
   fragen: [
     { text: 'Wie viel vom Gesamtbetrag entfällt auf Material und Labor?' },
-    { text: 'Welche Positionen haben einen Faktor über 2,3?' },
+    { text: 'Welche Positionen haben einen Faktor über 2,3?', erwartet: /keine Position|keine der Positionen|^Keine/i, verboten: /(0530|5377)[^.]{0,60}(über|höher|oberhalb)/ },
     { text: 'Wie oft steht die 9010 im Plan und was kostet sie?', erwartet: /9010/ },
   ],
 })

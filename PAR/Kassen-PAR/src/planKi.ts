@@ -11,6 +11,9 @@ export interface KiPosition {
   anzahl: number
   faktor?: number
   einzel?: number
+  /** BEMA: Punktzahl und Punktwert, aus denen der Planer das Honorar rechnet */
+  punkte?: number
+  punktwert?: number
   betrag: number
   text: string
   /** aus der Planung errechnet (nicht von Hand angelegt) */
@@ -400,7 +403,7 @@ export function zielSetzen<P>(plan: P, z: KiZiel<P>, wert: boolean | string | nu
 /** Zeile einer Rechnung, wie sie die Planer mit Positionsliste liefern. */
 export interface ListenZeile {
   id?: string; ebene?: string; nr: string; zahn?: string; text: string; anzahl: number
-  faktor?: number; einzel?: number; summe?: number; betrag?: number
+  faktor?: number; einzel?: number; summe?: number; betrag?: number; punkte?: number; punktwert?: number
   ohnePreis?: boolean; auto?: boolean; begruendung?: string
 }
 /** Rechnungszeilen für KI-Zeile und Prüfmodul; Zeilen ohne eigene Kennung bekommen eine laufende. */
@@ -411,6 +414,7 @@ export function listenZeilen(zeilen: ListenZeile[], o: { ebene?: (z: ListenZeile
       id, ebene: o.ebene ? o.ebene(z) : z.ebene ?? 'GOZ', nr: z.nr, zahn: z.zahn ?? '', anzahl: z.anzahl,
       ...(z.faktor !== undefined ? { faktor: z.faktor } : {}),
       ...(z.einzel !== undefined ? { einzel: z.einzel } : {}),
+      ...(z.punkte !== undefined && z.punktwert !== undefined ? { punkte: z.punkte, punktwert: z.punktwert } : {}),
       betrag: z.summe ?? z.betrag ?? 0, text: z.text,
       ...(z.auto || !z.id || (o.frei && !o.frei(id)) ? { auto: true } : {}),
       ...(z.begruendung ? { begruendung: z.begruendung } : {}),

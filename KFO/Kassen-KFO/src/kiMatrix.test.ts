@@ -15,7 +15,7 @@ kiMatrix<any>({
   start: start,
   aendern: 'Dazu acht Brackets 126a.',
   fragen: [
-    { text: 'Wie viel vom Honorar zahlt der Patient zunächst selbst und wann bekommt er es zurück?' },
+    { text: 'Wie viel vom Honorar zahlt der Patient zunächst selbst und wann bekommt er es zurück?', erwartet: [/20\s?%|20 Prozent/, /Abschluss|abgeschlossen/i], verboten: /kein(en)? Rückfluss|keine Rück(zahlung|erstattung)/i },
     { text: 'Wie rechnet sich der Betrag der 119a?', erwartet: /119a/ },
     { text: 'Darf ich die 126a mehr als einmal je Zahn abrechnen?' },
   ],

@@ -15,7 +15,7 @@ kiMatrix<any>({
   aendern: 'Zahn 36 hat vier Kanäle, nicht drei.',
   fragen: [
     { text: 'Wie oft steht die 2410 im Plan und warum?', erwartet: /2410/ },
-    { text: 'Welche Positionen liegen über dem 2,3-fachen Satz und brauchen eine Begründung?' },
+    { text: 'Welche Positionen liegen über dem 2,3-fachen Satz und brauchen eine Begründung?', erwartet: /keine|liegt nicht|nicht über/i, verboten: /(brauchen|benötigen|erfordern)\s+(daher |deshalb |alle |jeweils )*eine (schriftliche )?Begründung/i },
     { text: 'Welche Position ist die teuerste im Plan?' },
   ],
 })

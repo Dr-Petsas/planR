@@ -71,6 +71,18 @@ describe.skipIf(!KI_LIVE)('KI-Zeile live: Kassen-HKP', { timeout: 240_000 }, () 
     expect(b.text).toMatch(/gleichartig|Mehrkosten|GOZ|Regelversorgung/i)
   })
 
+  it('ändert das Kronenmaterial nur an dem genannten Zahn', async () => {
+    const p = mit(zahn('16', { befund: 'ww' }), zahn('26', { befund: 'ww' }))
+    const r = await zug(p, 'Die Krone an 16 soll vollkeramisch werden.')
+    expect(r.schritte.some((x) => x.op === 'schalter' && x.name === 'kronenmaterial')).toBe(false)
+    expect(r.schritte.filter((x) => x.op === 'zahn').map((x) => (x as { zahn: string }).zahn)).toEqual(['16'])
+    expect(z(r.plan, '26')).toEqual(z(p, '26'))
+    expect(r.plan.werkstoffe?.['26']).toBe(p.werkstoffe?.['26'])
+    const pos = (q: HkpPlan, nr: string) => rechnen(q).positionen.filter((x) => x.zahn.includes(nr)).map((x) => `${x.ebene} ${x.nr} ${x.betrag}`).join('|')
+    expect(pos(r.plan, '26')).toBe(pos(p, '26'))
+    expect(pos(r.plan, '16')).not.toBe(pos(p, '16'))
+  })
+
   it('geht zurück auf die Regelversorgung', async () => {
     const p = mit(zahn('16', { befund: 'ww', planung: 'KM' }))
     const r = await zug(p, 'Doch nur die Regelversorgung an 16, keine Keramik.')

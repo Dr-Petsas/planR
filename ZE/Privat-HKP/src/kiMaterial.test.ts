@@ -24,6 +24,14 @@ describe('KI-Zeile: Kronenmaterial im privaten ZE-Plan', () => {
     expect(echt(zeAnwenden(p, E, [zahn('11', { werkstoff: 'zirkon' })]).nicht)[0]).toContain('keine Krone')
   })
 
+  it('nimmt die Planung auch heraus, wenn ein Material mitgeschickt wird, und vergisst das Material des Zahns', () => {
+    const p = zeAnwenden(neuerPlan(1), E, [zahn('16', { befund: 'kw', planung: 'KM', werkstoff: 'zirkon' })]).plan
+    const r = zeAnwenden(p, E, [zahn('16', { planung: '', werkstoff: 'zirkon' })])
+    expect(echt(r.nicht)).toEqual([])
+    expect(r.plan.zaehne['16']?.TP ?? '').toBe('')
+    expect(r.plan.werkstoffe ?? {}).toEqual({})
+  })
+
   it('setzt das Material für alle passenden Einheiten und ändert dabei die Summe nachvollziehbar', () => {
     const p = zeAnwenden(neuerPlan(1), E, [zahn('16', { befund: 'kw', planung: 'KM' }), zahn('26', { befund: 'kw', planung: 'KM' })]).plan
     expect(String(zeBlick(p, E, false).angaben.kronenmaterial)).toContain('noch nicht gewählt')

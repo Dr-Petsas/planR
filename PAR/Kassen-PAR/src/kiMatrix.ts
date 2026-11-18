@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest'
 import { KI_LIVE, kiProbe, probeSitzung } from './kiProbe'
 import type { PlanKiDienst } from './planKi'
 
-export interface MatrixFrage { text: string; erwartet?: RegExp }
+/** erwartet: muss in der Antwort stehen (mehrere: alle); verboten: darf nicht darin stehen */
+export interface MatrixFrage { text: string; erwartet?: RegExp | RegExp[]; verboten?: RegExp | RegExp[] }
 
 export function kiMatrix<P>(o: {
   planer: string
@@ -47,7 +48,9 @@ export function kiMatrix<P>(o: {
         expect(bild(s.plan())).toBe(bild(start))
         expect(r.text.length).toBeGreaterThan(40)
         expect(r.text).not.toMatch(/keine Antwort bekommen/i)
-        if (f.erwartet) expect(r.text).toMatch(f.erwartet)
+        for (const e of [f.erwartet ?? []].flat()) expect(r.text).toMatch(e)
+        for (const v of [f.verboten ?? []].flat()) expect(r.text).not.toMatch(v)
+        expect(r.text).not.toMatch(/FAKTOREN|GRUNDSÄTZE|BEMA-RECHNUNG|AUSSCHLUSS-TABELLE/)
       })
     })
   })

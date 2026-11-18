@@ -16,7 +16,7 @@ kiMatrix<any>({
   aendern: 'Rechne bitte alles mit Faktor 3,0.',
   fragen: [
     { text: 'Ab welchem Faktor brauche ich bei der 7010 eine Begründung?', erwartet: /2,3/ },
-    { text: 'Ab wann muss ich mit dem Patienten eine abweichende Vereinbarung treffen?', erwartet: /3,5/ },
+    { text: 'Ab wann muss ich mit dem Patienten eine abweichende Vereinbarung treffen?', erwartet: [/über (dem )?3,5|3,5-fache[nm]? (Satz )?(überschr|hinaus)|oberhalb|mehr als 3,5|höher als 3,5|3,5 übersteig/i, /§ ?2/], verboten: /1 bis 5|1,0 bis 5/ },
     { text: 'Wie viel vom Gesamtbetrag ist Honorar und wie viel Labor?' },
   ],
 })

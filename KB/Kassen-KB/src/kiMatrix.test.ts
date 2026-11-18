@@ -15,8 +15,8 @@ kiMatrix<any>({
   start: start,
   aendern: 'Dazu zweimal die K7 für Kontrollen.',
   fragen: [
-    { text: 'Wie oft darf ich die K7 neben der K1 abrechnen?' },
-    { text: 'Welcher Punktwert ist hier angesetzt und wie rechnet sich daraus das Honorar der K1?', erwartet: /Punkt/i },
-    { text: 'Zahlt der Patient bei dieser Schiene etwas selbst?' },
+    { text: 'Wie oft darf ich die K7 neben der K1 abrechnen?', erwartet: [/Höchstzahl|so oft|je (Kontroll)?sitzung|unbegrenzt|keine (feste )?(Grenze|Begrenzung|Obergrenze)/i, /eingeglieder|Eingliederung/i], verboten: /Kontrollmodell/i },
+    { text: 'Welcher Punktwert ist hier angesetzt und wie rechnet sich daraus das Honorar der K1?', erwartet: [/106/, /1,3497/, /143,07/] },
+    { text: 'Zahlt der Patient bei dieser Schiene etwas selbst?', erwartet: /nichts|kein(en)? Eigenanteil|trägt die Kasse|Sachleistung/i, verboten: /andersartig|gleichartig|Festzuschuss (von|in Höhe|beträgt)/i },
   ],
 })
