@@ -5,6 +5,7 @@
  */
 import type { KiSchritt, Meldung, PlanBlick, PlanKiDienst } from './planKi'
 import { planPruefen } from './pruefung'
+import { nurLeerlauf } from './arbeitClient'
 
 export const KI_LIVE = !!import.meta.env.VITE_KI_LIVE
 const ZIEL = import.meta.env.VITE_KI_LIVE_URL || 'http://127.0.0.1:4011'
@@ -36,6 +37,23 @@ export function probeDienst<P>(bau: (lesen: () => P, schreiben: (plan: P) => voi
   }
 }
 
+/**
+ * Eine Sitzung wie im geöffneten Planer: derselbe Dienst über mehrere Züge, damit »zurück« den Stand
+ * vor der letzten Änderung kennt. `plan()` liefert den aktuellen Plan.
+ */
+export function probeSitzung<P>(bau: (lesen: () => P, schreiben: (plan: P) => void) => PlanKiDienst, start: P) {
+  let plan = start
+  const d = bau(() => plan, (p) => { plan = p })
+  return {
+    plan: () => plan,
+    blick: (_: P): PlanBlick => d.lesen(),
+    anwenden: (_: P, schritte: KiSchritt[]) => {
+      const r = d.aendern(schritte)
+      return { plan, getan: r.getan, nicht: r.nicht }
+    },
+  }
+}
+
 const offen = (h: Meldung[]) => h.filter((x) => x.stufe !== 'info')
 
 export async function kiProbe<P>(o: {
@@ -57,6 +75,7 @@ export async function kiProbe<P>(o: {
   const getanAlle: string[] = []
   const nichtAlle: string[] = []
   let frage = ''
+  let leerlauf: string[] = []
   let nachlauf: { runde: number; getan: string[]; nicht: string[] } | undefined
   for (let runde = 1; runde <= 3; runde++) {
     const r = await fetch(ZIEL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: o.text, blick, verlauf: (o.verlauf ?? []).slice(-6), ...(nachlauf ? { nachlauf } : {}) }) })
@@ -68,12 +87,20 @@ export async function kiProbe<P>(o: {
     const schritte = Array.isArray(d.schritte) ? d.schritte : []
     if (d.frage) frage = d.frage
     const angesagt = !d.pruefung || (runde === 1 && !schritte.length && !d.frage) ? teile.push(d.antwort) - 1 : -1
-    if (!schritte.length) break
+    if (!schritte.length) {
+      if (leerlauf.length && angesagt < 0) nichtAlle.push(...leerlauf)
+      break
+    }
     schritteAlle.push(...schritte)
     const a = o.anwenden(plan, schritte)
-    nichtAlle.push(...a.nicht)
     // Wie die Startseite: hat der Plan nichts übernommen, zählt sein Grund und nicht die Ankündigung.
     if (!a.getan.length && angesagt >= 0) teile.splice(angesagt, 1)
+    if (!leerlauf.length && runde < 3 && nurLeerlauf(a.getan, a.nicht)) {
+      leerlauf = a.nicht
+      nachlauf = { runde: runde + 1, getan: a.getan, nicht: a.nicht }
+      continue
+    }
+    nichtAlle.push(...a.nicht)
     if (!a.getan.length) break
     getanAlle.push(...a.getan)
     plan = a.plan

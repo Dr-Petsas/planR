@@ -184,6 +184,14 @@ async function modellFragen(body: unknown): Promise<KiAntwort> {
 const RUNDEN = 3
 
 /**
+ * Der Plan hat keinen Schritt übernommen, weil alles schon so steht: das Modell hat den Stand falsch gelesen.
+ * Dann bekommt es die Meldungen des Plans und einen zweiten Versuch. Eine echte Ablehnung löst keinen aus.
+ */
+export function nurLeerlauf(getan: string[], nicht: string[]): boolean {
+  return !getan.length && nicht.length > 0 && nicht.every((n) => n.includes('schon so'))
+}
+
+/**
  * Der Satz geht mit dem ganzen Planstand an das Modell; dessen Schritte führt der Plan selbst aus.
  * Danach prüft das Prüfmodul den neuen Stand. Galt der Satz dem Prüfen und Korrigieren und ist noch etwas offen,
  * bekommt das Modell den neuen Stand und arbeitet weiter.
@@ -213,6 +221,7 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
   let gesamt: number | undefined
   let nachlauf: { runde: number; getan: string[]; nicht: string[] } | undefined
   let vorschlag = false
+  let leerlauf: string[] = []
   // Doppelte und sich ausschließende Positionen: die Praxis entscheidet, die Zeile fragt.
   let frage = ''
 
@@ -227,7 +236,11 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
     if (d.frage) frage = d.frage
     // Ab der zweiten Runde ist die Antwort nur noch Nachrede zu bereits Erledigtem.
     const angesagt = !d.pruefung || (runde === 1 && !schritte.length && !d.frage) ? teile.push(satz(d.antwort)) - 1 : -1
-    if (!schritte.length) break
+    if (!schritte.length) {
+      // Auch der zweite Versuch ändert nichts: dann gilt, was der Plan zum ersten gemeldet hat.
+      if (leerlauf.length && angesagt < 0) for (const n of leerlauf) teile.push(satz(n))
+      break
+    }
     if (schritte.some((x) => typeof (x as { begruendung?: unknown })?.begruendung === 'string')) vorschlag = true
     const r = await fragenKi(fenster, { aktion: 'aendern', schritte }, 5000)
     if (!r || r.art !== 'geaendert') {
@@ -237,6 +250,11 @@ export async function planKiZug(fenster: Window, text: string, plan: string): Pr
     const { getan = [], nicht = [] } = r.ergebnis
     // Hat der Plan nichts übernommen, zählt sein Grund und nicht die Ankündigung des Modells.
     if (!getan.length && angesagt >= 0) teile.splice(angesagt, 1)
+    if (!leerlauf.length && runde < RUNDEN && nurLeerlauf(getan, nicht)) {
+      leerlauf = nicht
+      nachlauf = { runde: runde + 1, getan, nicht }
+      continue
+    }
     if (getan.length) teile.push(`Im Plan geändert: ${getan.join('; ')}.`)
     for (const n of nicht) teile.push(satz(n))
     if (!getan.length) {

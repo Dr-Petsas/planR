@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { istJa, istNein, istPlanAuftrag, planNameGesucht, pruefBericht, pruefOffen } from './arbeitClient'
+import { istJa, istNein, istPlanAuftrag, nurLeerlauf, planNameGesucht, pruefBericht, pruefOffen } from './arbeitClient'
 
 describe('Bestätigung der KI-Zeile', () => {
   it('erkennt die Zusage und lässt einen Nachsatz nicht als Ja gelten', () => {
@@ -40,5 +40,14 @@ describe('Prüfmodul nach einer Änderung der KI-Zeile', () => {
     expect(pruefBericht(['A', 'B'], ['B'])).toContain('1 behoben, 1 noch offen')
     expect(pruefBericht(['A', 'B'], ['B'])).toContain('Offen: B')
     expect(pruefBericht(['A'], ['A', 'N'])).toContain('Neu durch die Änderung: N')
+  })
+})
+
+describe('zweiter Versuch der KI-Zeile', () => {
+  it('gilt nur, wenn der Plan alles schon so stehen hat', () => {
+    expect(nurLeerlauf([], ['Zahn 26 steht schon so im Plan.'])).toBe(true)
+    expect(nurLeerlauf([], ['Zahn 26 steht schon so im Plan.', 'Die Nummer K99 kenne ich nicht.'])).toBe(false)
+    expect(nurLeerlauf(['Zahn 16: Befund ww'], ['Zahn 26 steht schon so im Plan.'])).toBe(false)
+    expect(nurLeerlauf([], [])).toBe(false)
   })
 })
