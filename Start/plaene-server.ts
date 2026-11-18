@@ -56,7 +56,7 @@ import {
 
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
-const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine') => `${ORDNER}/mandanten/${mandant}/${name}.json`
+const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine' | 'einstellungen') => `${ORDNER}/mandanten/${mandant}/${name}.json`
 /** Pickadoc-Praxis → Mandant, Benutzer → DS-Win-Praxen (anmeldung.ts) */
 const ZUGAENGE = `${ORDNER}/zugaenge.json`
 const SITZUNGEN = `${ORDNER}/sitzungen.json`
@@ -235,10 +235,10 @@ async function werIst(req: IncomingMessage): Promise<Wer | null> {
   }
   // Buchung beendet (MAS oder PlanR-Abo gekündigt): die Sitzung gilt nicht mehr
   if (!s.sudo && !darfEingangSehen(s.konto.email, s.konto.role)) {
-    const b = await berechtigung(s.konto.clientId)
-    if (b && !b.erlaubt) {
-      abgelehnt.add(req)
-      return null
+  const b = await berechtigung(s.konto.clientId)
+  if (b && !b.erlaubt) {
+    abgelehnt.add(req)
+    return null
     }
   }
   const w = werAus(await zugaengeLesen(), s.konto)
@@ -1459,9 +1459,20 @@ async function behandlerLesen(m: string): Promise<Record<string, string>> {
   return roh && typeof roh === 'object' && !Array.isArray(roh) ? roh as Record<string, string> : {}
 }
 
-async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfernt?: unknown[]; behandler?: unknown }, res: ServerResponse) {
+/** Einstellungen der Planer (Faktoren, Preise), wie sie der zuletzt meldende Browser der Praxis führt – Clara rechnet damit. */
+async function einstLesen(m: string): Promise<Record<string, Record<string, unknown>>> {
+  const roh = await jsonLesen<unknown>(ABLAGE(m, 'einstellungen'), {})
+  return roh && typeof roh === 'object' && !Array.isArray(roh) ? roh as Record<string, Record<string, unknown>> : {}
+}
+
+async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfernt?: unknown[]; behandler?: unknown; einst?: unknown }, res: ServerResponse) {
   const m = w.mandant
   const modul = String(body.modul ?? '')
+  if (MODUL_RE.test(modul) && modul !== 'hkp' && body.einst && typeof body.einst === 'object' && !Array.isArray(body.einst)) {
+    const alle = await einstLesen(m)
+    const neu = JSON.stringify(body.einst)
+    if (neu.length <= 200_000 && JSON.stringify(alle[modul] ?? null) !== neu) await jsonSchreiben(ABLAGE(m, 'einstellungen'), { ...alle, [modul]: body.einst })
+  }
   const behandler = String(body.behandler ?? '').trim().slice(0, 80)
   if (modul === 'hkp' && behandler) {
     await jsonSchreiben(ABLAGE(m, 'behandler'), { ...await behandlerLesen(m), hkp: behandler })
@@ -2499,6 +2510,73 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   if (url === '/api/intern/pvs/doku') return internDoku(req, w, res)
   if (url.startsWith('/api/intern/befund/')) return internBefundAendern(req, w, url, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
+}
+
+/**
+ * Pläne der Planer für Clara (MAS), Schlüssel wie internPvs. Der Kassen-HKP liegt in MAS selbst und kommt hier nicht vor.
+ * GET  /api/intern/plaene?clientId=                 Köpfe aller Pläne der Praxis
+ * GET  /api/intern/plan?clientId=&modul=&nummer=    Kopf, Inhalt und Einstellungen des Planers
+ * POST /api/intern/plan?clientId= { modul, nummer, plan, betrag, pvs?, basis }   geänderter Plan; basis = Stand, auf dem die Änderung fußt
+ * POST /api/intern/plan/loeschen · /api/intern/plan/zurueck { modul, nummer }
+ */
+async function internPlaene(req: IncomingMessage, res: ServerResponse, url: string, query: string) {
+  res.setHeader('Cache-Control', 'no-store')
+  const soll = Buffer.from(masSchluessel())
+  const ist = Buffer.from(String(req.headers['x-planr-key'] ?? ''))
+  if (!soll.length || soll.length !== ist.length || !timingSafeEqual(soll, ist)) return json(res, 401, { ok: false })
+  const q = new URLSearchParams(query)
+  const w = await werFuerClient(q.get('clientId') ?? '')
+  if (!w) return json(res, 404, { ok: false, meldung: 'Praxis unbekannt.' })
+  const m = w.mandant
+  if (req.method === 'GET' && url === '/api/intern/plaene') {
+    const [karten, inhalte] = await Promise.all([dateiLesen(m), inhalteLesen(m)])
+    return json(res, 200, {
+      ok: true,
+      plaene: karten.filter((k) => k.modul !== 'hkp' && k.status !== 'verworfen').map((k) => ({
+        modul: k.modul, nummer: k.nummer, patient: k.patient, betrag: k.betrag, status: k.status, geaendert: k.geaendert,
+        inhalt: !!inhalte[schluessel(k.modul, k.nummer)],
+      })),
+    })
+  }
+  if (req.method === 'GET' && url === '/api/intern/plan') {
+    const modul = q.get('modul') ?? ''
+    const nummer = q.get('nummer') ?? ''
+    const karte = (await dateiLesen(m)).find((k) => k.modul === modul && k.nummer === nummer)
+    if (!karte) return json(res, 404, { ok: false, meldung: 'Plan nicht gefunden.' })
+    const inhalt = (await inhalteLesen(m))[schluessel(modul, nummer)]
+    if (!inhalt) return json(res, 409, { ok: false, meldung: 'Den Inhalt dieses Plans kennt PlanR noch nicht – den Planer einmal öffnen.' })
+    return json(res, 200, { ok: true, karte, plan: inhalt.plan, stand: inhalt.geaendert, einst: (await einstLesen(m))[modul] ?? null })
+  }
+  if (req.method !== 'POST') return json(res, 405, { ok: false })
+  let body: { modul?: unknown; nummer?: unknown; plan?: unknown; betrag?: unknown; pvs?: unknown; basis?: unknown }
+  try { body = JSON.parse(await lesenBody(req)) } catch { return json(res, 400, { ok: false }) }
+  const modul = String(body.modul ?? '')
+  const nummer = String(body.nummer ?? '')
+  if (!MODUL_RE.test(modul) || modul === 'hkp' || !nummer) return json(res, 400, { ok: false })
+  if (url === '/api/intern/plan/loeschen') return exklusiv(() => loeschen(w, modul, nummer, res))
+  if (url === '/api/intern/plan/zurueck') return exklusiv(() => zurueckholen(w, modul, nummer, res))
+  if (url !== '/api/intern/plan') return json(res, 404, { ok: false })
+  const plan = body.plan
+  if (!plan || typeof plan !== 'object' || Array.isArray(plan) || JSON.stringify(plan).length > 2_000_000) return json(res, 400, { ok: false })
+  return exklusiv(async () => {
+    const karte = (await dateiLesen(m)).find((k) => k.modul === modul && k.nummer === nummer)
+    if (!karte) return json(res, 404, { ok: false, meldung: 'Plan nicht gefunden.' })
+    if (karte.status === 'freigegeben') return json(res, 409, { ok: false, gesperrt: true, meldung: 'Der Plan ist freigegeben und damit gesperrt.' })
+    const stand = (await inhalteLesen(m))[schluessel(modul, nummer)]?.geaendert ?? karte.geaendert
+    if (String(body.basis ?? '') !== stand) return json(res, 409, { ok: false, veraltet: true, meldung: 'Der Plan wurde inzwischen an anderer Stelle geändert.' })
+    // Immer neuer als der Stand im Browser, auch wenn dessen Uhr vorgeht.
+    const jetzt = new Date(Math.max(Date.now(), new Date(stand).getTime() + 1000)).toISOString()
+    const neu: PlanKarte = { ...karte, betrag: Number.isFinite(Number(body.betrag)) ? Number(body.betrag) : karte.betrag, status: 'entwurf', geaendert: jetzt }
+    await inDenEingang(m, neu, plan as Record<string, unknown>)
+    const pvs = PVS_PLANER[modul] ? pvsFassung(body.pvs) : undefined
+    if (pvs) {
+      const inhalte = await inhalteLesen(m)
+      inhalte[schluessel(modul, nummer)] = { geaendert: jetzt, plan: plan as Record<string, unknown>, pvs }
+      await jsonSchreiben(ABLAGE(m, 'inhalte'), inhalte)
+    }
+    console.log(`[plaene] Clara hat ${modul} ${nummer} geändert`)
+    json(res, 200, { ok: true, stand: jetzt })
+  })
 }
 
 /** Praxis, die nicht per Sitzung kommt (MAS-Schlüssel, Handy-Link) – null, wenn PlanR sie nicht kennt */
@@ -3734,6 +3812,9 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog'
     || url === '/api/intern/pvs/doku' || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen' || url === '/api/intern/befund/vorgang') {
     return void internPvs(req, res, url, query).catch(fehler500(res))
+  }
+  if (url === '/api/intern/plaene' || url === '/api/intern/plan' || url === '/api/intern/plan/loeschen' || url === '/api/intern/plan/zurueck') {
+    return void internPlaene(req, res, url, query).catch(fehler500(res))
   }
   if (url === '/api/befund/link' || url.startsWith('/api/befund/link/')) return void befundLinkEndpunkt(req, res, url, query).catch(fehler500(res))
   if (!url.startsWith('/api/')) return next()

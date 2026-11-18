@@ -200,6 +200,20 @@ function behandlerVon(key: string, plan: unknown): string {
   }
 }
 
+/** Einstellungen des Planers in diesem Browser – die Übersicht braucht sie, damit Clara denselben Plan rechnet. */
+function einstVon(key: string): Record<string, unknown> | undefined {
+  if (typeof localStorage === 'undefined') return undefined
+  for (const v of ['v3', 'v2', 'v1']) {
+    try {
+      const roh = localStorage.getItem(key.replace(/\.liste\.v\d+/, `.einstellungen.${v}`))
+      if (!roh || roh.length > 200_000) continue
+      const e = JSON.parse(roh) as unknown
+      if (e && typeof e === 'object' && !Array.isArray(e)) return e as Record<string, unknown>
+    } catch { /* nächste Fassung */ }
+  }
+  return undefined
+}
+
 /** Rückmeldung an die Knöpfe: Ist der Stand bei PlanR angekommen? Ohne Übersicht zählt die Ablage im Browser. */
 export const ABLAGE_GEMELDET = 'planr-ablage-gemeldet'
 function gemeldet(ok: boolean) {
@@ -222,7 +236,8 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
     nummer: e.nummer, patient: e.patient, betrag: e.betrag, status: e.status, geaendert: e.geaendert,
     behandler: behandlerVon(key, e.plan), plan: e.plan, ...(e.pvs ? { pvs: e.pvs } : {}),
   }))
-  const body = JSON.stringify({ modul: basis, plaene, entfernt: weg })
+  const einst = einstVon(key)
+  const body = JSON.stringify({ modul: basis, plaene, entfernt: weg, ...(einst ? { einst } : {}) })
   const init: RequestInit = { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body }
   if (body.length < 60_000) init.keepalive = true
   fetch(hub, init).then((r) => {
