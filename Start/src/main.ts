@@ -399,6 +399,7 @@ function zeile(p: PlanKarte, i: number, imFall = false): string {
   if (p.vorgang) return vorgangZeile(p, i)
   const url = planUrl(p)
   const name = esc(p.patient || 'Ohne Namen')
+  const dreh = pvsLaeuft === `${p.modul}|${p.nummer}` ? '<span class="pvs-dreh" role="status" aria-label="Wird ins Praxisprogramm übertragen"></span>' : ''
   const dswin = ausDswin(p)
   const hkp = p.modul === 'hkp'
   const tonne = loeschbar(p)
@@ -424,7 +425,7 @@ function zeile(p: PlanKarte, i: number, imFall = false): string {
     : zeit(p.geaendert)
   return `<div class="zeile${imFall ? ' im-fall' : ''}${url ? ' mit-link' : ''}" role="row">
     <span class="sp-art"><span class="kuerzel">${esc(p.kuerzel)}</span></span>
-    ${url ? `<a class="sp-patient" href="${esc(url)}" data-nummer="${esc(p.nummer)}" data-modul="${esc(p.modul)}">${name}</a>` : `<span class="sp-patient">${name}</span>`}
+    ${url ? `<a class="sp-patient" href="${esc(url)}" data-nummer="${esc(p.nummer)}" data-modul="${esc(p.modul)}">${name}${dreh}</a>` : `<span class="sp-patient">${name}${dreh}</span>`}
     <span class="sp-nr">${esc(planSchein(p))}</span>
     <span class="sp-status">${esc(STATUS[p.status] || p.status)}</span>
     <span class="sp-betrag">${p.betrag ? esc(euro(p.betrag)) : ''}</span>
@@ -490,7 +491,8 @@ function pvsQuelle(): string {
   return p && einstellungen.bridge && PVS_SUCHE[p.id] ? p.name : ''
 }
 
-let pvsLaeuft = false
+/** Plan, der gerade ins Praxisprogramm übertragen wird (modul|nummer) */
+let pvsLaeuft = ''
 
 async function insPvs(p: PlanKarte, ziel: string) {
   if (pvsLaeuft) return
@@ -500,7 +502,7 @@ async function insPvs(p: PlanKarte, ziel: string) {
     ? `${p.imPvs}.\n\nTrotzdem noch einmal als neuen Plan in ${ziel} anlegen?`
     : `${art} von ${wer} in ${ziel} beim gleichnamigen Patienten anlegen?`
   if (!confirm(frage)) return
-  pvsLaeuft = true
+  pvsLaeuft = `${p.modul}|${p.nummer}`
   melden(`${art} von ${wer} geht an ${ziel} …`)
   try {
     const r = await apiJson<Antwort>('/api/plaene/pvs', {
@@ -510,7 +512,8 @@ async function insPvs(p: PlanKarte, ziel: string) {
     const text = r.meldung || (r.ok ? `${art} in ${ziel} angelegt.` : `Export nach ${ziel} hat nicht geklappt.`)
     melden(text, undefined, r.ok)
   } finally {
-    pvsLaeuft = false
+    pvsLaeuft = ''
+    zeichnen()
   }
 }
 
