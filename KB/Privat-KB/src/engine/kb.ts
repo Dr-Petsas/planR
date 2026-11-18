@@ -6,7 +6,7 @@
 // Preisstufe des Reglers. Regeln aus GOZ Abschnitt H/J (KB/_quellen/privat-kb.json).
 
 import {
-  BEB, BEWEGUNGSAUFZEICHNUNG, DIGITAL, istFunktionsanalyse, LABOR_GIPSMODELLE, LABOR_MITTELWERT, SCHIENE_ABDRUCK, SCHIENE_GEFRAEST, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, SCHARNIERACHSE,
+  BEB, BEWEGUNGSAUFZEICHNUNG, istFunktionsanalyse, LABOR_GIPSMODELLE, SCHIENE_ABDRUCK, SCHIENE_GEFRAEST, LABOR_KLASSE_FAKTOR, LABOR_NUR_ABDRUCK, SCAN_BEREICHE_BEIDE_KIEFER, SCHARNIERACHSE,
   UKPS_BEMESSUNG_STANDARD, umfangPositionen, type VorlagenPosition,
 } from '../data/katalog'
 import { importVon, type LaborXml } from '../laborxml'
@@ -26,7 +26,7 @@ export const neueId = () => Math.random().toString(36).slice(2, 10)
 export function laborGrundpreis(nr: string, einst: Einstellungen): number | undefined {
   if (einst.laborPreise[nr] != null) return einst.laborPreise[nr]
   const b = BEB.get(nr)
-  return laborListenPreis(b?.labor) ?? (b?.fremd ? b.preis : undefined) ?? b?.richt
+  return laborListenPreis(b?.labor) ?? (b?.fremd ? b.preis : undefined)
 }
 
 /** Fremdlabor-Leistung ohne eigenen Preis und ohne Praxispreis: gerechnet wird mit dem Platzhalter aus dem Katalog. */
@@ -130,7 +130,7 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
     hinweise.push(`Laborpreise aus dem Labor-XML ${plan.fremdlabor.import.datei} (Rechnung ${plan.fremdlabor.import.rechnungsnummer || '—'}, ${euro(plan.fremdlabor.import.netto)} netto).`)
   }
   if (plan.abformung === 'scan') {
-    hinweise.push('Intraoralscan: GOZ 0065 je Kieferhälfte bzw. Frontzahnbereich statt 0060. Digitaler Laborablauf: Oralscan aufbereiten (0007), CAD-Auftragsdaten (0901), digitale Registrierung (0902) statt Mittelwertartikulator, gedruckte Modelle (0009) statt Gips; adjustierte harte Schienen werden konstruiert (D120) und gefräst (2957/2958), weiche und tiefgezogene Schienen entstehen auf dem gedruckten Modell. Versand bei Datenlieferung (0036).')
+    hinweise.push('Intraoralscan: GOZ 0065 je Kieferhälfte bzw. Frontzahnbereich statt 0060. Das Labor arbeitet auf gedruckten Modellen (0009) statt Gips; adjustierte harte Schienen werden konstruiert und gefräst (2960, Konstruktion inbegriffen), weiche und tiefgezogene Schienen entstehen auf dem gedruckten Modell. Versand bei Datenlieferung (0036). Laborkosten nach § 9 GOZ: maßgeblich ist die Rechnung des Labors.')
     if (plan.positionen.some((p) => p.ebene === 'LABOR' && LABOR_GIPSMODELLE.includes(p.nr) && p.anzahl > 0)) {
       warnungen.push('Intraoralscan gewählt, aber Gipsmodelle im Plan – Abformung umschalten oder Modelle prüfen.')
     }
@@ -237,21 +237,11 @@ function umnummern(positionen: Position[], tabelle: Readonly<Record<string, stri
   return pos
 }
 
-/** Setzt eine Laborposition auf genau diese Anzahl (0 = entfernen); Preis und Text einer vorhandenen Zeile bleiben. */
-function setzen(positionen: Position[], nr: string, anzahl: number): Position[] {
-  const da = positionen.find((p) => umstellbar(p) && p.nr === nr)
-  const rest = positionen.filter((p) => !(umstellbar(p) && p.nr === nr && p !== da))
-  if (!anzahl) return rest.filter((p) => p !== da)
-  if (da) return rest.map((p) => (p === da ? { ...p, anzahl } : p))
-  return [...rest, { id: neueId(), ebene: 'LABOR', nr, anzahl }]
-}
-
 /**
  * Stellt Honorar und Labor auf den Abformweg um. Intraoralscan: 0060 → 0065 für beide Kiefer, Gipsmodelle →
- * gedruckte Modelle (BEB 0009), Doublieren entfällt, Mittelwertartikulator → optisch digitale Registrierung (0902),
- * adjustierte harte Schienen → konstruiert (D120) und gefräst (2957/2958), je Auftrag Oralscan aufbereiten (0007)
- * und CAD-Auftragsdaten (0901), Versand → Versand bei Datenlieferung. Weiche und tiefgezogene Schienen bleiben
- * und entstehen auf dem gedruckten Modell. Fremdlabor-Festpreise bleiben unberührt. Abdruck: zurück.
+ * gedruckte Modelle (BEB 0009), Doublieren entfällt, adjustierte harte Schienen → Konstruktion und Fräsen (2960),
+ * Versand → Versand bei Datenlieferung. Es kommen nur Positionen der Laborliste in den Plan. Weiche und tiefgezogene
+ * Schienen bleiben und entstehen auf dem gedruckten Modell. Fremdlabor-Festpreise bleiben unberührt. Abdruck: zurück.
  */
 export function abformungAnwenden(positionen: Position[], ziel: Abformung): Position[] {
   let pos = positionen
@@ -260,21 +250,13 @@ export function abformungAnwenden(positionen: Position[], ziel: Abformung): Posi
     if (abdruck) pos = ersetzen(pos, 'GOZ', ['0060'], '0065', SCAN_BEREICHE_BEIDE_KIEFER * abdruck)
     pos = ersetzen(pos, 'LABOR', LABOR_GIPSMODELLE, '0009', menge(pos, 'LABOR', LABOR_GIPSMODELLE))
     pos = pos.filter((p) => !(umstellbar(p) && LABOR_NUR_ABDRUCK.includes(p.nr)))
-    pos = ersetzen(pos, 'LABOR', [LABOR_MITTELWERT], DIGITAL.registrierung, menge(pos, 'LABOR', [LABOR_MITTELWERT]))
     pos = umnummern(pos, SCHIENE_GEFRAEST)
-    const gefraest = menge(pos, 'LABOR', Object.keys(SCHIENE_ABDRUCK))
-    const digital = gefraest + menge(pos, 'LABOR', ['0009', DIGITAL.registrierung])
-    pos = setzen(pos, DIGITAL.konstruktion, gefraest)
-    pos = setzen(pos, DIGITAL.oralscan, digital ? 1 : 0)
-    pos = setzen(pos, DIGITAL.auftragsdaten, digital ? 1 : 0)
     return ersetzen(pos, 'LABOR', ['0701'], '0036', menge(pos, 'LABOR', ['0701']))
   }
   const scan = menge(pos, 'GOZ', ['0065'])
   if (scan) pos = ersetzen(pos, 'GOZ', ['0065'], '0060', Math.max(1, Math.round(scan / SCAN_BEREICHE_BEIDE_KIEFER)))
   pos = ersetzen(pos, 'LABOR', ['0009'], '0002', menge(pos, 'LABOR', ['0009']))
-  pos = ersetzen(pos, 'LABOR', [DIGITAL.registrierung], LABOR_MITTELWERT, menge(pos, 'LABOR', [DIGITAL.registrierung]))
   pos = umnummern(pos, SCHIENE_ABDRUCK)
-  for (const nr of [DIGITAL.konstruktion, DIGITAL.oralscan, DIGITAL.auftragsdaten]) pos = setzen(pos, nr, 0)
   return ersetzen(pos, 'LABOR', ['0036'], '0701', menge(pos, 'LABOR', ['0036']))
 }
 

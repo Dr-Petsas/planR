@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, umfangAnwenden, vorlageAnwenden, vorlageEinfuegen, vorlageEnthalten, vorlageEntfernen } from './kb'
 import { laborXmlLesen } from '../laborxml'
 import { gozPunkte, GOZ_PUNKTWERT } from './listen'
-import { VORLAGEN } from '../data/katalog'
+import { digitalAltlast, VORLAGEN } from '../data/katalog'
 import { einstMigrieren, neuerPlan, STANDARD_EINSTELLUNGEN } from '../store'
 import type { Plan, Position, Thema } from '../types'
 import { pvsPosition } from './pvs'
@@ -215,34 +215,37 @@ describe('Privat-KB-Rechnung', () => {
     expect(zurueck.find((x) => x.nr === '0701')!.anzahl).toBe(1)
   })
 
-  it('Intraoralscan: jede Schiene bekommt den digitalen Laborablauf, Abdruck stellt zurück', () => {
+  it('Intraoralscan: nur Positionen der Laborliste, Abdruck stellt zurück', () => {
     const vor = (id: string) => VORLAGEN.find((v) => v.id === id)!.pos
     const labor = (pos: Position[]) => Object.fromEntries(pos.filter((x) => x.ebene === 'LABOR').map((x) => [x.nr, x.anzahl]))
-    // Michigan: konstruiert und gefräst statt konventionell, digitale Registrierung statt Mittelwertartikulator
+    // Michigan: Konstruktion und Fräsen als eine Listenposition, gedruckte Modelle statt Gips
     const michigan = vorlageAnwenden([], vor('michigan'), einst)
     const m = abformungAnwenden(michigan, 'scan')
-    expect(labor(m)).toEqual({ '0009': 3, '0902': 1, '2957': 1, D120: 1, '0007': 1, '0901': 1, '0732': 2 })
+    expect(labor(m)).toEqual({ '0009': 3, '0402': 1, '2960': 1, '0732': 2 })
     expect(labor(abformungAnwenden(m, 'scan'))).toEqual(labor(m))
     expect(labor(abformungAnwenden(m, 'abdruck'))).toEqual({ '0002': 3, '0402': 1, '7621': 1, '0732': 2 })
-    // Weiche Knirscherschiene: bleibt, entsteht aber auf dem gedruckten Modell
-    expect(labor(abformungAnwenden(vorlageAnwenden([], vor('knirscher'), einst), 'scan')))
-      .toEqual({ '0009': 2, '0902': 1, '7604': 1, '0007': 1, '0901': 1, '0732': 2 })
-    // Tiefziehschiene: gedrucktes Modell, kein Artikulator
-    expect(labor(abformungAnwenden(vorlageAnwenden([], vor('tiefzieh'), einst), 'scan')))
-      .toEqual({ '0009': 1, '7601': 1, '0007': 1, '0901': 1, '0732': 2 })
+    // Weiche Knirscherschiene und Tiefziehschiene: bleiben, entstehen auf dem gedruckten Modell
+    expect(labor(abformungAnwenden(vorlageAnwenden([], vor('knirscher'), einst), 'scan'))).toEqual({ '0009': 2, '0402': 1, '7604': 1, '0732': 2 })
+    expect(labor(abformungAnwenden(vorlageAnwenden([], vor('tiefzieh'), einst), 'scan'))).toEqual({ '0009': 1, '7601': 1, '0732': 2 })
     // Digitale Schiene stellt den Plan auf Scan um
     const d = vorlageEinfuegen([], vor('digital'), 'abdruck', einst)
     expect(d.abformung).toBe('scan')
-    expect(labor(d.positionen)).toEqual({ '0009': 2, '0902': 1, '2957': 1, D120: 1, '0007': 1, '0901': 1, '0732': 1 })
-    // Zwei Schienen: Oralscan und Auftragsdaten je Auftrag einmal, Konstruktion je gefräster Schiene
+    expect(labor(d.positionen)).toEqual({ '0009': 2, '0402': 1, '2960': 1, '0732': 1 })
     const beide = vorlageEinfuegen(d.positionen, vor('michigan'), 'scan', einst).positionen
-    expect(labor(beide)).toMatchObject({ '2957': 2, D120: 2, '0007': 1, '0901': 1 })
-    const ohne = vorlageEntfernen(beide, vor('michigan'), 'scan', einst)
-    expect(labor(ohne)).toEqual(labor(d.positionen))
-    // Alle digitalen Zeilen haben einen Preis
+    expect(labor(beide)).toMatchObject({ '2960': 2 })
+    expect(labor(vorlageEntfernen(beide, vor('michigan'), 'scan', einst))).toEqual(labor(d.positionen))
+    // Kein erfundener Preis: jede automatische Zeile steht in der Laborliste
     const r = rechnen({ ...neuerPlan('T-1', einst), abformung: 'scan', positionen: m }, einst)
     expect(r.labor.every((z) => !z.ohnePreis && z.einzel > 0)).toBe(true)
-    expect(r.warnungen).toEqual([])
+    expect(r.labor.find((z) => z.nr === '2960')!.einzel).toBe(83)
+    // Altplan vom 18.11.2026: eigene Konstruktionszeile und Richtpreis-Zeilen werden zurückgenommen
+    const alt: Position[] = [
+      { id: 'a', ebene: 'LABOR', nr: '2957', anzahl: 1 }, { id: 'b', ebene: 'LABOR', nr: 'D120', anzahl: 1 },
+      { id: 'c', ebene: 'LABOR', nr: '0007', anzahl: 1 }, { id: 'd', ebene: 'LABOR', nr: '0901', anzahl: 1 },
+      { id: 'e', ebene: 'LABOR', nr: '0902', anzahl: 1 }, { id: 'f', ebene: 'LABOR', nr: '0009', anzahl: 2 },
+    ]
+    expect(labor(digitalAltlast(alt))).toEqual({ '2960': 1, '0402': 1, '0009': 2 })
+    expect(digitalAltlast(m)).toBe(m)
     // Fremdlabor-Festpreise (ResMed) bleiben unberührt
     const resmed = vorlageAnwenden([], vor('ukps-resmed'), einst)
     expect(labor(abformungAnwenden(resmed, 'scan'))).toEqual(labor(resmed))

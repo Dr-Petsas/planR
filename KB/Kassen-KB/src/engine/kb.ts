@@ -7,7 +7,7 @@
 // entsteht nicht. Regeln nach BEMA Teil 2 und BMV-Z Anlage 1 Nr. 3 (KB/_quellen/kassen-kb.json).
 
 import { ermittlePunktwert, kzvDerPraxis } from '../punktwerte'
-import { BEL_MODELLE, BEL_NUR_ABDRUCK, PRIVAT_LABOR } from '../data/katalog'
+import { BEL_ADJUSTIERT, BEL_MODELLE, BEL_NUR_ABDRUCK, PRIVAT_CADCAM, PRIVAT_LABOR } from '../data/katalog'
 import { importVon, type LaborXml } from '../laborxml'
 import type { Abformung, Einstellungen, Plan, Position, Rechnung, Zeile } from '../types'
 import { bemaEintrag, belListeFuer, belNr, BEL_HINWEISE, istGoae, kzvName, runden } from './listen'
@@ -107,6 +107,9 @@ export function rechnen(plan: Plan, einst: Einstellungen): Rechnung {
       warnungen.push('Intraoralscan gewählt, aber Gipsmodelle (BEL 001 0/001 5) im Plan – Abformung umschalten oder Modelle prüfen.')
     }
   }
+  if (plan.positionen.some((p) => p.ebene === 'PRIVAT' && p.nr === PRIVAT_CADCAM && p.anzahl > 0)) {
+    hinweise.push('Konstruktion und Fräsen (CAD/CAM) stehen nicht in der BEL II. Die Kasse zahlt den Aufbissbehelf nach BEL 401 0; der Privatanteil darf nur den Mehraufwand des Labors gegenüber der Kassenleistung enthalten, nicht die Herstellung ein zweites Mal. Betrag an die Laborrechnung anpassen oder die Zeile löschen.')
+  }
   if (privat.length) {
     hinweise.push('Laborleistungen ohne BEL-II-Nummer sind keine Kassenleistung: Privatanteil vor Behandlungsbeginn schriftlich mit dem Patienten vereinbaren (§ 8 Abs. 7 BMV-Z).')
   }
@@ -165,22 +168,35 @@ export const istUkps = (positionen: Position[]) => positionen.some((p) => p.eben
 const mengeVon = (positionen: Position[], ebene: Position['ebene'], nrs: string[]) =>
   positionen.filter((p) => p.ebene === ebene && nrs.includes(p.nr) && p.anzahl > 0).reduce((s, p) => s + p.anzahl, 0)
 
+/** Setzt eine Privat-Laborzeile ohne eigenen Preis auf genau diese Anzahl (0 = entfernen). */
+function privatSetzen(positionen: Position[], nr: string, anzahl: number): Position[] {
+  const auto = (p: Position) => p.ebene === 'PRIVAT' && p.nr === nr && p.preis == null
+  const da = positionen.find(auto)
+  const rest = positionen.filter((p) => !auto(p) || p === da)
+  if (!anzahl) return rest.filter((p) => p !== da)
+  if (da) return rest.map((p) => (p === da ? { ...p, anzahl } : p))
+  return [...rest, { id: neueId(), ebene: 'PRIVAT', nr, anzahl }]
+}
+
 /**
  * Stellt den Laborweg auf die Abformung um. Intraoralscan: Gipsmodelle der BEL II werden zu gedruckten
- * Modellen (Privatanteil), Doublieren, individueller Löffel und Abformpauschale entfallen. Abdruck: zurück.
- * Artikulator, Bissgabel, Schiene und Versand bleiben – das Labor fertigt auf den Modellen wie gewohnt.
+ * Modellen (Privatanteil), Doublieren, individueller Löffel und Abformpauschale entfallen; je adjustiertem
+ * Aufbissbehelf (BEL 401 0) kommt Konstruktion und Fräsen als Privatanteil dazu. Die Kassenposition bleibt,
+ * die Zeile ist ein Vorschlag und lässt sich löschen. Abdruck: zurück.
  */
 export function abformungAnwenden(positionen: Position[], ziel: Abformung): Position[] {
   if (ziel === 'scan') {
     const modelle = mengeVon(positionen, 'BEL', BEL_MODELLE)
-    const rest = positionen.filter((p) => !(
+    let rest = positionen.filter((p) => !(
       (p.ebene === 'BEL' && (BEL_MODELLE.includes(p.nr) || BEL_NUR_ABDRUCK.includes(p.nr))) || (p.ebene === 'MATERIAL' && p.nr === '605')
     ))
+    rest = privatSetzen(rest, PRIVAT_CADCAM, mengeVon(rest, 'BEL', BEL_ADJUSTIERT))
     const da = rest.find((p) => p.ebene === 'PRIVAT' && p.nr === '0009' && p.preis == null)
     if (!modelle) return rest
     if (da) return rest.map((p) => (p === da ? { ...p, anzahl: p.anzahl + modelle } : p))
     return [...rest, { id: neueId(), ebene: 'PRIVAT', nr: '0009', anzahl: modelle }]
   }
+  positionen = privatSetzen(positionen, PRIVAT_CADCAM, 0)
   const gedruckt = positionen.filter((p) => p.ebene === 'PRIVAT' && p.nr === '0009' && p.preis == null && p.anzahl > 0)
     .reduce((s, p) => s + p.anzahl, 0)
   if (!gedruckt) return positionen

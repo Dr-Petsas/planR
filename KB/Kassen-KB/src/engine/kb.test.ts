@@ -124,6 +124,22 @@ describe('Kassen-KB-Rechnung', () => {
     expect(zurueck.some((x) => x.ebene === 'PRIVAT')).toBe(false)
   })
 
+  it('Intraoralscan: Konstruktion und Fräsen der adjustierten Schiene als Privatanteil', () => {
+    const p = mit(['k1'])
+    const pos = abformungAnwenden(p.positionen, 'scan')
+    const privat = (l: typeof pos) => Object.fromEntries(l.filter((x) => x.ebene === 'PRIVAT').map((x) => [x.nr, x.anzahl]))
+    expect(privat(pos)).toEqual({ '0009': 2, '2960': 1 })
+    expect(pos.some((x) => x.ebene === 'BEL' && x.nr === '4010')).toBe(true)
+    expect(privat(abformungAnwenden(pos, 'scan'))).toEqual(privat(pos))
+    const r = rechnen({ ...p, abformung: 'scan', positionen: pos }, bayern)
+    expect(r.summePrivat).toBe(129)
+    expect(r.hinweise.some((h) => h.includes('§ 8 Abs. 7 BMV-Z'))).toBe(true)
+    expect(r.hinweise.some((h) => h.includes('CAD/CAM'))).toBe(true)
+    // nicht adjustierte Schiene (K2): kein CAD/CAM-Anteil
+    expect(privat(abformungAnwenden(mit(['k2']).positionen, 'scan'))).toEqual({ '0009': 1 })
+    expect(abformungAnwenden(pos, 'abdruck').some((x) => x.ebene === 'PRIVAT')).toBe(false)
+  })
+
   it('Labor-XML ersetzt die Laborpositionen, NBL wird Privatanteil', () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Laborabrechnung Version="4.5">

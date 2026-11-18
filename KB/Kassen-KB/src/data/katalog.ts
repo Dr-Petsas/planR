@@ -134,7 +134,13 @@ export const ART_NAME: Record<Art, string> = {
 export const PRIVAT_LABOR: Record<string, { text: string; preis: number }> = {
   '0009': { text: 'Modell aus Kunststoff, gedruckt nach Intraoralscan (BEB 0009)', preis: 23 },
   '0036': { text: 'Versandkosten bei Datenlieferung (BEB 0036)', preis: 8.52 },
+  '2960': { text: 'Aufbissschiene konstruieren und fräsen, CAD/CAM (BEB 2960)', preis: 83 },
 }
+
+/** Adjustierte Aufbissbehelfe der BEL II, die nach Intraoralscan konstruiert und gefräst werden */
+export const BEL_ADJUSTIERT = ['4010']
+/** Konstruktion und Fräsen (CAD/CAM) – steht nicht in der BEL II, Privatanteil */
+export const PRIVAT_CADCAM = '2960'
 
 /** Modellpositionen der BEL II, die beim Intraoralscan durch gedruckte Modelle ersetzt werden */
 export const BEL_MODELLE = ['0010', '0015']

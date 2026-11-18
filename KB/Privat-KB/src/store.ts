@@ -3,7 +3,7 @@ import type { Einstellungen, Plan, Regler } from './types'
 import { planNummer, nummerMitReihe, useAblage } from './ablage'
 import { mk } from './mandant'
 import { leererPatient, patientMigrieren, praxisMigrieren, standardPraxis } from './stammdaten'
-import { UKPS_BEMESSUNG_STANDARD } from './data/katalog'
+import { digitalAltlast, UKPS_BEMESSUNG_STANDARD } from './data/katalog'
 
 const UKPS_STAND = 'bzaek-2026-07'
 
@@ -51,7 +51,7 @@ export function planMigrieren(roh: unknown, einst: Einstellungen): Plan {
     ...p,
     patient: patientMigrieren(p.patient),
     regler: { ...basis.regler, ...p.regler },
-    positionen: Array.isArray(p.positionen) ? p.positionen : [],
+    positionen: Array.isArray(p.positionen) ? digitalAltlast(p.positionen) : [],
     abformung: p.abformung === 'scan' ? 'scan' : 'abdruck',
     fremdlabor: { ...basis.fremdlabor, ...p.fremdlabor },
     diagnose: p.diagnose ?? '',
