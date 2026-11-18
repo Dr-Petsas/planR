@@ -55,6 +55,8 @@ import {
   neuerVerbundCode, verbundVon, type VerbundCode,
 } from './verbund.ts'
 
+// Plan, HKP und Befund ins Praxisprogramm: die Bridge sichert und prüft dabei ganze Tabellen (große Praxis: über eine Minute).
+const SCHREIB_MS = 270_000
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
 const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine' | 'einstellungen') => `${ORDNER}/mandanten/${mandant}/${name}.json`
@@ -888,7 +890,7 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
       // Die Sitzung gehört den Behandlungsschritten, das Praxisprogramm kennt das Feld nicht.
       const plan = { ...voll, positionen: (Array.isArray(voll.positionen) ? voll.positionen as Record<string, unknown>[] : []).map(({ sitzung: _s, ...rest }) => rest) }
       const anlage = await c.rufen<{ number?: number; label?: string; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/plaene/import`, {
-        method: 'POST', body: { json: JSON.stringify(plan) }, ms: 70_000, headers: { 'X-DSWIN-EDIT': '1' },
+        method: 'POST', body: { json: JSON.stringify(plan) }, ms: SCHREIB_MS, headers: { 'X-DSWIN-EDIT': '1' },
       })
       if (!anlage.ok || typeof anlage.daten.number !== 'number') {
         const schon = angelegt.length ? ` Bereits angelegt: ${nr} ${angelegt.join(', ')}.` : ''
@@ -933,7 +935,7 @@ async function insPvs(req: IncomingMessage, w: Wer, modul: string, nummer: strin
     // DS-Win nimmt HKPs nur über den Import-Endpunkt mit Schreibfreigabe an (Connector mit --enable-write).
     const gesendet = hkpFuerPvs(plan, r.daten.ergebnis as Record<string, unknown>)
     const anlage = await c.rufen<{ number?: number; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/hkps${dampsoft ? '/import' : ''}`, {
-      method: 'POST', body: { json: gesendet }, ms: 70_000,
+      method: 'POST', body: { json: gesendet }, ms: SCHREIB_MS,
       headers: dampsoft ? { 'X-DSWIN-EDIT': '1' } : undefined,
     })
     if (!anlage.ok || typeof anlage.daten.number !== 'number') {
@@ -2809,7 +2811,7 @@ async function befundSchreiben(w: Wer, l: BefundGelesen, kiefer: unknown[], zaeh
   if (!Object.keys(teeth).length) return { status: 400, daten: { ok: false, meldung: 'Im Befund steht kein Zahn der genannten Kiefer.' } }
   const { c, rufen, nummer } = l
   const schreiben = (version: string) => rufen<{ selectedTeeth?: string[]; message?: string }>(`/patients/${nummer}/befunde/01`, {
-    method: 'POST', body: { version, teeth }, headers: { 'X-DSWIN-EDIT': '1' }, ms: 70_000,
+    method: 'POST', body: { version, teeth }, headers: { 'X-DSWIN-EDIT': '1' }, ms: SCHREIB_MS,
   })
   try {
     let s = await schreiben(l.befund.version)
