@@ -2511,8 +2511,30 @@ function superuserZuHause(wer: { konto: { email: string }; sudo?: string }) {
   return true
 }
 
+/**
+ * Die Planer führen Pläne und Einstellungen im Browser – je Praxis in einem eigenen Speicher (mandant.ts).
+ * Hier wird der Speicher des angemeldeten Kontos gewählt, bevor ein Planer öffnet: Meldet sich an diesem Browser
+ * ein anderes Konto an, sieht und meldet es nie die Pläne des vorigen.
+ */
+function planerSpeicher(mandant: string, name?: string) {
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(mandant) || mandant.length > 40) return
+  try {
+    if (localStorage.getItem('planr.konto.v1') === mandant && localStorage.getItem('planr.mandant.v1') === mandant) return
+    if (mandant !== 'standard') {
+      const roh = JSON.parse(localStorage.getItem('planr.mandanten.v1') ?? '[]') as unknown
+      const liste = (Array.isArray(roh) ? roh : []) as { id?: string; name?: string }[]
+      if (!liste.some((m) => m?.id === mandant)) {
+        localStorage.setItem('planr.mandanten.v1', JSON.stringify([...liste, { id: mandant, name: (name ?? '').trim() || 'Praxis' }]))
+      }
+    }
+    localStorage.setItem('planr.konto.v1', mandant)
+    localStorage.setItem('planr.mandant.v1', mandant)
+  } catch { /* privater Modus: der Planer klärt es selbst (409 der Übersicht) */ }
+}
+
 ausPickadoc().then(ichLaden).then(async (wer) => {
   if (!wer) return ohneAnmeldung()
+  planerSpeicher(wer.mandant)
   addEventListener('hashchange', () => {
     if (location.hash === '#probe' || location.hash.startsWith('#fall/')) void probeOeffnen()
     if (location.hash === '#probe-eingang') void probeEingangOeffnen()

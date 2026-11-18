@@ -36,16 +36,16 @@ export function uebernommen(lokal: Record<string, unknown>, server: Record<strin
   return 'praxis' in lokal ? { ...server, praxis: lokal.praxis } : server
 }
 
-const MERK = (modul: string) => `planr.zentral.${modul}`
+const MERK = (modul: string, speicher = 'standard') => `planr.zentral.${modul}${speicher === 'standard' ? '' : `@${speicher}`}`
 const BREMSE = (modul: string) => `planr.zentral.laden.${modul}`
 
-function merkerLesen(modul: string): ZentralMerker | null {
+function merkerLesen(modul: string, speicher?: string): ZentralMerker | null {
   try {
-    const m = JSON.parse(localStorage.getItem(MERK(modul)) ?? 'null') as Partial<ZentralMerker> | null
+    const m = JSON.parse(localStorage.getItem(MERK(modul, speicher)) ?? 'null') as Partial<ZentralMerker> | null
     return m && typeof m.mandant === 'string' && Number.isInteger(m.v) && typeof m.kern === 'string' ? m as ZentralMerker : null
   } catch { return null }
 }
-const merkerSetzen = (modul: string, m: ZentralMerker) => localStorage.setItem(MERK(modul), JSON.stringify(m))
+const merkerSetzen = (modul: string, m: ZentralMerker, speicher?: string) => localStorage.setItem(MERK(modul, speicher), JSON.stringify(m))
 
 const wann = (iso?: string) => {
   const d = iso ? new Date(iso) : null
@@ -99,7 +99,7 @@ function bremse(modul: string): boolean {
  * der Stand der Praxis wird regelmäßig und beim Zurückkehren ins Fenster geholt.
  * `lesen` liefert Speicherort und Inhalt der Einstellungen dieses Planers im Browser.
  */
-export function zentralAbgleich(modul: string, adresse: string, lesen: () => { key: string; roh: string } | null, sofort = false) {
+export function zentralAbgleich(modul: string, adresse: string, lesen: () => { key: string; roh: string } | null, sofort = false, speicher = 'standard') {
   if (typeof fetch !== 'function' || typeof localStorage === 'undefined' || typeof document === 'undefined') return
   const hier = lesen()
   if (!hier) return
@@ -116,13 +116,13 @@ export function zentralAbgleich(modul: string, adresse: string, lesen: () => { k
   lauf.lokalZuletzt = lokal
 
   const hoch = async (basis: number, mandant: string) => {
-    const r = await fetch(adresse, {
+    const r = await fetch(`${adresse}?pm=${encodeURIComponent(speicher)}`, {
       method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
       body: `{"modul":${JSON.stringify(modul)},"basis":${basis},"einst":${hier.roh}}`,
     })
     if (r.ok) {
       const d = await r.json() as { v: number; mandant?: string }
-      merkerSetzen(modul, { mandant: d.mandant ?? mandant, v: d.v, kern: lokal })
+      merkerSetzen(modul, { mandant: d.mandant ?? mandant, v: d.v, kern: lokal }, speicher)
     } else lauf.zuletzt = 0 // Konflikt oder Netz: gleich noch einmal abgleichen
   }
   const runter = (s: ZentralStand, neuLaden: boolean) => {
@@ -131,20 +131,23 @@ export function zentralAbgleich(modul: string, adresse: string, lesen: () => { k
     if (lesen()?.roh !== hier.roh) { lauf.zuletzt = 0; return }
     try { localStorage.setItem(`${hier.key}.vor-zentral`, hier.roh) } catch { /* Sicherung ist Zugabe */ }
     localStorage.setItem(hier.key, JSON.stringify(uebernommen(lokalEinst, s.einst)))
-    merkerSetzen(modul, { mandant: s.mandant, v: s.v, kern: kern(s.einst) })
+    merkerSetzen(modul, { mandant: s.mandant, v: s.v, kern: kern(s.einst) }, speicher)
     // Der Planer liest seine Einstellungen beim Start – Pläne und Entwürfe liegen im Browser und bleiben.
     if (neuLaden) location.reload()
   }
 
   void (async () => {
-    const r = await fetch(`${adresse}?modul=${encodeURIComponent(modul)}`, { cache: 'no-store', credentials: 'include' })
+    const r = await fetch(`${adresse}?modul=${encodeURIComponent(modul)}&pm=${encodeURIComponent(speicher)}`, { cache: 'no-store', credentials: 'include' })
     if (!r.ok) return
     const s = await r.json() as ZentralStand
     if (typeof s.mandant !== 'string' || !Number.isInteger(s.v)) return
-    const schritt = entscheide(lokal, merkerLesen(modul), s)
+    const merker = merkerLesen(modul, speicher)
+    // Erster Kontakt eines Konto-Speichers mit seiner Praxis: Deren Stand gilt, ohne Rückfrage.
+    const neuHier = speicher !== 'standard' && speicher === s.mandant && merker?.mandant !== s.mandant
+    const schritt = entscheide(lokal, merker, s)
     const ersteRunde = lauf.ersteRunde
     lauf.ersteRunde = false
-    if (schritt === 'merken') merkerSetzen(modul, { mandant: s.mandant, v: s.v, kern: lokal })
+    if (schritt === 'merken') merkerSetzen(modul, { mandant: s.mandant, v: s.v, kern: lokal }, speicher)
     else if (schritt === 'hoch') await hoch(s.v, s.mandant)
     else if (schritt === 'runter') {
       if ((ersteRunde || document.hidden) && bremse(modul)) runter(s, true)
@@ -153,6 +156,8 @@ export function zentralAbgleich(modul: string, adresse: string, lesen: () => { k
         hinweis(`Die Einstellungen der Praxis wurden an einem anderen Platz geändert${s.von ? ` (${s.von}${wann(s.zeit) ? `, ${wann(s.zeit)}` : ''})` : ''}.`,
           [{ titel: 'Jetzt übernehmen', haupt: true, tun: () => runter(s, true) }])
       }
+    } else if (schritt === 'fragen' && neuHier) {
+      if (bremse(modul)) runter(s, true)
     } else if (schritt === 'fragen' && lauf.gefragt !== `f${s.v}:${lokal.length}`) {
       lauf.gefragt = `f${s.v}:${lokal.length}`
       const stand = s.v > 0 && s.von ? ` (zuletzt geändert von ${s.von}${wann(s.zeit) ? ` am ${wann(s.zeit)}` : ''})` : ''

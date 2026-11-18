@@ -1504,6 +1504,7 @@ async function planerEinst(req: IncomingMessage, res: ServerResponse, query: str
     return json(res, 200, { ok: true, ...await stand(modul) })
   }
   if (req.method !== 'PUT') return json(res, 405, { ok: false })
+  if (m !== 'standard' && !new URLSearchParams(query).has('pm')) return json(res, 409, { ok: false, falscherMandant: true, mandant: m })
   const b = JSON.parse(await lesenBody(req, 400_000) || '{}') as { modul?: unknown; einst?: unknown; basis?: unknown }
   const modul = String(b.modul ?? '')
   if (!MODUL_RE.test(modul) || modul === 'hkp') return json(res, 400, { ok: false })
@@ -1520,9 +1521,11 @@ async function planerEinst(req: IncomingMessage, res: ServerResponse, query: str
   json(res, 400, { ok: false })
 }
 
-async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfernt?: unknown[]; behandler?: unknown; einst?: unknown }, res: ServerResponse) {
+async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfernt?: unknown[]; behandler?: unknown; einst?: unknown }, res: ServerResponse, ohneMarke = false) {
   const m = w.mandant
   const modul = String(body.modul ?? '')
+  // Ein alter Planer-Stand nennt seine Praxis nicht: Seine Browser-Ablage kann von einem anderen Konto stammen.
+  if (ohneMarke && m !== 'standard' && modul !== 'hkp') return json(res, 409, { ok: false, falscherMandant: true, mandant: m })
   if (MODUL_RE.test(modul) && modul !== 'hkp' && body.einst && typeof body.einst === 'object' && !Array.isArray(body.einst)) {
     const alle = await einstLesen(m)
     const neu = JSON.stringify(body.einst)
@@ -3902,6 +3905,10 @@ function angemeldet(req: IncomingMessage, res: ServerResponse, url: string, quer
 
 function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string, query: string, w: Wer, next: () => void) {
   const m = w.mandant
+  // Ein Planer nennt die Praxis, deren Daten er im Browser führt. Ist ein anderes Konto angemeldet, darf nichts
+  // davon in dessen Ablage laufen (und nichts von dort in die fremde Browser-Ablage).
+  const planerMandant = new URLSearchParams(query).get('pm')
+  if (planerMandant !== null && planerMandant !== m) return json(res, 409, { ok: false, falscherMandant: true, mandant: m })
   if (url === '/api/profil/foto') return void profilFoto(req, res, w).catch(fehler500(res))
   if (url === '/api/einstellungen') return einstellungen(req, res, w)
   if (url === '/api/bridge-schluessel') return void bridgeSchluessel(req, res, w).catch(fehler500(res))
@@ -4063,7 +4070,7 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
     return
   }
   if (req.method === 'PUT') {
-    lesenBody(req, 20_000_000).then((text) => exklusiv(() => melden(w, JSON.parse(text), res)))
+    lesenBody(req, 20_000_000).then((text) => exklusiv(() => melden(w, JSON.parse(text), res, !q.has('pm'))))
       .catch(() => { if (!res.headersSent) json(res, 400, { ok: false }) })
     return
   }

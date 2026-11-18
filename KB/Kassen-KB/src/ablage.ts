@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ZENTRALE_PRAXIS_KEY } from './stammdaten'
 import { arztUebernehmen } from './arzt'
 import { zentralAbgleich } from './zentral'
+import { KONTO_ID, MANDANT_ID, kontoWechsel } from './mandant'
 
 /**
  * Ablage gespeicherter Pläne mit Freigabe-Status (im Browser, localStorage).
@@ -81,8 +82,20 @@ function entfernenMerken(key: string, e: { nummer: string; geaendert: string }) 
   entfernt.set(key, [...bisher, { nummer: e.nummer, geaendert: e.geaendert }])
 }
 
-/** Modul für die PlanR-Übersicht; andere Mandanten als der Standard bleiben ihr fern (sonst überschreiben sie sich). */
-const modulVon = (key: string) => (key.includes('@') ? '' : key.replace(/\.liste\.v\d+$/, ''))
+/** Modul für die PlanR-Übersicht; nur der Speicher des angemeldeten Kontos geht dorthin (sonst mischen sich Praxen). */
+const modulVon = (key: string) => (MANDANT_ID !== KONTO_ID ? '' : key.replace(/@.*$/, '').replace(/\.liste\.v\d+$/, ''))
+/** Marke an jeder Anfrage: die Praxis, deren Daten dieser Browser-Speicher führt */
+const PM = `pm=${encodeURIComponent(MANDANT_ID)}`
+/** Die Übersicht gehört einem anderen Konto als dieser Speicher: nichts übernehmen, auf dessen Speicher wechseln. */
+async function fremdesKonto(r: Response): Promise<boolean> {
+  if (r.status !== 409) return false
+  try {
+    const d = (await r.clone().json()) as { falscherMandant?: unknown; mandant?: unknown }
+    if (d.falscherMandant !== true || typeof d.mandant !== 'string') return false
+    kontoWechsel(d.mandant)
+    return true
+  } catch { return false }
+}
 /** PlanR-Übersicht; die Sitzung (Cookie) gilt für denselben Host, daher nicht fest 127.0.0.1 */
 const hubAdresse = () => (typeof location === 'undefined' ? 'http://127.0.0.1:5189/api/plaene'
   : location.pathname.startsWith('/planer/') ? `${location.origin}/api/plaene`
@@ -138,7 +151,8 @@ async function abgleichHolen<P>(modul: string): Promise<{ geloescht: { nummer: s
   const leer = { geloescht: [], eingang: [] }
   if (!HUB_MODUL[modul] || typeof fetch !== 'function') return leer
   try {
-    const r = await fetch(`${hubAdresse()}?nur=abgleich&modul=${encodeURIComponent(modul)}`, { cache: 'no-store', credentials: 'include' })
+    const r = await fetch(`${hubAdresse()}?nur=abgleich&modul=${encodeURIComponent(modul)}&${PM}`, { cache: 'no-store', credentials: 'include' })
+    if (!r.ok) { void fremdesKonto(r); return leer }
     const d = (await r.json()) as { geloescht?: { modul: string; nummer: string; geaendert: string }[]; eingang?: (Import<P> & { modul: string })[] }
     return {
       geloescht: (d.geloescht ?? []).filter((g) => g.modul === modul),
@@ -157,7 +171,7 @@ async function inhaltHolen<P>(modul: string, nummer: string): Promise<AblageEint
   if (!HUB_MODUL[modul] || !nummer || typeof fetch !== 'function') return null
   try {
     const q = new URLSearchParams({ nur: 'inhalt', modul, nummer })
-    const r = await fetch(`${hubAdresse()}?${q}`, { cache: 'no-store', credentials: 'include' })
+    const r = await fetch(`${hubAdresse()}?${q}&${PM}`, { cache: 'no-store', credentials: 'include' })
     if (!r.ok) return null
     const d = (await r.json()) as Partial<AblageEintrag<P>>
     if (!d.plan || typeof d.geaendert !== 'string') return null
@@ -223,7 +237,7 @@ function einstHier(key: string): { key: string; roh: string } | null {
 function einstAbgleichen(key: string, sofort = false) {
   const basis = modulVon(key)
   if (!HUB_MODUL[basis]) return
-  zentralAbgleich(basis, hubAdresse().replace(/\/plaene$/, '/planer-einstellungen'), () => einstHier(key), sofort)
+  zentralAbgleich(basis, hubAdresse().replace(/\/plaene$/, '/planer-einstellungen'), () => einstHier(key), sofort, MANDANT_ID)
 }
 
 /** Rückmeldung an die Knöpfe: Ist der Stand bei PlanR angekommen? Ohne Übersicht zählt die Ablage im Browser. */
@@ -242,7 +256,7 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
   if (!meta || typeof fetch !== 'function') return gemeldet(true)
   const weg = entfernt.get(key) ?? []
   if (!liste.length && !weg.length) return
-  const hub = hubAdresse()
+  const hub = `${hubAdresse()}?${PM}`
   const plaene = liste.map((e) => ({
     modul: basis, kuerzel: meta.kuerzel, art: meta.art,
     nummer: e.nummer, patient: e.patient, betrag: e.betrag, status: e.status, geaendert: e.geaendert,
@@ -252,6 +266,7 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
   const init: RequestInit = { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body }
   if (body.length < 60_000) init.keepalive = true
   fetch(hub, init).then((r) => {
+    void fremdesKonto(r)
     gemeldet(r.ok)
     if (!r.ok || typeof window === 'undefined' || window.parent === window) return
     window.parent.postMessage({

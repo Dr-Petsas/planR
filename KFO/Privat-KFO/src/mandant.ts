@@ -61,6 +61,32 @@ let stand = starten()
 export const MANDANT_ID = stand.aktiv.id
 export const mk = (key: string) => schluessel(key, MANDANT_ID)
 
+/**
+ * Praxis des angemeldeten PlanR-Kontos. Nur deren Ablage geht an die Übersicht; meldet sich an diesem Browser ein
+ * anderes Konto an, bekommt es einen eigenen Speicher – Pläne und Einstellungen zweier Praxen mischen sich nie.
+ */
+const KONTO_KEY = 'planr.konto.v1'
+export const KONTO_ID = (() => {
+  try { return kennung(speicher()?.getItem(KONTO_KEY) ?? '') || STANDARD_ID } catch { return STANDARD_ID }
+})()
+
+/** Die Übersicht meldet ein anderes Konto als dieser Speicher: auf dessen Speicher umschalten (lädt neu). */
+export function kontoWechsel(id: string): boolean {
+  const s = speicher()
+  if (!s || !id || kennung(id) !== id || (id === KONTO_ID && id === MANDANT_ID)) return false
+  try {
+    // Höchstens zweimal je Minute – nie in einer Schleife neu laden
+    const jetzt = Date.now()
+    const zuletzt = (JSON.parse(sessionStorage.getItem(KONTO_KEY) ?? '[]') as number[]).filter((t) => jetzt - t < 60_000)
+    if (zuletzt.length >= 2) return false
+    sessionStorage.setItem(KONTO_KEY, JSON.stringify([...zuletzt, jetzt]))
+    s.setItem(KONTO_KEY, id)
+    if (!stand.liste.some((m) => m.id === id)) schreiben([...stand.liste, { id, name: 'Praxis' }])
+    wechseln(id)
+    return true
+  } catch { return false }
+}
+
 const abonnenten = new Set<() => void>()
 const melden = (liste: Mandant[]) => {
   schreiben(liste)
