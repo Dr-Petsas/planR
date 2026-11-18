@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Einstellungen, Ebene, Plan, Position, Rechnung } from '../types'
 import { BEB_POSITIONEN, GOZ_POSITIONEN, UKPS_BEMESSUNG_STANDARD, VORLAGEN, VORLAGEN_GRUPPEN, type VorlagenPosition } from '../data/katalog'
-import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden, vorlageEnthalten, vorlageEntfernen } from '../engine/kb'
+import { abformungAnwenden, euro, laborGrundpreis, neueId, positionsFaktor, umfangAnwenden, vorlageAnwenden, vorlageEinfuegen, vorlageEnthalten, vorlageEntfernen } from '../engine/kb'
 import { GOAE_POSITIONEN, goaeText, gozText } from '../engine/listen'
 import { vorschlaege, vorschlagAnwenden } from '../engine/vorschlaege'
 
@@ -33,8 +33,9 @@ export default function Leistungen({ plan, setPlan, einst, rechnung }: Props) {
       setPlan({ ...plan, vorlagen: [...aktiv].filter((x) => x !== id), positionen: umfangAnwenden(vorlageEntfernen(eigene, pos, plan.abformung, einst), plan.regler.faktor, plan.thema) })
       return
     }
-    const neu = vorlageAnwenden(eigene, pos, einst)
-    setPlan({ ...plan, vorlagen: [...aktiv, id], positionen: umfangAnwenden(plan.abformung === 'scan' ? abformungAnwenden(neu, 'scan') : neu, plan.regler.faktor, plan.thema) })
+    const neu = vorlageEinfuegen(eigene, pos, plan.abformung, einst)
+    const basis = neu.abformung === plan.abformung ? neu.positionen : abformungAnwenden(neu.positionen, neu.abformung)
+    setPlan({ ...plan, abformung: neu.abformung, vorlagen: [...aktiv, id], positionen: umfangAnwenden(basis, plan.regler.faktor, plan.thema) })
   }
 
   const hinzufuegen = () => {

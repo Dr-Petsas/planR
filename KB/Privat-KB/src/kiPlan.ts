@@ -1,6 +1,6 @@
 /** Der private KB-Plan für die KI-Zeile und das Prüfmodul. */
 import type { Einstellungen, Plan, Position, Rechnung } from './types'
-import { rechnen } from './engine/kb'
+import { abformungAnwenden, rechnen } from './engine/kb'
 import { begruendungText } from './engine/begruendung'
 import { feldSetzen, felderSchalter, listenDienst, listenZeilen, zielSchalter, zielSetzen, type KiFeld, type KiPosition, type KiZiel, type PlanKiDienst } from './planKi'
 
@@ -15,7 +15,7 @@ export const FELDER: KiFeld<Plan>[] = [
   { name: 'regler.faktor', text: 'GOZ-Faktor für Aufbissbehelfe, Schienen und Provisorien', von: 1, bis: 5, ...regler('faktor') },
   { name: 'regler.faFaktor', text: 'GOZ-Faktor der Funktionsanalyse (Abschnitt J)', von: 1, bis: 5, ...regler('faFaktor') },
   { name: 'regler.laborKlasse', text: 'Preisklasse des Labors: 0 günstig, 1 Standard, 2 hochwertig', von: 0, bis: 2, ...regler('laborKlasse') },
-  { name: 'abformung', text: 'Abformung (abdruck = konventionell, scan = Intraoralscan)', werte: ['abdruck', 'scan'], lesen: (p) => p.abformung, setzen: (p, w: Plan['abformung']) => ({ ...p, abformung: w }) },
+  { name: 'abformung', text: 'Abformung (abdruck = konventionell, scan = Intraoralscan)', werte: ['abdruck', 'scan'], lesen: (p) => p.abformung, setzen: (p, w: Plan['abformung']) => ({ ...p, abformung: w, positionen: abformungAnwenden(p.positionen, w) }) },
   { name: 'diagnose', text: 'Befund und Diagnose (freier Text)', lesen: (p) => p.diagnose ?? '', setzen: (p, w: string) => ({ ...p, diagnose: w }) },
   { name: 'bemerkung', text: 'Bemerkung auf dem Plan (freier Text)', lesen: (p) => p.bemerkung ?? '', setzen: (p, w: string) => ({ ...p, bemerkung: w }) },
 ]

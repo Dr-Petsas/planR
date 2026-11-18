@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, umfangAnwenden, vorlageAnwenden, vorlageEnthalten, vorlageEntfernen } from './kb'
+import { abformungAnwenden, istUkps, laborXmlUebernehmen, rechnen, umfangAnwenden, vorlageAnwenden, vorlageEinfuegen, vorlageEnthalten, vorlageEntfernen } from './kb'
 import { laborXmlLesen } from '../laborxml'
 import { gozPunkte, GOZ_PUNKTWERT } from './listen'
 import { VORLAGEN } from '../data/katalog'
 import { einstMigrieren, neuerPlan, STANDARD_EINSTELLUNGEN } from '../store'
-import type { Plan, Thema } from '../types'
+import type { Plan, Position, Thema } from '../types'
 import { pvsPosition } from './pvs'
 import { vorschlaege, vorschlagAnwenden } from './vorschlaege'
 
@@ -213,6 +213,39 @@ describe('Privat-KB-Rechnung', () => {
     expect(zurueck.find((x) => x.nr === '0060')!.anzahl).toBe(1)
     expect(zurueck.find((x) => x.nr === '0002')!.anzahl).toBe(2)
     expect(zurueck.find((x) => x.nr === '0701')!.anzahl).toBe(1)
+  })
+
+  it('Intraoralscan: jede Schiene bekommt den digitalen Laborablauf, Abdruck stellt zurück', () => {
+    const vor = (id: string) => VORLAGEN.find((v) => v.id === id)!.pos
+    const labor = (pos: Position[]) => Object.fromEntries(pos.filter((x) => x.ebene === 'LABOR').map((x) => [x.nr, x.anzahl]))
+    // Michigan: konstruiert und gefräst statt konventionell, digitale Registrierung statt Mittelwertartikulator
+    const michigan = vorlageAnwenden([], vor('michigan'), einst)
+    const m = abformungAnwenden(michigan, 'scan')
+    expect(labor(m)).toEqual({ '0009': 3, '0902': 1, '2957': 1, D120: 1, '0007': 1, '0901': 1, '0732': 2 })
+    expect(labor(abformungAnwenden(m, 'scan'))).toEqual(labor(m))
+    expect(labor(abformungAnwenden(m, 'abdruck'))).toEqual({ '0002': 3, '0402': 1, '7621': 1, '0732': 2 })
+    // Weiche Knirscherschiene: bleibt, entsteht aber auf dem gedruckten Modell
+    expect(labor(abformungAnwenden(vorlageAnwenden([], vor('knirscher'), einst), 'scan')))
+      .toEqual({ '0009': 2, '0902': 1, '7604': 1, '0007': 1, '0901': 1, '0732': 2 })
+    // Tiefziehschiene: gedrucktes Modell, kein Artikulator
+    expect(labor(abformungAnwenden(vorlageAnwenden([], vor('tiefzieh'), einst), 'scan')))
+      .toEqual({ '0009': 1, '7601': 1, '0007': 1, '0901': 1, '0732': 2 })
+    // Digitale Schiene stellt den Plan auf Scan um
+    const d = vorlageEinfuegen([], vor('digital'), 'abdruck', einst)
+    expect(d.abformung).toBe('scan')
+    expect(labor(d.positionen)).toEqual({ '0009': 2, '0902': 1, '2957': 1, D120: 1, '0007': 1, '0901': 1, '0732': 1 })
+    // Zwei Schienen: Oralscan und Auftragsdaten je Auftrag einmal, Konstruktion je gefräster Schiene
+    const beide = vorlageEinfuegen(d.positionen, vor('michigan'), 'scan', einst).positionen
+    expect(labor(beide)).toMatchObject({ '2957': 2, D120: 2, '0007': 1, '0901': 1 })
+    const ohne = vorlageEntfernen(beide, vor('michigan'), 'scan', einst)
+    expect(labor(ohne)).toEqual(labor(d.positionen))
+    // Alle digitalen Zeilen haben einen Preis
+    const r = rechnen({ ...neuerPlan('T-1', einst), abformung: 'scan', positionen: m }, einst)
+    expect(r.labor.every((z) => !z.ohnePreis && z.einzel > 0)).toBe(true)
+    expect(r.warnungen).toEqual([])
+    // Fremdlabor-Festpreise (ResMed) bleiben unberührt
+    const resmed = vorlageAnwenden([], vor('ukps-resmed'), einst)
+    expect(labor(abformungAnwenden(resmed, 'scan'))).toEqual(labor(resmed))
   })
 
   it('Labor-XML ersetzt die Laborpositionen und beendet den Platzhalter', () => {

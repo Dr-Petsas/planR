@@ -1,5 +1,5 @@
 import type { Abformung, Einstellungen, Plan, Rechnung, Regler as ReglerT, Thema } from '../types'
-import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen, umfangAnwenden, vorlageAnwenden } from '../engine/kb'
+import { abformungAnwenden, euro, faktorText, laborXmlUebernehmen, umfangAnwenden, vorlageAnwenden, vorlageMitScan } from '../engine/kb'
 import LaborXmlKnopf from './LaborXmlKnopf'
 import { goaeText, GOZ_HOECHSTSATZ, GOZ_SCHWELLE, GOZ_VEREINBARUNG_MAX, gozText } from '../engine/listen'
 import { LABOR_KLASSE_FAKTOR, LABOR_KLASSE_NAMEN, laborKlasseName, THEMEN, VORLAGEN } from '../data/katalog'
@@ -43,13 +43,15 @@ export default function Regler({ plan, setPlan, einst, setEinst, rechnung }: Pro
     const eigene = plan.positionen.filter((p) => !p.umfang)
     let positionen = eigene
     let vorlagen = plan.vorlagen
+    let abformung = plan.abformung
     if (th && !eigene.length) {
-      positionen = th.vorlagen.reduce((pos, id) => vorlageAnwenden(pos, VORLAGEN.find((v) => v.id === id)?.pos ?? [], einst), eigene)
-      if (plan.abformung === 'scan') positionen = abformungAnwenden(positionen, 'scan')
+      const vor = th.vorlagen.map((id) => VORLAGEN.find((v) => v.id === id)?.pos ?? [])
+      positionen = vor.reduce((pos, v) => vorlageAnwenden(pos, v, einst), eigene)
+      if (abformung === 'scan' || vor.some(vorlageMitScan)) { abformung = 'scan'; positionen = abformungAnwenden(positionen, 'scan') }
       vorlagen = th.vorlagen
     }
     const diagnose = th && (!plan.diagnose.trim() || THEMEN.some((x) => x.diagnose === plan.diagnose)) ? th.diagnose : plan.diagnose
-    setPlan({ ...plan, thema, diagnose, vorlagen, positionen: umfangAnwenden(positionen, r.faktor, thema) })
+    setPlan({ ...plan, thema, diagnose, vorlagen, abformung, positionen: umfangAnwenden(positionen, r.faktor, thema) })
   }
 
   return (
@@ -91,7 +93,7 @@ export default function Regler({ plan, setPlan, einst, setEinst, rechnung }: Pro
 
       <div className="kl-block kl-einlage">
         <div className="wahl" title={plan.abformung === 'scan'
-          ? 'GOZ 0065 statt 0060, gedruckte Modelle (BEB 0009) statt Gips, kein Doublieren, Versand bei Datenlieferung.'
+          ? 'GOZ 0065 statt 0060; digitaler Laborablauf: Oralscan aufbereiten, CAD-Auftragsdaten, digitale Registrierung statt Mittelwertartikulator, gedruckte Modelle (BEB 0009) statt Gips, harte Schienen konstruiert und gefräst; Versand bei Datenlieferung.'
           : 'Konventionell: GOZ 0060, Gipsmodelle, Versand je Versandgang.'}>
           {(Object.keys(ABFORMUNG_NAME) as Abformung[]).map((a) => (
             <button key={a} className={plan.abformung === a ? 'aktiv' : ''}

@@ -58,6 +58,8 @@ export interface BebPosition {
   /** Fremdlabor-Leistung ohne Listenpreis: `preis` ist ein Platzhalter bis zum Kostenvoranschlag */
   fremd?: boolean
   preis?: number
+  /** Richtpreis (netto), solange weder Praxispreis noch Laborliste einen Preis kennen */
+  richt?: number
 }
 
 export const BEB_POSITIONEN: BebPosition[] = [
@@ -98,6 +100,13 @@ export const BEB_POSITIONEN: BebPosition[] = [
   { nr: '1122', text: 'Wachsplatte für zentrische Bissnahme vorbereiten', labor: '1122', begleit: true },
   { nr: '0732', text: 'Desinfektion', labor: '0732', begleit: true },
   { nr: '0009', text: 'Modell aus Kunststoff, gedruckt nach Intraoralscan', labor: '0009', begleit: true },
+  // Digitaler Laborablauf nach Intraoralscan. 0007/0901/0902: Standardpositionen und Richtpreise wie im ZE-Planer
+  // (ZE/HKP beb-standard.ts). D120: ohne BEB-Nummer; Richtpreis = Unterschied der Laborliste zwischen
+  // „Konstruktion und Fräsen“ (2960) und „Fräsen bei Datenanlieferung“ (2957).
+  { nr: '0007', text: 'Oralscan aufbereiten (Scandaten übernehmen, prüfen, ausrichten)', richt: 14, begleit: true },
+  { nr: '0901', text: 'CAD: Anlage Auftragsdaten', richt: 9.5, begleit: true },
+  { nr: '0902', text: 'CAD: optisch digitale Registrierung (virtueller Artikulator)', richt: 14.5, begleit: true },
+  { nr: 'D120', text: 'CAD: Aufbissschiene konstruieren (Okklusion und Führung virtuell einstellen), je Schiene', richt: 30, begleit: true },
   { nr: '0701', text: 'Versand je Versandgang', labor: '0701', begleit: true },
   { nr: '0036', text: 'Versand bei Datenlieferung', labor: '0036', begleit: true },
   // Die ITZ-Liste kennt keine UKPS: Fremdlabor-Platzhalter, bis der Kostenvoranschlag (XML) eingelesen ist.
@@ -179,7 +188,7 @@ const SCHIENEN: Omit<Vorlage, 'gruppe'>[] = [
   },
   {
     id: 'digital', titel: 'Digitale Schiene', text: 'Intraoralscan, gefräst (PMMA)',
-    pos: [G('0065', 4), G('7010'), L('2957'), L('0732')],
+    pos: [G('0065', 4), G('7010'), L('0009', 2), L('0902'), L('2957'), L('0732')],
   },
 ]
 
@@ -239,6 +248,14 @@ export const VORLAGEN: Vorlage[] = [
 export const LABOR_GIPSMODELLE = ['0001', '0002']
 /** Entfallen beim Intraoralscan */
 export const LABOR_NUR_ABDRUCK = ['0241']
+/** Digitaler Laborablauf nach Intraoralscan */
+export const DIGITAL = { oralscan: '0007', auftragsdaten: '0901', registrierung: '0902', konstruktion: 'D120' } as const
+/** Mittelwertartikulator ↔ optisch digitale Registrierung */
+export const LABOR_MITTELWERT = '0402'
+/** Harte, adjustierte Schienen werden nach Scan konstruiert und gefräst: Abdruck-Position → Fräsen bei Datenanlieferung */
+export const SCHIENE_GEFRAEST: Readonly<Record<string, string>> = { '7621': '2957', '7603': '2957', '2960': '2957', '2959': '2958' }
+/** Zurück auf Abdruck: gefräste Schiene → konventionelle bzw. bei Modellanlieferung gefräste Schiene */
+export const SCHIENE_ABDRUCK: Readonly<Record<string, string>> = { '2957': '7621', '2958': '2959' }
 /** 0065 je Kieferhälfte bzw. Frontzahnbereich: beide Kiefer = 4 (BZÄK-Kommentar zu 0065: bis zu viermal je Sitzung) */
 export const SCAN_BEREICHE_BEIDE_KIEFER = 4
 
