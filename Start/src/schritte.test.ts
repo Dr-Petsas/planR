@@ -87,3 +87,29 @@ describe('behandlungsschritte', () => {
     expect(schritteAnzahl(behandlungsschritte([]))).toBe(0)
   })
 })
+
+describe('Schienenplan in der Reihenfolge der Behandlung', () => {
+  // Reihenfolge wie im Kostenvoranschlag des Privat-KB-Planers
+  const plan: SchrittPosition[] = [
+    p('GOAE', '5004'), p('GOZ', '0065'), p('GOZ', '7010'), p('GOZ', '7040'), p('GOZ', '7050'),
+    p('GOZ', '8010'), p('GOZ', '8020'), p('GOZ', '8050'), p('GOZ', '8080'), p('GOZ', '8000'),
+  ]
+  const s = behandlungsschritte(plan)
+
+  it('führt den Hauptteil von der Funktionsanalyse bis zur Eingliederung', () => {
+    expect(s.haupt.map((x) => x.leistung)).toEqual(['GOZ 8000', 'GOZ 8010', 'GOZ 8020', 'GOZ 8050', 'GOZ 8080', 'GOZ 7010'])
+    expect([...new Set(s.haupt.map((x) => x.phase))]).toEqual(['Funktionsanalyse', 'Registrierung', 'Modellanalyse', 'Eingliederung'])
+  })
+
+  it('stellt die Kontrollen unter Kontrolle', () => {
+    expect(s.kontrolle.map((x) => x.leistung)).toEqual(['GOZ 7040', 'GOZ 7050'])
+    expect(s.vor.map((x) => x.leistung)).toEqual(['GOÄ 5004', 'GOZ 0065'])
+  })
+
+  it('ordnet Kassenplan PAR und Schiene gleich', () => {
+    const k = behandlungsschritte([p('BEMA', 'UPTa'), p('BEMA', 'BEVa'), p('BEMA', 'AITa'), p('BEMA', 'MHU'), p('BEMA', 'ATG'), p('BEMA', '4'), p('BEMA', 'K7'), p('BEMA', 'K1')])
+    expect(k.vor.map((x) => x.leistung)).toEqual(['BEMA 4', 'BEMA ATG', 'BEMA MHU'])
+    expect(k.haupt.map((x) => x.leistung)).toEqual(['BEMA AITa', 'BEMA K1'])
+    expect(k.kontrolle.map((x) => x.leistung)).toEqual(['BEMA BEVa', 'BEMA K7', 'BEMA UPTa'])
+  })
+})

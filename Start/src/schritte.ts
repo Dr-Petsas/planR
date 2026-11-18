@@ -23,7 +23,7 @@ export interface Schritt {
   zahn: string
   /** Leistung dahinter, z. B. „GOZ 9010“ */
   leistung: string
-  /** Sitzung, in der der Schritt liegt (Implantologie) */
+  /** Sitzung (Implantologie) oder Stufe im Hauptteil, unter der der Schritt steht */
   phase?: string
 }
 
@@ -166,13 +166,143 @@ const REGELN: Record<string, Regel> = {
   'GOZ:5230': r('haupt', 225, 'Totalprothese eingliedern (Unterkiefer)'),
   'GOZ:2197': r('haupt', 230, 'Adhäsiv befestigen', { jeZahn: true }),
   'GOZ:6190': r('haupt', 290, 'Verhaltensregeln besprechen'),
+  // Funktionsanalyse und Schiene: erst untersuchen und registrieren, dann Modelle, dann eingliedern
+  'GOZ:8000': r('haupt', 60, 'Klinische Funktionsanalyse'),
+  'GOZ:8010': r('haupt', 70, 'Zentrallage des Unterkiefers registrieren'),
+  'GOZ:8020': r('haupt', 71, 'Scharnierachse bestimmen (Gesichtsbogen)'),
+  'GOZ:8030': r('haupt', 71, 'Scharnierachse kinematisch bestimmen'),
+  'GOZ:8035': r('haupt', 71, 'Scharnierachse elektronisch bestimmen'),
+  'GOZ:8050': r('haupt', 72, 'Unterkieferbewegungen registrieren'),
+  'GOZ:8060': r('haupt', 72, 'Unterkieferbewegungen registrieren (voll adjustierbarer Artikulator)'),
+  'GOZ:8065': r('haupt', 72, 'Unterkieferbewegungen elektronisch aufzeichnen'),
+  'GOZ:8080': r('haupt', 80, 'Modelle im Artikulator auswerten'),
+  'GOZ:8090': r('haupt', 81, 'Funktionsflächen diagnostisch aufbauen'),
+  'GOZ:7000': r('haupt', 226, 'Aufbissbehelf eingliedern'),
+  'GOZ:7010': r('haupt', 226, 'Schiene mit adjustierter Oberfläche eingliedern'),
+  'GOZ:7020': r('haupt', 226, 'Prothese zum Aufbissbehelf umarbeiten'),
+  'GOZ:7070': r('haupt', 227, 'Zähne schienen (Ätztechnik)'),
+  'GOZ:7030': r('haupt', 228, 'Aufbissbehelf wiederherstellen'),
+  'GOZ:7080': r('haupt', 215, 'Langzeitprovisorium eingliedern'),
+  'GOZ:7090': r('haupt', 215, 'Langzeitprovisorium eingliedern'),
+  'GOZ:7100': r('haupt', 228, 'Langzeitprovisorium wiederherstellen'),
+  'GOZ:8100': r('haupt', 240, 'Okklusion einschleifen'),
+  'GOZ:4040': r('haupt', 240, 'Grobe Vorkontakte einschleifen'),
+  'BEMA:K1': r('haupt', 226, 'Schiene mit adjustierter Oberfläche eingliedern'),
+  'BEMA:K2': r('haupt', 226, 'Aufbissbehelf eingliedern'),
+  'BEMA:K3': r('haupt', 226, 'Prothese zum Aufbissbehelf umarbeiten'),
+  'BEMA:K4': r('haupt', 227, 'Zähne schienen'),
+  'BEMA:K6': r('haupt', 228, 'Aufbissbehelf wiederherstellen'),
+  'BEMA:7a': r('vor', 40, 'Abformung für Planungsmodelle'),
+  'BEMA:7b': r('vor', 40, 'Abformung für Planungsmodelle'),
+  // Parodontologie
+  'GOZ:4000': r('vor', 13, 'Parodontalstatus erheben'),
+  'GOZ:4005': r('vor', 13, 'Gingival- oder Parodontalindex erheben'),
+  'GOZ:4020': r('haupt', 141, 'Mundschleimhaut lokal behandeln'),
+  'GOZ:4030': r('haupt', 142, 'Scharfe Kanten und Reize beseitigen'),
+  'GOZ:4070': r('haupt', 145, 'Zahnfleischtaschen reinigen (einwurzelige Zähne)'),
+  'GOZ:4075': r('haupt', 145, 'Zahnfleischtaschen reinigen (mehrwurzelige Zähne)'),
+  'GOZ:4025': r('haupt', 146, 'Antibakterielles Medikament in die Taschen einbringen'),
+  'GOZ:4080': r('haupt', 147, 'Zahnfleisch abtragen und formen'),
+  'GOZ:4090': r('haupt', 148, 'Lappenoperation (Frontzahn)'),
+  'GOZ:4100': r('haupt', 148, 'Lappenoperation (Seitenzahn)'),
+  'GOZ:4136': r('haupt', 148, 'Knochen formen, Krone verlängern'),
+  'GOZ:4110': r('haupt', 149, 'Knochendefekt auffüllen'),
+  'GOZ:4138': r('haupt', 149, 'Membran einbringen'),
+  'GOZ:4120': r('haupt', 182, 'Schleimhautlappen verlegen'),
+  'GOZ:4130': r('haupt', 182, 'Schleimhaut transplantieren'),
+  'GOZ:4133': r('haupt', 182, 'Bindegewebe transplantieren'),
+  'BEMA:4': r('vor', 13, 'Parodontalstatus erheben'),
+  'BEMA:ATG': r('vor', 15, 'Aufklärungs- und Therapiegespräch'),
+  'BEMA:MHU': r('vor', 50, 'Mundhygiene unterweisen'),
+  'BEMA:AITa': r('haupt', 145, 'Zahnfleischtaschen reinigen (einwurzelige Zähne)'),
+  'BEMA:AITb': r('haupt', 145, 'Zahnfleischtaschen reinigen (mehrwurzelige Zähne)'),
+  'BEMA:CPT': r('haupt', 148, 'Chirurgische Parodontitistherapie'),
+  'BEMA:CPTa': r('haupt', 148, 'Chirurgische Parodontitistherapie (einwurzelige Zähne)'),
+  'BEMA:CPTb': r('haupt', 148, 'Chirurgische Parodontitistherapie (mehrwurzelige Zähne)'),
+  'BEMA:108': r('haupt', 240, 'Einschleifen'),
+  // Kieferorthopädie
+  'GOZ:6000': r('vor', 42, 'Profil- und Enface-Fotos auswerten'),
+  'GOZ:6010': r('vor', 43, 'Modelle analysieren'),
+  'GOZ:6020': r('vor', 44, 'Fernröntgenbild auswerten'),
+  'GOZ:6220': r('vor', 47, 'Behandlungsmittel vorbereiten (Abformung, Bissnahme)'),
+  'GOZ:6030': r('haupt', 232, 'Kiefer umformen (geringer Umfang)'),
+  'GOZ:6040': r('haupt', 232, 'Kiefer umformen (mittlerer Umfang)'),
+  'GOZ:6050': r('haupt', 232, 'Kiefer umformen (hoher Umfang)'),
+  'GOZ:6060': r('haupt', 232, 'Kiefer in den Regelbiss einstellen (geringer Umfang)'),
+  'GOZ:6070': r('haupt', 232, 'Kiefer in den Regelbiss einstellen (mittlerer Umfang)'),
+  'GOZ:6080': r('haupt', 232, 'Kiefer in den Regelbiss einstellen (hoher Umfang)'),
+  'GOZ:6090': r('haupt', 232, 'Okklusion alveolär ausgleichen'),
+  'GOZ:6100': r('haupt', 233, 'Brackets kleben'),
+  'GOZ:6120': r('haupt', 233, 'Bänder setzen'),
+  'GOZ:6140': r('haupt', 234, 'Teilbogen eingliedern'),
+  'GOZ:6150': r('haupt', 234, 'Bogen eingliedern'),
+  'GOZ:6160': r('haupt', 235, 'Verankerung eingliedern (z. B. Headgear)'),
+  'GOZ:6170': r('haupt', 235, 'Kopf-Kinn-Kappe eingliedern'),
+  'GOZ:6200': r('haupt', 236, 'Hilfsmittel gegen Funktionsstörungen eingliedern'),
+  'GOZ:6230': r('haupt', 236, 'Behandlungsgerät eingliedern'),
+  'GOZ:6240': r('haupt', 237, 'Lücke offenhalten'),
+  'GOZ:6250': r('haupt', 237, 'Diastema schließen'),
+  'GOZ:6260': r('haupt', 237, 'Verlagerten Zahn einordnen'),
+  'GOZ:6180': r('haupt', 238, 'Behandlungsgerät wiederherstellen oder erweitern'),
+  'GOZ:6110': r('haupt', 245, 'Brackets entfernen, Zähne polieren'),
+  'GOZ:6130': r('haupt', 245, 'Bänder entfernen, Zähne polieren'),
+  'BEMA:116': r('vor', 42, 'Fotos auswerten'),
+  'BEMA:117': r('vor', 43, 'Modelle analysieren'),
+  'BEMA:118': r('vor', 44, 'Fernröntgenbild auswerten'),
+  'BEMA:119': r('haupt', 232, 'Kiefer umformen'),
+  'BEMA:120': r('haupt', 232, 'Kiefer in den Regelbiss einstellen'),
+  'BEMA:126a': r('haupt', 233, 'Brackets kleben'),
+  'BEMA:126b': r('haupt', 233, 'Bänder setzen'),
+  'BEMA:127a': r('haupt', 234, 'Teilbogen eingliedern'),
+  'BEMA:128a': r('haupt', 234, 'Bogen eingliedern'),
+  // Kasse: Untersuchung, Betäubung, Füllung
+  'BEMA:01': r('vor', 12, 'Eingehende Untersuchung'),
+  'BEMA:04': r('vor', 13, 'Parodontalen Screening-Index erheben'),
+  'BEMA:107': r('vor', 53, 'Zahnstein entfernen'),
+  'BEMA:40': r('haupt', 101, 'Injektion', { jeZahn: true }),
+  'BEMA:41a': r('haupt', 102, 'Leitungsanästhesie'),
+  'BEMA:105': r('haupt', 141, 'Mundschleimhaut lokal behandeln'),
+  'BEMA:13a': r('haupt', 200, 'Füllung legen (einflächig)', { jeZahn: true }),
+  'BEMA:13b': r('haupt', 200, 'Füllung legen (zweiflächig)', { jeZahn: true }),
+  'BEMA:13c': r('haupt', 200, 'Füllung legen (dreiflächig)', { jeZahn: true }),
+  'BEMA:13d': r('haupt', 200, 'Füllung legen (mehr als dreiflächig)', { jeZahn: true }),
   // Kontrolle
   'GOZ:3290': r('kontrolle', 300, 'Kontrolle nach dem Eingriff'),
   'GOZ:3300': r('kontrolle', 301, 'Wunde nachbehandeln'),
   'GOZ:3310': r('kontrolle', 302, 'Wunde chirurgisch nachversorgen'),
   'GOZ:2130': r('kontrolle', 310, 'Füllung kontrollieren und polieren', { jeZahn: true }),
   'GOZ:1020': r('kontrolle', 320, 'Fluoridieren'),
+  'GOZ:4150': r('kontrolle', 303, 'Kontrolle und Nachbehandlung nach dem Parodontaleingriff'),
+  'BEMA:111': r('kontrolle', 303, 'Nachbehandlung'),
+  'BEMA:BEV': r('kontrolle', 304, 'Befund neu erheben und auswerten'),
+  'BEMA:BEVa': r('kontrolle', 304, 'Befund nach der Taschenreinigung neu erheben'),
+  'BEMA:BEVb': r('kontrolle', 305, 'Befund nach dem Eingriff neu erheben'),
+  'GOZ:4060': r('kontrolle', 321, 'Kontrolle nach der Zahnreinigung'),
+  'GOZ:7040': r('kontrolle', 330, 'Aufbissbehelf kontrollieren'),
+  'GOZ:7050': r('kontrolle', 331, 'Schiene kontrollieren und einschleifen'),
+  'GOZ:7060': r('kontrolle', 332, 'Schiene kontrollieren und aufbauen'),
+  'BEMA:K7': r('kontrolle', 330, 'Aufbissbehelf kontrollieren'),
+  'BEMA:K8': r('kontrolle', 331, 'Schiene kontrollieren und einschleifen'),
+  'BEMA:K9': r('kontrolle', 332, 'Schiene kontrollieren und aufbauen'),
+  'GOZ:6210': r('kontrolle', 335, 'Verlauf kontrollieren, Retention weiterführen'),
+  'BEMA:122a': r('kontrolle', 335, 'Verlauf kontrollieren'),
+  'BEMA:UPTa': r('kontrolle', 340, 'Unterstützende Parodontitistherapie'),
+  'BEMA:UPTb': r('kontrolle', 340, 'Unterstützende Parodontitistherapie'),
+  'BEMA:UPTc': r('kontrolle', 340, 'Unterstützende Parodontitistherapie'),
+  'BEMA:UPTd': r('kontrolle', 340, 'Unterstützende Parodontitistherapie'),
+  'BEMA:UPTe': r('kontrolle', 340, 'Unterstützende Parodontitistherapie'),
+  'BEMA:UPTf': r('kontrolle', 340, 'Unterstützende Parodontitistherapie'),
+  'BEMA:UPTg': r('kontrolle', 340, 'Unterstützende Parodontitistherapie'),
 }
+
+/** Hauptteil als Behandlungsplan: Stufe nach dem Rang, in dieser Folge. */
+const STUFEN: [bis: number, name: string][] = [
+  [69, 'Funktionsanalyse'], [79, 'Registrierung'], [99, 'Modellanalyse'], [119, 'Betäubung und Arbeitsfeld'],
+  [129, 'Alte Versorgung entfernen'], [139, 'Wurzelbehandlung'], [149, 'Parodontalbehandlung'], [194, 'Chirurgischer Eingriff'],
+  [209, 'Aufbau und Füllung'], [219, 'Provisorium'], [231, 'Eingliederung'], [239, 'Kieferorthopädische Behandlung'],
+  [249, 'Feineinstellung'], [289, 'Weitere Leistungen'], [299, 'Abschluss der Sitzung'],
+]
+const stufe = (rang: number) => STUFEN.find(([bis]) => rang <= bis)?.[1] ?? ''
 
 /** Zuschläge sind kein eigener Handgriff. */
 const KEIN_SCHRITT = new Set([
@@ -231,7 +361,8 @@ export function behandlungsschritte(positionen: SchrittPosition[], impl = false)
       bildSchon.add(schluessel)
       if (a === 'kontrolle') text = text.startsWith('Röntgen ') ? `Röntgenkontrolle ${text.slice(8)}` : text
     }
-    const phase = impl && sitzung ? PHASEN_IMPL[sitzung] : undefined
+    const rang = regel?.rang ?? 250
+    const phase = impl && sitzung ? PHASEN_IMPL[sitzung] : !sitzung && a === 'haupt' ? stufe(rang) || undefined : undefined
     const leistung = `${ebene === 'GOAE' ? 'GOÄ' : ebene} ${nr}`
     const zahn = String(p.zahn ?? '').trim()
     const teile = zahn.split(',').map((t) => t.trim()).filter(Boolean)
@@ -240,7 +371,7 @@ export function behandlungsschritte(positionen: SchrittPosition[], impl = false)
       const marke = `${a}|${sitzung}|${text}|${z}`
       if (gesehen.has(marke)) continue
       gesehen.add(marke)
-      zeilen.push({ a, sitzung, rang: regel?.rang ?? 250, lauf: lauf++, text, zahn: z, leistung, ...(phase ? { phase } : {}) })
+      zeilen.push({ a, sitzung, rang, lauf: lauf++, text, zahn: z, leistung, ...(phase ? { phase } : {}) })
     }
   }
   const sortiert = (a: Abschnitt): Schritt[] => zeilen.filter((z) => z.a === a)
