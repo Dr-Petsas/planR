@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ZENTRALE_PRAXIS_KEY } from './stammdaten'
 import { arztUebernehmen } from './arzt'
+import { zentralAbgleich } from './zentral'
 
 /**
  * Ablage gespeicherter Pläne mit Freigabe-Status (im Browser, localStorage).
@@ -200,40 +201,29 @@ function behandlerVon(key: string, plan: unknown): string {
   }
 }
 
-/** Einstellungen des Planers in diesem Browser – die Übersicht braucht sie, damit Clara denselben Plan rechnet. */
-function einstRoh(key: string): string {
-  if (typeof localStorage === 'undefined') return ''
+/** Einstellungen des Planers in diesem Browser: Speicherort und Inhalt */
+function einstHier(key: string): { key: string; roh: string } | null {
+  if (typeof localStorage === 'undefined') return null
   for (const v of ['v3', 'v2', 'v1']) {
     try {
-      const roh = localStorage.getItem(key.replace(/\.liste\.v\d+/, `.einstellungen.${v}`))
+      const k = key.replace(/\.liste\.v\d+/, `.einstellungen.${v}`)
+      const roh = localStorage.getItem(k)
       if (!roh || roh.length > 200_000) continue
       const e = JSON.parse(roh) as unknown
-      if (e && typeof e === 'object' && !Array.isArray(e)) return roh
+      if (e && typeof e === 'object' && !Array.isArray(e)) return { key: k, roh }
     } catch { /* nächste Fassung */ }
   }
-  return ''
-}
-function einstVon(key: string): Record<string, unknown> | undefined {
-  const roh = einstRoh(key)
-  return roh ? JSON.parse(roh) as Record<string, unknown> : undefined
+  return null
 }
 
-/** Zuletzt gemeldete Einstellungen je Planer – geändert werden sie ohne Speichern eines Plans. */
-const einstGemeldet = new Map<string, string>()
 /**
- * Geänderte Einstellungen allein melden (Preise, Faktoren, Eigenlabor): Sonst rechnet Clara einen Plan
- * mit dem Stand vom letzten Speichern und nennt eine andere Summe als der Planer.
+ * Einstellungen (Preise, Faktoren, Eigenlabor) mit dem Stand der Praxis abgleichen: Sie gelten an jedem
+ * Arbeitsplatz, und Clara rechnet mit denselben Werten wie der Planer.
  */
-function einstMelden(key: string) {
+function einstAbgleichen(key: string, sofort = false) {
   const basis = modulVon(key)
-  if (!HUB_MODUL[basis] || typeof fetch !== 'function') return
-  const roh = einstRoh(key)
-  if (!roh || einstGemeldet.get(key) === roh) return
-  einstGemeldet.set(key, roh)
-  fetch(hubAdresse(), {
-    method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-    body: `{"modul":${JSON.stringify(basis)},"plaene":[],"entfernt":[],"einst":${roh}}`,
-  }).then((r) => { if (!r.ok) einstGemeldet.delete(key) }).catch(() => { einstGemeldet.delete(key) })
+  if (!HUB_MODUL[basis]) return
+  zentralAbgleich(basis, hubAdresse().replace(/\/plaene$/, '/planer-einstellungen'), () => einstHier(key), sofort)
 }
 
 /** Rückmeldung an die Knöpfe: Ist der Stand bei PlanR angekommen? Ohne Übersicht zählt die Ablage im Browser. */
@@ -258,9 +248,7 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
     nummer: e.nummer, patient: e.patient, betrag: e.betrag, status: e.status, geaendert: e.geaendert,
     behandler: behandlerVon(key, e.plan), plan: e.plan, ...(e.pvs ? { pvs: e.pvs } : {}),
   }))
-  const einst = einstVon(key)
-  if (einst) einstGemeldet.set(key, einstRoh(key))
-  const body = JSON.stringify({ modul: basis, plaene, entfernt: weg, ...(einst ? { einst } : {}) })
+  const body = JSON.stringify({ modul: basis, plaene, entfernt: weg })
   const init: RequestInit = { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body }
   if (body.length < 60_000) init.keepalive = true
   fetch(hub, init).then((r) => {
@@ -308,9 +296,11 @@ export function useAblage<P>(key: string): Ablage<P> {
     hubMelden(key, liste)
   }, [key, liste])
   useEffect(() => {
-    einstMelden(key)
-    const uhr = setInterval(() => einstMelden(key), 4000)
-    return () => clearInterval(uhr)
+    einstAbgleichen(key, true)
+    const uhr = setInterval(() => einstAbgleichen(key), 4000)
+    const zurueck = () => { if (!document.hidden) einstAbgleichen(key, true) }
+    document.addEventListener('visibilitychange', zurueck)
+    return () => { clearInterval(uhr); document.removeEventListener('visibilitychange', zurueck) }
   }, [key])
   useEffect(() => {
     let vorbei = false

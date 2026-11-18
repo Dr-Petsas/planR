@@ -44,6 +44,7 @@ import {
 } from './rechnung.ts'
 import type { Paket } from './src/paket.ts'
 import { aenderungen, katalogBilden, rohPruefen, unbekannte, wahlPruefen, type Ablage, type Bekannt } from './praxiskatalog.ts'
+import { altMeldungGilt, einstSetzen, staendePruefen } from './planerEinst.ts'
 import { fallAnsicht, fallAufnehmen, fallEntfernen, regelnAus, type Fall, type Praxisregel } from './src/fallkatalog.ts'
 import {
   ablageKuerzen, befundAnsicht, befundFreigeben, befundLinkPruefen, befundLive, befundMelden, befundOhnePvs, gleichesPvs, nachAenderung, nachLesen, nachSchreiben, offeneKiefer, verwerfen,
@@ -1465,13 +1466,50 @@ async function einstLesen(m: string): Promise<Record<string, Record<string, unkn
   return roh && typeof roh === 'object' && !Array.isArray(roh) ? roh as Record<string, Record<string, unknown>> : {}
 }
 
+const einstStaendeLesen = async (m: string) => staendePruefen(await jsonLesen<unknown>(ABLAGE(m, 'einst-stand'), {}))
+
+/**
+ * Zentrale Einstellungen eines Planers: GET liefert den Stand der Praxis samt Fassung, PUT übernimmt einen neuen –
+ * nur auf Basis der aktuellen Fassung, sonst kommt der aktuelle Stand zurück (409).
+ */
+async function planerEinst(req: IncomingMessage, res: ServerResponse, query: string, w: Wer) {
+  const m = w.mandant
+  const stand = async (modul: string) => {
+    const s = (await einstStaendeLesen(m))[modul]
+    return { mandant: m, modul, v: s?.v ?? 0, zeit: s?.zeit ?? '', von: s?.von ?? '', einst: (await einstLesen(m))[modul] ?? null }
+  }
+  if (req.method === 'GET') {
+    const modul = new URLSearchParams(query).get('modul') ?? ''
+    if (!MODUL_RE.test(modul) || modul === 'hkp') return json(res, 400, { ok: false })
+    return json(res, 200, { ok: true, ...await stand(modul) })
+  }
+  if (req.method !== 'PUT') return json(res, 405, { ok: false })
+  const b = JSON.parse(await lesenBody(req, 400_000) || '{}') as { modul?: unknown; einst?: unknown; basis?: unknown }
+  const modul = String(b.modul ?? '')
+  if (!MODUL_RE.test(modul) || modul === 'hkp') return json(res, 400, { ok: false })
+  const r = await exklusiv(async () => {
+    const e = einstSetzen(await einstLesen(m), await einstStaendeLesen(m), modul, b.einst, b.basis, w.konto.name || w.konto.email, new Date().toISOString())
+    if (e.ok) {
+      await jsonSchreiben(ABLAGE(m, 'einstellungen'), e.alle)
+      await jsonSchreiben(ABLAGE(m, 'einst-stand'), e.staende)
+    }
+    return e
+  })
+  if (r.ok) return json(res, 200, { ok: true, mandant: m, modul, v: r.v })
+  if (r.grund === 'konflikt') return json(res, 409, { ok: false, konflikt: true, ...await stand(modul) })
+  json(res, 400, { ok: false })
+}
+
 async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfernt?: unknown[]; behandler?: unknown; einst?: unknown }, res: ServerResponse) {
   const m = w.mandant
   const modul = String(body.modul ?? '')
   if (MODUL_RE.test(modul) && modul !== 'hkp' && body.einst && typeof body.einst === 'object' && !Array.isArray(body.einst)) {
     const alle = await einstLesen(m)
     const neu = JSON.stringify(body.einst)
-    if (neu.length <= 200_000 && JSON.stringify(alle[modul] ?? null) !== neu) await jsonSchreiben(ABLAGE(m, 'einstellungen'), { ...alle, [modul]: body.einst })
+    // Gibt es einen zentralen Stand der Praxis, zählt die Meldung eines einzelnen (alten) Browsers nicht mehr.
+    if (altMeldungGilt(await einstStaendeLesen(m), modul) && neu.length <= 200_000 && JSON.stringify(alle[modul] ?? null) !== neu) {
+      await jsonSchreiben(ABLAGE(m, 'einstellungen'), { ...alle, [modul]: body.einst })
+    }
     // Nur Einstellungen gemeldet (im Planer geändert, kein Plan gespeichert): An der Ablage ändert sich nichts.
     const leer = (x: unknown) => !Array.isArray(x) || !x.length
     if (leer(body.plaene) && leer(body.entfernt)) return json(res, 200, { ok: true })
@@ -3848,6 +3886,7 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
   if (url === '/api/bridge-paket') return void bridgePaket(req, res, w).catch(fehler500(res))
   if (url === '/api/bridge-setup') return void bridgeSetupLaden(req, res, w, new URLSearchParams(query).get('lokal') === '1').catch(fehler500(res))
   if (url === '/api/ort') return void ortEndpunkt(req, res, w).catch(() => { if (!res.headersSent) json(res, 400, { ok: false }) })
+  if (url === '/api/planer-einstellungen') return void planerEinst(req, res, query, w).catch(() => { if (!res.headersSent) json(res, 400, { ok: false }) })
   if (url === '/api/praxiskatalog') return praxiskatalog(req, res, query, w)
   if (url === '/api/fallkatalog') return fallkatalog(req, res, w)
   if (url === '/api/praxisdaten' && req.method === 'GET') return void praxisdaten(res, w).catch(fehler500(res))
