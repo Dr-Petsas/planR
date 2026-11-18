@@ -201,17 +201,39 @@ function behandlerVon(key: string, plan: unknown): string {
 }
 
 /** Einstellungen des Planers in diesem Browser – die Übersicht braucht sie, damit Clara denselben Plan rechnet. */
-function einstVon(key: string): Record<string, unknown> | undefined {
-  if (typeof localStorage === 'undefined') return undefined
+function einstRoh(key: string): string {
+  if (typeof localStorage === 'undefined') return ''
   for (const v of ['v3', 'v2', 'v1']) {
     try {
       const roh = localStorage.getItem(key.replace(/\.liste\.v\d+/, `.einstellungen.${v}`))
       if (!roh || roh.length > 200_000) continue
       const e = JSON.parse(roh) as unknown
-      if (e && typeof e === 'object' && !Array.isArray(e)) return e as Record<string, unknown>
+      if (e && typeof e === 'object' && !Array.isArray(e)) return roh
     } catch { /* nächste Fassung */ }
   }
-  return undefined
+  return ''
+}
+function einstVon(key: string): Record<string, unknown> | undefined {
+  const roh = einstRoh(key)
+  return roh ? JSON.parse(roh) as Record<string, unknown> : undefined
+}
+
+/** Zuletzt gemeldete Einstellungen je Planer – geändert werden sie ohne Speichern eines Plans. */
+const einstGemeldet = new Map<string, string>()
+/**
+ * Geänderte Einstellungen allein melden (Preise, Faktoren, Eigenlabor): Sonst rechnet Clara einen Plan
+ * mit dem Stand vom letzten Speichern und nennt eine andere Summe als der Planer.
+ */
+function einstMelden(key: string) {
+  const basis = modulVon(key)
+  if (!HUB_MODUL[basis] || typeof fetch !== 'function') return
+  const roh = einstRoh(key)
+  if (!roh || einstGemeldet.get(key) === roh) return
+  einstGemeldet.set(key, roh)
+  fetch(hubAdresse(), {
+    method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: `{"modul":${JSON.stringify(basis)},"plaene":[],"entfernt":[],"einst":${roh}}`,
+  }).then((r) => { if (!r.ok) einstGemeldet.delete(key) }).catch(() => { einstGemeldet.delete(key) })
 }
 
 /** Rückmeldung an die Knöpfe: Ist der Stand bei PlanR angekommen? Ohne Übersicht zählt die Ablage im Browser. */
@@ -237,6 +259,7 @@ function hubMelden(key: string, liste: AblageEintrag<unknown>[]) {
     behandler: behandlerVon(key, e.plan), plan: e.plan, ...(e.pvs ? { pvs: e.pvs } : {}),
   }))
   const einst = einstVon(key)
+  if (einst) einstGemeldet.set(key, einstRoh(key))
   const body = JSON.stringify({ modul: basis, plaene, entfernt: weg, ...(einst ? { einst } : {}) })
   const init: RequestInit = { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body }
   if (body.length < 60_000) init.keepalive = true
@@ -284,6 +307,11 @@ export function useAblage<P>(key: string): Ablage<P> {
     localStorage.setItem(key, JSON.stringify(liste))
     hubMelden(key, liste)
   }, [key, liste])
+  useEffect(() => {
+    einstMelden(key)
+    const uhr = setInterval(() => einstMelden(key), 4000)
+    return () => clearInterval(uhr)
+  }, [key])
   useEffect(() => {
     let vorbei = false
     const modul = modulVon(key)

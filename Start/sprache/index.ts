@@ -14,47 +14,51 @@ import { zeKi } from '../../ZE/Privat-HKP/src/kiPlan'
 import { kalkulieren as zeKalk } from '../../ZE/Privat-HKP/src/engine/berechnung'
 import { pvsPlaene as zePvs } from '../../ZE/Privat-HKP/src/engine/pvs'
 import { STANDARD_EINSTELLUNGEN as ZE_E, neuerPlan as zeNeu } from '../../ZE/Privat-HKP/src/planNeu'
+import { planMigrieren as zeAlt } from '../../ZE/Privat-HKP/src/store'
 
 import { implKi } from '../../Implantologie/Privat-Impl/src/kiPlan'
 import { kalkulieren as implKalk } from '../../Implantologie/Privat-Impl/src/engine/berechnung'
 import { pvsPlaene as implPvs } from '../../Implantologie/Privat-Impl/src/engine/pvs'
 import { STANDARD_EINSTELLUNGEN as IMPL_E, neuerPlan as implNeu } from '../../Implantologie/Privat-Impl/src/planNeu'
+import { planMigrieren as implAlt } from '../../Implantologie/Privat-Impl/src/store'
 
 import { mkvKi } from '../../KONS/MKV/src/kiPlan'
 import { rechnen as mkvRechnen } from '../../KONS/MKV/src/engine/mkv'
 import { pvsPlaene as mkvPvs } from '../../KONS/MKV/src/engine/pvs'
 import { STANDARD_EINSTELLUNGEN as MKV_E, neuerPlan as mkvNeu } from '../../KONS/MKV/src/planNeu'
+import { planMigrieren as mkvAlt } from '../../KONS/MKV/src/store'
 
 import { konsKi } from '../../KONS/Privat-Kons/src/kiPlan'
 import { rechnen as konsRechnen } from '../../KONS/Privat-Kons/src/engine/kons'
 import { pvsPlaene as konsPvs } from '../../KONS/Privat-Kons/src/engine/pvs'
 import { STANDARD_EINSTELLUNGEN as KONS_E, neuerPlan as konsNeu } from '../../KONS/Privat-Kons/src/planNeu'
+import { planMigrieren as konsAlt } from '../../KONS/Privat-Kons/src/store'
 
 import { parKi as kparKi } from '../../PAR/Kassen-PAR/src/kiPlan'
 import { preiseAus, streckeRechnen } from '../../PAR/Kassen-PAR/src/engine/leistungen'
 import { ermittlePunktwert } from '../../PAR/Kassen-PAR/src/punktwerte'
-import { STANDARD_EINSTELLUNGEN as KPAR_E, neuerFall as kparNeu } from '../../PAR/Kassen-PAR/src/store'
+import { STANDARD_EINSTELLUNGEN as KPAR_E, fallMigrieren as kparAlt, neuerFall as kparNeu } from '../../PAR/Kassen-PAR/src/store'
 
 import { parKi as pparKi } from '../../PAR/Privat-PAR/src/kiPlan'
 import { rechnen as pparRechnen } from '../../PAR/Privat-PAR/src/engine/par'
-import { STANDARD_EINSTELLUNGEN as PPAR_E, neuerPlan as pparNeu } from '../../PAR/Privat-PAR/src/store'
+import { STANDARD_EINSTELLUNGEN as PPAR_E, planMigrieren as pparAlt, neuerPlan as pparNeu } from '../../PAR/Privat-PAR/src/store'
 
 import { kbKi as kkbKi } from '../../KB/Kassen-KB/src/kiPlan'
 import { rechnen as kkbRechnen } from '../../KB/Kassen-KB/src/engine/kb'
-import { STANDARD_EINSTELLUNGEN as KKB_E, neuerPlan as kkbNeu } from '../../KB/Kassen-KB/src/store'
+import { STANDARD_EINSTELLUNGEN as KKB_E, planMigrieren as kkbAlt, neuerPlan as kkbNeu } from '../../KB/Kassen-KB/src/store'
 
 import { kbKi as pkbKi } from '../../KB/Privat-KB/src/kiPlan'
 import { rechnen as pkbRechnen } from '../../KB/Privat-KB/src/engine/kb'
 import { pvsPlaene as pkbPvs } from '../../KB/Privat-KB/src/engine/pvs'
-import { STANDARD_EINSTELLUNGEN as PKB_E, neuerPlan as pkbNeu } from '../../KB/Privat-KB/src/store'
+import { STANDARD_EINSTELLUNGEN as PKB_E, planMigrieren as pkbAlt, neuerPlan as pkbNeu } from '../../KB/Privat-KB/src/store'
 
 import { kfoKi as kkfoKi } from '../../KFO/Kassen-KFO/src/kiPlan'
 import { rechnen as kkfoRechnen } from '../../KFO/Kassen-KFO/src/engine/kfo'
-import { STANDARD_EINSTELLUNGEN as KKFO_E, neuerPlan as kkfoNeu } from '../../KFO/Kassen-KFO/src/store'
+import { STANDARD_EINSTELLUNGEN as KKFO_E, planMigrieren as kkfoAlt, neuerPlan as kkfoNeu } from '../../KFO/Kassen-KFO/src/store'
 
 import { kfoKi as pkfoKi } from '../../KFO/Privat-KFO/src/kiPlan'
 import { rechnen as pkfoRechnen } from '../../KFO/Privat-KFO/src/engine/kfo'
-import { STANDARD_EINSTELLUNGEN as PKFO_E, neuerPlan as pkfoNeu } from '../../KFO/Privat-KFO/src/store'
+import { STANDARD_EINSTELLUNGEN as PKFO_E, planMigrieren as pkfoAlt, neuerPlan as pkfoNeu } from '../../KFO/Privat-KFO/src/store'
 
 declare const __SPRACHE_STAND__: string
 export const ENGINE_STAND = typeof __SPRACHE_STAND__ === 'string' ? __SPRACHE_STAND__ : 'dev'
@@ -72,6 +76,8 @@ interface Modul {
   pvs?: (plan: P, einst: E) => unknown[]
   /** leerer Plan, wie ihn der Planer bei „Neu“ anlegt */
   neu: (einst: E) => P
+  /** älteren Stand auf das heutige Schema heben – dasselbe, was der Planer beim Öffnen tut */
+  alt?: (plan: P, einst: E) => P
 }
 
 const kparPreise = (fall: P, einst: E) => {
@@ -92,6 +98,7 @@ const MODULE: Record<string, Modul> = {
   },
   'privat-kv': {
     neu: () => zeNeu(0),
+    alt: (p) => zeAlt({ ...zeNeu(0), ...p }),
     text: 'Kostenvoranschlag Zahnersatz', standard: ZE_E,
     dienst: (lesen, schreiben) => zeKi(lesen, schreiben),
     betrag: (plan, einst) => zeKalk(plan, einst).gesamt,
@@ -99,6 +106,7 @@ const MODULE: Record<string, Modul> = {
   },
   'privat-impl': {
     neu: () => implNeu(0),
+    alt: (p) => implAlt(p),
     text: 'Kostenvoranschlag Implantologie', standard: IMPL_E,
     dienst: (lesen, schreiben) => implKi(lesen, schreiben),
     betrag: (plan, einst) => implKalk(plan, einst).gesamt,
@@ -106,6 +114,7 @@ const MODULE: Record<string, Modul> = {
   },
   'kons-mkv': {
     neu: (e) => mkvNeu('', e),
+    alt: (p, e) => mkvAlt(p, e),
     text: 'Füllungs-Mehrkostenvereinbarung', standard: MKV_E,
     dienst: (lesen, schreiben) => mkvKi(lesen, schreiben),
     betrag: (plan, einst) => mkvRechnen(plan, einst).mehrkosten,
@@ -113,6 +122,7 @@ const MODULE: Record<string, Modul> = {
   },
   'privat-kons': {
     neu: (e) => konsNeu('', e),
+    alt: (p, e) => konsAlt(p, e),
     text: 'Kostenvoranschlag Kons', standard: KONS_E,
     dienst: (lesen, schreiben) => konsKi(lesen, schreiben),
     betrag: (plan, einst) => konsRechnen(plan, einst).summe,
@@ -120,6 +130,7 @@ const MODULE: Record<string, Modul> = {
   },
   'kassen-par': {
     neu: () => kparNeu(0),
+    alt: (p) => kparAlt(p),
     text: 'PAR-Plan', standard: KPAR_E,
     dienst: (lesen, schreiben) => kparKi(() => {
       const { plan, einst, gesperrt } = lesen()
@@ -129,18 +140,21 @@ const MODULE: Record<string, Modul> = {
   },
   'privat-par': {
     neu: (e) => pparNeu('', e),
+    alt: (p, e) => pparAlt(p, e),
     text: 'Kostenvoranschlag Parodontologie', standard: PPAR_E,
     dienst: (lesen, schreiben) => pparKi(lesen, schreiben),
     betrag: (plan) => pparRechnen(plan).gesamt,
   },
   'kassen-kb': {
     neu: (e) => kkbNeu('', e),
+    alt: (p, e) => kkbAlt(p, e),
     text: 'Kassenplan Schiene', standard: KKB_E,
     dienst: (lesen, schreiben) => kkbKi(lesen, schreiben),
     betrag: (plan, einst) => kkbRechnen(plan, einst).gesamt,
   },
   'privat-kb': {
     neu: (e) => pkbNeu('', e),
+    alt: (p, e) => pkbAlt(p, e),
     text: 'Kostenvoranschlag Schiene', standard: PKB_E,
     dienst: (lesen, schreiben) => pkbKi(lesen, schreiben),
     betrag: (plan, einst) => pkbRechnen(plan, einst).gesamt,
@@ -148,12 +162,14 @@ const MODULE: Record<string, Modul> = {
   },
   'kassen-kfo': {
     neu: (e) => kkfoNeu('', e),
+    alt: (p, e) => kkfoAlt(p, e),
     text: 'KFO-Kassenplan', standard: KKFO_E,
     dienst: (lesen, schreiben) => kkfoKi(lesen, schreiben),
     betrag: (plan, einst) => kkfoRechnen(plan, einst).gesamt,
   },
   'privat-kfo': {
     neu: (e) => pkfoNeu('', e),
+    alt: (p, e) => pkfoAlt(p, e),
     text: 'Kostenvoranschlag Kieferorthopädie', standard: PKFO_E,
     dienst: (lesen, schreiben) => pkfoKi(lesen, schreiben),
     betrag: (plan, einst) => pkfoRechnen(plan, einst).gesamt,
@@ -174,6 +190,12 @@ function einstVon(m: Modul, einst: unknown): E {
     if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) aus[k] = { ...(a as object), ...(b as object) }
   }
   return aus
+}
+
+/** Plan so, wie ihn der Planer nach dem Öffnen führt; scheitert das Anheben, bleibt der Stand unberührt. */
+function gehoben(m: Modul, plan: P, e: E): P {
+  if (!m.alt || !plan || typeof plan !== 'object') return plan
+  try { return m.alt(plan, e) ?? plan } catch { return plan }
 }
 
 const offen = (h: Meldung[]) => h.filter((x) => x.stufe !== 'info')
@@ -197,6 +219,7 @@ export function blick(modul: string, plan: P, einst?: unknown, gesperrt = false)
   const m = MODULE[modul]
   if (!m) throw new Error(`modul_unbekannt: ${modul}`)
   const e = einstVon(m, einst)
+  plan = gehoben(m, plan, e)
   const b = m.dienst(() => ({ plan, einst: e, gesperrt }), () => {}).lesen()
   return { ...b, hinweise: b.hinweise.length ? b.hinweise : planPruefen(b.positionen, { begruendung: true }) }
 }
@@ -212,6 +235,7 @@ export function bewerten(modul: string, plan: P, einst?: unknown): { betrag: num
   const m = MODULE[modul]
   if (!m) throw new Error(`modul_unbekannt: ${modul}`)
   const e = einstVon(m, einst)
+  plan = gehoben(m, plan, e)
   const betrag = Number(m.betrag(plan, e)) || 0
   let pvs: unknown[] | undefined
   try { pvs = m.pvs?.(plan, e) } catch { pvs = undefined }
@@ -244,7 +268,7 @@ export async function lauf(o: {
     const r = m.dienst(() => ({ plan, einst: e, gesperrt }), (p) => { neu = p }).aendern(schritte)
     return { plan: neu, getan: r.getan, nicht: r.nicht }
   }
-  let plan = o.plan
+  let plan = gehoben(m, o.plan, e)
   let b = lesen(plan)
   const teile: string[] = []
   const getanAlle: string[] = []

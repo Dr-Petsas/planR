@@ -1472,6 +1472,9 @@ async function melden(w: Wer, body: { modul?: string; plaene?: unknown[]; entfer
     const alle = await einstLesen(m)
     const neu = JSON.stringify(body.einst)
     if (neu.length <= 200_000 && JSON.stringify(alle[modul] ?? null) !== neu) await jsonSchreiben(ABLAGE(m, 'einstellungen'), { ...alle, [modul]: body.einst })
+    // Nur Einstellungen gemeldet (im Planer geändert, kein Plan gespeichert): An der Ablage ändert sich nichts.
+    const leer = (x: unknown) => !Array.isArray(x) || !x.length
+    if (leer(body.plaene) && leer(body.entfernt)) return json(res, 200, { ok: true })
   }
   const behandler = String(body.behandler ?? '').trim().slice(0, 80)
   if (modul === 'hkp' && behandler) {
