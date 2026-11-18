@@ -52,3 +52,43 @@ export function stammdatenAusPvs(z: Record<string, unknown>): PvsStammdaten {
     email: /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email) ? email.slice(0, 120) : '',
   }
 }
+
+const NUMMER_WORTE = new Set(['patient', 'patienten', 'patientin', 'patientennummer', 'patientennr', 'patientennr.', 'nummer', 'nr', 'nr.', 'id', 'pat', 'pat.', 'mit', 'der', 'die'])
+
+/**
+ * Patientennummer aus dem Suchfeld: „12043“, „Nr. 12043“, „Patienten 12043“ oder „#12043“. Steht daneben ein
+ * anderes Wort (Name, Ort), ist es keine Nummernsuche. Ein Geburtsdatum (mit Punkt oder Strich) ist keine Nummer.
+ */
+export function nummerAusSuche(q: string): string {
+  const teile = q.trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean)
+  let nummer = ''
+  for (const roh of teile) {
+    const t = roh.startsWith('#') ? roh.slice(1) : roh
+    if (!t) continue
+    if ([...t].every((z) => z >= '0' && z <= '9')) {
+      if (nummer || t.length > 9) return ''
+      nummer = t
+    } else if (!NUMMER_WORTE.has(t.endsWith(':') ? t.slice(0, -1) : t)) return ''
+  }
+  return nummer
+}
+
+/** Dieselbe Nummer, auch wenn das Praxisprogramm sie mit führenden Nullen führt („123“ = „00123“) */
+export const gleicheNummer = (a: string, b: string) => {
+  const kern = (x: string) => x.trim().replace(/^0+(?=\d)/, '')
+  return kern(a) !== '' && kern(a) === kern(b)
+}
+
+/**
+ * Genau der Patient mit dieser Nummer: erst der Einzelabruf der Bridge, sonst die Suche (sie durchsucht auch die
+ * Nummer; ältere Bridge ohne Einzelabruf). Nie ein Treffer, dessen Nummer nur ähnlich ist.
+ */
+export async function patientPerNummer<Z extends { id?: unknown; patientNumber?: unknown }>(
+  nummer: string,
+  einzeln: (nummer: string) => Promise<Z | null>,
+  suche: (text: string) => Promise<Z[]>,
+): Promise<Z[]> {
+  const z = await einzeln(nummer)
+  if (z) return [{ ...z, id: z.id ?? z.patientNumber ?? nummer }]
+  return (await suche(nummer)).filter((p) => gleicheNummer(String(p.id ?? p.patientNumber ?? ''), nummer))
+}

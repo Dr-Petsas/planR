@@ -181,7 +181,8 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
     gesucht = text
     const liste = $('[data-patienten]')
     karte.hidden = true
-    if (text.length < 2) {
+    const ziffer = mitPvs && text.length === 1 && text >= '0' && text <= '9'
+    if (text.length < 2 && !ziffer) {
       liste.innerHTML = ''
       return status(text ? 'Noch ein Buchstabe …' : '')
     }

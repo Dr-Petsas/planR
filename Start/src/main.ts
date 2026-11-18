@@ -8,6 +8,7 @@ import { PVS_BEFUND, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellun
 import { patientensucheOeffnen, type PlanTreffer, type Stammdaten } from './patientensuche'
 import { befundZeigen } from './befund'
 import { apiJson } from './api'
+import { nummerAusSuche } from '../pvsPatient'
 import { verbundBlock, verbundLaden, verbundVerdrahten } from './verbund'
 import { logo } from './logo'
 import { aboText, fotoZuschneiden, kontoMenu, persoenlichKarte } from './konto'
@@ -1520,14 +1521,24 @@ function claraLeiste() {
 }
 
 /** „öffne den Plan Zaharia“ öffnet die Kachel. null = kein Öffnen-Satz. */
-function planPerNamenOeffnen(text: string): string | null {
+async function planPerNamenOeffnen(text: string): Promise<string | null> {
   const nadel = planNameGesucht(text)
   if (!nadel) return null
-  const worte = nadel.toLowerCase().split(/\s+/).filter(Boolean)
-  const treffer = plaene.filter((p) => {
+  const finden = (worte: string[]) => plaene.filter((p) => {
     const hay = `${p.patient} ${planSchein(p)} ${p.nummer}`.toLowerCase()
     return worte.every((w) => hay.includes(w))
   })
+  let treffer = finden(nadel.toLowerCase().split(/\s+/).filter(Boolean))
+  const patientNr = treffer.length ? '' : nummerAusSuche(nadel)
+  if (patientNr) {
+    // Patientennummer aus dem Praxisprogramm: die Pläne tragen den Namen, nicht die Nummer.
+    const r = await apiJson<{ patienten?: { vorname: string; name: string }[] }>(`/api/pvs/patienten?q=${encodeURIComponent(patientNr)}`).catch(() => null)
+    if (!r?.ok) return `Ich finde keinen Plan zu „${nadel}“.`
+    const wer = r.patienten?.length === 1 ? r.patienten[0] : null
+    if (!wer) return `Zur Patientennummer ${patientNr} finde ich im Praxisprogramm keinen Patienten.`
+    treffer = finden(`${wer.vorname} ${wer.name}`.toLowerCase().split(/\s+/).filter(Boolean))
+    if (!treffer.length) return `Für ${wer.vorname} ${wer.name} (Nr. ${patientNr}) gibt es noch keinen Plan.`
+  }
   if (!treffer.length) return `Ich finde keinen Plan zu „${nadel}“.`
   if (treffer.length > 1) {
     const liste = treffer.slice(0, 4).map((p) => `${p.patient}, ${planSchein(p)}, ${STATUS[p.status] || p.status}`).join('; ')
@@ -1559,7 +1570,7 @@ async function claraSenden(text: string) {
   let gesagt = ''
   let neuLaden = false
   try {
-    const geoeffnet = planPerNamenOeffnen(text)
+    const geoeffnet = await planPerNamenOeffnen(text)
     if (geoeffnet) {
       claraBlase('clara', geoeffnet, true)
       claraAgent('fertig', 'Plan', 'offen')

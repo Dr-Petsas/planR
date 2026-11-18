@@ -34,7 +34,7 @@ import {
 } from './anmeldung.ts'
 import { spawn } from 'node:child_process'
 import { timingSafeEqual } from 'node:crypto'
-import { isoDatum, stammdatenAusPvs } from './pvsPatient.ts'
+import { isoDatum, nummerAusSuche, patientPerNummer, stammdatenAusPvs } from './pvsPatient.ts'
 import { kundenBauen, type KundeZahlen } from './kundenBackend.ts'
 import { PROBE_PASSWORT } from './demoKonto.ts'
 import { zipMitDatei } from './zipAnhang.ts'
@@ -1064,11 +1064,28 @@ async function pvsLesen(req: IncomingMessage, w: Wer, art: string, q: URLSearchP
   try {
     if (art === 'patienten') {
       const woerter = (q.get('q') ?? '').trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean).slice(0, 4)
-      if (!woerter.length) return json(res, 400, { ok: false, meldung: 'Vor- und/oder Nachname eingeben.' })
-      const r = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: woerter.reduce((a, b) => (b.length > a.length ? b : a)) })}`, { ms: 45_000 })
-      if (!r.ok) return json(res, 502, { ok: false, meldung: `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
-      const patienten = (r.daten.items ?? [])
-        .filter((p) => woerter.every((w) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.toLocaleLowerCase('de').includes(w)))
+      if (!woerter.length) return json(res, 400, { ok: false, meldung: 'Name oder Patientennummer eingeben.' })
+      const rufen = c.rufen
+      const liste = async (text: string) => {
+        const r = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: text })}`, { ms: 45_000 })
+        if (!r.ok) throw new Error(`${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}`)
+        return r.daten.items ?? []
+      }
+      const nummer = nummerAusSuche(q.get('q') ?? '')
+      let zeilen: PvsZeile[]
+      try {
+        zeilen = nummer
+          ? await patientPerNummer<PvsZeile>(nummer, async (n) => {
+            const z = await rufen<PvsZeile>(`/patients/${n}`)
+            return z.ok ? z.daten : null
+          }, liste)
+          : (await liste(woerter.reduce((a, b) => (b.length > a.length ? b : a))))
+            .filter((p) => woerter.every((w) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.toLocaleLowerCase('de').includes(w)))
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith(`${c.name}:`)) return json(res, 502, { ok: false, meldung: e.message })
+        throw e
+      }
+      const patienten = zeilen
         .map((p) => ({
           id: String(p.id ?? p.patientNumber ?? ''), vorname: p.firstName ?? '', name: p.lastName ?? '',
           geburtsdatum: p.birthDate ?? '', ort: p.city ?? p.postalCodeAndCity ?? '',
@@ -3002,10 +3019,12 @@ async function internPatienten(req: IncomingMessage, w: Wer, q: URLSearchParams,
   }
   try {
     if (nummer) {
-      const z = await rufen<PvsZeile>(`/patients/${nummer}`)
-      if (z.ok) return json(res, 200, { ok: true, pvs: c.name, patienten: [zeile({ ...z.daten, id: z.daten.id ?? nummer })] })
       // Gesprochen "123", in DS-Win "00123" – oder ältere Bridge ohne Einzelabruf: die Suche durchsucht auch die Nummer
-      return json(res, 200, { ok: true, pvs: c.name, patienten: (await suche(nummer)).filter((p) => Number(p.id) === Number(nummer)) })
+      const treffer = await patientPerNummer(nummer, async (n) => {
+        const z = await rufen<PvsZeile>(`/patients/${n}`)
+        return z.ok ? zeile({ ...z.daten, id: z.daten.id ?? n }) : null
+      }, suche)
+      return json(res, 200, { ok: true, pvs: c.name, patienten: treffer })
     }
     let patienten: ReturnType<typeof zeile>[] = []
     if (woerter.length) {
