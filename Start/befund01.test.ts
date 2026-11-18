@@ -130,6 +130,13 @@ describe('vom Befund zum Plan', () => {
     expect(c.vorgang!.seit).toBe(T1)
   })
 
+  it('neu vorgelegter Befund: ein Vorgang in Planung beginnt wieder beim Befund (18.11.2026: Handy ohne Knöpfe)', () => {
+    const a = befundFreigeben(vorgangMelden(basis(), { modul: 'hkp', phase: 'befund' }, T1), 'Gespräch', T1)
+    const b = vorgangMelden(a, { phase: 'planung', plan: { '14': { TP: 'KV', R: 'KV' } } }, T2)
+    const c = vorgangMelden(b, { phase: 'befund', neu: true }, T3)
+    expect(c.vorgang).toMatchObject({ phase: 'befund', seit: T3, freigegeben: '', plan: {} })
+  })
+
   it('Planart kommt nach: ein Befund ohne Modul läuft als HKP weiter, eine andere Planart beginnt neu', () => {
     const a = vorgangMelden(basis(), { phase: 'befund' }, T1)
     const b = vorgangMelden(a, { modul: 'hkp' }, T2)

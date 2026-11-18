@@ -33,11 +33,20 @@ export interface BefundUmgebung {
 
 const OK = ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28']
 const UK = ['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38']
-/** Häufige eHKP-Kürzel zum Anklicken; jedes andere geht über das Feld daneben */
+/** Jedes eHKP-Befundkürzel zum Anklicken (häufige zuerst); Freitext geht über das Feld daneben */
 const SCHNELL: [string, string][] = [
   ['', 'vorhanden (ohne Befund)'], ['f', 'fehlender Zahn'], ['k', 'klinisch intakte Krone'], ['kw', 'erneuerungsbedürftige Krone'],
   ['pw', 'partielle Substanzdefekte'], ['ww', 'weitgehende Zerstörung'], ['x', 'nicht erhaltungswürdig'], ['b', 'Brückenglied'],
   ['bw', 'erneuerungsbedürftiges Brückenglied'], ['e', 'ersetzter Zahn'], ['i', 'Implantat'], ['t', 'Teleskopkrone'], ['tw', 'erneuerungsbedürftige Teleskopkrone'], ['ur', 'unzureichende Retention'],
+  ['a', 'Adhäsivbrücke (Anker)'], ['ab', 'Adhäsivbrücke (Brückenglied)'], ['abw', 'erneuerungsbedürftige Adhäsivbrücke (Brückenglied)'], ['aw', 'erneuerungsbedürftige Adhäsivbrücke (Anker)'],
+  ['ew', 'ersetzter, erneuerungsbedürftiger Zahn'], ['ix', 'zu entfernendes Implantat'], ['pkw', 'erneuerungsbedürftige Teilkrone'],
+  ['r', 'Wurzelstiftkappe mit ersetztem Zahn'], ['rw', 'erneuerungsbedürftige Wurzelstiftkappe'],
+  ['sb', 'implantatgetragenes Brückenglied'], ['sbw', 'erneuerungsbedürftiges implantatgetragenes Brückenglied'],
+  ['se', 'ersetzter Zahn einer implantatgetragenen Prothese'], ['sew', 'erneuerungsbedürftiger ersetzter Zahn einer implantatgetragenen Prothese'],
+  ['sk', 'implantatgetragene intakte Krone'], ['skw', 'erneuerungsbedürftige implantatgetragene Krone'],
+  ['so', 'implantatgetragenes Verbindungselement'], ['sow', 'erneuerungsbedürftiges implantatgetragenes Verbindungselement'],
+  ['st', 'implantatgetragene Teleskopkrone'], ['stw', 'erneuerungsbedürftige implantatgetragene Teleskopkrone'],
+  ['t2w', 'erneuerungsbedürftiges Sekundärteil einer Teleskopkrone'], [')(', 'Lückenschluss'],
 ]
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
@@ -186,6 +195,8 @@ export function befundZeigen(kennung: PatientKennung, titel: string, u: BefundUm
           <form data-frei><input type="text" maxlength="6" placeholder="Kürzel" aria-label="anderes Kürzel" autocomplete="off" spellcheck="false"></form>
         </div>`
       : ''
+    // Solange ein Vorgang läuft und der Befund nicht bestätigt ist, steht die Frage mit dem Bestätigen-Knopf da
+    const unbestaetigt = !!v && v.phase !== 'angelegt' && (v.phase === 'befund' || !v.freigegeben || offen > 0)
     const knopf = (an: boolean, attr: string, text: string, klasse = 'import-knopf') => (an ? `<button type="button" class="${klasse}" ${attr}${laeuft ? ' disabled' : ''}>${text}</button>` : '')
     dlg.innerHTML = `
       <button type="button" class="wahl-grund" data-zu aria-label="Schließen"></button>
@@ -197,9 +208,10 @@ export function befundZeigen(kennung: PatientKennung, titel: string, u: BefundUm
         ${x ? `<p class="pvs-info">${herkunft}</p>${vorgang}${schema(x)}${auswahl}
           <p class="bz-hinweis">${wahl ? 'Kürzel wählen oder eintippen und Enter.' : `Zahn anklicken zum Ändern. Rosa = noch nicht in ${esc(x.pvs)}; gilt aber schon für den nächsten Plan und für ${esc(u.assistentin)}.`}</p>` : ''}
         <p class="pvs-status" role="status">${laeuft === 'liest' ? 'Befund wird aus dem Praxisprogramm geholt …' : laeuft === 'stamm' ? 'Stammdaten werden geholt …' : esc(meldung)}</p>
+        ${x && unbestaetigt ? '<p class="bz-vorgang"><b>Stimmt der Befund so?</b> Zum Ändern einen Zahn anklicken, sonst bestätigen.</p>' : ''}
         ${x ? `<div class="einst-fuss bz-fuss">
-          ${knopf(offen > 0, 'data-schreiben', `In ${esc(x.pvs)} speichern (Befund ändern)`, 'neu-knopf')}
-          ${knopf(!offen && v?.phase === 'befund', 'data-schreiben', 'Befund stimmt – freigeben', 'neu-knopf')}
+          ${knopf(offen > 0, 'data-schreiben', `Bestätigen und in ${esc(x.pvs)} speichern`, 'neu-knopf')}
+          ${knopf(!offen && unbestaetigt, 'data-schreiben', 'Befund stimmt – bestätigen', 'neu-knopf')}
           ${knopf(offen > 0, 'data-verwerfen', 'Änderungen verwerfen')}
           ${knopf(true, 'data-neu-lesen', `Neu aus ${esc(x.pvs)} lesen`)}
           ${knopf(true, 'data-neuer-plan', 'Neuer Plan für diesen Patienten')}

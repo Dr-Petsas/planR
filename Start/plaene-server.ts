@@ -2863,7 +2863,7 @@ async function internBefundAendern(req: IncomingMessage, w: Wer, url: string, re
     const nummer = angabe('patient')
     if (!/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, meldung: 'Patientennummer fehlt.' })
     const teil = {
-      modul: angabe('modul'), phase: angabe('phase'), hkpId: angabe('hkpId'),
+      modul: angabe('modul'), phase: angabe('phase'), hkpId: angabe('hkpId'), neu: angabe('neu') === '1',
       ...('auftrag' in body ? { auftrag: angabe('auftrag') } : {}),
       ...('plan' in body ? { plan: body.plan } : {}),
       ...('meldung' in body ? { meldung: angabe('meldung') } : {}),

@@ -80,13 +80,17 @@ function planZeilen(roh: unknown): Vorgang['plan'] {
   return aus
 }
 
-export interface VorgangTeil { modul?: string; phase?: string; auftrag?: string; plan?: unknown; hkpId?: string; meldung?: string }
+export interface VorgangTeil {
+  modul?: string; phase?: string; auftrag?: string; plan?: unknown; hkpId?: string; meldung?: string
+  /** Der Befund wird neu vorgelegt (Assistentin liest ihn frisch vor): ein älterer Vorgang gilt nicht weiter */
+  neu?: boolean
+}
 
 /** Meldung der Assistentin bzw. von PlanR: ein laufender Vorgang wird ergänzt, sonst beginnt ein neuer. Phasen nur vorwärts. */
 export function vorgangMelden(alt: Befund01, teil: VorgangTeil, jetzt = new Date().toISOString()): Befund01 {
   const modul = /^[a-z0-9-]{1,40}$/.test(teil.modul ?? '') ? teil.modul! : ''
   const v0 = alt.vorgang
-  const weiter = v0 && vorgangLaeuft(alt, Date.parse(jetzt)) && (!modul || !v0.modul || modul === v0.modul)
+  const weiter = !teil.neu && v0 && vorgangLaeuft(alt, Date.parse(jetzt)) && (!modul || !v0.modul || modul === v0.modul)
   const v: Vorgang = weiter
     ? { ...v0, plan: { ...v0.plan } }
     : { modul: '', phase: 'befund', seit: jetzt, stand: jetzt, auftrag: '', freigegeben: '', freigabeWo: '', plan: {}, hkpId: '', meldung: '' }

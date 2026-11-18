@@ -950,6 +950,12 @@ button.bf-zelle.b { cursor: pointer; }
 .bf-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 4px; padding: 8px; background: #fff; border: 1px solid var(--blau); border-radius: 10px; }
 .bf-picker span { font-weight: 700; margin-right: 4px; }
 .bf-picker button { min-width: 42px; padding: 8px 6px; font-size: 15px; border-radius: 8px; }
+.bf-picker button.an { background: var(--blau); color: #fff; border-color: var(--blau); }
+.bf-picker form { margin: 0; }
+.bf-picker input { width: 84px; padding: 8px 6px; font-size: 15px; border: 1px solid var(--blau); border-radius: 8px; }
+.bf-stimmt { margin: 0; font-size: 17px; font-weight: 700; }
+.bf-zwei { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.bf-zwei button.an { border-color: var(--blau); color: var(--blau); font-weight: 700; }
 .bf-herkunft { margin: 8px 4px 0; font-size: 13px; color: var(--grau); }
 .bf-herkunft b { color: var(--rot); }
 .bf-ok { margin: 6px 4px 0; font-size: 13px; color: #1a7f37; }
