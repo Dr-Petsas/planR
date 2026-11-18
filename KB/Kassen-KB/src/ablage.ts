@@ -348,7 +348,9 @@ export function useAblage<P>(key: string): Ablage<P> {
     const neu = [eintrag, ...alt.filter((e) => e.nummer !== d.nummer)].slice(0, HOECHSTENS)
     listeRef.current = neu
     try { localStorage.setItem(key, JSON.stringify(neu)) } catch { /* Der Browser lässt gerade nichts mehr ablegen. */ }
-    hubMelden(key, neu)
+    // Nur der eben abgelegte Plan: klein genug, um auch beim Verlassen des Planers (keepalive) noch anzukommen.
+    // Die ganze Liste folgt mit dem Zeichnen; wird der Planer vorher geschlossen, bricht der Browser sie ab.
+    hubMelden(key, [eintrag])
     setListe(neu)
   }, [key])
 

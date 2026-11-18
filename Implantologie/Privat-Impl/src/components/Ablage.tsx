@@ -60,8 +60,14 @@ export function AblageKnoepfe<P>({ ablage, daten, eintrag, offen, onNeu, neuText
   useEffect(() => {
     if (offen || abgelegt === undefined || eintrag?.status === 'freigegeben') return
     if (Math.abs(daten.betrag - abgelegt) < 0.005) return
-    const t = window.setTimeout(() => ablage.speichern(stand.current), 1500)
-    return () => window.clearTimeout(t)
+    const t = window.setTimeout(() => ablage.speichern(stand.current), 400)
+    // Wer vorher zur Übersicht wechselt, nimmt die Summe mit.
+    const weg = () => ablage.speichern(stand.current)
+    window.addEventListener('pagehide', weg)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('pagehide', weg)
+    }
   }, [offen, daten.betrag, abgelegt, eintrag?.status])
   const freiRef = useRef(frei)
   freiRef.current = frei
