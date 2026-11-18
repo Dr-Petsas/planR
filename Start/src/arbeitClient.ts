@@ -118,6 +118,8 @@ function fragenKi(fenster: Window, body: { aktion: 'lesen' } | { aktion: 'aender
       if (ev.source !== fenster) return
       const d = ev.data as { type?: string; id?: string; art?: string; blick?: KiBlick; ergebnis?: KiErgebnis }
       if (!d || d.type !== ARBEIT || d.id !== id) return
+      // Ohne PlanR-Rahmen spricht die Zeile im selben Fenster: die eigene Anfrage ist keine Antwort.
+      if (!d.art) return
       window.clearTimeout(timer)
       window.removeEventListener('message', auf)
       if (d.art === 'blick' && d.blick) resolve({ art: 'blick', blick: d.blick })

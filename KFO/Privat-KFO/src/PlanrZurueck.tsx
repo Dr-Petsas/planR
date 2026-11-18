@@ -2,6 +2,7 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { arbeitStandard, planrLeiste, type PlanPunkt } from './arbeitFenster'
 import { blaetterEinpassen } from './components/Handy'
+import { KiZeile } from './components/KiZeile'
 
 function planNav(richtung: 'zurueck' | 'vor') {
   if (window.parent !== window) {
@@ -60,6 +61,7 @@ export function PlanrZurueck() {
       </svg>
     </a>}
     <button type="button" style={navKnopf} title="Vor" aria-label="Vor" onClick={() => planNav('vor')}>›</button>
+    {eingebettet ? null : <KiZeile />}
     </span>
   )
 }
