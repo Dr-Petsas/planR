@@ -10,7 +10,7 @@ import { apiJson } from './api'
 interface Patient { id: string; vorname: string; name: string; geburtsdatum: string; ort: string }
 interface Hkp { nummer: number; datum: string; planart: string; bezeichnung: string; status: string; betrag: number }
 /** Anmeldedaten für den Planer (Teil von _gemeinsam/stammdaten.ts Patient) */
-export type Stammdaten = Partial<Record<'anrede' | 'vorname' | 'name' | 'geburtsdatum' | 'strasse' | 'plz' | 'ort' | 'kasse' | 'kassenNr' | 'versichertenNr', string>>
+export type Stammdaten = Partial<Record<'anrede' | 'vorname' | 'name' | 'geburtsdatum' | 'strasse' | 'plz' | 'ort' | 'kasse' | 'kassenNr' | 'versichertenNr' | 'pvsNr', string>>
 export interface PlanTreffer { titel: string; unter: string; url: string | null }
 
 export interface SucheUmgebung {
@@ -116,7 +116,8 @@ export function patientensucheOeffnen(u: SucheUmgebung) {
     // Fehlen die Stammdaten (ältere Bridge), reicht der Name aus der Trefferliste
     const daten: Stammdaten = r.ok && r.patient ? r.patient : { vorname: p.vorname, name: p.name, geburtsdatum: p.geburtsdatum }
     zu()
-    u.neuerPlan(daten)
+    // Die Patientennummer geht mit: der Planer holt den 01 damit direkt, ohne den Patienten noch einmal über den Namen zu suchen
+    u.neuerPlan({ ...daten, pvsNr: p.id })
   }
 
   async function importieren(p: Patient, h: Hkp) {

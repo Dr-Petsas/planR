@@ -97,6 +97,35 @@ const SERVER = typeof location === 'undefined' ? 'http://127.0.0.1:5189'
   : location.pathname.startsWith('/planer/') ? location.origin
   : location.hostname.endsWith('.pickadoc-tunnel.com') ? 'https://planr.pickadoc-tunnel.com'
     : `http://${location.hostname}:5189`
+/** Patientennummer im Praxisprogramm je Patient (Vorname|Name|Geburtsdatum), wie PlanR sie bei „Neuer Plan“ mitgibt bzw. der erste Abruf sie liefert */
+const NR_KEY = 'planr.pvsNr'
+const nrLesen = (): Record<string, string> => {
+  try { return JSON.parse(localStorage.getItem(NR_KEY) ?? '{}') as Record<string, string> } catch { return {} }
+}
+const nurZiffern = (nr: string) => nr.length > 0 && nr.length <= 9 && [...nr].every((z) => z >= '0' && z <= '9')
+export const pvsNrZu = (schluessel: string): string => (schluessel ? nrLesen()[schluessel] ?? '' : '')
+export function pvsNrMerken(schluessel: string, nr: string) {
+  if (!schluessel || !nurZiffern(nr)) return
+  const alle = Object.entries({ ...nrLesen(), [schluessel]: nr }).slice(-50)
+  try { localStorage.setItem(NR_KEY, JSON.stringify(Object.fromEntries(alle))) } catch { /* voller Speicher: dann sucht der Planer über den Namen */ }
+}
+export const patientSchluessel = (p: { vorname?: string; name?: string; geburtsdatum?: string }) =>
+  `${(p.vorname ?? '').trim()}|${(p.name ?? '').trim()}|${(p.geburtsdatum ?? '').trim()}`
+
+/** Übergabe #patient=<base64url-JSON> der PlanR-Übersicht: die Patientennummer merken, bevor der Planer die Adresse aufräumt */
+export function pvsNrAusFragmentMerken(hash: string) {
+  try {
+    const roh = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash).get('patient') ?? ''
+    if (!roh) return
+    const b64 = roh.replaceAll('-', '+').replaceAll('_', '/')
+    const bytes = Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), (c) => c.charCodeAt(0))
+    const p = JSON.parse(new TextDecoder().decode(bytes)) as { pvsNr?: unknown; vorname?: unknown; name?: unknown; geburtsdatum?: unknown }
+    const text = (x: unknown) => (typeof x === 'string' ? x.trim().slice(0, 120) : '')
+    if (typeof p.pvsNr === 'string') pvsNrMerken(patientSchluessel({ vorname: text(p.vorname), name: text(p.name), geburtsdatum: text(p.geburtsdatum) }), p.pvsNr)
+  } catch { /* keine lesbare Übergabe */ }
+}
+if (typeof window !== 'undefined') pvsNrAusFragmentMerken(window.location.hash)
+
 const BASIS = `${SERVER}/api/befund`
 
 let befunde: Record<string, Befund01> = {}

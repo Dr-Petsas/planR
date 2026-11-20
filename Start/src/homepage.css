@@ -179,6 +179,15 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
   box-shadow: 0 10px 30px -10px rgba(63, 216, 181, 0.7);
 }
 .hp-knopf-voll:hover { background: linear-gradient(135deg, #5ce6c4, #9af7df); }
+.hp-knopf-pink {
+  border: 0; color: #fff;
+  background: linear-gradient(135deg, var(--hp-pink-tief), var(--hp-pink));
+  box-shadow: 0 10px 30px -10px rgba(224, 64, 123, 0.75);
+}
+.hp-knopf-pink:hover { color: #fff; background: linear-gradient(135deg, #ff5c96, #ff9bc0); }
+.hp-knopf:disabled { opacity: 0.45; cursor: not-allowed; transform: none; font: inherit; }
+.hp-knopf:disabled:hover, .hp-knopf-voll:disabled:hover { transform: none; background: linear-gradient(135deg, var(--hp-mint), #7cf0d2); }
+.hp-nav nav .hp-gesperrt { opacity: 0.45; cursor: not-allowed; color: var(--hp-grau); }
 .hp-link { background: none; border: 0; color: var(--hp-grau); text-decoration: underline; cursor: pointer; font: inherit; font-size: 14px; padding: 0; }
 
 /* ---------- Hero ---------- */

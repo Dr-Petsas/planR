@@ -1,36 +1,47 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { EMAIL, emlEntwurf, mailEntwurf, mailtoLink, pdfDateiname, versandAdresse, type Anschreiben } from '../versand'
+import { EMAIL, emlEntwurf, mailEntwurf, mailfensterOeffnen, pdfDateiname, versandAdresse, type Anschreiben } from '../versand'
 import { herunterladen, pdfAusVorschau } from '../pdf'
 
-type Weg = 'nadine' | 'mailprogramm'
-
 const FENSTER: CSSProperties = {
-  width: 'min(720px, 94vw)', maxHeight: '88vh', padding: 0, border: '1px solid #ddd', borderRadius: 12,
+  width: 'min(480px, 94vw)', padding: 0, border: '1px solid #ddd', borderRadius: 12,
   boxShadow: '0 18px 50px rgba(0,0,0,.18)',
 }
 const KOPF: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid #eee' }
-const FELD: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5 }
-const EINGABE: CSSProperties = { font: 'inherit', fontSize: 13.5, padding: '7px 9px', border: '1px solid #d6d0c4', borderRadius: 7 }
 
-/** `?versand=1` aus der PlanR-Übersicht: Dialog öffnen, sobald der Plan aus `?plan=` offen ist ('' = sofort) */
+/** `?versand=1` aus der PlanR-Übersicht: senden, sobald der Plan aus `?plan=` offen ist ('' = sofort) */
 let versandWunsch: string | null = (() => {
   if (typeof location === 'undefined') return null
   const q = new URLSearchParams(location.search)
   return q.get('versand') === '1' ? (q.get('plan') ?? '').trim() : null
 })()
 
-async function api<T>(pfad: string, body?: unknown): Promise<T & { ok?: boolean; meldung?: string; message?: string }> {
-  const r = await fetch(versandAdresse(pfad), {
-    method: body === undefined ? 'GET' : 'POST', credentials: 'include', cache: 'no-store',
-    ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
-  })
-  const d = await r.json().catch(() => ({})) as T & { ok?: boolean; meldung?: string; message?: string }
-  return r.ok ? d : { ...d, ok: false, meldung: d.meldung || d.message || `Fehler ${r.status}` }
+async function vermerk(nummer: string, modul: string, an: string) {
+  await fetch(versandAdresse('/vermerk'), {
+    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nummer, an, weg: 'mailprogramm', modul }),
+  }).catch(() => undefined)
+}
+
+/** E-Mail-Adresse des Patienten: aus dem Plan, sonst aus dem Praxis-Kontakt (höchstens 4 s warten). '' = unbekannt. */
+async function empfaenger(p: Anschreiben['patient']): Promise<string> {
+  const imPlan = p.email?.trim() ?? ''
+  if (EMAIL.test(imPlan)) return imPlan
+  if (!p.name.trim()) return ''
+  try {
+    const r = await fetch(versandAdresse('/kontakt'), {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(4000),
+      body: JSON.stringify({ vorname: p.vorname, name: p.name, geburtsdatum: p.geburtsdatum }),
+    })
+    const gefunden = String(((await r.json()) as { email?: unknown }).email ?? '').trim()
+    return r.ok && EMAIL.test(gefunden) ? gefunden : ''
+  } catch {
+    return ''
+  }
 }
 
 /**
- * „Versenden“: Kostenvoranschlag als PDF per E-Mail. Mit Pickadoc MAS sendet Nadine über das Praxis-Postfach,
- * sonst öffnet sich ein Entwurf mit Anhang im Mailprogramm. `vorher` speichert den Plan vor dem Versand.
+ * „Versenden“: öffnet eine neue E-Mail mit dem Kostenvoranschlag als Anhang.
+ * Empfänger (soweit bekannt), Betreff und Text stehen schon drin.
  */
 export function VersandKnopf({ anschreiben, vorher, seiten }: {
   anschreiben: Anschreiben
@@ -39,31 +50,45 @@ export function VersandKnopf({ anschreiben, vorher, seiten }: {
   seiten?: () => HTMLElement[]
 }) {
   const fenster = useRef<HTMLDialogElement>(null)
-  const [weg, setWeg] = useState<Weg>('mailprogramm')
-  const [an, setAn] = useState('')
-  const [betreff, setBetreff] = useState('')
-  const [text, setText] = useState('')
   const [arbeit, setArbeit] = useState('')
-  const [meldung, setMeldung] = useState<{ ok: boolean; text: string } | null>(null)
+  const [meldung, setMeldung] = useState('')
   const datei = pdfDateiname(anschreiben.nummer, anschreiben.patient)
 
-  const oeffnen = async () => {
-    const m = mailEntwurf(anschreiben)
-    setAn(anschreiben.patient.email?.trim() ?? '')
-    setBetreff(m.betreff)
-    setText(m.text)
-    setMeldung(null)
-    setArbeit('')
+  const senden = async () => {
+    setMeldung('')
+    setArbeit('Kostenvoranschlag wird in die E-Mail gelegt …')
     fenster.current?.showModal()
-    const w = await api<{ weg?: Weg }>('').catch(() => ({ weg: undefined }))
-    const neu: Weg = w.weg === 'nadine' ? 'nadine' : 'mailprogramm'
-    setWeg(neu)
-    if (neu === 'nadine' && !anschreiben.patient.email?.trim() && anschreiben.patient.name.trim()) {
-      const p = anschreiben.patient
-      const k = await api<{ email?: string }>('/kontakt', { vorname: p.vorname, name: p.name, geburtsdatum: p.geburtsdatum }).catch(() => null)
-      if (k?.email) setAn((alt) => alt || k.email!)
+    try {
+      vorher?.()
+      const blaetter = seiten ? seiten() : [...document.querySelectorAll<HTMLElement>('.vorschau .kv-blatt')]
+      const [{ base64 }, an] = await Promise.all([pdfAusVorschau(blaetter), empfaenger(anschreiben.patient)])
+      const brief = mailEntwurf(anschreiben)
+      setArbeit('E-Mail wird geöffnet …')
+      const eml = emlEntwurf({ an, betreff: brief.betreff, text: brief.text, pdfBase64: base64, dateiname: datei })
+      const offen = await mailfensterOeffnen(eml)
+      if (!offen) {
+        herunterladen(new Blob([eml], { type: 'message/rfc822' }), datei.replace(/\.pdf$/, '.eml'))
+        setMeldung('Das Mailfenster auf diesem PC ist nicht erreichbar. Der Entwurf mit Anhang wurde heruntergeladen – bitte die Datei öffnen.')
+        setArbeit('')
+        return
+      }
+      void vermerk(anschreiben.nummer, anschreiben.modul || '', an).then(() => {
+        if (window.parent !== window) window.parent.postMessage({ type: 'planr-versendet' }, '*')
+      })
+      fenster.current?.close()
+    } catch (e) {
+      setMeldung(e instanceof Error ? e.message : String(e))
+      setArbeit('')
     }
   }
+
+  const sendenAktuell = useRef(senden)
+  sendenAktuell.current = senden
+  useEffect(() => {
+    const zu = () => { void sendenAktuell.current() }
+    window.addEventListener('planr-versand', zu)
+    return () => window.removeEventListener('planr-versand', zu)
+  }, [])
 
   useEffect(() => {
     if (versandWunsch === null || (versandWunsch && anschreiben.nummer !== versandWunsch)) return
@@ -71,94 +96,21 @@ export function VersandKnopf({ anschreiben, vorher, seiten }: {
     const u = new URL(location.href)
     u.searchParams.delete('versand')
     history.replaceState(history.state, '', u.toString())
-    void oeffnen()
+    void sendenAktuell.current()
   }, [anschreiben.nummer])
 
-  const pdf = async () => {
-    setArbeit('PDF wird erstellt …')
-    const blaetter = seiten ? seiten() : [...document.querySelectorAll<HTMLElement>('.vorschau .kv-blatt')]
-    return pdfAusVorschau(blaetter)
-  }
-
-  const oeffnenAktuell = useRef(oeffnen)
-  oeffnenAktuell.current = oeffnen
-  useEffect(() => {
-    const zu = () => { void oeffnenAktuell.current() }
-    window.addEventListener('planr-versand', zu)
-    return () => window.removeEventListener('planr-versand', zu)
-  }, [])
-
-  const ausfuehren = async (fn: () => Promise<string>) => {
-    if (!EMAIL.test(an.trim())) return setMeldung({ ok: false, text: 'Bitte eine gültige E-Mail-Adresse eintragen.' })
-    setMeldung(null)
-    try {
-      vorher?.()
-      const text = await fn()
-      setMeldung({ ok: true, text })
-      void api('/vermerk', { nummer: anschreiben.nummer, an: an.trim(), weg, modul: anschreiben.modul || '' }).then((r) => {
-        if (r.ok && window.parent !== window) window.parent.postMessage({ type: 'planr-versendet' }, '*')
-      }).catch(() => {})
-    } catch (e) {
-      setMeldung({ ok: false, text: e instanceof Error ? e.message : String(e) })
-    } finally {
-      setArbeit('')
-    }
-  }
-
-  const nadine = () => ausfuehren(async () => {
-    const { base64 } = await pdf()
-    setArbeit('Nadine sendet …')
-    const r = await api<{ to?: string; dryRun?: boolean }>('/senden', { to: an.trim(), subject: betreff, text, pdf: { filename: datei, base64 } })
-    if (!r.ok) throw new Error(r.meldung || 'Senden fehlgeschlagen.')
-    return `Gesendet an ${r.to}${r.dryRun ? ' (Testmodus, nicht wirklich verschickt)' : ''} – die Mail steht in Nadines Postausgang.`
-  })
-
-  const mailprogramm = () => ausfuehren(async () => {
-    const { base64 } = await pdf()
-    const eml = emlEntwurf({ an: an.trim(), betreff, text, pdfBase64: base64, dateiname: datei })
-    herunterladen(new Blob([eml], { type: 'message/rfc822' }), datei.replace(/\.pdf$/, '.eml'))
-    return 'Der Mail-Entwurf mit Anhang wurde heruntergeladen – öffnen, dann prüfen und senden (Outlook öffnet ihn als neue Mail).'
-  })
-
-  const ohneAnhang = () => ausfuehren(async () => {
-    const { blob } = await pdf()
-    herunterladen(blob, datei)
-    window.location.href = mailtoLink(an.trim(), betreff, text)
-    return `Das Mailprogramm ist geöffnet; bitte ${datei} aus den Downloads anhängen.`
-  })
-
-  const zu = () => fenster.current?.close()
+  const zu = () => { if (!arbeit) fenster.current?.close() }
   return (
     <>
-      <button className="sekundaer" style={window.parent !== window ? { display: 'none' } : undefined} title="Kostenvoranschlag als PDF per E-Mail senden" onClick={() => void oeffnen()}>Versenden</button>
-      <dialog ref={fenster} style={FENSTER} onClick={(e) => e.target === fenster.current && !arbeit && zu()}>
+      <button className="sekundaer" style={window.parent !== window ? { display: 'none' } : undefined} title="Neue E-Mail mit dem Kostenvoranschlag als Anhang" onClick={() => void senden()}>Versenden</button>
+      <dialog ref={fenster} style={FENSTER} onClick={(e) => e.target === fenster.current && zu()}>
         <div style={KOPF}>
-          <b>Kostenvoranschlag per E-Mail {weg === 'nadine' ? '· über Nadine' : '· Mailprogramm'}</b>
+          <b>Kostenvoranschlag per E-Mail</b>
           <button className="sekundaer klein-btn" onClick={zu} disabled={!!arbeit}>Schließen</button>
         </div>
-        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <label style={FELD}>An
-            <input style={EINGABE} type="email" value={an} placeholder="E-Mail-Adresse der Patientin / des Patienten" onChange={(e) => setAn(e.target.value)} />
-          </label>
-          <label style={FELD}>Betreff
-            <input style={EINGABE} value={betreff} onChange={(e) => setBetreff(e.target.value)} />
-          </label>
-          <label style={FELD}>Text
-            <textarea style={{ ...EINGABE, minHeight: 230, resize: 'vertical' }} value={text} onChange={(e) => setText(e.target.value)} />
-          </label>
-          <div style={{ fontSize: 12.5, color: '#555' }}>Anhang: <b>{datei}</b> (Kostenvoranschlag wie in der Vorschau)</div>
-          {meldung && <div style={{ fontSize: 13, padding: '8px 10px', borderRadius: 7, background: meldung.ok ? '#e8f6ef' : '#fdecec', color: meldung.ok ? '#185c3c' : '#8a1f1f' }}>{meldung.text}</div>}
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
-            {arbeit && <span style={{ fontSize: 12.5, color: '#555', marginRight: 'auto' }}>{arbeit}</span>}
-            {weg === 'nadine' ? (
-              <button className="primaer" disabled={!!arbeit} onClick={() => void nadine()}>Über Nadine senden</button>
-            ) : (
-              <>
-                <button className="sekundaer" disabled={!!arbeit} title="Mailprogramm mit Text öffnen, PDF wird heruntergeladen" onClick={() => void ohneAnhang()}>Mailprogramm + PDF einzeln</button>
-                <button className="primaer" disabled={!!arbeit} onClick={() => void mailprogramm()}>Im Mailprogramm öffnen</button>
-              </>
-            )}
-          </div>
+        <div style={{ padding: 16, fontSize: 14 }}>
+          {arbeit && <div>{arbeit}</div>}
+          {meldung && <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 7, background: '#fdecec', color: '#8a1f1f' }}>{meldung}</div>}
         </div>
       </dialog>
     </>

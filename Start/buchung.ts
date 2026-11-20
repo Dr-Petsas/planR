@@ -348,32 +348,18 @@ export function infoMail(b: Buchung, glaeubigerId: string): { betreff: string; t
   }
 }
 
-/** Bestätigung an die Praxis: Zusammenfassung, Mandat mit verdeckter IBAN, nächste Schritte */
-export function kundenMail(b: Buchung, glaeubigerId: string, basis = 'https://planr.pickadoc.de'): { betreff: string; text: string } {
-  const pvs = pvsVon(b.pvs.id)
+/** Mail an die Praxis: nur Zugangsdaten und der erste Plan. Keine Freischaltung, keine Bridge. */
+export function kundenMail(b: Buchung, _glaeubigerId: string, basis = 'https://planr.pickadoc.de'): { betreff: string; text: string } {
   const anrede = b.inhaber.anrede === 'Frau' ? `Sehr geehrte Frau ${[b.inhaber.titel, b.inhaber.nachname].filter(Boolean).join(' ')}`
     : b.inhaber.anrede === 'Herr' ? `Sehr geehrter Herr ${[b.inhaber.titel, b.inhaber.nachname].filter(Boolean).join(' ')}` : `Guten Tag ${wer(b)}`
-  if (b.testabo?.status === 'laeuft') {
+  if (b.konto?.status === 'manuell') {
     return {
-      betreff: `Ihr PlanR-Testabo ${b.id}`,
+      betreff: `Ihre PlanR-Buchung ${b.id}`,
       text: [
         `${anrede},`,
         '',
-        `vielen Dank. Das Testabo für ${b.praxis.name} ist eingerichtet: PlanR inklusive Sprachupgrade.`,
-        b.testabo.vermerk,
-        'In der Testzeit gibt es keine Lastschrift. Danach endet der Zugang, außer Sie buchen PlanR.',
-        '',
-        'So geht es weiter:',
-        ...(b.konto?.status === 'angelegt' ? [
-          `  1. Ihr Zugang ist eingerichtet: Melden Sie sich unter ${basis} mit ${b.inhaber.email} und dem Passwort aus der Buchung an.`,
-        ] : b.konto?.status === 'vorhanden' ? [
-          `  1. Für ${b.inhaber.email} gibt es schon ein Pickadoc-Konto. Wir schalten das Testabo dafür frei und melden uns.`,
-        ] : [
-          `  1. Wir schalten das Testabo frei – meist noch am selben Werktag. Sie bekommen dann eine E-Mail, mit der Sie das Passwort für ${b.inhaber.email} festlegen.`,
-        ]),
-        `  2. Nach der Anmeldung führt Sie der Einrichtungsassistent durch die Verbindung mit ${pvs?.name ?? 'Ihrem Praxissystem'}.`,
-        '',
-        'Fragen? Antworten Sie einfach auf diese E-Mail oder rufen Sie uns an: 0211 3029 3035.',
+        'Die Buchung ist eingegangen. Das Konto konnte gerade nicht angelegt werden.',
+        'Bitte die Buchung noch einmal abschicken oder anrufen: 0211 3029 3035.',
         '',
         'Freundliche Grüße',
         'Ihr PlanR-Team der Pickadoc GmbH',
@@ -381,36 +367,23 @@ export function kundenMail(b: Buchung, glaeubigerId: string, basis = 'https://pl
       ].join('\n'),
     }
   }
+  const passwort = 'das Passwort aus der Registrierung.'
+  const text = [
+    `${anrede},`,
+    '',
+    'Ihr PlanR-Zugang:',
+    `Anmeldung: ${basis}`,
+    `E-Mail: ${b.inhaber.email}`,
+    `Passwort: ${passwort}`,
+    '',
+    'Erster Plan: Nach der Anmeldung einen Patienten suchen und den Befund sagen. PlanR schreibt den Heil- und Kostenplan.',
+    '',
+    'Freundliche Grüße',
+    'Ihr PlanR-Team der Pickadoc GmbH',
+    GLAEUBIGER.anschrift,
+  ].join('\n')
   return {
-    betreff: `Ihre PlanR-Buchung ${b.id}`,
-    text: [
-      `${anrede},`,
-      '',
-      `vielen Dank für Ihre Buchung von ${PAKETE[b.paket].name} für ${b.praxis.name}.`,
-      `Paket: ${preisText(b.paket)}.`,
-      ...(b.doku ? [`Dazu die KI-Sprachdokumentation: ${euro(DOKU_MONAT)} im Monat, kein Preis je Eintrag.`] : []),
-      '',
-      'So geht es weiter:',
-      ...(b.konto?.status === 'angelegt' ? [
-        `  1. Ihr Zugang ist eingerichtet: Melden Sie sich unter ${basis} mit ${b.inhaber.email} und dem Passwort aus der Buchung an.`,
-      ] : b.konto?.status === 'vorhanden' ? [
-        `  1. Für ${b.inhaber.email} gibt es schon ein Pickadoc-Konto. Wir schalten PlanR dafür frei – meist noch am selben Werktag – und melden uns.`,
-        `     Danach melden Sie sich unter ${basis} mit Ihrem bestehenden Pickadoc-Passwort an.`,
-      ] : [
-        `  1. Wir schalten PlanR für Ihre Praxis frei – meist noch am selben Werktag. Sie bekommen dann eine E-Mail, mit der Sie das Passwort für ${b.inhaber.email} festlegen.`,
-      ]),
-      `  2. Nach der Anmeldung führt Sie der Einrichtungsassistent durch die Verbindung mit ${pvs?.name ?? 'Ihrem Praxissystem'}: Bridge herunterladen, auf dem Praxisserver installieren (ohne Eingaben), Preise & Positionen übernehmen.`,
-      ...(pvs?.bereit ? [] : [`     Die Anbindung an ${pvs?.name ?? 'Ihr PVS'} ist in Vorbereitung – wir melden uns zur Einrichtung bei Ihnen.`]),
-      '',
-      'Ihr SEPA-Lastschriftmandat:',
-      '',
-      ...mandatText(b, glaeubigerId, ibanVerdeckt(b.sepa.iban)).split('\n').map((z) => `  ${z}`),
-      '',
-      'Fragen? Antworten Sie einfach auf diese E-Mail oder rufen Sie uns an: 0211 3029 3035.',
-      '',
-      'Freundliche Grüße',
-      'Ihr PlanR-Team der Pickadoc GmbH',
-      GLAEUBIGER.anschrift,
-    ].join('\n'),
+    betreff: b.testabo?.status === 'laeuft' ? `Ihr PlanR-Zugang ${b.id}` : `Ihr PlanR-Zugang ${b.id}`,
+    text,
   }
 }

@@ -31,11 +31,13 @@ describe('Praxis-Verbund', () => {
     expect(gaesteVon(z, 'petsas').map(([id]) => id)).toEqual(['solo'])
   })
 
-  it('der koppelnde Admin sieht alle Praxen, andere Konten des Gastes warten auf Freischaltung', () => {
+  it('der koppelnde Admin sieht alle Praxen, andere Konten die Hauptpraxis', () => {
     const z = koppelSolo()
     expect(praxenVon(z, { uid: 'u2', clientId: 'solo', email: 'contact@maik-music.io' })).toEqual([1, 3])
-    expect(praxenVon(z, { uid: 'u3', clientId: 'solo', email: 'team@maik-music.io' })).toEqual([])
+    expect(praxenVon(z, { uid: 'u3', clientId: 'solo', email: 'team@maik-music.io' })).toEqual([1])
     expect(praxenVon(z, { uid: 'u1', clientId: 'petsas', email: 'dr@pickadoc.de' })).toEqual([1])
+    z.benutzer.u3.praxen = []
+    expect(praxenVon(z, { uid: 'u3', clientId: 'solo', email: 'team@maik-music.io' })).toEqual([])
   })
 
   it('Entkoppeln stellt den Stand vor dem Koppeln exakt wieder her', () => {

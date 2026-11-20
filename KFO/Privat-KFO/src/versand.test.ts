@@ -30,6 +30,9 @@ describe('Kostenvoranschlag per E-Mail', () => {
   it('.eml-Entwurf: ungesendet, Betreff kodiert, PDF als Anhang', () => {
     const eml = emlEntwurf({ an: 'a@b.de', betreff: 'Ihr Kostenvoranschlag – Praxis', text: 'Grüße', pdfBase64: 'JVBERi0x'.repeat(20), dateiname: 'KV.pdf' })
     expect(eml.startsWith('X-Unsent: 1\r\nTo: a@b.de\r\nSubject: =?UTF-8?B?')).toBe(true)
+    const leer = emlEntwurf({ an: '  ', betreff: 'Betreff', text: 'Grüße', pdfBase64: 'QQ==', dateiname: 'KV.pdf' })
+    expect(leer.startsWith('X-Unsent: 1\r\nSubject: Betreff\r\n')).toBe(true)
+    expect(leer).not.toContain('To:')
     expect(eml).toContain('Content-Disposition: attachment; filename="KV.pdf"')
     expect(eml.split('\r\n').every((z) => z.length <= 998)).toBe(true)
     const text = eml.split('charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n')[1].split('\r\n')[0]

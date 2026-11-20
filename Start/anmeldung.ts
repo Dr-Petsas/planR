@@ -80,7 +80,7 @@ const MELDUNGEN: Record<string, [number, string]> = {
   INVALID_PASSWORD: [401, 'E-Mail-Adresse oder Passwort ist falsch.'],
   EMAIL_NOT_FOUND: [401, 'E-Mail-Adresse oder Passwort ist falsch.'],
   INVALID_EMAIL: [400, 'Bitte eine gültige E-Mail-Adresse eingeben.'],
-  USER_DISABLED: [403, 'Dieses Pickadoc-Konto ist gesperrt. Bitte wenden Sie sich an pickadoc.'],
+  USER_DISABLED: [403, 'Dieses Konto ist gesperrt. Bitte wenden Sie sich an Pickadoc.'],
   TOO_MANY_ATTEMPTS_TRY_LATER: [429, 'Zu viele Versuche. Bitte in ein paar Minuten erneut versuchen.'],
   TOKEN_EXPIRED: [401, 'Bitte erneut anmelden.'],
   USER_NOT_FOUND: [401, 'Bitte erneut anmelden.'],
@@ -99,7 +99,7 @@ async function firebase(url: string, body: Record<string, unknown>, form = false
 
 function fehlerVon(daten: Record<string, unknown>): { ok: false; status: number; meldung: string } {
   const code = String((daten.error as { message?: unknown } | undefined)?.message ?? '').split(/[ :]/)[0]
-  const [status, meldung] = MELDUNGEN[code] ?? [502, 'Die Pickadoc-Anmeldung ist gerade nicht erreichbar. Bitte gleich nochmal versuchen.']
+  const [status, meldung] = MELDUNGEN[code] ?? [502, 'Die Anmeldung ist gerade nicht erreichbar. Bitte gleich nochmal versuchen.']
   return { ok: false, status, meldung }
 }
 
@@ -110,7 +110,7 @@ export async function einloggen(email: string, passwort: string, schluessel = go
   const r = await firebase('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword', { email, password: passwort, returnSecureToken: true })
   if (!r.ok) return fehlerVon(r.daten)
   const konto = await tokenPruefen(String(r.daten.idToken ?? ''), schluessel)
-  if (!konto) return { ok: false, status: 403, meldung: 'Mit diesem Pickadoc-Konto ist PlanR nicht freigegeben (kein Praxis-Konto).' }
+  if (!konto) return { ok: false, status: 403, meldung: 'Mit diesem Konto ist PlanR nicht freigegeben (kein Praxis-Konto).' }
   return { ok: true, wert: { konto, erneuern: String(r.daten.refreshToken ?? '') } }
 }
 
@@ -119,7 +119,7 @@ export async function erneuern(refreshToken: string, schluessel = googleSchluess
   const r = await firebase('https://securetoken.googleapis.com/v1/token', { grant_type: 'refresh_token', refresh_token: refreshToken }, true)
   if (!r.ok) return fehlerVon(r.daten)
   const konto = await tokenPruefen(String(r.daten.id_token ?? ''), schluessel)
-  if (!konto) return { ok: false, status: 403, meldung: 'Mit diesem Pickadoc-Konto ist PlanR nicht freigegeben.' }
+  if (!konto) return { ok: false, status: 403, meldung: 'Mit diesem Konto ist PlanR nicht freigegeben.' }
   return { ok: true, wert: { konto, erneuern: String(r.daten.refresh_token ?? refreshToken) } }
 }
 
@@ -187,7 +187,7 @@ export interface Benutzer {
   name: string
   clientId: string
   role: string
-  /** DS-Win-Praxen (1–9), die er sieht; fehlt = noch nicht zugeordnet */
+  /** DS-Win-Praxen (1–9), die er sieht; fehlt = Hauptpraxis, [] = gesperrt */
   praxen?: number[]
   zuerst: string
   zuletzt: string
@@ -240,14 +240,18 @@ export const hauptpraxis = (z: Zugaenge, k: Pick<Konto, 'clientId'>) => z.mandan
 export const praxisNr = (x: unknown) => (Number.isInteger(x) && (x as number) >= 1 && (x as number) <= 9 ? (x as number) : null)
 
 /**
- * Sichtbare DS-Win-Praxen: null = alle (Einzelpraxis). Liegen mehrere Praxen auf dem Server, sieht ein Benutzer
- * nur die ihm zugeordneten – ein neuer zunächst keine, bis der Praxis-Admin ihn freischaltet.
+ * Sichtbare DS-Win-Praxen: null = alle (Einzelpraxis). Liegen mehrere Praxen auf dem Server, gilt ohne
+ * eigene Zuordnung die Hauptpraxis – sonst kann ein Kollege keinen HKP speichern. Eine leere Liste
+ * (alle Haken weg) sperrt bewusst.
  */
 export function praxenVon(z: Zugaenge, k: Pick<Konto, 'uid' | 'clientId' | 'email'>): number[] | null {
   const eigene = z.benutzer[k.uid]?.praxen ?? z.vorbelegung?.[k.email]
   const bekannt = z.mandanten[k.clientId]?.praxen ?? []
   if (eigene) return [...new Set(eigene.map(praxisNr).filter((n): n is number => n !== null))].sort()
-  return bekannt.length > 1 ? [] : null
+  if (bekannt.length <= 1) return null
+  const haupt = z.mandanten[k.clientId]?.hauptpraxis ?? 1
+  const nummer = bekannt.some((p) => p.nummer === haupt) ? haupt : bekannt[0].nummer
+  return [nummer]
 }
 
 export const darfSehen = (praxen: number[] | null, praxis: number | undefined, haupt: number) =>

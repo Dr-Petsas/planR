@@ -92,8 +92,8 @@ const formular = (hinweis: string, popup: boolean) => `
         ${popup ? '<button type="button" class="anmelde-zu" aria-label="Schließen" data-zu>×</button>' : ''}
         <div class="marke"><span class="logo">${logo()}</span><div><h1 id="anmelde-titel">PlanR</h1><p>Heil- und Kostenpläne</p></div></div>
         <h2>Anmelden</h2>
-        <p class="anmelde-text">Mit Ihrem Pickadoc-Konto – am Praxis-PC, zu Hause oder am Handy.</p>
-        <label class="feld">E-Mail-Adresse
+        <p class="anmelde-text">Anmelden mit Benutzername und Passwort.</p>
+        <label class="feld">Benutzername
           <input type="email" name="email" autocomplete="username" required autofocus>
         </label>
         <label class="feld">Passwort
@@ -166,7 +166,7 @@ function formularVerdrahten(form: HTMLFormElement) {
   })
   form.querySelector('[data-vergessen]')!.addEventListener('click', async () => {
     const email = feld('email').value.trim()
-    if (!email.includes('@')) return meldung('Bitte zuerst die E-Mail-Adresse Ihres Pickadoc-Kontos eintragen.')
+    if (!email.includes('@')) return meldung('Bitte zuerst den Benutzernamen eintragen.')
     const d = await fetch('/api/passwort-vergessen', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
     }).then((r) => r.json() as Promise<{ meldung?: string }>).catch(() => ({ meldung: 'Keine Verbindung zu PlanR.' }))
@@ -209,7 +209,7 @@ export function benutzerBlock(daten: { praxen: PraxisZeile[]; benutzer: Benutzer
       Liegen auf dem PVS-Server mehrere Praxen (Praxisgemeinschaft), ordnen Sie hier zu, wer welche sieht.</p></fieldset>`
   }
   return `<fieldset class="katalog benutzer"><legend>Benutzer &amp; Praxen</legend>
-    <p class="pvs-info">Auf dem PVS-Server liegen ${praxen.length} Praxen. Jeder sieht nur Patienten, HKPs und Pläne der angehakten Praxen; wer sich neu anmeldet, sieht nichts, bis er hier freigeschaltet ist.</p>
+    <p class="pvs-info">Auf dem PVS-Server liegen ${praxen.length} Praxen. Ohne Haken gilt die Hauptpraxis, damit jeder HKP speichern kann. Weitere Haken grenzen ein; alle Haken weg sperrt den Benutzer.</p>
     <div class="benutzer-tabelle">
       <div class="benutzer-zeile kopfzeile"><span>Benutzer</span>${praxen.map((p) => `<span title="${esc(`${p.name ?? ''} · KZV ${p.kzvNr ?? '–'} · ${p.patienten ?? 0} Patienten`)}">${esc(p.name || `Praxis ${p.nummer}`)}</span>`).join('')}</div>
       ${benutzer.map((b) => `<div class="benutzer-zeile">

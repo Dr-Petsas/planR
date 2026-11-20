@@ -91,4 +91,12 @@ describe('Browser-Ablage einer anderen Praxis läuft nie in dieses Konto', () =>
     expect(r.status).toBe(200)
     expect((await liste()).map((k) => k.nummer)).toEqual(['IMPL-2026-A001'])
   })
+
+  it('Einzelpraxis ohne Praxiszuordnung speichert einen HKP (praxen ist null, nicht eine leere Liste)', async () => {
+    const r = await fetch(`${basis}/api/register/hkp`, {
+      method: 'POST', headers: kopf, body: JSON.stringify({ patient: { name: 'Test' } }),
+    })
+    expect(r.status).toBe(200)
+    expect(await r.json()).toMatchObject({ ok: true })
+  })
 })

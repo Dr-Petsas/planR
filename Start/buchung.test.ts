@@ -72,8 +72,10 @@ describe('Buchung prüfen', () => {
     expect(info.betreff).toContain('Testabo')
     expect(info.text).toContain(r.buchung.testabo?.vermerk)
     expect(info.text).not.toContain('SEPA-LASTSCHRIFTMANDAT')
-    expect(kunde.text).toContain('Sprachupgrade')
+    expect(kunde.text).toContain(r.buchung.inhaber.email)
+    expect(kunde.text).toContain('Erster Plan')
     expect(kunde.text).not.toContain('Lastschriftmandat')
+    expect(kunde.text).not.toContain('Sprachupgrade')
   })
 })
 
@@ -95,7 +97,8 @@ describe('Testabo-Abschluss', () => {
     expect(mit.buchung.sepa.iban).toBe('DE89370400440532013000')
     expect(mit.buchung.testabo?.vermerk).toContain('Reguläres Abo abgeschlossen')
     expect(infoMail(mit.buchung, '').text).toContain('SEPA-LASTSCHRIFTMANDAT')
-    expect(kundenMail(mit.buchung, '').text).toContain('DE89 •••• •••• 3000')
+    expect(kundenMail(mit.buchung, '').text).not.toContain('DE89')
+    expect(kundenMail(mit.buchung, '').text).toContain('Erster Plan')
   })
 
   it('setzt den Vermerk auf beendet, sobald die Frist vorbei ist', () => {
@@ -127,16 +130,22 @@ describe('Mails', () => {
     expect(m.text).toContain(b.sepa.mandatsreferenz)
     expect(m.text).toContain('DE98ZZZ09999999999')
   })
-  it('Bestätigung an die Praxis verdeckt die IBAN und nennt die nächsten Schritte', () => {
+  it('Mail an die Praxis nennt nur Zugang und den ersten Plan', () => {
     const m = kundenMail(b, '')
-    expect(m.text).not.toContain('0532 0130')
-    expect(m.text).toContain('DE89 •••• •••• 3000')
+    expect(m.text).not.toContain('0532')
+    expect(m.text).not.toContain('DE89')
+    expect(m.text).not.toContain('Freischaltung')
     expect(m.text).toContain('Sehr geehrte Frau Dr. Muster')
-    expect(m.text).toContain('wird mit der ersten Rechnung mitgeteilt')
+    expect(m.text).toContain(b.inhaber.email)
+    expect(m.text).toContain('Passwort aus der Registrierung')
+    expect(m.text).toContain('Erster Plan')
   })
   it('mit sofort angelegtem Konto: Anmeldung gleich, keine Freischaltung von Hand', () => {
     const mit = { ...b, konto: { status: 'angelegt' as const, clientId: 'abc123' } }
-    expect(kundenMail(mit, '').text).toContain('Passwort aus der Buchung an')
+    expect(kundenMail(mit, '').text).toContain('Passwort aus der Registrierung')
+    expect(kundenMail(mit, '').text).not.toContain('Freischaltung')
+    expect(kundenMail({ ...b, konto: { status: 'manuell' } }, '').text).toContain('nicht angelegt')
+    expect(kundenMail({ ...b, konto: { status: 'manuell' } }, '').text).not.toContain('Passwort')
     expect(infoMail(mit, '').text).toContain('automatisch erledigt')
     expect(infoMail(mit, '').text).toContain('abc123')
     expect(infoMail({ ...b, konto: { status: 'vorhanden' } }, '').text).toContain('ZU TUN')

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { beimAblegenAbo } from '../ablage'
 import {
-  ALLE_ZAEHNE, BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER, abweichungen, befundAendern, befundFolgen, befundHolen, befundMitPlanSchreiben,
+  ALLE_ZAEHNE, BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER, abweichungen, befundAendern, befundFolgen, befundHolen, befundMitPlanSchreiben, patientSchluessel, pvsNrMerken, pvsNrZu,
   befundPlanPatient, befundSchreiben, befundVerwerfen, befundVormerken, datumDe, uhrzeit, useBefund, useBefundLive, zeilenAenderung, type Befund01,
 } from '../befund01'
 
@@ -64,7 +64,9 @@ export function Befundleiste({ patient, zeile, planId = '', onUebernehmen, onBef
   hinweis?: string
 }) {
   const { vorname, name, geburtsdatum } = patient
-  const schluessel = name.trim() && /^\d{4}-\d{2}-\d{2}$/.test(geburtsdatum) ? `${vorname.trim()}|${name.trim()}|${geburtsdatum}` : ''
+  const wer = patientSchluessel(patient)
+  // Mit bekannter Patientennummer (aus „Neuer Plan“ in PlanR) braucht es weder Geburtsdatum noch Namenssuche
+  const schluessel = name.trim() && (/^\d{4}-\d{2}-\d{2}$/.test(geburtsdatum) || pvsNrZu(wer)) ? wer : ''
   const [nr, setNr] = useState('')
   const [laedt, setLaedt] = useState(false)
   const [meldung, setMeldung] = useState('')
@@ -81,8 +83,9 @@ export function Befundleiste({ patient, zeile, planId = '', onUebernehmen, onBef
     const uhr = window.setTimeout(() => {
       setLaedt(true)
       const [vn, n, g] = schluessel.split('|')
-      befundHolen({ vorname: vn, name: n, geburt: g })
-        .then((d) => { if (!weg) { setNr(d.befund.patient); setMeldung(d.meldung ? `⚠ ${d.meldung}` : ''); setAbgemeldet(false) } })
+      const bekannt = pvsNrZu(schluessel)
+      befundHolen(bekannt ? { patient: bekannt } : { vorname: vn, name: n, geburt: g })
+        .then((d) => { pvsNrMerken(schluessel, d.befund.patient); if (!weg) { setNr(d.befund.patient); setMeldung(d.meldung ? `⚠ ${d.meldung}` : ''); setAbgemeldet(false) } })
         .catch((e) => { if (!weg) { setAbgemeldet(!!(e as { anmelden?: boolean }).anmelden); setMeldung(fehlerText(e)) } })
         .finally(() => { if (!weg) setLaedt(false) })
     }, 700)

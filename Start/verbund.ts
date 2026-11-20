@@ -59,8 +59,8 @@ const ohneVerbund = (e: MandantEintrag | undefined): Omit<MandantEintrag, 'verbu
 }
 
 /**
- * Gast an Haupt koppeln. Der Admin, der koppelt (`uid`), sieht danach alle Praxen der Haupt-Praxis; die übrigen
- * Konten des Gastes schaltet der Admin der Haupt-Praxis frei, sobald dort mehrere DS-Win-Praxen liegen.
+ * Gast an Haupt koppeln. Der Admin, der koppelt (`uid`), sieht danach alle Praxen der Haupt-Praxis.
+ * Die übrigen Konten behalten keine alte Zuordnung und sehen die Hauptpraxis, bis der Admin sie einengt.
  */
 export function koppeln(z: Zugaenge, o: { gast: string; haupt: string; hauptName: string; gastName: string; von: string; uid: string; jetzt?: Date }): Zugaenge {
   const fehler = koppelnPruefen(z, o.gast, o.haupt)

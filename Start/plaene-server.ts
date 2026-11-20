@@ -431,11 +431,11 @@ async function passwortEndpunkt(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
   const email = String((JSON.parse(await lesenBody(req, 1000)) as { email?: unknown }).email ?? '').trim().toLowerCase().slice(0, 200)
-  if (!email.includes('@')) return json(res, 400, { ok: false, meldung: 'Bitte die E-Mail-Adresse Ihres Pickadoc-Kontos eingeben.' })
+  if (!email.includes('@')) return json(res, 400, { ok: false, meldung: 'Bitte den Benutzernamen eingeben.' })
   if (anmeldeBremse.gesperrt(`mail|${ip(req)}`)) return json(res, 429, { ok: false, meldung: 'Bitte etwas später erneut versuchen.' })
   anmeldeBremse.fehler(`mail|${ip(req)}`)
   await passwortVergessen(email)
-  json(res, 200, { ok: true, meldung: 'Falls es zu dieser Adresse ein Pickadoc-Konto gibt, ist eine E-Mail zum Zurücksetzen unterwegs.' })
+  json(res, 200, { ok: true, meldung: 'Falls es zu diesem Benutzernamen ein Konto gibt, ist eine E-Mail zum Zurücksetzen unterwegs.' })
 }
 
 /**
@@ -464,7 +464,7 @@ async function benutzerEndpunkt(req: IncomingMessage, res: ServerResponse, w: We
     const z = await zugaengeLesen()
     // Mehrere Pickadoc-Praxen können sich eine Ablage teilen (z. B. Klinik und Praxisgemeinschaft)
     const benutzer = Object.entries(z.benutzer).filter(([, b]) => mandantVon(z, b) === w.mandant)
-      .map(([uid, b]) => ({ uid, email: b.email, name: b.name, role: b.role, praxen: b.praxen ?? null, zuletzt: b.zuletzt, ich: uid === w.konto.uid }))
+      .map(([uid, b]) => ({ uid, email: b.email, name: b.name, role: b.role, praxen: praxenVon(z, { uid, clientId: b.clientId, email: b.email }), zuletzt: b.zuletzt, ich: uid === w.konto.uid }))
       .sort((a, b) => a.email.localeCompare(b.email))
     return json(res, 200, { ok: true, praxen: z.mandanten[clientId]?.praxen ?? [], benutzer })
   }
@@ -592,7 +592,7 @@ async function registerEndpunkt(req: IncomingMessage, res: ServerResponse, url: 
     return json(res, 200, { ...r.daten, hkps: liste.filter((h) => darfSehen(w.praxen, praxisNr(h.praxis) ?? undefined, w.haupt)) })
   }
   if (weg === '/hkp' && req.method === 'POST') {
-    if (!w.praxen.length) return json(res, 403, { ok: false, message: 'Ihr Zugang ist noch keiner Praxis zugeordnet.' })
+    if (w.praxen?.length === 0) return json(res, 403, { ok: false, message: 'Ihr Zugang ist noch keiner Praxis zugeordnet.' })
     if (!await exklusiv(() => testaboMerken(w.konto.clientId, 1))) return json(res, 409, { ok: false, testaboVoll: true, message: TESTABO_VOLL })
     const r = await mas(w, '', { method: 'POST', body: { ...await body(), praxis: stempel(w), wer: w.konto.email } })
     if (!r.ok) await exklusiv(() => testaboMerken(w.konto.clientId, -1))
@@ -855,10 +855,13 @@ function pvsNachVorn(pvs: string) {
   } catch { /* Fenster bleibt, wo es ist */ }
 }
 
+/** Das längste Wort eines Namens: ältere Connectoren finden „Müller Lüdenscheid“ nicht als ein Suchwort. Ausgewählt wird danach über den vollen Namen. */
+const suchwort = (name: string) => name.trim().split(/\s+/).reduce((a, b) => (b.length > a.length ? b : a), '')
+
 /** Patient des Plans im PVS: genau ein Treffer nach Name (und Geburtsdatum), sonst eine Meldung mit HTTP-Status. */
 async function pvsPatient(c: PvsWeg, patient: PlanPatient): Promise<{ id?: string; status?: number; meldung?: string }> {
   const vorname = String(patient.vorname ?? '').trim(), nachname = String(patient.name ?? '').trim()
-  const q = c.id === 'dampsoft' ? new URLSearchParams({ q: nachname || vorname, limit: '100' }) : new URLSearchParams({ firstName: vorname, lastName: nachname })
+  const q = c.id === 'dampsoft' ? new URLSearchParams({ q: suchwort(nachname || vorname), limit: '100' }) : new URLSearchParams({ firstName: vorname, lastName: nachname })
   const suche = await c.rufen!<{ items?: PvsZeile[] }>(`/patients?${q}`)
   if (!suche.ok) return { status: 502, meldung: `${c.name}: ${suche.daten.error ?? `Patientensuche fehlgeschlagen (HTTP ${suche.status}).`}` }
   const treffer = (suche.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
@@ -1889,8 +1892,8 @@ a.knopf{display:inline-block;background:#1f6feb;color:#fff;padding:.7rem 1.2rem;
 code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem 0}</style></head><body>
 <h1>PlanR-Bridge für den Praxisserver</h1>
 <p>Die Bridge verbindet DS-Win bzw. DENS auf dem Praxisserver mit PlanR. Sie baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Python ist im Paket enthalten.</p>
-<p><a class="knopf" href="/#bridge">Bridge herunterladen</a></p>
-<p>Das Paket lädt der Praxis-Admin in PlanR unter <b>Einrichtung</b> herunter. Es kennt Ihre Praxis bereits – bei der Installation muss nichts eingegeben werden.</p>
+<p><a class="knopf" href="/download/PlanR-Bridge.zip">Download erneut starten</a></p>
+<p>Beim Öffnen von <b>planr.pickadoc.de/download</b> startet die Datei von selbst. Sie heißt PlanR-Bridge.zip und liegt im Ordner Downloads. Eine Anmeldung ist nicht nötig.</p>
 <h2>Einrichten (einmal, auf dem Server mit DS-Win bzw. DENS)</h2>
 <p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden.</p>
 <ol>
@@ -1899,15 +1902,26 @@ code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem
 <li>Das Fenster meldet „Connector bereit“ und „PlanR verbunden“ – fertig. Die Bridge startet ab jetzt mit dem Server.</li>
 </ol>
 <h2>Arbeiten mit PlanR</h2>
-<p>PlanR über <code>https://planr.pickadoc.de</code> öffnen – am Praxis-PC, zu Hause oder am Handy – und mit dem <b>Pickadoc-Konto</b> anmelden. Jeder sieht nur die Patienten und Pläne seiner Praxis; in einer Praxisgemeinschaft ordnet der Praxis-Admin die Benutzer in PlanR unter Einstellungen → Benutzer zu.</p>
+<p>PlanR über <code>https://planr.pickadoc.de</code> öffnen – am Praxis-PC, zu Hause oder am Handy – und mit <b>Benutzername und Passwort</b> anmelden. Jeder sieht nur die Patienten und Pläne seiner Praxis; in einer Praxisgemeinschaft ordnet der Praxis-Admin die Benutzer in PlanR unter Einstellungen → Benutzer zu.</p>
 <p>Entfernen: <code>Entfernen.cmd</code> im entpackten Ordner doppelklicken. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>
 </body></html>`
 
-function download(req: IncomingMessage, res: ServerResponse, url: string) {
+const BRIDGE_DOWNLOAD_FREI = false
+const BRIDGE_DOWNLOAD_SPERRE = 'Der Download der PlanR-Bridge ist gesperrt.'
+
+function bridgeDownloadSperren(res: ServerResponse) {
+  res.statusCode = 403
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  res.end(BRIDGE_DOWNLOAD_SPERRE)
+}
+
+function download(req: IncomingMessage, res: ServerResponse, url: string, query = '') {
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { ok: false })
   // Cloudflare hält .zip sonst zwischengespeichert und liefert nach einem Neubau das alte Paket.
   res.setHeader('Cache-Control', 'no-store')
-  if (url === '/download' || url === '/download/') {
+  if (!BRIDGE_DOWNLOAD_FREI) return bridgeDownloadSperren(res)
+  if ((url === '/download' || url === '/download/') && new URLSearchParams(query).get('anleitung') === '1') {
     stat(AGENT_PAKET).then((s) => Math.round(s.mtimeMs).toString(36), () => '0').then((stand) => {
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.end(DOWNLOAD_SEITE.replace('STAND', stand))
@@ -1916,7 +1930,7 @@ function download(req: IncomingMessage, res: ServerResponse, url: string) {
   }
   readFile(AGENT_PAKET).then((daten) => {
     res.setHeader('Content-Type', 'application/zip')
-    res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge-allgemein.zip"')
+    res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge.zip"')
     res.setHeader('Content-Length', String(daten.length))
     res.end(req.method === 'HEAD' ? undefined : daten)
   }).catch(() => json(res, 404, { ok: false, meldung: 'Das Bridge-Paket ist noch nicht gebaut (pvsConnectoR: agent/paket-bauen.ps1).' }))
@@ -1998,7 +2012,7 @@ async function testaboAbschlussEndpunkt(req: IncomingMessage, res: ServerRespons
   json(res, 200, { ok: true })
 }
 
-/** Praxis und Admin-Konto in Pickadoc anlegen (über MAS); Abo planr ist damit gesetzt, die Anmeldung geht sofort. */
+/** Praxis und Admin-Konto in Pickadoc anlegen (über MAS). Es gibt keine Uhr: die Buchung wartet, bis die Anlage antwortet. */
 async function kontoAnlegen(b: Buchung, passwort: string): Promise<NonNullable<Buchung['konto']>> {
   try {
     const r = await fetch(`${MAS}/registrieren`, {
@@ -2010,7 +2024,6 @@ async function kontoAnlegen(b: Buchung, passwort: string): Promise<NonNullable<B
         paket: b.paket, sprachsteuerung: PAKETE[b.paket].sprachsteuerung, doku: b.doku === true, buchung: b.id, mandatsreferenz: b.sepa.mandatsreferenz,
         testaboBis: b.testabo?.bis ?? '',
       }),
-      signal: AbortSignal.timeout(20_000),
     })
     const d = await r.json().catch(() => ({})) as { ok?: boolean; clientId?: string; error?: string }
     if (r.ok && d.ok && d.clientId) return { status: 'angelegt', clientId: d.clientId }
@@ -2063,7 +2076,8 @@ async function bridgeSchluessel(req: IncomingMessage, res: ServerResponse, w: We
 async function bridgePaket(req: IncomingMessage, res: ServerResponse, w: Wer) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
-  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Bridge laden nur Praxis-Admins herunter.' })
+  if (!BRIDGE_DOWNLOAD_FREI) return json(res, 403, { ok: false, meldung: BRIDGE_DOWNLOAD_SPERRE })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Bridge-Datei startet ohne Anmeldung unter planr.pickadoc.de/download.' })
   const basis = await readFile(AGENT_PAKET).catch(() => null)
   if (!basis || basis.length < 30 || basis.readUInt32LE(0) !== 0x04034b50) {
     return json(res, 503, { ok: false, meldung: 'Das Bridge-Paket ist gerade nicht verfügbar. Bitte rufen Sie uns an: 0211 3029 3035.' })
@@ -2096,7 +2110,8 @@ async function bridgePaket(req: IncomingMessage, res: ServerResponse, w: Wer) {
 async function bridgeSetupLaden(req: IncomingMessage, res: ServerResponse, w: Wer, lokal = false) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
-  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Bridge laden nur Praxis-Admins herunter.' })
+  if (!BRIDGE_DOWNLOAD_FREI) return json(res, 403, { ok: false, meldung: BRIDGE_DOWNLOAD_SPERRE })
+  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Bridge-Datei startet ohne Anmeldung unter planr.pickadoc.de/download.' })
   const daten = await readFile(AGENT_SETUP).catch(() => null)
   if (!daten || daten.length < 1024 || daten.toString('latin1', 0, 2) !== 'MZ') {
     return json(res, 503, { ok: false, meldung: 'Das Bridge-Setup ist gerade nicht verfügbar. Bitte rufen Sie uns an: 0211 3029 3035.' })
@@ -2733,7 +2748,7 @@ async function internDoku(req: IncomingMessage, w: Wer, res: ServerResponse) {
 
 // ---------- Aktueller 01-Befund je Patient (befund01.ts) ----------
 
-type BefundFehler = { status: number; daten: Record<string, unknown> }
+type BefundFehler = { status: number; daten: Record<string, unknown>; nummer?: string }
 interface BefundGelesen { c: PvsWeg; rufen: Rufer; nummer: string; befund: PvsBefund; label: string; geburt: string }
 /** Ohne neues Lesen gilt der gemerkte Stand aus dem Praxisprogramm so lange als frisch */
 const BEFUND_FRISCH_MS = 10 * 60_000
@@ -2757,7 +2772,7 @@ async function pvsBefundLesen(req: IncomingMessage, w: Wer, angabe: (k: string) 
     if (!nummer) {
       const p: PlanPatient = { vorname: angabe('vorname'), name: angabe('name'), geburtsdatum: angabe('geburt') }
       if (!p.geburtsdatum) return { status: 400, daten: { ok: false, pvs: c.name, meldung: `Ohne Geburtsdatum finde ich den Patienten in ${c.name} nicht sicher.` } }
-      const s = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: p.name || p.vorname || '', limit: '100' })}`, { ms: 30_000 })
+      const s = await rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: suchwort(p.name || p.vorname || ''), limit: '100' })}`, { ms: 30_000 })
       if (!s.ok) return pvsFehlt(c, s)
       const treffer = (s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
       const wahl = patientWaehlen(treffer, p, c.name!)
@@ -2768,7 +2783,7 @@ async function pvsBefundLesen(req: IncomingMessage, w: Wer, angabe: (k: string) 
       geburt = isoDatum(String(t?.birthDate ?? ''))
     }
     const r = await rufen<Record<string, unknown>>(`/patients/${nummer}/befunde/01`, { ms: 30_000 })
-    if (!r.ok) return pvsFehlt(c, r)
+    if (!r.ok) return { ...pvsFehlt(c, r), nummer }
     const befund = befundAusPvs(r.daten)
     if (!befund) return { status: 502, daten: { ok: false, pvs: c.name, meldung: `${c.name} hat keinen lesbaren Befund geliefert.` } }
     return { c, rufen, nummer, befund, label, geburt }
@@ -2914,7 +2929,8 @@ async function befundEndpunkt(req: IncomingMessage, res: ServerResponse, url: st
     const l = await pvsBefundLesen(req, w, (k) => (q.get(k) ?? '').trim())
     if ('nummer' in l) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
     // PVS gerade nicht erreichbar: der gemerkte Stand mit Hinweis
-    const alt = /^\d{1,9}$/.test(q.get('patient') ?? '') ? (await befundeLesen(m))[q.get('patient')!] : undefined
+    const gemerkt = l.nummer || (q.get('patient') ?? '')
+    const alt = /^\d{1,9}$/.test(gemerkt) ? (await befundeLesen(m))[gemerkt] : undefined
     return alt ? json(res, 200, { ok: true, befund: befundAnsicht(alt), meldung: String(l.daten.meldung ?? '') }) : json(res, l.status, l.daten)
   }
   if (req.method !== 'POST') return json(res, 404, { ok: false })
@@ -3843,7 +3859,7 @@ async function probeEingangSeite(req: IncomingMessage, res: ServerResponse, id =
     res.statusCode = wer.status
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     const text = wer.status === 401
-      ? 'Bitte mit dem Pickadoc-Konto anmelden.'
+      ? 'Bitte mit Benutzername und Passwort anmelden.'
       : 'Dieser Eingang ist nur für den Betreiber der Probe.'
     res.end(`<!DOCTYPE html><meta charset="utf-8"><title>PlanR Eingang</title><p>${text}</p><p><a href="/#probe-eingang">Zum Eingang</a></p>`)
     return
@@ -3863,7 +3879,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort' || url === '/api/pvs-agent/setup' ||
     url === '/api/pvs-agent/update' || url === '/api/pvs-agent/update/paket') return agentEndpunkt(req, res, url, query)
   if (url === '/api/bridge-setup/einloesen') return void bridgeSetupEinloesen(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Der Einrichtungscode kam nicht an.' }) })
-  if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip' || url === '/download/PlanR-Bridge.zip') return download(req, res, url)
+  if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip' || url === '/download/PlanR-Bridge.zip') return download(req, res, url, query)
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
@@ -3898,7 +3914,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
     return
   }
   werIst(req).then((w) => {
-    if (!w) return json(res, 401, { ok: false, anmelden: true, meldung: abgelehnt.has(req) ? NICHT_GEBUCHT : 'Bitte mit dem Pickadoc-Konto anmelden.' })
+    if (!w) return json(res, 401, { ok: false, anmelden: true, meldung: abgelehnt.has(req) ? NICHT_GEBUCHT : 'Bitte mit Benutzername und Passwort anmelden.' })
     return angemeldet(req, res, url, query, w, next)
   }).catch(fehler500(res))
 }

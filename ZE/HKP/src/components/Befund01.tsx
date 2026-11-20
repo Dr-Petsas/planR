@@ -4,7 +4,7 @@ import { BEFUND_KUERZEL, OBERKIEFER, UNTERKIEFER } from '../engine/zahnschema'
 import { useVerbindung } from '../store/register'
 import {
   abweichungen, befundAendern, befundFolgen, befundHolen, befundPlanPatient, befundSchreiben, befundVerwerfen, befundVormerken, datumDe, uhrzeit,
-  useBefund, useBefundLive, zeilenAenderung, type Befund01,
+  patientSchluessel, pvsNrMerken, pvsNrZu, useBefund, useBefundLive, zeilenAenderung, type Befund01,
 } from '../store/befund01'
 
 const ALLE = [...OBERKIEFER, ...UNTERKIEFER]
@@ -94,7 +94,9 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei }: {
 }) {
   const v = useVerbindung()
   const { vorname, name, geburtsdatum } = plan.patient
-  const schluessel = v.sitzung && name.trim() && /^\d{4}-\d{2}-\d{2}$/.test(geburtsdatum) ? `${vorname.trim()}|${name.trim()}|${geburtsdatum}` : ''
+  const wer = patientSchluessel(plan.patient)
+  // Mit bekannter Patientennummer (aus „Neuer Plan“ in PlanR) braucht es weder Geburtsdatum noch Namenssuche
+  const schluessel = v.sitzung && name.trim() && (/^\d{4}-\d{2}-\d{2}$/.test(geburtsdatum) || pvsNrZu(wer)) ? wer : ''
   const [nr, setNr] = useState('')
   const [laedt, setLaedt] = useState(false)
   const [meldung, setMeldung] = useState('')
@@ -110,8 +112,9 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei }: {
     const uhr = window.setTimeout(() => {
       setLaedt(true)
       const [vn, n, g] = schluessel.split('|')
-      befundHolen({ vorname: vn, name: n, geburt: g })
-        .then((d) => { if (!weg) { setNr(d.befund.patient); setMeldung(d.meldung ? `⚠ ${d.meldung}` : '') } })
+      const bekannt = pvsNrZu(schluessel)
+      befundHolen(bekannt ? { patient: bekannt } : { vorname: vn, name: n, geburt: g })
+        .then((d) => { pvsNrMerken(schluessel, d.befund.patient); if (!weg) { setNr(d.befund.patient); setMeldung(d.meldung ? `⚠ ${d.meldung}` : '') } })
         .catch((e) => { if (!weg) setMeldung(`⚠ ${e instanceof Error ? e.message : String(e)}`) })
         .finally(() => { if (!weg) setLaedt(false) })
     }, 700)

@@ -152,7 +152,7 @@ export function befundZeigen(kennung: PatientKennung, titel: string, u: BefundUm
     laeuft = ''
     const daten: Stammdaten = r.ok && r.patient ? r.patient : { vorname: vorname ?? '', name: name ?? '', geburtsdatum: b.geburt }
     zu()
-    u.neuerPlan(daten)
+    u.neuerPlan({ ...daten, pvsNr: b.patient })
   }
 
   function schema(x: Befund): string {

@@ -13,7 +13,7 @@ const CLARA_ZUSTAENDE = [
   { id: 'speaking', zustand: 'Sie spricht', unter: 'Plan steht · 4.380 €', hinweis: '„Soll ich ihn ins PVS geben?“' },
 ]
 
-const PVS = ['Dampsoft DS-Win', 'CGM Z1.PRO', 'DENSoffice', 'solutio charly', 'evident', 'ivoris', 'VISIdent', 'Linudent', 'jedes PVS mit VDDS-Schnittstelle']
+const PVS = ['Dampsoft DS-Win', 'CGM Z1.PRO', 'DENSoffice', 'ivoris', 'VISIdent', 'Linudent', 'jedes PVS mit VDDS-Schnittstelle']
 
 const ZUSATZ = [
   { titel: 'keine', euro: 0 },
@@ -81,7 +81,7 @@ const PVS_RUECK = [
   { name: 'Dampsoft DS-Win', farbe: '#2f6db3' },
   { name: 'CGM Z1.PRO', farbe: '#0f8a6e' },
   { name: 'DENSoffice', farbe: '#b3462f' },
-  { name: 'solutio charly', farbe: '#6a4bb3' },
+  { name: 'ivoris', farbe: '#6a4bb3' },
 ]
 const RUECK_PLAENE = [
   { art: 'HKP', text: 'Brücke 14–16, Krone 26', summe: '4.380,00 €' },
@@ -209,7 +209,6 @@ const HTML = `
       <a href="#doku">Doku</a>
       <a href="#kette">Kette</a>
       <a href="#anyconnect">AnyConnect</a>
-      <a href="#connect">Brücke</a>
       <a href="#preise">Preise</a>
       <a href="#probe">HKP DEMO</a>
       <a href="#produkte">Pickadoc</a>
@@ -223,13 +222,13 @@ const HTML = `
       <p class="hp-eyebrow">PlanR · Heil- und Kostenpläne mit Sprach-KI</p>
       <h1>Ab sofort macht <span class="hp-verlauf">HKP erstellen</span> Spaß.</h1>
       <p class="hp-lead">Per Sprach-KI: <b>Patient nennen, Befund sagen</b> – deine KI-Assistentin Clara (Name frei wählbar) erstellt den HKP und errechnet den <b>maximalen Umsatz</b> deiner Praxis.
-        Praxisindividuell und vorbereitet für Dampsoft, Z1.PRO, DENSoffice und solutio.</p>
+        Praxisindividuell und vorbereitet für Dampsoft, Z1.PRO und DENSoffice.</p>
       <p class="hp-gestern"><s>HKP outsourcen für teuer Geld</s> war gestern.</p>
       <div class="hp-ctas">
-        <a class="hp-knopf hp-knopf-voll" href="#connect">Heute verbinden</a>
+        <a class="hp-knopf hp-knopf-pink" href="#buchen-clara">Jetzt starten</a>
         <a class="hp-knopf" href="#sprach-ki">So geht's per Sprache</a>
       </div>
-      <p class="hp-klein">Schon Kunde? <a href="#anmelden">Mit dem Pickadoc-Konto anmelden</a></p>
+      <p class="hp-klein">Schon Kunde? <a href="#anmelden">Anmelden mit Benutzername und Passwort</a></p>
     </div>
     <div class="hp-handy">
       <div class="cc-stage">
@@ -474,7 +473,7 @@ const HTML = `
       <div class="hp-buehne-text">
         <p class="hp-eyebrow">Dokumentation per Sprache</p>
         <h2>KI-Dokumentation per Headset.</h2>
-        <p>Deine KI-Assistentin Clara (Name frei wählbar) sucht den Patienten, gleicht ihn ab und schreibt dein Diktat als Prosa in die Akte. Direkt in Dampsoft, Z1.PRO, Charly und DENS Office – ohne Kopieren und ohne Einfügen.</p>
+        <p>Deine KI-Assistentin Clara (Name frei wählbar) sucht den Patienten, gleicht ihn ab und schreibt dein Diktat als Prosa in die Akte. Direkt in Dampsoft, Z1.PRO und DENSoffice – ohne Kopieren und ohne Einfügen.</p>
         <ol class="hp-schritte">
           <li><span>1</span><div><h3>Akte nennen</h3><p>„Clara, ich möchte etwas dokumentieren in die Akte von Frau Berger.“ Der Name ist frei wählbar.</p></div></li>
           <li><span>2</span><div><h3>Patient abgleichen</h3><p>Deine KI-Assistentin findet die Kartei und nennt Name und Geburtsdatum. Bei zwei Treffern fragt sie, wer gemeint ist.</p></div></li>
@@ -500,7 +499,7 @@ const HTML = `
             <p>PZR. Gingiva reizlos, Mundhygiene gut.</p>
           </div>
           <footer>
-            <span>Dampsoft</span><span>Z1.PRO</span><span>Charly</span><span>DENS Office</span>
+            <span>Dampsoft</span><span>Z1.PRO</span><span>DENSoffice</span>
           </footer>
         </article>
         </div>
@@ -530,7 +529,7 @@ const HTML = `
           </li>
           <li class="hp-ziel" id="abrechnung">
             <h4>PVS-Abrechnung</h4>
-            <p>Der umgesetzte Plan steht mit allen Positionen in der Akte. Abgerechnet wird in Dampsoft, Z1.PRO, Charly oder DENS Office – dort, wo du immer abrechnest. Hierhin kehrt am Ende alles zurück.</p>
+            <p>Der umgesetzte Plan steht mit allen Positionen in der Akte. Abgerechnet wird in Dampsoft, Z1.PRO oder DENSoffice – dort, wo du immer abrechnest. Hierhin kehrt am Ende alles zurück.</p>
           </li>
         </ol>
       </article>
@@ -582,7 +581,7 @@ const HTML = `
       <div class="hp-buehne-text">
         <p class="hp-eyebrow">AnyConnect</p>
         <h2>Eine Schnittstelle. Jedes PVS. Beide Richtungen.</h2>
-        <p>AnyConnect ist die universelle Schnittstelle von PlanR. Sie spricht jedes Praxisverwaltungssystem an und kommuniziert mit ihm in beide Richtungen. Du sprichst per Headset mit deiner KI-Assistentin Clara (Name frei wählbar). AnyConnect holt Patient, Befund und Preise aus dem PVS und schreibt den fertigen Plan zurück in die Akte – in Dampsoft, Z1.PRO, Charly, DENS Office und jedem weiteren Programm.</p>
+        <p>AnyConnect ist die universelle Schnittstelle von PlanR. Sie spricht jedes Praxisverwaltungssystem an und kommuniziert mit ihm in beide Richtungen. Du sprichst per Headset mit deiner KI-Assistentin Clara (Name frei wählbar). AnyConnect holt Patient, Befund und Preise aus dem PVS und schreibt den fertigen Plan zurück in die Akte – in Dampsoft, Z1.PRO, DENSoffice und jedem weiteren Programm.</p>
         <p>Im Rahmen der Einrichtung wird die KI mit den Abrechnungen deiner Praxis trainiert. So tritt sie möglichst nahe an die Rechnungsstrukturen heran, die du schon kennst. <b>Analogpositionen und eigene Laborpositionen werden gescannt.</b> PlanR lernt, damit zu arbeiten, und setzt sie in den nächsten Plänen so ein, wie deine Praxis sie abrechnet.</p>
         <ul class="hp-haken">
           <li>Hin: Patient, Befund, Preise und deine eigenen Positionen</li>
@@ -607,9 +606,9 @@ const HTML = `
           </div>
           <article class="hp-any-schirm s1"><b>Dampsoft DS-Win</b><small>Berger, Anna · Akte</small><i></i><i></i></article>
           <article class="hp-any-schirm s2"><b>CGM Z1.PRO</b><small>HKP 14–16 · zurück</small><i></i><i></i></article>
-          <article class="hp-any-schirm s3"><b>solutio charly</b><small>Eigenes Labor · BEB</small><i></i><i></i></article>
+          <article class="hp-any-schirm s3"><b>LinuDent</b><small>Eigenes Labor · BEB</small><i></i><i></i></article>
           <article class="hp-any-schirm s4"><b>DENSoffice</b><small>Analogposition · GOZ</small><i></i><i></i></article>
-          <article class="hp-any-schirm s5"><b>evident</b><small>Befund · 01</small><i></i><i></i></article>
+          <article class="hp-any-schirm s5"><b>VISIdent</b><small>Befund · 01</small><i></i><i></i></article>
           <article class="hp-any-schirm s6"><b>ivoris</b><small>Preisliste · gescannt</small><i></i><i></i></article>
         </div>
       </div>
@@ -628,8 +627,8 @@ const HTML = `
           <li><b>Mehrumsatz sehen</b><span>Regler ziehen, Differenz ablesen – und den besseren Plan zurück ins PVS geben.</span></li>
         </ol>
         <div class="hp-ctas">
-          <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Jetzt buchen und verbinden</a>
-          <a class="hp-knopf" href="#spielwiese">Erst mal mit den Reglern spielen</a>
+          <a class="hp-knopf hp-knopf-pink" href="#buchen-clara">Jetzt starten</a>
+          <a class="hp-knopf" href="#buchen-clara">Jetzt buchen</a>
         </div>
       </div>
       <div class="hp-connect-bild" aria-hidden="true">
@@ -711,7 +710,7 @@ const HTML = `
         <h3>KI-Sprachdokumentation</h3>
         <p class="hp-preis"><b>89 €</b> / Monat</p>
         <p class="hp-volumen"><b>Kein</b> Preis je Eintrag</p>
-        <ul><li>Diktat per Headset in die Karteikarte</li><li>Direkt in Dampsoft, Z1.PRO, Charly und DENS Office</li><li>Zusätzlich zu PlanR</li><li>Bei Pickadoc MAS schon enthalten</li></ul>
+        <ul><li>Diktat per Headset in die Karteikarte</li><li>Direkt in Dampsoft, Z1.PRO und DENSoffice</li><li>Zusätzlich zu PlanR</li><li>Bei Pickadoc MAS schon enthalten</li></ul>
         <button class="hp-knopf" type="button" data-doku-knopf aria-pressed="false">Als Upgrade dazubuchen</button>
       </article>
       <article class="hp-tier hp-tier-mas hp-ein">
@@ -750,7 +749,7 @@ const HTML = `
     <div class="hp-stroeme" aria-hidden="true"><span></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-sektion-kopf hp-ein">
       <h2>PlanR für deine Praxis</h2>
-      <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat, Passwort. Danach sofort anmelden: Der Einrichtungsassistent führt dich bis zum ersten HKP aus deinem PVS.</p>
+      <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat, Passwort. Der Bridge-Download ist momentan gesperrt. Der Einrichtungsassistent führt dich bis zum ersten HKP aus deinem PVS.</p>
     </div>
     <div class="hp-kontakt-wege hp-ein">
       <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Jetzt online buchen</a>

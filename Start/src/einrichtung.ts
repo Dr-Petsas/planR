@@ -11,9 +11,9 @@ const dauer = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.
 interface Anleitung { rechner: string; ordner: string; schritte: string[]; preise: string }
 
 const BRIDGE_SCHRITTE = (ordner: string) => [
-  '<b>PlanR-Bridge herunterladen</b> – am besten gleich an diesem Rechner. Sitzen Sie gerade an einem anderen, kopieren Sie die Datei per USB-Stick oder Netzwerk hinüber.',
-  'Die Datei <b>PlanR-Bridge-Setup-….exe</b> öffnen (im Browser unten bzw. oben rechts oder im Ordner „Downloads“) und die Windows-Frage mit <b>„Ja“</b> beantworten.',
-  `Das Setup richtet alles selbst ein – etwa eine Minute; den Fortschritt sehen Sie auch hier. Nur falls es das Praxisprogramm nicht findet, fragt es nach dem Ordner – ${ordner}.`,
+  '<b>Der Download startet von selbst.</b> Die Datei heißt <b>PlanR-Bridge.zip</b> und liegt im Ordner „Downloads“. Eine Anmeldung ist dafür nicht nötig. Sitzen Sie an einem anderen Rechner, kopieren Sie die Datei auf den Praxisrechner.',
+  'Die ZIP entpacken (Rechtsklick → „Alle extrahieren“). Dann <b>Installieren.cmd</b> öffnen und die Windows-Frage mit <b>„Ja“</b> beantworten.',
+  `Das Fenster richtet alles selbst ein – etwa eine Minute. Nur falls es das Praxisprogramm nicht findet, fragt es nach dem Ordner – ${ordner}.`,
 ]
 const WARNUNGEN = 'Warnt Windows mit „Der Computer wurde durch Windows geschützt“? Auf <b>„Weitere Informationen“</b> und dann <b>„Trotzdem ausführen“</b> klicken. Fragt der Browser, ob Sie die Datei behalten möchten: <b>„Behalten“</b>.'
 
@@ -228,13 +228,13 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
           ? `<p class="ein-ok big">✓ PlanR ist mit ${esc(pvsName())} verbunden. Sie müssen nichts installieren – unten auf „Weiter“.</p>`
           : stand?.eingerichtet && !paketGeladen
             ? '<p class="ein-hinweis">Die PlanR-Bridge wurde schon einmal eingerichtet, ist aber gerade nicht verbunden. Ist der Computer mit der Bridge eingeschaltet und hat er Internet? Dann verbindet sie sich von selbst. Nur wenn dieser Computer neu ist, laden Sie die Bridge noch einmal herunter.</p>'
-          : '<p class="ein-text">Drücken Sie auf den grünen Knopf. Ihr Computer holt dann eine Datei aus dem Internet. Das dauert ein paar Sekunden.</p>'}
-        ${!o.admin ? '<p class="ein-hinweis">Das Herunterladen macht die Person, die PlanR für die Praxis angemeldet hat – die Datei enthält den Zugang Ihrer Praxis.</p>'
-          : `<p><button type="button" class="neu-knopf ein-riesig" data-setup${laeuft ? ' disabled' : ''}>${laeuft ? 'Einen Moment, die Datei wird vorbereitet …' : paketGeladen ? 'Noch einmal herunterladen' : stand?.verbunden ? 'Trotzdem neu herunterladen' : '⬇  PlanR-Bridge herunterladen'}</button></p>`}
+          : '<p class="ein-text">Der Download startet sofort, auch ohne Anmeldung. Die Datei heißt PlanR-Bridge.zip und liegt danach im Ordner „Downloads“.</p>'}
+        <p><button type="button" class="neu-knopf ein-riesig" disabled>PlanR-Bridge herunterladen</button></p>
+        <p class="ein-text">momentan gesperrt</p>
         ${paketGeladen ? '<p class="ein-ok big">✓ Die Datei ist da. Sie liegt im Ordner „Downloads“. Jetzt unten auf „Weiter“.</p>' : ''}
         <details class="ein-mehr"><summary>Der Browser fragt etwas oder warnt?</summary><p>Fragt der Browser, ob Sie die Datei behalten möchten: auf <b>„Behalten“</b> klicken. Die Datei kommt von uns und ist sicher.</p></details>
         ${o.admin ? `<p class="ein-klein" data-zip-platz>${zipGeladen ? '✓ ZIP-Paket heruntergeladen: entpacken und <code>Installieren.cmd</code> als Administrator ausführen.'
-          : `<button type="button" class="link-knopf" data-paket${laeuft ? ' disabled' : ''}>Für IT-Dienstleister: Bridge als ZIP-Paket mit Installieren.cmd</button>`}</p>` : ''}`
+          : 'Für IT-Dienstleister: momentan gesperrt'}</p>` : ''}`
       case 'Öffnen': return stand?.verbunden ? `
         <h3>Geschafft – die Verbindung steht!</h3>
         <p class="ein-ok big">✓ PlanR ist mit ${esc(pvsName())} verbunden${stand.version ? ` (Bridge ${esc(stand.version)})` : ''}.</p>
@@ -245,8 +245,8 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <h3>Die Datei öffnen</h3>
         ${stand?.setup ? setupHtml(stand.setup) : `
         <ol class="ein-gross-liste">
-          <li><b>Die Datei anklicken.</b> Sie heißt <b>PlanR-Bridge-Setup</b>. Ihr Browser zeigt sie oben rechts (kleiner Pfeil nach unten ⬇) oder unten links.</li>
-          <li><b>Windows fragt, ob das Programm etwas ändern darf.</b> Klicken Sie auf <b>„Ja“</b>.</li>
+          <li><b>Die Datei liegt im Ordner „Downloads“.</b> Sie heißt <b>PlanR-Bridge.zip</b>. Entpacken Sie sie (Rechtsklick → „Alle extrahieren“).</li>
+          <li><b>Installieren.cmd öffnen.</b> Windows fragt, ob das Programm etwas ändern darf. Klicken Sie auf <b>„Ja“</b>.</li>
           <li><b>Ein dunkelgrünes Fenster erscheint</b> und arbeitet von selbst. Sie müssen nur warten – etwa eine Minute.</li>
         </ol>`}
         ${pruefliste([[paketGeladen || !!stand?.eingerichtet, 'Datei heruntergeladen'], [!!stand?.setup || !!stand?.geprueft, 'Datei geöffnet, das Setup läuft'], [!!stand?.setup?.fertig, 'Setup ist fertig'], [false, `PlanR ist mit ${esc(pvsName())} verbunden`]])}
@@ -284,12 +284,12 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
              <button type="button" class="neu-knopf ein-riesig" data-importieren>Ersten Patienten suchen</button>
              <button type="button" class="import-knopf" data-zu>Schließen</button>
            </div>
-           <details class="ein-mehr"><summary>Bridge neu installieren oder entfernen</summary><p>Nur wenn der Praxis-Computer neu aufgesetzt wurde: <button type="button" class="link-knopf" data-zur-bridge>Bridge erneut herunterladen</button>. Entfernen: Windows-Einstellungen → Apps → „PlanR-Bridge“ → Deinstallieren.</p></details>`
+           <details class="ein-mehr"><summary>Bridge neu installieren oder entfernen</summary><p>Nur wenn der Praxis-Computer neu aufgesetzt wurde: <button type="button" class="link-knopf" disabled>Bridge erneut herunterladen</button> momentan gesperrt. Entfernen: Windows-Einstellungen → Apps → „PlanR-Bridge“ → Deinstallieren.</p></details>`
         : `<h3>Fertig – PlanR ist eingerichtet.</h3>
            <p class="ein-text">Suchen Sie jetzt Ihren ersten Patienten aus ${esc(p?.name ?? 'Ihrem Praxisprogramm')}.</p>
            <div class="ein-fertig">
              <button type="button" class="neu-knopf ein-riesig" data-importieren>Ersten Patienten suchen</button>
-             <button type="button" class="import-knopf" data-zur-bridge>Bridge erneut herunterladen</button>
+             <button type="button" class="import-knopf" disabled>Bridge erneut herunterladen</button> <small>momentan gesperrt</small>
            </div>`
     }
   }
@@ -308,14 +308,16 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
     switch (schrittName()) {
       case 'Praxisprogramm': return 'Bitte erst Ihr Programm antippen.'
       case 'Computer': return 'Bitte erst eine Antwort antippen.'
-      case 'Herunterladen': return 'Bitte erst auf den grünen Knopf drücken.'
+      case 'Herunterladen': return 'momentan gesperrt'
       case 'Öffnen': return 'Geht weiter, sobald die Verbindung steht.'
       default: return ''
     }
   }
 
+  const dateiSofort = () => { /* Download ist gesperrt. */ }
   const laden = (zip: boolean) => async () => {
     if (laeuft) return
+    dateiSofort()
     laeuft = true
     meldung = ''
     zeichnen()
@@ -324,6 +326,9 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       if (zip) zipGeladen = true
       else { paketGeladen = true; code = r.code }
       stand = { ...(stand ?? { mandant: '', verbunden: false }), eingerichtet: true }
+    } else if (r.status === 401 || r.status === 403) {
+      paketGeladen = true
+      meldung = 'momentan gesperrt'
     } else meldung = r.meldung
     laeuft = false
     zeichnen()
@@ -471,7 +476,13 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
         <button type="button" class="neu-knopf ein-riesig" data-weiter${weiterErlaubt() && !katalogSeit ? '' : ' disabled'}>Weiter →</button></span>`}`
     flaeche.querySelectorAll('[data-zu]').forEach((b) => b.addEventListener('click', zu))
     $('[data-zurueck]')?.addEventListener('click', () => { schritt -= 1; meldung = ''; flaeche.scrollTop = 0; zeichnen() })
-    $('[data-weiter]')?.addEventListener('click', () => { schritt += 1; meldung = ''; flaeche.scrollTop = 0; zeichnen() })
+    $('[data-weiter]')?.addEventListener('click', () => {
+      schritt += 1
+      meldung = ''
+      flaeche.scrollTop = 0
+      if (schrittName() === 'Herunterladen' && !paketGeladen && !stand?.verbunden) { dateiSofort(); paketGeladen = true }
+      zeichnen()
+    })
     flaeche.querySelectorAll<HTMLButtonElement>('[data-pvs]').forEach((b) => b.addEventListener('click', async () => {
       if (!o.admin) return
       const neu = { ...einst, pvs: b.dataset.pvs!, bridge: true }
@@ -480,11 +491,10 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
       zeichnen()
     }))
     flaeche.querySelectorAll<HTMLButtonElement>('[data-ort]').forEach((b) => b.addEventListener('click', () => { ort = b.dataset.ort as typeof ort; zeichnen() }))
-    $('[data-setup]')?.addEventListener('click', laden(false))
-    $('[data-paket]')?.addEventListener('click', laden(true))
+    $('[data-setup]')?.addEventListener('click', () => { paketGeladen = true; window.setTimeout(() => zeichnen(), 0) })
     $('[data-katalog]')?.addEventListener('click', () => void preiseHolen())
     $('[data-importieren]')?.addEventListener('click', () => { zu(); o.importieren() })
-    $('[data-zur-bridge]')?.addEventListener('click', () => { zuSchritt('Herunterladen'); zeichnen() })
+    $('[data-zur-bridge]')?.addEventListener('click', () => { dateiSofort(); zuSchritt('Herunterladen'); zeichnen() })
   }
 
   // Verbindung live verfolgen, solange der Assistent offen ist

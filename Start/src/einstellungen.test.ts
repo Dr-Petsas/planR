@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { einstellungenPruefen, pvsFreiKonten, pvsStehtFest, PVS_LISTE } from './einstellungen'
 
 describe('Einstellungen', () => {
-  it('zehn PVS mit eindeutigen Kennungen', () => {
-    expect(PVS_LISTE).toHaveLength(10)
-    expect(new Set(PVS_LISTE.map((p) => p.id)).size).toBe(10)
+  it('sieben PVS mit eindeutigen Kennungen', () => {
+    expect(PVS_LISTE).toHaveLength(7)
+    expect(new Set(PVS_LISTE.map((p) => p.id)).size).toBe(7)
+    expect(PVS_LISTE.map((p) => p.id)).not.toEqual(expect.arrayContaining(['cgm-z1', 'evident', 'charly']))
   })
   it('übernimmt ein bekanntes PVS mit Bridge', () => {
     expect(einstellungenPruefen({ pvs: 'dens', bridge: true, ordner: ' C:\\DENS\\Import ' })).toMatchObject({ pvs: 'dens', bridge: true, ordner: 'C:\\DENS\\Import' })
@@ -21,6 +22,7 @@ describe('Einstellungen', () => {
   it('Entwicklerkonto wechselt frei; die Liste kommt aus der Umgebung', () => {
     expect(pvsStehtFest({ pvs: 'dens', bridge: true, frei: true })).toBe(false)
     expect(pvsFreiKonten(undefined).has('contact@maik-music.io')).toBe(true)
+    expect(pvsFreiKonten(undefined).has('development@pickadoc.de')).toBe(true)
     expect([...pvsFreiKonten(' A@b.de, c@d.de ,')]).toEqual(['a@b.de', 'c@d.de'])
     expect(pvsFreiKonten('').size).toBe(0)
   })

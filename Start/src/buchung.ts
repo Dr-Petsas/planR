@@ -3,7 +3,7 @@ import './buchung.css'
 import { KZVEN } from './data/kzv'
 import { PVS_LISTE, pvsVon } from './einstellungen'
 import { DOKU_MONAT, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, TESTABO_PLAENE, TESTABO_TAGE, ibanGueltig, ibanNorm, type Paket } from './paket'
-import { anleitungHtml, anleitungVon, bridgeSetupLaden, codeLesbar } from './einrichtung'
+import { anleitungHtml } from './einrichtung'
 import { logo } from './logo'
 import { werbungStarten, zielErreicht } from './werbung'
 
@@ -54,7 +54,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
     return `<div class="bu-mandat">
       <b>SEPA-Lastschriftmandat</b> (wiederkehrende Zahlungen, SEPA-Basislastschrift)<br>
       Zahlungsempfänger: Pickadoc GmbH, Medical Center · c/o Dr. Petsas · Luise-Rainer-Str. 6–10 · 40235 Düsseldorf<br>
-      Gläubiger-ID und Mandatsreferenz erhalten Sie mit der Bestätigung per E-Mail.<br><br>
+      Gläubiger-ID und Mandatsreferenz stehen auf der ersten Rechnung.<br><br>
       Ich ermächtige / Wir ermächtigen die Pickadoc GmbH, Zahlungen von meinem / unserem Konto mittels Lastschrift einzuziehen. Zugleich weise ich mein / weisen wir unser Kreditinstitut an, die von der Pickadoc GmbH auf mein / unser Konto gezogenen Lastschriften einzulösen.<br>
       Hinweis: Ich kann / Wir können innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen. Es gelten dabei die mit meinem / unserem Kreditinstitut vereinbarten Bedingungen.
       Jeder Einzug wird mit der Rechnung angekündigt; die Frist der Vorabankündigung wird auf einen Kalendertag verkürzt.<br><br>
@@ -156,7 +156,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
         </dl>
         ${haken(w, f, 'zustimmung.agb', 'Ich habe die <a href="https://pickadoc.ai/agb.html" target="_blank" rel="noopener">AGB</a> gelesen und stimme zu.')}
         ${haken(w, f, 'zustimmung.datenschutz', 'Ich habe die <a href="https://pickadoc.ai/datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweise</a> zur Kenntnis genommen.')}
-        ${haken(w, f, 'zustimmung.avv', 'Ich beauftrage die Pickadoc GmbH mit der <b>Verarbeitung von Patientendaten im Auftrag</b> (Art. 28 DSGVO). Den Auftragsverarbeitungsvertrag erhalte ich mit der Freischaltung.')}
+        ${haken(w, f, 'zustimmung.avv', 'Ich beauftrage die Pickadoc GmbH mit der <b>Verarbeitung von Patientendaten im Auftrag</b> (Art. 28 DSGVO).')}
         <input type="text" name="firma2" class="bu-falle" tabindex="-1" autocomplete="off" aria-hidden="true">`
   }
 
@@ -307,12 +307,12 @@ export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
 function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string, konto: string, angemeldet: boolean, testabo?: { bis: string; vermerk: string } | null) {
   const pvs = pvsVon(pvsId)
   const zugang = angemeldet
-    ? `<li><b>Zugang:</b> Ihr Konto ist eingerichtet und Sie sind schon angemeldet. Später melden Sie sich mit ${esc(email)} und Ihrem Passwort an.</li>`
-    : konto === 'angelegt'
-    ? `<li><b>Zugang:</b> Ihr Konto ist eingerichtet. Melden Sie sich jetzt mit ${esc(email)} und Ihrem Passwort an.</li>`
+    ? `<li><b>Zugang:</b> ${esc(email)} und das Passwort aus der Registrierung. Sie sind schon angemeldet.</li>`
     : konto === 'vorhanden'
-      ? `<li><b>Freischaltung:</b> Für ${esc(email)} gibt es schon ein Pickadoc-Konto. Wir schalten PlanR dafür frei – meist noch am selben Werktag. Danach melden Sie sich mit Ihrem bestehenden Pickadoc-Passwort an.</li>`
-      : `<li><b>Freischaltung:</b> Wir richten Ihren Zugang ein – meist noch am selben Werktag. Sie bekommen dann eine E-Mail, mit der Sie das Passwort für ${esc(email)} festlegen.</li>`
+      ? `<li><b>Zugang:</b> ${esc(email)} und das Passwort aus der Registrierung.</li>`
+      : konto === 'manuell'
+        ? `<li><b>Zugang:</b> Das Konto ist noch nicht angelegt. Bitte die Buchung noch einmal abschicken oder anrufen: 0211 3029 3035.</li>`
+        : `<li><b>Zugang:</b> ${esc(email)} und das Passwort aus der Registrierung.</li>`
   const bis = testabo?.bis ? new Date(testabo.bis).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' }) : ''
   document.title = testabo ? 'PlanR – Testabo läuft' : 'PlanR – Buchung eingegangen'
   app.innerHTML = `
@@ -321,32 +321,16 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
       <div class="bu-karte bu-danke">
         <p class="bu-haekchen">✓</p>
         <h2>${testabo ? 'Ihr Testabo ist gestartet.' : 'Vielen Dank – Ihre Buchung ist eingegangen.'}</h2>
-        <p class="bu-text">${testabo ? `Buchungsnummer <b>${esc(id)}</b>. ${esc(testabo.vermerk)} Die Bestätigung geht an <b>${esc(email)}</b>. Am ${esc(bis)} endet der Zugang.` : `Buchungsnummer <b>${esc(id)}</b>. Die Bestätigung mit Ihrem SEPA-Mandat geht an <b>${esc(email)}</b>.`}</p>
+        <p class="bu-text">${testabo ? `Buchungsnummer <b>${esc(id)}</b>. ${esc(testabo.vermerk)} Die Zugangsdaten gehen an <b>${esc(email)}</b>. Am ${esc(bis)} endet der Zugang.` : `Buchungsnummer <b>${esc(id)}</b>. Die Zugangsdaten gehen an <b>${esc(email)}</b>.`}</p>
+        <h3>${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
+        <p><button type="button" class="neu-knopf" disabled>PlanR-Bridge herunterladen</button></p>
+        <p class="bu-klein">momentan gesperrt</p>
         <ol class="bu-weiter">
           ${zugang}
-          <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Installation der Bridge, Verbindung, Preise &amp; Positionen.</li>
         </ol>
-        <h3>${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
-        ${anleitungVon(pvsId) ? `<p><button type="button" class="neu-knopf" data-bridge-laden>PlanR-Bridge herunterladen</button></p>
-          <p class="bu-klein" data-bridge-meldung>${angemeldet ? 'Das Setup ist für Ihre Praxis vorbereitet – bei der Installation muss nichts eingegeben werden.' : 'Zum Herunterladen melden Sie sich kurz an; danach startet der Download.'}</p>` : ''}
         ${anleitungHtml(pvsId)}
-        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a>${angemeldet ? '<a class="neu-knopf" href="/#einrichtung">Zu PlanR</a>' : `<a class="neu-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a>`}</div>
+        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a>${angemeldet ? '<a class="link-knopf" href="/#einrichtung">Zu PlanR</a>' : `<a class="link-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a>`}</div>
       </div>
     </div>`
-  const knopf = app.querySelector<HTMLButtonElement>('[data-bridge-laden]')
-  const hinweis = app.querySelector<HTMLElement>('[data-bridge-meldung]')
-  knopf?.addEventListener('click', async () => {
-    if (!angemeldet) { location.hash = '#bridge'; return }
-    knopf.disabled = true
-    knopf.textContent = 'Setup wird vorbereitet …'
-    const r = await bridgeSetupLaden()
-    knopf.disabled = false
-    knopf.textContent = r.ok ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'
-    if (r.ok) {
-      if (hinweis) hinweis.textContent = `✓ Heruntergeladen (Ordner „Downloads“). Jetzt die Datei öffnen und mit „Ja“ bestätigen – den Fortschritt sehen Sie auch in PlanR unter „Zu PlanR“.${r.code ? ` Fragt das Setup nach einem Code: ${codeLesbar(r.code)}` : ''}`
-    }
-    else if (r.status === 401 || r.status === 403) location.hash = '#bridge'
-    else if (hinweis) hinweis.textContent = r.meldung
-  })
   scrollTo(0, 0)
 }

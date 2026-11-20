@@ -1,3 +1,4 @@
+import { patientSchluessel, pvsNrAusFragment, pvsNrMerken } from './store/befund01'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Einstellungen, HkpPlan, Preisliste } from './types'
 import { usePlan, leererPlan, planNormalisieren } from './store/plan'
@@ -142,6 +143,7 @@ export default function App() {
     // „Neuen Plan erstellen“ in PlanR
     if (q.get('neu') === '1') {
       const patient = patientAusFragment(window.location.hash)
+      if (patient) pvsNrMerken(patientSchluessel(patient), pvsNrAusFragment(window.location.hash))
       const u = new URL(window.location.href)
       u.searchParams.delete('neu')
       history.replaceState(history.state, '', u.pathname + u.search)

@@ -51,6 +51,34 @@ export function befundLinkAus(search: string): BefundLink | null {
   return /^\d{1,9}$/.test(p) && /^\d+\.[\w-]+$/.test(t) && /^[\w-]{2,64}$/.test(c) ? { p, t, c } : null
 }
 
+/** Patientennummer im Praxisprogramm je Patient (Vorname|Name|Geburtsdatum), wie PlanR sie bei „Neuer Plan“ mitgibt bzw. der erste Abruf sie liefert */
+const NR_KEY = 'planr.hkp.pvsNr'
+const nrLesen = (): Record<string, string> => {
+  try { return JSON.parse(localStorage.getItem(NR_KEY) ?? '{}') as Record<string, string> } catch { return {} }
+}
+export const pvsNrZu = (schluessel: string): string => (schluessel ? nrLesen()[schluessel] ?? '' : '')
+export function pvsNrMerken(schluessel: string, nr: string) {
+  if (!schluessel || !nr || [...nr].some((z) => z < '0' || z > '9')) return
+  const alle = Object.entries({ ...nrLesen(), [schluessel]: nr }).slice(-50)
+  try { localStorage.setItem(NR_KEY, JSON.stringify(Object.fromEntries(alle))) } catch { /* voller Speicher: dann sucht der Planer über den Namen */ }
+}
+export const patientSchluessel = (p: { vorname?: string; name?: string; geburtsdatum?: string }) =>
+  `${(p.vorname ?? '').trim()}|${(p.name ?? '').trim()}|${(p.geburtsdatum ?? '').trim()}`
+
+/** pvsNr aus der Übergabe #patient=<base64url-JSON> der PlanR-Übersicht */
+export function pvsNrAusFragment(hash: string): string {
+  try {
+    const roh = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash).get('patient') ?? ''
+    if (!roh) return ''
+    const b64 = roh.replaceAll('-', '+').replaceAll('_', '/')
+    const bytes = Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), (c) => c.charCodeAt(0))
+    const nr = (JSON.parse(new TextDecoder().decode(bytes)) as { pvsNr?: unknown }).pvsNr
+    return typeof nr === 'string' && nr.length <= 9 && nr.length > 0 && [...nr].every((z) => z >= '0' && z <= '9') ? nr : ''
+  } catch {
+    return ''
+  }
+}
+
 const BASIS = `${PLANR_SERVER}/api/befund`
 let link: BefundLink | null = null
 /** Ab jetzt laufen alle Anfragen über den Handy-Link statt über die Sitzung */

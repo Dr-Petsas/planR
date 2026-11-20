@@ -15,9 +15,6 @@ export interface Pvs {
 export const PVS_LISTE: Pvs[] = [
   { id: 'dampsoft', name: 'DS-Win', hersteller: 'Dampsoft', weg: 'VDDS – „Holen“ in die offene Kartei', bereit: true },
   { id: 'cgm-z1pro', name: 'Z1.PRO', hersteller: 'CGM Dentalsysteme', weg: 'pvsConnectoR – HKP direkt in den Plan des Patienten', bereit: true },
-  { id: 'cgm-z1', name: 'Z1', hersteller: 'CGM Dentalsysteme', weg: 'VDDS-Schnittstelle', bereit: false },
-  { id: 'evident', name: 'evident', hersteller: 'evident', weg: 'VDDS-Schnittstelle', bereit: false },
-  { id: 'charly', name: 'charly', hersteller: 'solutio', weg: 'VDDS-Schnittstelle', bereit: false },
   { id: 'dens', name: 'DENSoffice', hersteller: 'DENS', weg: 'pvsConnectoR – HKP direkt in die Prothetik des Patienten', bereit: true },
   { id: 'ivoris', name: 'ivoris', hersteller: 'Computer konkret', weg: 'VDDS-Schnittstelle', bereit: false },
   { id: 'linudent', name: 'LinuDent', hersteller: 'Pharmatechnik', weg: 'VDDS-Schnittstelle', bereit: false },
@@ -50,7 +47,7 @@ export function einstellungenPruefen(roh: unknown): Einstellungen {
 
 /** Konten, die das Praxisprogramm jederzeit wechseln dürfen (Entwicklung); kommagetrennte E-Mail-Adressen */
 export const pvsFreiKonten = (liste: string | undefined) =>
-  new Set((liste ?? 'contact@maik-music.io').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean))
+  new Set((liste ?? 'contact@maik-music.io,development@pickadoc.de').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean))
 
 /**
  * Eine Praxis hat genau ein Praxisprogramm: Ist es gewählt und die Bridge eingerichtet, steht es fest.

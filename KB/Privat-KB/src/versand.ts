@@ -59,12 +59,13 @@ const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(
 const zeilen76 = (s: string) => s.replace(/.{1,76}/g, '$&\r\n')
 const kopfwort = (s: string) => (/^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${b64(s)}?=`)
 
-/** Mail-Entwurf (RFC 822) mit Text und PDF-Anhang; Outlook und Apple Mail öffnen ihn zum Senden. */
+/** Mail-Entwurf (RFC 822) mit Text und PDF-Anhang; Outlook und Apple Mail öffnen ihn zum Senden. Ohne Adresse bleibt „An“ leer. */
 export function emlEntwurf(m: { an: string; betreff: string; text: string; pdfBase64: string; dateiname: string }): string {
   const grenze = `planr-${Math.random().toString(36).slice(2)}`
+  const an = m.an.replace(/[\r\n]/g, '').trim()
   return [
     'X-Unsent: 1',
-    `To: ${m.an.replace(/[\r\n]/g, '')}`,
+    ...(an ? [`To: ${an}`] : []),
     `Subject: ${kopfwort(m.betreff.replace(/[\r\n]/g, ' '))}`,
     'MIME-Version: 1.0',
     `Content-Type: multipart/mixed; boundary="${grenze}"`,
@@ -83,6 +84,29 @@ export function emlEntwurf(m: { an: string; betreff: string; text: string; pdfBa
     `--${grenze}--`,
     '',
   ].join('\r\n')
+}
+
+/**
+ * Öffnet auf diesem Windows-PC eine neue E-Mail mit Anhang (lokales Mailfenster, nur 127.0.0.1).
+ * true, wenn das Fenster offen ist. Ohne Mailfenster false – dann bleibt der .eml-Entwurf.
+ */
+export async function mailfensterOeffnen(eml: string): Promise<boolean> {
+  if (typeof fetch !== 'function') return false
+  const stopp = new AbortController()
+  const frist = setTimeout(() => stopp.abort(), 12_000)
+  try {
+    const r = await fetch('http://127.0.0.1:8791/oeffnen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eml }),
+      signal: stopp.signal,
+    })
+    return r.ok
+  } catch {
+    return false
+  } finally {
+    clearTimeout(frist)
+  }
 }
 
 /** mailto-Link (ohne Anhang) – Ausweg für Mailprogramme, die keine .eml-Entwürfe öffnen */

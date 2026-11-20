@@ -108,7 +108,15 @@ export function schluesselSetzen(schluessel: string) {
 
 export const verbunden = (v: { schluessel: string; automatisch?: boolean; sitzung?: boolean } = verbindung) => !!(v.schluessel || v.automatisch || v.sitzung)
 
-const perSitzung = () => fetch(`${HUB}/status`, { credentials: 'include', cache: 'no-store' }).then((r) => r.ok)
+/** Anmeldung prüfen. Antwortet das Register gerade nicht (Zeitüberschreitung, 5xx), wird bis zu dreimal nachgefragt – nur ein 401 heißt „nicht angemeldet“. */
+async function perSitzung(): Promise<boolean> {
+  for (let versuch = 0; ; versuch++) {
+    const status = await fetch(`${HUB}/status`, { credentials: 'include', cache: 'no-store' }).then((r) => r.status, () => 0)
+    if (status >= 200 && status < 300) return true
+    if (status === 401 || status === 403 || status === 404 || versuch >= 3) return false
+    await new Promise((weiter) => setTimeout(weiter, 2500))
+  }
+}
 const perProxy = () => fetch(`${BASIS}/status`, { headers: { 'Content-Type': 'application/json', ...MANDANT_KOPF } }).then((r) => r.ok)
 
 /** Erledigt, sobald geprüft ist, ob eine PlanR-Anmeldung besteht bzw. der PlanR-Server den Schlüssel selbst einträgt */
