@@ -442,7 +442,14 @@ export function berechnen(plan: HkpPlan, listen: Listen): Ergebnis {
   const positionen = allePositionen.map((p) => positionBerechnen(p, listen, plan))
 
   const summe = (f: (p: BerechnetePosition) => boolean) => runden(positionen.filter(f).reduce((s, p) => s + p.betrag, 0))
-  const bemaHonorar = summe((p) => p.ebene === 'BEMA')
+  // BMV-Z Anlage 14b, III Nr. 2: Summe der Bewertungszahlen mal Punktwert, einmal gerundet – nicht je Position.
+  // Positionen mit eigenem Preis (ohne Punktwert) gehen mit ihrem Betrag ein.
+  const nachPunkten = (p: BerechnetePosition) => p.ebene === 'BEMA' && p.punktwert !== undefined
+  const bemaPunkte = positionen.filter((p) => p.ebene === 'BEMA').reduce((s, p) => s + (p.punkte ?? 0) * p.anzahl, 0)
+  const bemaHonorar = runden(
+    runden(positionen.filter(nachPunkten).reduce((s, p) => s + (p.punkte ?? 0) * p.anzahl, 0) * (listen.bema?.punktwert ?? 0))
+    + summe((p) => p.ebene === 'BEMA' && !nachPunkten(p)),
+  )
   const gozHonorar = summe((p) => p.ebene === 'GOZ')
   const belNetto = summe((p) => p.ebene === 'BEL')
   const bebNetto = summe((p) => p.ebene === 'BEB')
@@ -463,7 +470,6 @@ export function berechnen(plan: HkpPlan, listen: Listen): Ergebnis {
   const laborMwst = runden(eigenMwst + fremdMwst + materialMwst)
   const materialUndLabor = runden(eigenNetto + fremdNetto + laborMwst + material)
   const gesamt = runden(bemaHonorar + gozHonorar + materialUndLabor)
-  const bemaPunkte = positionen.filter((p) => p.ebene === 'BEMA').reduce((s, p) => s + (p.punkte ?? 0) * p.anzahl, 0)
 
   const stufe = plan.zuschuss.haertefall ? '100' : plan.zuschuss.bonus
   const befunde: BerechneterBefund[] = plan.befunde.map((b) => {

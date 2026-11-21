@@ -50,6 +50,23 @@ describe('Gebührenberechnung', () => {
     expect(berechnen(p, LISTEN).summen.bemaHonorar).toBe(175.29)
   })
 
+  it('BEMA-Honorar: Summe der Bewertungszahlen × Punktwert, einmal gerundet (BMV-Z Anlage 14b)', () => {
+    const p = leererPlan()
+    p.positionen = [pos('BEMA', '19', { anzahl: 3 }), pos('BEMA', '20a', { id: 'k', anzahl: 2 })]
+    const e = berechnen(p, LISTEN)
+    // 3 × 19 + 2 × 148 = 353 Punkte × 1,1844 = 418,0932. Je Position gerundet wären es 67,50 + 350,58 = 418,08.
+    expect(e.summen.bemaPunkte).toBe(353)
+    expect(e.summen.bemaHonorar).toBe(418.09)
+    expect(e.positionen.map((x) => x.betrag)).toEqual([67.5, 350.58])
+    expect(e.summen.gesamt).toBe(418.09)
+  })
+
+  it('BEMA-Honorar: Position mit eigenem Preis zählt mit ihrem Betrag', () => {
+    const p = leererPlan()
+    p.positionen = [pos('BEMA', '19', { anzahl: 3 }), pos('BEMA', '20a', { id: 'k', preis: 100 })]
+    expect(berechnen(p, LISTEN).summen.bemaHonorar).toBe(167.51)
+  })
+
   it('BEL: Preisspalte nach Standard-Labor, MwSt. auf Labor', () => {
     const p = leererPlan()
     p.positionen = [pos('BEL', '1021')]
