@@ -1,6 +1,6 @@
 import type { Ebene, ImplantatAngaben, Labor, Position, ZahnZeilen } from '../types'
 import { KOMPONENTEN, implantatsystem, type Komponente } from '../data/implantatsysteme'
-import { ALLE_ZAEHNE, kieferVon } from './zahnschema'
+import { ALLE_ZAEHNE, FEHLEND, OBERKIEFER, UNTERKIEFER, kieferVon } from './zahnschema'
 import { bereich, zweiJeKiefer } from './zusatzleistungen'
 
 /** Kürzel (TP, sonst R) einer implantatgetragenen Krone, eines Implantat-Teleskops oder -Verbindungselements (Steg, Locator) */
@@ -34,6 +34,33 @@ export function implantateErfasst(zaehne: Record<string, ZahnZeilen>): string[] 
     if (IMPLANTAT_TP.test((v.TP.trim() || v.R.trim()).toUpperCase())) return true
     return BEFUND_IMPLANTAT.has(v.B.trim().toLowerCase())
   })
+}
+
+const befundVon = (v: ZahnZeilen | undefined) => (v?.B ?? '').trim().toLowerCase()
+const nachbarn = (z: string) => {
+  const reihe = kieferVon(z) === 'OK' ? OBERKIEFER : UNTERKIEFER
+  const i = reihe.indexOf(z)
+  return [reihe[i - 1], reihe[i + 1]]
+}
+
+/** Befund 7.1: erneuerungsbedürftige Implantatkrone in einer zahnbegrenzten Einzelzahnlücke – beide Nachbarn sind natürliche Zähne. */
+export function supraEinzelzahnluecke(zaehne: Record<string, ZahnZeilen>, z: string): boolean {
+  if (befundVon(zaehne[z]) !== 'skw') return false
+  return nachbarn(z).every((n) => {
+    if (!n) return false
+    const k = befundVon(zaehne[n])
+    return !FEHLEND.has(k) && !k.startsWith('s')
+  })
+}
+
+/**
+ * Ausnahmefall Nr. 36 a) ZE-Richtlinie: Die Suprakonstruktion in einer zahnbegrenzten Einzelzahnlücke ist
+ * Regelversorgung, wenn keine parodontale Behandlungsbedürftigkeit besteht und die Nachbarzähne kariesfrei
+ * und nicht überkronungsbedürftig bzw. überkront sind. Die Praxis setzt den Fall je Zahn (klinisch.supraRegel);
+ * am Zahnschema prüfbar sind die Einzelzahnlücke und Nachbarzähne ohne Befund oder mit intakter Krone (k).
+ */
+export function supraAlsRegelversorgung(zaehne: Record<string, ZahnZeilen>, klinisch: { supraRegel?: string[] } | undefined, z: string): boolean {
+  return !!klinisch?.supraRegel?.includes(z) && supraEinzelzahnluecke(zaehne, z) && nachbarn(z).every((n) => ['', 'k'].includes(befundVon(zaehne[n])))
 }
 
 let zaehler = 0

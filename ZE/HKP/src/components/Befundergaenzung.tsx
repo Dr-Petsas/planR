@@ -5,7 +5,7 @@ import { REPARATUR_ARTEN, reparaturArt } from '../engine/reparaturen'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
 import { neueId } from '../format'
 import { geloescht, Tonne, wiederEinfuegen } from '../rueckgaengig'
-import { ABUTMENTS, implantatZaehne } from '../engine/implantat'
+import { ABUTMENTS, implantatZaehne, supraEinzelzahnluecke } from '../engine/implantat'
 import { ABFORMUNG_ARTEN, LOEFFEL, PROTHESE_ARTEN, implantatAbformung } from '../engine/abformung'
 import { implantatsystem } from '../data/implantatsysteme'
 import { ImplantatFelder } from './ImplantatAngaben'
@@ -109,6 +109,10 @@ export function Befundergaenzung({ plan, setPlan, onAbformung }: Props & { onAbf
   const spaeter = plan.positionen.filter((p) => p.nachtraeglich && !p.auto)
   const anzahl = k.stiftKonfektioniert.length + k.stiftGegossen.length + k.stiftAdhaesiv.length + k.disparallel.length
     + [k.metallbasisOK, k.metallbasisUK, k.stuetzstift, k.atrophieOK, k.atrophieUK].filter(Boolean).length + reps.length + spaeter.length
+    + (k.supraRegel?.length ?? 0)
+  /** Befund 7.1: erneuerungsbedürftige Implantatkronen in einer Einzelzahnlücke – plus bereits gesetzte */
+  const supraRegel = k.supraRegel ?? []
+  const supraKandidaten = ALLE_ZAEHNE.filter((z) => supraEinzelzahnluecke(plan.zaehne, z) || supraRegel.includes(z))
   const imp = implantatZaehne(plan.zaehne)
   const rel = relevanzErmitteln(plan.zaehne)
   /** Kiefer, für die eine Kieferangabe abgefragt wird – passende Kiefer plus bereits gesetzte */
@@ -145,6 +149,7 @@ export function Befundergaenzung({ plan, setPlan, onAbformung }: Props & { onAbf
     (k.metallbasisOK || k.metallbasisUK) && `4.5: ${[k.metallbasisOK && 'OK', k.metallbasisUK && 'UK'].filter(Boolean).join(', ')}`,
     k.stuetzstift && '4.9',
     (k.atrophieOK || k.atrophieUK) && `7.6: ${[k.atrophieOK && 'OK', k.atrophieUK && 'UK'].filter(Boolean).join(', ')}`,
+    supraRegel.length && `7.1 Regelversorgung: ${supraRegel.join(', ')}`,
     ...reps.map((r) => `${r.art.replace(/-.*/, '')}${r.gebiet ? `: ${r.gebiet}` : ''}`),
     ...spaeter.map((p) => `${p.ebene} ${p.nr} (${p.zahn})`),
     imp.length && `Implantat ${imp.join(', ')}: ${[
@@ -226,6 +231,19 @@ export function Befundergaenzung({ plan, setPlan, onAbformung }: Props & { onAbf
           {metallKiefer.length > 0 && <div className={passtNicht(rel.deckprothese.length > 0).trim()}>{kieferZeile('4.5', 'Metallbasis', 'Metallbasis notwendig (Total-/Deckprothese)', kieferSchalter(metallKiefer, 'metallbasisOK', 'metallbasisUK'))}</div>}
           {atrophieKiefer.length > 0 && <div className={passtNicht(rel.zahnlos.length > 0).trim()}>{kieferZeile('7.6', 'Atrophie zahnlos', 'Atrophierter zahnloser Kiefer (Nr. 36)', kieferSchalter(atrophieKiefer, 'atrophieOK', 'atrophieUK'))}</div>}
           {zeigeStuetzstift && <div className={passtNicht(rel.prothese.length > 0).trim()}>{kieferZeile('4.9', 'Stützstiftregistrierung', 'Stützstiftregistrierung bei schwieriger Kieferrelation', schalter('stuetzstift', 'ja'))}</div>}
+        </div>
+        )}
+        {supraKandidaten.length > 0 && (
+        <div className="be-karte">
+          <h4 title="Die Erneuerung einer Suprakonstruktion ist andersartig – außer im Ausnahmefall Nr. 36 ZE-Richtlinie. Wirkt nach „HKP berechnen“.">Suprakonstruktion</h4>
+          {kieferZeile('7.1', 'Regelversorgung (Nr. 36 a)',
+            'Ausnahmefall Nr. 36 a) ZE-Richtlinie – zahnbegrenzte Einzelzahnlücke, keine parodontale Behandlungsbedürftigkeit, Nachbarzähne kariesfrei und nicht überkronungsbedürftig bzw. überkront. Die Implantatkrone ist dann Regelversorgung (Zeile R, BEMA 20 i und 19 i) statt andersartig.',
+            <>{supraKandidaten.map((z) => (
+              <button
+                key={z} className={`be-schalter${supraRegel.includes(z) ? ' aktiv' : ''}`} aria-pressed={supraRegel.includes(z)}
+                onClick={() => setK('supraRegel', supraRegel.includes(z) ? supraRegel.filter((x) => x !== z) : [...supraRegel, z])}
+              >{z}</button>
+            ))}</>)}
         </div>
         )}
         </div>

@@ -195,6 +195,12 @@ export interface KlinischeAngaben {
   /** 7.6: atrophierter zahnloser Kiefer (Ausnahmefall Nr. 36 ZE-Richtlinie) */
   atrophieOK: boolean
   atrophieUK: boolean
+  /**
+   * 7.1: Zähne, deren erneuerte Suprakonstruktion Regelversorgung ist (Ausnahmefall Nr. 36 a ZE-Richtlinie:
+   * zahnbegrenzte Einzelzahnlücke, keine parodontale Behandlungsbedürftigkeit, Nachbarzähne kariesfrei,
+   * nicht überkronungsbedürftig bzw. überkront)
+   */
+  supraRegel?: string[]
 }
 
 /** Wiederherstellung / Erweiterung (Befundklasse 6, 7.3, 7.4, 7.7) */

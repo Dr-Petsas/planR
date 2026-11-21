@@ -107,17 +107,27 @@ const SUPRA_PROTHESE = new Set(['sew', 'sow', 'stw'])
 
 /**
  * Zähne, an denen eine Suprakonstruktion erneuert wird (Befunde 7.1, 7.2, 7.5) – dieselbe Regel wie
- * supraErneuerung in der HKP-Engine. Ausgenommen: Ausnahmefall Nr. 36 ZE-Richtlinie mit Befund 7.6
- * (atrophierter zahnloser Kiefer) und Pläne, deren Versorgungsart von Hand auf Regel- oder gleichartige
- * Versorgung gesetzt ist (Ausnahmefall Nr. 36 a, Einzelzahnlücke).
+ * supraErneuerung in der HKP-Engine. Ausgenommen: die Ausnahmefälle Nr. 36 ZE-Richtlinie – Befund 7.6
+ * (atrophierter zahnloser Kiefer) und die im Planer gesetzte Einzelzahnlücke (klinisch.supraRegel, Befund 7.1:
+ * Nachbarzähne ohne Befund oder mit intakter Krone) – sowie Pläne, deren Versorgungsart von Hand auf Regel-
+ * oder gleichartige Versorgung gesetzt ist.
  */
 export function supraErneuerung(plan: Obj): string[] {
   if (plan.versorgungsart === 'regel' || plan.versorgungsart === 'gleichartig') return []
   const klinisch = (plan.klinisch ?? {}) as Obj
-  return Object.entries((plan.zaehne ?? {}) as Record<string, Obj>).filter(([z, v]) => {
+  const zaehne = (plan.zaehne ?? {}) as Record<string, Obj>
+  const befund = (z: string | undefined) => (z === undefined ? undefined : String(zaehne[z]?.B ?? '').trim().toLowerCase())
+  const gesetzt = new Set(Array.isArray(klinisch.supraRegel) ? klinisch.supraRegel.map(String) : [])
+  const regelFall = (z: string) => {
+    if (!gesetzt.has(z) || befund(z) !== 'skw') return false
+    const reihe = Object.values(KIEFER).find((k) => k.includes(z)) ?? []
+    const i = reihe.indexOf(z)
+    return [reihe[i - 1], reihe[i + 1]].every((n) => ['', 'k'].includes(befund(n) ?? '-'))
+  }
+  return Object.entries(zaehne).filter(([z, v]) => {
     if (!(String(v.TP ?? '').trim() || String(v.R ?? '').trim()).toUpperCase().startsWith('S')) return false
     const b = String(v.B ?? '').trim().toLowerCase()
-    if (SUPRA_FESTSITZEND.has(b)) return true
+    if (SUPRA_FESTSITZEND.has(b)) return !regelFall(z)
     return SUPRA_PROTHESE.has(b) && !(z[0] === '1' || z[0] === '2' ? klinisch.atrophieOK : klinisch.atrophieUK)
   }).map(([z]) => z)
 }

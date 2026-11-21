@@ -171,6 +171,21 @@ describe('PVS-Export: HKP-Daten', () => {
     expect(supraErneuerung({ zaehne: { 36: { B: 'skw', R: '', TP: '' }, 12: { B: 'f', R: 'B', TP: 'SKM' } } })).toEqual([])
   })
 
+  it('Befund 7.1 im Ausnahmefall Nr. 36 a (klinisch.supraRegel): Implantatkrone bleibt in Zeile R, Plan nicht andersartig', () => {
+    const ergebnis = { versorgungsart: 'gleichartig', summen: {}, befunde: [{ nr: '7.1' }], positionen: [{ id: 'b', ebene: 'BEMA', nr: '20b', anzahl: 1, zahn: '21' }] }
+    const zaehne = { 21: { B: 'skw', R: 'SKV', TP: '' }, 22: { B: 'k', R: '', TP: '' }, 36: { B: 'skw', R: 'SK', TP: '' } }
+    expect(supraErneuerung({ zaehne, klinisch: { supraRegel: ['21'] } })).toEqual(['36'])
+    const d = JSON.parse(hkpFuerPvs({ zaehne: { 21: zaehne['21'], 22: zaehne['22'] }, klinisch: { supraRegel: ['21'] } }, ergebnis))
+    expect(d.zaehne['21']).toMatchObject({ B: 'skw', R: 'SKV', TP: '' })
+    expect(d.ergebnis.versorgungsart).toBe('gleichartig')
+    // Markierung ohne Voraussetzungen: überkronungsbedürftiger Nachbar, Nachbar-Implantat, kein skw
+    expect(supraErneuerung({ zaehne: { 21: zaehne['21'], 22: { B: 'kw', R: 'KV', TP: '' } }, klinisch: { supraRegel: ['21'] } })).toEqual(['21'])
+    expect(supraErneuerung({ zaehne: { 24: { B: 'skw', R: 'SKV', TP: '' }, 25: { B: 'skw', R: 'SK', TP: '' } }, klinisch: { supraRegel: ['24', '25'] } })).toEqual(['24', '25'])
+    expect(supraErneuerung({ zaehne: { 25: { B: 'sbw', R: 'SBV', TP: '' } }, klinisch: { supraRegel: ['25'] } })).toEqual(['25'])
+    // Endständiger Zahn (kein distaler Nachbar) ist keine zahnbegrenzte Lücke
+    expect(supraErneuerung({ zaehne: { 18: { B: 'skw', R: 'SK', TP: '' } }, klinisch: { supraRegel: ['18'] } })).toEqual(['18'])
+  })
+
   it('Zeile TP: Implantat statt Regelbrücke lässt die Anker leer, Regelbrücke und Prothese bleiben', () => {
     const implantat = planungJeZahn(
       { 35: { R: 'K' }, 36: { B: 'f', R: 'B', TP: 'SK' }, 37: { R: 'K' } },

@@ -1265,6 +1265,65 @@ describe('Therapieplanung nach den Berechnungsbeispielen des Kompendiums', () =>
     expect(supraErneuerung(planen({ 16: 'ww', 12: 'f' }, { 12: 'SKM' }).plan)).toEqual([])
   })
 
+  it('Befund 7.1 im Ausnahmefall Nr. 36 a: Implantatkrone als Regelversorgung nach BEMA 20/19 (Kompendium 9.5.2)', () => {
+    const mit = (befund: Record<string, string>, supraRegel: string[], tp: Record<string, string> = {}) => {
+      const p = planMit(befund, tp)
+      p.klinisch.supraRegel = supraRegel
+      const r = therapieAnwenden(regelversorgungErmitteln(p.zaehne, regelOptionen(p)), p.zaehne, p)
+      return { r, plan: regelUebernehmen(p, r) }
+    }
+
+    // Verblendbereich: vestibulär verblendete Krone, 20b + 19, Festzuschuss 7.1 + 1.3
+    const front = mit({ 21: 'skw', 22: 'k' }, ['21'])
+    expect(front.plan.zaehne['21'].R).toBe('SKV')
+    expect(nrs(front.r.befunde)).toEqual(['1.3', '7.1'])
+    expect(leist(front.r, 'BEMA')).toEqual(['19 21', '20b 21', '7b'])
+    expect(leist(front.r, 'BEL')).toEqual(expect.arrayContaining(['1024 21', '1620 21', '0010', '0051 OK', '0120', '9700']))
+    expect(leist(front.r, 'GOZ').some((x) => x.startsWith('2200'))).toBe(false)
+    expect(leist(front.r, 'BEB').some((x) => /^(2101|2121|2611) /.test(x))).toBe(false)
+    expect(front.r.hinweise.some((h) => h.startsWith('Suprakonstruktion 21: Ausnahmefall Nr. 36 a)'))).toBe(true)
+    expect(supraErneuerung(front.plan)).toEqual([])
+    const e = berechnen(front.plan, LISTEN)
+    expect(e.versorgungsart).toBe('gleichartig')
+    expect(e.direktabrechnung).toBe(false)
+    expect(e.hinweise.some((h) => h.stufe === 'fehler')).toBe(false)
+
+    // Seitenzahn: Vollkrone, 20a + 19, nur 7.1
+    const seite = mit({ 36: 'skw' }, ['36'])
+    expect(seite.plan.zaehne['36'].R).toBe('SK')
+    expect(nrs(seite.r.befunde)).toEqual(['7.1'])
+    expect(leist(seite.r, 'BEMA')).toEqual(['19 36', '20a 36', '7b'])
+    expect(leist(seite.r, 'BEL')).toEqual(expect.arrayContaining(['1021 36']))
+
+    // Vollkeramik im Ausnahmefall: GOZ 2200, BEMA 19 bleibt, gleichartig (Kompendium: GOZ 2200 + 19 i)
+    const keramik = mit({ 21: 'skw' }, ['21'], { 21: 'SKM' })
+    expect(leist(keramik.r, 'BEMA')).toEqual(['19 21', '7b'])
+    expect(leist(keramik.r, 'GOZ')).toEqual(expect.arrayContaining(['2200 21']))
+    expect(leist(keramik.r, 'GOZ').some((x) => x.startsWith('2270'))).toBe(false)
+    expect(leist(keramik.r, 'BEB')).toEqual(expect.arrayContaining(['2281 21', '2612 21']))
+    expect(supraErneuerung(keramik.plan)).toEqual([])
+    expect(berechnen(keramik.plan, LISTEN).versorgungsart).toBe('gleichartig')
+
+    // Ohne Markierung bleibt alles wie bisher: andersartig nach GOZ/BEB
+    const ohne = mit({ 21: 'skw' }, [])
+    expect(leist(ohne.r, 'BEMA')).toEqual(['7b'])
+    expect(leist(ohne.r, 'GOZ')).toEqual(expect.arrayContaining(['2200 21']))
+    expect(berechnen(ohne.plan, LISTEN).versorgungsart).toBe('andersartig')
+
+    // Markierung ohne Voraussetzungen wirkt nicht: überkronungsbedürftiger Nachbar, keine Einzelzahnlücke, Brückenglied
+    const faelle: [Record<string, string>, string][] = [[{ 21: 'skw', 22: 'kw' }, '21'], [{ 24: 'skw', 25: 'skw' }, '24'], [{ 24: 'skw', 25: 'sbw', 26: 'skw' }, '25']]
+    for (const [befund, zahn] of faelle) {
+      const x = mit(befund, [zahn])
+      expect(leist(x.r, 'BEMA').filter((l) => l.startsWith('20') || l.startsWith('19'))).toEqual(befund['22'] === 'kw' ? ['19 22', '20b 22'] : [])
+      expect(x.r.hinweise.some((h) => h.startsWith(`Zahn ${zahn}: als Ausnahmefall Nr. 36 a) ZE-Richtlinie markiert`))).toBe(true)
+      expect(supraErneuerung(x.plan)).toContain(zahn)
+      expect(berechnen(x.plan, LISTEN).versorgungsart).toBe('andersartig')
+    }
+    const krone = mit({ 16: 'ww' }, ['16'])
+    expect(leist(krone.r, 'BEMA')).toEqual(['19 16', '20a 16', '7b'])
+    expect(krone.r.hinweise.some((h) => h.startsWith('Zahn 16: als Ausnahmefall Nr. 36 a) ZE-Richtlinie markiert'))).toBe(true)
+  })
+
   it('zaehneVon: Bereiche, Listen und Kiefer', () => {
     expect(zaehneVon('15-13')).toEqual(['15', '14', '13'])
     expect(zaehneVon('11-21')).toEqual(['11', '21'])

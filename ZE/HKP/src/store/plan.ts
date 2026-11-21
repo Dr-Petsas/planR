@@ -24,7 +24,7 @@ export function leererPlan(): HkpPlan {
     },
     klinisch: {
       stiftKonfektioniert: [], stiftGegossen: [], stiftAdhaesiv: [], stiftNachtraeglich: [], disparallel: [],
-      metallbasisOK: false, metallbasisUK: false, stuetzstift: false, atrophieOK: false, atrophieUK: false,
+      metallbasisOK: false, metallbasisUK: false, stuetzstift: false, atrophieOK: false, atrophieUK: false, supraRegel: [],
     },
     reparaturen: [],
     abformung: '',

@@ -1,6 +1,6 @@
 import type { Ebene, FestzuschussBefund, HkpPlan, KlinischeAngaben, Position, Reparatur, ZahnZeilen } from '../types'
 import { reparaturenAnwenden } from './reparaturen'
-import { implantatPositionen } from './implantat'
+import { implantatPositionen, supraAlsRegelversorgung } from './implantat'
 import { abformungAnwenden, implantatAbformung } from './abformung'
 import { TP_ZUORDNUNG, therapieplanAnwenden } from './therapie'
 import {
@@ -200,6 +200,8 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
   const teleskope = new Set<string>()
   const verblend27: string[] = []
   let festsitzend = false
+  /** erneuerte Implantatkronen, die Regelversorgung sind (Ausnahmefall Nr. 36 a ZE-Richtlinie) */
+  const supraRegel = new Set<string>()
   const prothesenKiefer: string[] = []
 
   const teleskopAnker = (z: string, nr: '3.2' | '4.6') => {
@@ -380,10 +382,23 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
       const verblend = imVerblendbereich(z)
       R[z] = (k === 'skw' ? 'SK' : 'SB') + (verblend ? 'V' : '')
       if (k === 'skw' && verblend) befunde.push(befund('1.3', z))
+      if (supraAlsRegelversorgung(zaehne, optionen.klinisch, z)) {
+        // Ausnahmefall Nr. 36 a) ZE-Richtlinie: die Implantatkrone ist Regelversorgung (Kompendium 9.5.2: BEMA 20 i und 19 i)
+        supraRegel.add(z)
+        festsitzend = true
+        positionen.push(pos('BEMA', verblend ? '20b' : '20a', z), pos('BEMA', '19', z))
+        continue
+      }
       const zuo = TP_ZUORDNUNG[R[z]]
       if (zuo.goz) positionen.push(pos('GOZ', zuo.goz, z))
       for (const b of zuo.beb) positionen.push(pos('BEB', b, z))
     }
+    const regelFall = reihe.filter((z) => supraRegel.has(z))
+    if (regelFall.length)
+      hinweise.push(`Suprakonstruktion ${regelFall.join(', ')}: Ausnahmefall Nr. 36 a) ZE-Richtlinie (zahnbegrenzte Einzelzahnlücke) – die Krone ist Regelversorgung und steht in Zeile R, berechnet nach BEMA ${[...new Set(regelFall.map((z) => (imVerblendbereich(z) ? '20b' : '20a')))].sort().join('/')} und 19. In der Abrechnung tragen beide Nummern das Kennzeichen i (20 i, 19 i). Implantataufbau, Abformung am Implantat und Implantatteile gehören nicht zur Regelversorgung (Nr. 38 ZE-Richtlinie): Sie bleiben privat im Plan, rechnerisch ist er damit gleichartig.`)
+    const abgelehnt = (optionen.klinisch?.supraRegel ?? []).filter((z) => reihe.includes(z) && !supraRegel.has(z))
+    if (abgelehnt.length)
+      hinweise.push(`Zahn ${abgelehnt.join(', ')}: als Ausnahmefall Nr. 36 a) ZE-Richtlinie markiert, die Voraussetzungen liegen laut Zahnschema aber nicht vor (erneuerungsbedürftige Implantatkrone skw in einer Einzelzahnlücke, Nachbarzähne ohne Befund oder mit intakter Krone) – die Markierung bleibt ohne Wirkung.`)
     const prothese = reihe.filter((z) => IMPLANTAT_PROTHESE.has(kuerzel(zaehne[z])))
     if (prothese.length) {
       befunde.push(befund('7.5', kiefer))
@@ -406,7 +421,7 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
       }
       hinweise.push(`${kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'}: Implantatgetragene Prothesenkonstruktion (Befund 7.5) – Leistungen nach GOZ/BEB vorgeschlagen, bitte prüfen. Natürliche Pfeiler (tw) werden gesondert geplant.`)
     }
-    if (reihe.some((z) => IMPLANTAT_ERNEUERUNG.has(kuerzel(zaehne[z]))))
+    if (reihe.some((z) => IMPLANTAT_ERNEUERUNG.has(kuerzel(zaehne[z])) && !supraRegel.has(z)))
       hinweise.push(`${kiefer === 'OK' ? 'Oberkiefer' : 'Unterkiefer'}: Suprakonstruktionen werden nach GOZ/BEB abgerechnet; der Festzuschuss richtet sich nach Befund 7.1/7.2. Implantologische Leistungen gehören nicht in den HKP.`)
   }
 
@@ -448,10 +463,12 @@ export function regelversorgungErmitteln(zaehne: Record<string, ZahnZeilen>, opt
     if (r === 'PK') positionen.push(pos('BEL', '1022', z))
     if (r === 'B') positionen.push(pos('BEL', '1100', z))
     if (r === 'BV') positionen.push(pos('BEL', '1100', z), pos('BEL', '1620', z))
+    if (supraRegel.has(z)) positionen.push(...(r === 'SKV' ? [pos('BEL', '1024', z), pos('BEL', '1620', z)] : [pos('BEL', '1021', z)]))
   }
-  const einheiten = Object.values(R).filter((r) => /^(K|KV|KH|KVH|PK|B|BV)$/.test(r)).length
+  const einheit = (z: string) => /^(K|KV|KH|KVH|PK|B|BV)$/.test(R[z]) || supraRegel.has(z)
+  const einheiten = Object.keys(R).filter(einheit).length
   if (festsitzend && einheiten) {
-    const kiefer = new Set(Object.keys(R).filter((z) => /^(K|KV|KH|KVH|PK|B|BV)$/.test(R[z])).map((z) => (z[0] <= '2' ? 'OK' : 'UK')))
+    const kiefer = new Set(Object.keys(R).filter(einheit).map((z) => (z[0] <= '2' ? 'OK' : 'UK')))
     positionen.push(pos('BEL', '0010', '', 1), pos('BEL', '0051', [...kiefer].join(','), kiefer.size), pos('BEL', '0120', ''))
     positionen.push(pos('BEL', '9700', '', einheiten))
   }

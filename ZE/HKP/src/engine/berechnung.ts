@@ -6,7 +6,7 @@ import { zusatzleistungen } from './zusatzleistungen'
 import { andersartig } from './therapie'
 import { ALLE_ZAEHNE, kieferVon } from './zahnschema'
 import { standardBegruendung } from './begruendung'
-import { implantatZaehne } from './implantat'
+import { implantatZaehne, supraAlsRegelversorgung } from './implantat'
 import { eigenFinden, type EigenPosition, type FindenKontext } from './eigenlabor'
 import { mitDigital } from './digital'
 import { kronenEinheiten, materialErmitteln, werkstoffVon } from './material'
@@ -232,8 +232,9 @@ const SUPRA_PROTHESE = new Set(['sew', 'sow', 'stw'])
 
 /**
  * Zähne, an denen eine Suprakonstruktion erneuert wird (Befunde 7.1, 7.2, 7.5). Das ist andersartig: Auf dem HKP
- * bleibt Zeile R leer, die Suprakonstruktion steht in Zeile TP (BMV-Z Anlage 14d). Ausgenommen ist der Ausnahmefall
- * Nr. 36 ZE-Richtlinie mit Befund 7.6 (atrophierter zahnloser Kiefer): dort ist die Suprakonstruktion Regelversorgung.
+ * bleibt Zeile R leer, die Suprakonstruktion steht in Zeile TP (BMV-Z Anlage 14d). Ausgenommen sind die Ausnahmefälle
+ * Nr. 36 ZE-Richtlinie: Befund 7.6 (atrophierter zahnloser Kiefer) und die von der Praxis gesetzte Einzelzahnlücke
+ * (klinisch.supraRegel, Befund 7.1) – dort ist die Suprakonstruktion Regelversorgung.
  * Im Plan selbst trägt Zeile R das Kürzel weiter – als Rechengrundlage für Festzuschuss und Leistungen.
  */
 export function supraErneuerung(plan: HkpPlan): string[] {
@@ -241,7 +242,7 @@ export function supraErneuerung(plan: HkpPlan): string[] {
     const v = plan.zaehne[z]
     if (!v || !(v.TP.trim() || v.R.trim()).toUpperCase().startsWith('S')) return false
     const b = v.B.trim().toLowerCase()
-    if (SUPRA_FESTSITZEND.has(b)) return true
+    if (SUPRA_FESTSITZEND.has(b)) return !supraAlsRegelversorgung(plan.zaehne, plan.klinisch, z)
     return SUPRA_PROTHESE.has(b) && !(kieferVon(z) === 'OK' ? plan.klinisch?.atrophieOK : plan.klinisch?.atrophieUK)
   })
 }
