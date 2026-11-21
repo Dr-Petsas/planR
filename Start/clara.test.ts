@@ -30,6 +30,20 @@ describe('Assistentin nach Stufe der Praxis', () => {
     expect(t.hinweis).toBe('Mia kennt in PlanR Patientensuche und Heil- und Kostenpläne. Termine, Telefon, Post und alles Weitere gibt es mit ')
     expect(t.mas).toBe(true)
   })
+  it('ohne Verbund ändert der dritte Parameter nichts', () => {
+    expect(claraTexte('Eva', true, false)).toEqual(claraTexte('Eva', true))
+    expect(claraTexte('Mia', false, false)).toEqual(claraTexte('Mia', false))
+  })
+  it('Gast-Praxis im Verbund: Assistentin der Haupt-Praxis, Name wird dort geändert, kein Verweis auf MAS', () => {
+    for (const voll of [true, false]) {
+      const t = claraTexte('Eva', voll, true)
+      expect(t.nameFest).toBe('Den Namen ändert die Haupt-Praxis.')
+      expect(t.hinweis).toBe('Im Praxis-Verbund nutzen Sie Eva, die Assistentin der Haupt-Praxis.')
+      expect(t.mas).toBe(false)
+      expect(`${t.unter} ${t.hinweis}`).not.toContain('Pickadoc')
+    }
+    expect(claraTexte('Eva', false, true).titel).toBe('Eva – Ihre HKP-Assistentin')
+  })
 })
 
 // Gleiche Regel wie MAS (backend/src/hkp/planrClara.js rufnameSaeubern): der Name ist zugleich Weckwort.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { hauptpraxis, mandantVon, praxenVon, registerVon, type Zugaenge } from './anmeldung.ts'
 import {
-  bridgeMandanten, codeFinden, codeSetzen, codeVerbrauchen, eigenerMandant, eigenesRegister, entkoppeln, gaesteVon, koppeln,
+  bridgeMandanten, claraImVerbund, codeFinden, codeSetzen, codeVerbrauchen, eigenerMandant, eigenesRegister, entkoppeln, gaesteVon, koppeln,
   koppelnPruefen, neuerVerbundCode, verbundVon,
 } from './verbund.ts'
 
@@ -94,5 +94,24 @@ describe('Praxis-Verbund', () => {
     expect(codeFinden(liste, code, jetzt)).toBeNull()
     const c = codeFinden(liste, zweiter, jetzt)!
     expect(codeFinden(codeVerbrauchen(liste, c, jetzt), zweiter, jetzt)).toBeNull()
+  })
+})
+
+// Eine Clara je Praxis: im Verbund ist es die der Haupt-Praxis. MAS meldet sie, PlanR prüft gegen den eigenen Stand.
+describe('Clara im Verbund', () => {
+  const gemeldet = { haupt: 'petsas', stufe: 'voll' as const }
+  it('Gast-Praxis: die gemeldete Clara der Haupt-Praxis gilt', () => {
+    expect(claraImVerbund(koppelSolo(), 'solo', gemeldet)).toEqual(gemeldet)
+  })
+  it('ohne Verbund in PlanR zählt die Meldung nicht', () => {
+    expect(claraImVerbund(stand(), 'solo', gemeldet)).toBeNull()
+  })
+  it('andere Haupt-Praxis als in PlanR: zählt nicht', () => {
+    expect(claraImVerbund(koppelSolo(), 'solo', { haupt: 'fremd', stufe: 'voll' as const })).toBeNull()
+  })
+  it('Haupt-Praxis selbst und Praxen ohne Meldung bleiben bei sich', () => {
+    expect(claraImVerbund(koppelSolo(), 'petsas', gemeldet)).toBeNull()
+    expect(claraImVerbund(koppelSolo(), 'solo', undefined)).toBeNull()
+    expect(claraImVerbund(koppelSolo(), 'solo', null)).toBeNull()
   })
 })

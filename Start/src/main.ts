@@ -327,7 +327,7 @@ function terminZelle(p: PlanKarte): string {
   const taste = (klasse: string, text: string) =>
     `<button type="button" class="${klasse}" data-termin="${esc(p.modul)}" data-nummer="${esc(p.nummer)}">${text}</button>`
   if (p.termin && terminKurz(p.termin)) return taste('termin-datum', esc(terminKurz(p.termin)))
-  return taste(kalenderErlaubt(ich.abo, ich.clara) ? 'termin-maske' : 'termin-aus', 'Termin')
+  return taste(kalenderErlaubt(ich.abo, ich.claraEigen ?? ich.clara) ? 'termin-maske' : 'termin-aus', 'Termin')
 }
 
 function gewaehltesMotiv(b: TerminBlick): TerminMotiv | undefined {
@@ -2105,7 +2105,7 @@ async function terminOeffnen(modul: string, nummer: string) {
   if (!p) return
   const lauf = ++stammLauf
   terminBlick = {
-    modul, nummer, name: p.patient || 'Ohne Namen', laden: true, kalender: kalenderErlaubt(ich.abo, ich.clara),
+    modul, nummer, name: p.patient || 'Ohne Namen', laden: true, kalender: kalenderErlaubt(ich.abo, ich.claraEigen ?? ich.clara),
     telefon: '', email: '', vorname: '', nachname: '', anrede: '', behandler: [], motive: [],
     grund: 'besprechung', dauer: 30, calendarId: '', motivId: '', slots: [], minuten: 30, slotsLaden: false, fehler: '', buchen: null,
   }

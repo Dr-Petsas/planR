@@ -7,14 +7,17 @@ import './einrichtung.css'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
-export interface ClaraStand { ok?: boolean; stufe?: string; zugang?: string; umbenennbar?: boolean; assistantName?: string; standardName?: string; error?: string; message?: string }
+export interface ClaraStand { ok?: boolean; stufe?: string; zugang?: string; umbenennbar?: boolean; verbund?: boolean; assistantName?: string; standardName?: string; error?: string; message?: string }
 interface Kopplung { ok?: boolean; url?: string; qrDataUrl?: string; code?: string; expiresAtMs?: number; error?: string }
 /** PlanR meldet Fehler als meldung, MAS reicht message durch. */
 type Fehlertext = { meldung?: string; message?: string }
 
-/** Wortlaut je Stufe der Praxis: voll = dieselbe Assistentin wie in Pickadoc, sonst die HKP-Assistentin. */
-export function claraTexte(name: string, voll: boolean) {
-  return voll ? {
+/**
+ * Wortlaut je Stufe der Praxis: voll = dieselbe Assistentin wie in Pickadoc, sonst die HKP-Assistentin.
+ * verbund = Gast-Praxis im Praxis-Verbund: es ist die Assistentin der Haupt-Praxis, Name und Buchung liegen dort.
+ */
+export function claraTexte(name: string, voll: boolean, verbund = false) {
+  const t = voll ? {
     knopf: 'Assistentin: Handy koppeln',
     titel: `${name} – Ihre Assistentin`,
     unter: `Dieselbe ${name} wie in Pickadoc. Für Pläne: Patient nennen, Befund sagen, ${name} rechnet.`,
@@ -28,6 +31,14 @@ export function claraTexte(name: string, voll: boolean) {
     nameFest: 'Den Namen ändert der Praxis-Admin.',
     hinweis: `${name} kennt in PlanR Patientensuche und Heil- und Kostenpläne. Termine, Telefon, Post und alles Weitere gibt es mit `,
     mas: true,
+  }
+  if (!verbund) return t
+  return {
+    ...t,
+    unter: voll ? `Die Assistentin Ihrer Haupt-Praxis. Für Pläne: Patient nennen, Befund sagen, ${name} rechnet.` : t.unter,
+    nameFest: 'Den Namen ändert die Haupt-Praxis.',
+    hinweis: `Im Praxis-Verbund nutzen Sie ${name}, die Assistentin der Haupt-Praxis.`,
+    mas: false,
   }
 }
 
@@ -55,6 +66,7 @@ export function claraOeffnen(o: { admin: boolean; voll?: boolean; stand: ClaraSt
   let meldung = ''
   let laeuft = false
   const voll = o.voll === true || o.stand?.stufe === 'voll'
+  const verbund = o.stand?.verbund === true
 
   const schleier = document.createElement('div')
   schleier.className = 'ein-schleier'
@@ -66,7 +78,7 @@ export function claraOeffnen(o: { admin: boolean; voll?: boolean; stand: ClaraSt
 
   const zeichnen = () => {
     const bis = kopplung?.expiresAtMs ? new Date(kopplung.expiresAtMs).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : ''
-    const t = claraTexte(name, voll)
+    const t = claraTexte(name, voll, verbund)
     schleier.innerHTML = `
       <div class="ein-karte" role="dialog" aria-modal="true" aria-labelledby="cl-titel">
         <div class="ein-kopf">
@@ -75,7 +87,7 @@ export function claraOeffnen(o: { admin: boolean; voll?: boolean; stand: ClaraSt
         </div>
         <div class="ein-inhalt">
           <h3>Name</h3>
-          ${o.admin && !voll ? `
+          ${o.admin && !voll && !verbund ? `
             <form class="cl-name" data-name>
               <input name="n" value="${esc(name)}" maxlength="20" autocomplete="off" aria-label="Name der Assistentin" required>
               <button type="submit" class="neu-knopf"${laeuft ? ' disabled' : ''}>Speichern</button>

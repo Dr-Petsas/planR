@@ -12,6 +12,14 @@ import {
 
 export const verbundVon = (z: Zugaenge, clientId: string): VerbundInfo | undefined => z.mandanten[clientId]?.verbund
 
+/**
+ * Clara im Verbund: MAS meldet, dass für diese Praxis die Clara der Haupt-Praxis gilt.
+ * Zählt nur, wenn PlanR dieselbe Haupt-Praxis kennt – sonst bleibt die Praxis bei ihrer eigenen.
+ */
+export function claraImVerbund<T extends { haupt: string }>(z: Zugaenge, clientId: string, gemeldet: T | null | undefined): T | null {
+  return gemeldet && verbundVon(z, clientId)?.haupt === gemeldet.haupt ? gemeldet : null
+}
+
 export const gaesteVon = (z: Zugaenge, haupt: string): [string, VerbundInfo][] =>
   Object.entries(z.mandanten).flatMap(([id, e]) => (e.verbund?.haupt === haupt ? [[id, e.verbund] as [string, VerbundInfo]] : []))
 
