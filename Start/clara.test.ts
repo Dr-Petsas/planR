@@ -34,15 +34,19 @@ describe('Assistentin nach Stufe der Praxis', () => {
     expect(claraTexte('Eva', true, false)).toEqual(claraTexte('Eva', true))
     expect(claraTexte('Mia', false, false)).toEqual(claraTexte('Mia', false))
   })
-  it('Gast-Praxis im Verbund: Assistentin der Haupt-Praxis, Name wird dort geändert, kein Verweis auf MAS', () => {
-    for (const voll of [true, false]) {
-      const t = claraTexte('Eva', voll, true)
-      expect(t.nameFest).toBe('Den Namen ändert die Haupt-Praxis.')
-      expect(t.hinweis).toBe('Im Praxis-Verbund nutzen Sie Eva, die Assistentin der Haupt-Praxis.')
+  it('Assistentin aus dem gekoppelten Konto: MAS-Konto bzw. Standalone-Konto, Name wird dort geändert, kein Upgrade-Verweis', () => {
+    const mas = claraTexte('Eva', true, true)
+    expect(mas.nameFest).toBe('Den Namen legt das gekoppelte MAS-Konto fest.')
+    expect(mas.hinweis).toBe('Sie nutzen Eva aus dem gekoppelten MAS-Konto.')
+    expect(mas.unter).toContain('gekoppelten MAS-Konto')
+    const solo = claraTexte('Eva', false, true)
+    expect(solo.nameFest).toBe('Den Namen ändert das gekoppelte Standalone-Konto.')
+    expect(solo.hinweis).toBe('Sie nutzen Eva aus dem gekoppelten Standalone-Konto.')
+    expect(solo.titel).toBe('Eva – Ihre HKP-Assistentin')
+    for (const t of [mas, solo]) {
       expect(t.mas).toBe(false)
-      expect(`${t.unter} ${t.hinweis}`).not.toContain('Pickadoc')
+      expect(`${t.unter} ${t.hinweis} ${t.nameFest}`).not.toMatch(/Pickadoc|Haupt-Praxis|Verbund/)
     }
-    expect(claraTexte('Eva', false, true).titel).toBe('Eva – Ihre HKP-Assistentin')
   })
 })
 

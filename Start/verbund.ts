@@ -13,11 +13,13 @@ import {
 export const verbundVon = (z: Zugaenge, clientId: string): VerbundInfo | undefined => z.mandanten[clientId]?.verbund
 
 /**
- * Clara im Verbund: MAS meldet, dass für diese Praxis die Clara der Haupt-Praxis gilt.
- * Zählt nur, wenn PlanR dieselbe Haupt-Praxis kennt – sonst bleibt die Praxis bei ihrer eigenen.
+ * Clara bei gekoppelten Konten: MAS meldet, wessen Clara für dieses Konto gilt (mit einem MAS-Konto dessen volle
+ * Clara, für beide). Zählt nur, wenn PlanR beide Konten in derselben Kopplung kennt – sonst bleibt das Konto bei seiner eigenen.
  */
-export function claraImVerbund<T extends { haupt: string }>(z: Zugaenge, clientId: string, gemeldet: T | null | undefined): T | null {
-  return gemeldet && verbundVon(z, clientId)?.haupt === gemeldet.haupt ? gemeldet : null
+export function claraImVerbund<T extends { praxis: string }>(z: Zugaenge, clientId: string, gemeldet: T | null | undefined): T | null {
+  if (!gemeldet || !gemeldet.praxis || gemeldet.praxis === clientId) return null
+  const gruppe = (id: string) => verbundVon(z, id)?.haupt ?? id
+  return gruppe(clientId) === gruppe(gemeldet.praxis) ? gemeldet : null
 }
 
 export const gaesteVon = (z: Zugaenge, haupt: string): [string, VerbundInfo][] =>

@@ -14,7 +14,7 @@ type Fehlertext = { meldung?: string; message?: string }
 
 /**
  * Wortlaut je Stufe der Praxis: voll = dieselbe Assistentin wie in Pickadoc, sonst die HKP-Assistentin.
- * verbund = Gast-Praxis im Praxis-Verbund: es ist die Assistentin der Haupt-Praxis, Name und Buchung liegen dort.
+ * verbund = die Assistentin kommt aus einem gekoppelten Konto (voll: MAS-Konto, sonst Standalone-Konto); Name und Buchung liegen dort.
  */
 export function claraTexte(name: string, voll: boolean, verbund = false) {
   const t = voll ? {
@@ -35,9 +35,9 @@ export function claraTexte(name: string, voll: boolean, verbund = false) {
   if (!verbund) return t
   return {
     ...t,
-    unter: voll ? `Die Assistentin Ihrer Haupt-Praxis. Für Pläne: Patient nennen, Befund sagen, ${name} rechnet.` : t.unter,
-    nameFest: 'Den Namen ändert die Haupt-Praxis.',
-    hinweis: `Im Praxis-Verbund nutzen Sie ${name}, die Assistentin der Haupt-Praxis.`,
+    unter: voll ? `Die Assistentin aus dem gekoppelten MAS-Konto. Für Pläne: Patient nennen, Befund sagen, ${name} rechnet.` : t.unter,
+    nameFest: voll ? 'Den Namen legt das gekoppelte MAS-Konto fest.' : 'Den Namen ändert das gekoppelte Standalone-Konto.',
+    hinweis: `Sie nutzen ${name} aus dem gekoppelten ${voll ? 'MAS' : 'Standalone'}-Konto.`,
     mas: false,
   }
 }

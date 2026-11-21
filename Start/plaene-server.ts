@@ -276,7 +276,7 @@ const werInfo = (w: Wer, z: Zugaenge) => ({
   mandant: w.mandant,
   praxen: w.praxen,
   praxisNamen: Object.fromEntries((z.mandanten[w.konto.clientId]?.praxen ?? []).map((p) => [p.nummer, p.name ?? `Praxis ${p.nummer}`])),
-  // Im Praxis-Verbund gilt die Clara der Haupt-Praxis. claraEigen = was die Praxis selbst gebucht hat (Termine, Rechnung).
+  // Gekoppelte Konten: mit einem MAS-Konto gilt dessen volle Clara für beide. claraEigen = was das Konto selbst gebucht hat (Termine, Rechnung).
   ...((b, cv) => (cv ? { clara: cv.stufe, claraEigen: b?.clara ?? 'aus' } : { clara: b?.clara ?? 'aus' }))(
     berechtigungen.get(w.konto.clientId)?.b, claraImVerbund(z, w.konto.clientId, berechtigungen.get(w.konto.clientId)?.b.claraVerbund)),
   abo: ((b) => (b?.mas ? 'mas' : b?.planr ? 'planr' : ''))(berechtigungen.get(w.konto.clientId)?.b),
@@ -544,8 +544,8 @@ async function hkpsAusMas(w: Wer): Promise<PlanKarte[] | null> {
 
 interface Berechtigung {
   erlaubt: boolean; mas: boolean; planr: boolean; clara: 'voll' | 'planr' | 'aus'; doku: boolean
-  /** Praxis-Verbund: die Clara der Haupt-Praxis gilt auch hier. clara bleibt die eigene Buchung. */
-  claraVerbund?: { haupt: string; stufe: 'voll' | 'planr' }
+  /** Gekoppelte Konten: die Clara dieses Kontos (praxis) gilt auch hier. clara bleibt die eigene Buchung. */
+  claraVerbund?: { praxis: string; stufe: 'voll' | 'planr' }
 }
 const berechtigungen = new Map<string, { b: Berechtigung; zeit: number }>()
 
@@ -566,13 +566,18 @@ async function berechtigung(clientId: string): Promise<Berechtigung | null> {
     const cv = d.claraVerbund
     const b: Berechtigung = {
       erlaubt: d.erlaubt === true, mas: d.mas === true, planr: d.planr === true, clara: d.clara === 'voll' || d.clara === 'planr' ? d.clara : 'aus', doku: d.doku === true,
-      ...(cv && typeof cv.haupt === 'string' && cv.haupt && (cv.stufe === 'voll' || cv.stufe === 'planr') ? { claraVerbund: { haupt: cv.haupt, stufe: cv.stufe } } : {}),
+      ...(cv && typeof cv.praxis === 'string' && cv.praxis && (cv.stufe === 'voll' || cv.stufe === 'planr') ? { claraVerbund: { praxis: cv.praxis, stufe: cv.stufe } } : {}),
     }
     berechtigungen.set(clientId, { b, zeit: Date.now() })
     return b
   } catch {
     return alt && Date.now() - alt.zeit < 24 * 3600_000 ? alt.b : null
   }
+}
+/** Nach Koppeln und Entkoppeln: für alle Konten der Kopplung neu bei MAS fragen, wessen Clara gilt. */
+const kopplungVergessen = (z: Zugaenge, ...konten: string[]) => {
+  for (const k of konten) berechtigungen.delete(k)
+  for (const id of Object.keys(z.mandanten)) if (konten.includes(verbundVon(z, id)?.haupt ?? '')) berechtigungen.delete(id)
 }
 const NICHT_GEBUCHT = 'PlanR ist für Ihre Praxis nicht gebucht. Es ist in Pickadoc MAS enthalten oder einzeln unter planr.pickadoc.de buchbar.'
 
@@ -2180,7 +2185,7 @@ async function bridgeSetupEinloesen(req: IncomingMessage, res: ServerResponse) {
 /**
  * HKP-Clara (nur PlanR ohne MAS): GET Stand + Ruf-Name · PUT {assistantName} (Admins) · POST kopplung → QR fürs Handy.
  * Clara-Sitzungen laufen unter der Pickadoc-Praxis des Kontos, daher nicht über w.register.
- * Im Praxis-Verbund entscheidet MAS: die Gast-Praxis bekommt Stand und Kopplung der Haupt-Praxis.
+ * Bei gekoppelten Konten entscheidet MAS, wessen Clara gilt: Stand und Handy-Kopplung kommen von diesem Konto.
  */
 async function claraEndpunkt(req: IncomingMessage, res: ServerResponse, url: string, w: Wer) {
   res.setHeader('Cache-Control', 'no-store')
@@ -2219,7 +2224,7 @@ async function claraText(req: IncomingMessage, res: ServerResponse, w: Wer) {
     nummer: String(roh.nummer ?? '').slice(0, 40),
     modul: String(roh.modul ?? '').slice(0, 20),
   } : undefined
-  // Im Praxis-Verbund schreibt die Gast-Praxis mit der Clara der Haupt-Praxis.
+  // Gekoppelte Konten: geschrieben wird mit der Clara des Kontos, das MAS dafür meldet.
   const verbund = claraImVerbund(await zugaengeLesen(), w.konto.clientId, (await berechtigung(w.konto.clientId))?.claraVerbund)
   const ziel = process.env.CLARA_TEXT_URL?.trim() || 'http://127.0.0.1:8124/zug'
   const schreiben = (zeile: string) => {
@@ -2230,7 +2235,7 @@ async function claraText(req: IncomingMessage, res: ServerResponse, w: Wer) {
     const antwort = await fetch(ziel, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId: verbund?.haupt ?? w.konto.clientId, sitzung, text, plan }),
+      body: JSON.stringify({ clientId: verbund?.praxis ?? w.konto.clientId, sitzung, text, plan }),
       signal: AbortSignal.timeout(120000),
     })
     if (!antwort.ok || !antwort.body) {
@@ -2328,7 +2333,7 @@ async function verbundEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
   if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Praxen koppeln und entkoppeln dürfen nur Praxis-Admins.' })
 
   if (url === '/api/verbund/code' && req.method === 'POST') {
-    if (verbundVon(await zugaengeLesen(), ich)) return json(res, 409, { ok: false, meldung: 'Ihre Praxis ist selbst an eine andere gekoppelt. Den Code erzeugt die Haupt-Praxis.' })
+    if (verbundVon(await zugaengeLesen(), ich)) return json(res, 409, { ok: false, meldung: 'Ihre Praxis ist selbst an eine andere gekoppelt. Den Code erzeugt die andere Praxis.' })
     const code = neuerVerbundCode()
     await exklusiv(async () => jsonSchreiben(VERBUND_CODES, codeSetzen(await codesLesen(), code, ich, w.konto.email)))
     console.log('[planr] Verbund-Code für', ich, 'von', w.konto.email)
@@ -2372,7 +2377,7 @@ async function verbundEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
       await masVerbund(ich, 'DELETE')
       return json(res, 409, { ok: false, meldung: e instanceof Error ? e.message : 'Koppeln hat nicht geklappt.' })
     }
-    berechtigungen.delete(ich) // die Clara der Haupt-Praxis gilt ab sofort
+    kopplungVergessen(await zugaengeLesen(), ich, c.haupt) // wessen Clara gilt, ändert sich ab sofort – für alle Konten der Kopplung
     console.log('[planr] Verbund:', ich, '→', c.haupt, 'von', w.konto.email)
     return json(res, 200, { ok: true })
   }
@@ -2391,7 +2396,7 @@ async function verbundEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
       await masVerbund(gast, 'POST', { haupt: v.haupt, register: registerVon(z, { clientId: gast }) })
       return json(res, 409, { ok: false, meldung: e instanceof Error ? e.message : 'Entkoppeln hat nicht geklappt.' })
     }
-    berechtigungen.delete(gast)
+    kopplungVergessen(z, gast, v.haupt)
     console.log('[planr] Verbund gelöst:', gast, 'von', v.haupt, 'durch', w.konto.email)
     return json(res, 200, { ok: true })
   }

@@ -1,8 +1,8 @@
 import { apiJson } from './api'
 
 /**
- * Praxis-Verbund in den Einstellungen (Praxis-Admin): zwei Pickadoc-Praxen teilen sich Pläne, HKPs, die Bridge
- * und die Sprach-App. Die Haupt-Praxis erzeugt einen Code, die andere gibt ihn ein; entkoppeln geht von beiden Seiten.
+ * „Praxen koppeln“ in den Einstellungen (Praxis-Admin): zwei Konten teilen sich Pläne, HKPs, die Bridge
+ * und die Sprach-App. Ein Konto erzeugt einen Code, das andere gibt ihn ein; entkoppeln geht von beiden Seiten.
  */
 interface Gast { clientId: string; name: string; seit: string; von: string }
 interface Stand { gast: { haupt: string; name: string; seit: string; von: string } | null; gaeste: Gast[] }
@@ -30,8 +30,8 @@ export function verbundBlock(): string {
   const hinweis = '<p class="pvs-info">Gekoppelte Praxen arbeiten in PlanR gemeinsam: dieselben Pläne und HKPs, eine Bridge auf dem Praxisserver und eine Sprach-App fürs Handy. Abgerechnet wird jede Praxis weiter für sich.</p>'
   if (stand.gast) {
     const g = stand.gast
-    return `<fieldset class="katalog"><legend>Praxis-Verbund</legend>
-      <p class="pvs-info">Ihre Praxis ist gekoppelt mit <b>${esc(g.name || 'der Haupt-Praxis')}</b>${g.seit ? ` seit ${esc(datum(g.seit))}` : ''}${g.von ? ` (durch ${esc(g.von)})` : ''}.
+    return `<fieldset class="katalog"><legend>Praxen koppeln</legend>
+      <p class="pvs-info">Ihre Praxis ist gekoppelt mit <b>${esc(g.name || 'einer anderen Praxis')}</b>${g.seit ? ` seit ${esc(datum(g.seit))}` : ''}${g.von ? ` (durch ${esc(g.von)})` : ''}.
         Sie sehen deren Pläne und HKPs und nutzen deren Bridge. Ihre eigenen früheren Pläne ruhen und sind nach dem Entkoppeln wieder da.</p>
       <div class="katalog-fuss"><small>Nach dem Entkoppeln arbeitet Ihre Praxis wieder mit eigener Ablage und eigener Bridge.</small>
         <button type="button" class="import-knopf" data-verbund-loesen${laeuft ? ' disabled' : ''}>Entkoppeln</button></div>
@@ -40,7 +40,7 @@ export function verbundBlock(): string {
   const gaeste = stand.gaeste.map((g) => `<div class="katalog-fuss"><span><b>${esc(g.name || g.clientId)}</b><small> gekoppelt${g.seit ? ` seit ${esc(datum(g.seit))}` : ''}${g.von ? ` durch ${esc(g.von)}` : ''}</small></span>
       <button type="button" class="import-knopf" data-verbund-loesen="${esc(g.clientId)}"${laeuft ? ' disabled' : ''}>Entkoppeln</button></div>`).join('')
   const codeZeile = code
-    ? `<p class="pvs-info">Kopplungscode: <b style="font-size:1.3em;letter-spacing:.08em">${esc(code.code)}</b> – ${code.minuten} Minuten gültig, nur einmal. Geben Sie ihn in der anderen Praxis unter Einstellungen → Praxis-Verbund ein.</p>`
+    ? `<p class="pvs-info">Kopplungscode: <b style="font-size:1.3em;letter-spacing:.08em">${esc(code.code)}</b> – ${code.minuten} Minuten gültig, nur einmal. Geben Sie ihn in der anderen Praxis unter Einstellungen → Praxen koppeln ein.</p>`
     : ''
   const beitreten = stand.gaeste.length ? '' : vorschau
     ? `<p class="pvs-hinweis">Koppeln mit der Praxis von <b>${esc(vorschau.von)}</b>${vorschau.praxen.length ? ` (${esc(vorschau.praxen.join(', '))})` : ''}?
@@ -52,7 +52,7 @@ export function verbundBlock(): string {
       </div>
       <div class="katalog-fuss"><small>Ihre Praxis nutzt dann Pläne, HKPs und Bridge der anderen.</small>
         <button type="button" class="import-knopf" data-verbund-pruefen${laeuft ? ' disabled' : ''}>Code prüfen</button></div>`
-  return `<fieldset class="katalog"><legend>Praxis-Verbund</legend>
+  return `<fieldset class="katalog"><legend>Praxen koppeln</legend>
     ${hinweis}
     ${gaeste}
     ${codeZeile}
@@ -97,7 +97,7 @@ export function verbundVerdrahten(form: HTMLElement, neuZeichnen: () => void, me
   }))
   form.querySelectorAll<HTMLButtonElement>('[data-verbund-loesen]').forEach((b) => b.addEventListener('click', () => {
     const gast = b.dataset.verbundLoesen || ''
-    const name = gast ? stand?.gaeste.find((g) => g.clientId === gast)?.name || 'diese Praxis' : stand?.gast?.name || 'die Haupt-Praxis'
+    const name = gast ? stand?.gaeste.find((g) => g.clientId === gast)?.name || 'diese Praxis' : stand?.gast?.name || 'die andere Praxis'
     if (!confirm(`Kopplung mit ${name} lösen? Danach arbeiten beide Praxen wieder mit eigener Ablage, eigener Bridge und eigener Sprach-App-Zuordnung.`)) return
     void schritt(async () => {
       const d = await apiJson('/api/verbund', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(gast ? { gast } : {}) })

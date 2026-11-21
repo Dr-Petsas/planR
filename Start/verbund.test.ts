@@ -97,19 +97,27 @@ describe('Praxis-Verbund', () => {
   })
 })
 
-// Eine Clara je Praxis: im Verbund ist es die der Haupt-Praxis. MAS meldet sie, PlanR prüft gegen den eigenen Stand.
-describe('Clara im Verbund', () => {
-  const gemeldet = { haupt: 'petsas', stufe: 'voll' as const }
-  it('Gast-Praxis: die gemeldete Clara der Haupt-Praxis gilt', () => {
+// Eine Clara je Praxis: sind ein Standalone- und ein MAS-Konto gekoppelt, gilt die volle Clara des MAS-Kontos für beide –
+// egal, wer den Code erzeugt hat. MAS meldet sie, PlanR prüft gegen den eigenen Stand.
+describe('Clara bei gekoppelten Konten', () => {
+  const gemeldet = { praxis: 'petsas', stufe: 'voll' as const }
+  // umgekehrt: das Standalone-Konto hat den Code erzeugt, das MAS-Konto hat ihn eingegeben
+  const koppelMas = () => koppeln(stand(), { gast: 'petsas', haupt: 'solo', hauptName: 'Dr. Petsas', gastName: 'med dent', von: 'dr@pickadoc.de', uid: 'u1', jetzt: new Date('2026-11-21T09:00:00Z') })
+  it('Standalone hat den Code eingegeben: die gemeldete Clara des MAS-Kontos gilt', () => {
     expect(claraImVerbund(koppelSolo(), 'solo', gemeldet)).toEqual(gemeldet)
   })
-  it('ohne Verbund in PlanR zählt die Meldung nicht', () => {
+  it('Standalone hat den Code erzeugt: die gemeldete Clara des MAS-Kontos gilt genauso', () => {
+    expect(claraImVerbund(koppelMas(), 'solo', gemeldet)).toEqual(gemeldet)
+    expect(claraImVerbund(koppelMas(), 'petsas', undefined)).toBeNull()
+  })
+  it('ohne Kopplung in PlanR zählt die Meldung nicht', () => {
     expect(claraImVerbund(stand(), 'solo', gemeldet)).toBeNull()
   })
-  it('andere Haupt-Praxis als in PlanR: zählt nicht', () => {
-    expect(claraImVerbund(koppelSolo(), 'solo', { haupt: 'fremd', stufe: 'voll' as const })).toBeNull()
+  it('ein Konto außerhalb der Kopplung zählt nicht', () => {
+    expect(claraImVerbund(koppelSolo(), 'solo', { praxis: 'fremd', stufe: 'voll' as const })).toBeNull()
+    expect(claraImVerbund(koppelMas(), 'solo', { praxis: 'klinik', stufe: 'voll' as const })).toBeNull()
   })
-  it('Haupt-Praxis selbst und Praxen ohne Meldung bleiben bei sich', () => {
+  it('das eigene Konto und Konten ohne Meldung bleiben bei sich', () => {
     expect(claraImVerbund(koppelSolo(), 'petsas', gemeldet)).toBeNull()
     expect(claraImVerbund(koppelSolo(), 'solo', undefined)).toBeNull()
     expect(claraImVerbund(koppelSolo(), 'solo', null)).toBeNull()

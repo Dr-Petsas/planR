@@ -10,7 +10,7 @@ export interface Ich {
   praxisNamen: Record<string, string>
   /** Sprach-KI: volle Clara (MAS), HKP-Assistentin (PlanR mit Sprach-KI) oder keine */
   clara?: 'voll' | 'planr' | 'aus'
-  /** Nur im Praxis-Verbund: clara ist dann die der Haupt-Praxis, das hier die eigene Buchung (Termine) */
+  /** Nur bei gekoppelten Konten: clara ist dann die des gekoppelten Kontos, das hier die eigene Buchung (Termine) */
   claraEigen?: 'voll' | 'planr' | 'aus'
   /** 'planr' = PlanR-Abo ohne MAS (eigene Rechnungen), 'mas' = über Pickadoc MAS */
   abo?: 'planr' | 'mas' | ''
