@@ -1,13 +1,35 @@
 /**
- * HKP-Assistentin für PlanR-Kunden mit Sprach-KI (ohne MAS): Name vergeben, Handy per QR koppeln.
- * Der Name gilt für Begrüßung und Weckwort; MAS-Praxen pflegen ihn in Pickadoc.
+ * Die Assistentin der Praxis in PlanR: Handy per QR koppeln, Name vergeben.
+ * Es gibt eine je Praxis. Mit MAS ist es dieselbe wie in Pickadoc (Name wird dort gepflegt),
+ * ohne MAS die HKP-Assistentin der Sprach-KI. Der Name gilt für Begrüßung und Weckwort.
  */
 import './einrichtung.css'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
-export interface ClaraStand { ok?: boolean; zugang?: string; umbenennbar?: boolean; assistantName?: string; standardName?: string; error?: string; message?: string }
+export interface ClaraStand { ok?: boolean; stufe?: string; zugang?: string; umbenennbar?: boolean; assistantName?: string; standardName?: string; error?: string; message?: string }
 interface Kopplung { ok?: boolean; url?: string; qrDataUrl?: string; code?: string; expiresAtMs?: number; error?: string }
+/** PlanR meldet Fehler als meldung, MAS reicht message durch. */
+type Fehlertext = { meldung?: string; message?: string }
+
+/** Wortlaut je Stufe der Praxis: voll = dieselbe Assistentin wie in Pickadoc, sonst die HKP-Assistentin. */
+export function claraTexte(name: string, voll: boolean) {
+  return voll ? {
+    knopf: 'Assistentin: Handy koppeln',
+    titel: `${name} – Ihre Assistentin`,
+    unter: `Dieselbe ${name} wie in Pickadoc. Für Pläne: Patient nennen, Befund sagen, ${name} rechnet.`,
+    nameFest: 'Den Namen ändern Sie in Pickadoc.',
+    hinweis: `${name} ist dieselbe Assistentin wie in Pickadoc und am Telefon.`,
+    mas: false,
+  } : {
+    knopf: 'HKP-Assistentin: Name und Handy koppeln',
+    titel: `${name} – Ihre HKP-Assistentin`,
+    unter: `Heil- und Kostenpläne per Sprache: Patient nennen, Befund sagen, ${name} rechnet.`,
+    nameFest: 'Den Namen ändert der Praxis-Admin.',
+    hinweis: `${name} kennt in PlanR Patientensuche und Heil- und Kostenpläne. Termine, Telefon, Post und alles Weitere gibt es mit `,
+    mas: true,
+  }
+}
 
 export const NAME_MUSTER = /^[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß-]{2,19}$/
 
@@ -26,12 +48,13 @@ export async function claraLaden(): Promise<ClaraStand | null> {
   }
 }
 
-export function claraOeffnen(o: { admin: boolean; stand: ClaraStand | null; geaendert: (name: string) => void }) {
+export function claraOeffnen(o: { admin: boolean; voll?: boolean; stand: ClaraStand | null; geaendert: (name: string) => void }) {
   document.querySelector('.ein-schleier')?.remove()
   let name = o.stand?.assistantName || o.stand?.standardName || 'Clara'
   let kopplung: Kopplung | null = null
   let meldung = ''
   let laeuft = false
+  const voll = o.voll === true || o.stand?.stufe === 'voll'
 
   const schleier = document.createElement('div')
   schleier.className = 'ein-schleier'
@@ -43,21 +66,22 @@ export function claraOeffnen(o: { admin: boolean; stand: ClaraStand | null; geae
 
   const zeichnen = () => {
     const bis = kopplung?.expiresAtMs ? new Date(kopplung.expiresAtMs).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : ''
+    const t = claraTexte(name, voll)
     schleier.innerHTML = `
       <div class="ein-karte" role="dialog" aria-modal="true" aria-labelledby="cl-titel">
         <div class="ein-kopf">
-          <div><h2 id="cl-titel">${esc(name)} – Ihre HKP-Assistentin</h2><p>Heil- und Kostenpläne per Sprache: Patient nennen, Befund sagen, ${esc(name)} rechnet.</p></div>
+          <div><h2 id="cl-titel">${esc(t.titel)}</h2><p>${esc(t.unter)}</p></div>
           <button type="button" class="ein-zu" data-zu aria-label="Schließen">×</button>
         </div>
         <div class="ein-inhalt">
           <h3>Name</h3>
-          ${o.admin ? `
+          ${o.admin && !voll ? `
             <form class="cl-name" data-name>
               <input name="n" value="${esc(name)}" maxlength="20" autocomplete="off" aria-label="Name der Assistentin" required>
               <button type="submit" class="neu-knopf"${laeuft ? ' disabled' : ''}>Speichern</button>
             </form>
             <p class="ein-klein">Ein Wort, 3 bis 20 Buchstaben. Mit dem Namen sprechen Sie sie an („${esc(name)}, neuer HKP für …“). Gilt ab dem nächsten Gespräch.</p>`
-          : `<p class="ein-text">Sie heißt <b>${esc(name)}</b>. Den Namen ändert der Praxis-Admin.</p>`}
+          : `<p class="ein-text">Sie heißt <b>${esc(name)}</b>. ${esc(t.nameFest)}</p>`}
           <h3 class="cl-abstand">Handy koppeln</h3>
           ${kopplung?.qrDataUrl ? `
             <div class="cl-qr">
@@ -74,7 +98,7 @@ export function claraOeffnen(o: { admin: boolean; stand: ClaraStand | null; geae
             </div>`
           : `<p class="ein-text">Ihr Handy wird zum Mikrofon für ${esc(name)}. Der QR-Code gilt 30 Minuten und koppelt genau ein Gerät mit Ihrem Konto.</p>
             <button type="button" class="neu-knopf" data-koppeln${laeuft ? ' disabled' : ''}>QR-Code erzeugen</button>`}
-          <p class="ein-hinweis cl-abstand">${esc(name)} kennt in PlanR Patientensuche und Heil- und Kostenpläne. Termine, Telefon, Post und alles Weitere gibt es mit <a href="https://pickadoc.ai" target="_blank" rel="noopener">Pickadoc MAS</a>.</p>
+          <p class="ein-hinweis cl-abstand">${esc(t.hinweis)}${t.mas ? '<a href="https://pickadoc.ai" target="_blank" rel="noopener">Pickadoc MAS</a>.' : ''}</p>
         </div>
         ${meldung ? `<p class="ein-meldung" role="status">${esc(meldung)}</p>` : ''}
         <div class="ein-fuss"><span></span><button type="button" class="link-knopf" data-zu>Schließen</button></div>
@@ -93,9 +117,9 @@ export function claraOeffnen(o: { admin: boolean; stand: ClaraStand | null; geae
     laeuft = true; meldung = ''; zeichnen()
     try {
       const r = await fetch('/api/clara', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assistantName: neu }) })
-      const d = await r.json().catch(() => ({})) as { ok?: boolean; assistantName?: string; meldung?: string }
+      const d = await r.json().catch(() => ({})) as { ok?: boolean; assistantName?: string } & Fehlertext
       if (d.ok && d.assistantName) { name = d.assistantName; o.geaendert(name); meldung = '' }
-      else meldung = d.meldung || 'Der Name konnte nicht gespeichert werden.'
+      else meldung = d.meldung || d.message || 'Der Name konnte nicht gespeichert werden.'
     } catch { meldung = 'Keine Verbindung.' }
     laeuft = false; zeichnen()
   }
@@ -104,9 +128,9 @@ export function claraOeffnen(o: { admin: boolean; stand: ClaraStand | null; geae
     laeuft = true; meldung = ''; zeichnen()
     try {
       const r = await fetch('/api/clara/kopplung', { method: 'POST' })
-      const d = await r.json().catch(() => ({})) as Kopplung & { meldung?: string }
+      const d = await r.json().catch(() => ({})) as Kopplung & Fehlertext
       if (d.ok && d.qrDataUrl) kopplung = d
-      else meldung = d.meldung || 'Der QR-Code konnte nicht erzeugt werden.'
+      else meldung = d.meldung || d.message || 'Der QR-Code konnte nicht erzeugt werden.'
     } catch { meldung = 'Keine Verbindung.' }
     laeuft = false; zeichnen()
   }

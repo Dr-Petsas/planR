@@ -16,7 +16,7 @@ import { abmelden, anmeldePopup, anmeldePopupEntfernen, ausPickadoc, benutzerBlo
 import { planArbeit, planGespraechVergessen, planKiZug, planNameGesucht } from './arbeitClient'
 import { zuordnungOeffnen } from './zuordnungSeite'
 import { kastenSatz, OK, schemaVon, UK, type Kasten, type KastenGruppe } from './kasten'
-import { dauerStufen, dauerText, geschlecht, kalenderErlaubt, motivFuerPlan, motivPasst, slotBadge, terminKurz, uhrZeiger, type TerminGrund, type TerminMotiv } from './termin'
+import { claraDa, dauerStufen, dauerText, geschlecht, kalenderErlaubt, motivFuerPlan, motivPasst, slotBadge, terminKurz, uhrZeiger, type TerminGrund, type TerminMotiv } from './termin'
 import { trainingOeffnen } from './training'
 import { schritteOeffnen } from './schritteSeite'
 import { DOKU_MONAT, PAKETE, PRO_PLAN } from './paket'
@@ -1772,7 +1772,7 @@ function zeichnen() {
         ${ich.konto.email.toLowerCase() === 'superuser@pickadoc.de' ? '<a class="import-knopf" href="#probe-eingang">Kunden</a>' : ''}
         <button type="button" class="import-knopf" data-importe title="Hochgeladene Pläne: Original und Ergebnis – und neuen Plan importieren">Importe</button>
         <button type="button" class="import-knopf" data-training title="HKPs hochladen, eigene GOZ-Analogpositionen, Labor- und Materialpreise"><span>KI-Training</span></button>
-        ${ich.clara === 'planr' ? `<button type="button" class="import-knopf" data-clara-dialog title="HKP-Assistentin: Name und Handy koppeln">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
+        ${claraDa(ich.clara) ? `<button type="button" class="import-knopf" data-clara-dialog title="${ich.clara === 'voll' ? 'Assistentin: Handy koppeln' : 'HKP-Assistentin: Name und Handy koppeln'}">${MIKRO}<span>${esc(assistentin)}</span></button>` : ''}
         <button type="button" class="neu-knopf mit-symbol" data-import-neu title="${pvsQuelle() ? `Patient in ${esc(pvsQuelle())} suchen: Befund ansehen, neuen Plan erstellen oder HKP übernehmen` : 'Patient suchen und neuen Plan erstellen'} – jeder Plan gehört zu einem Patienten">${LUPE}<span class="chip-lang">Patientensuche</span><span class="chip-kurz">Suche</span></button>
         </div>
         ${kontoMenu({ name: ich.konto.name || ich.konto.email, email: ich.konto.email, admin: ich.konto.admin, abo: aboText(ich), foto: `/api/profil/foto?v=${fotoStand}`, rechnungen: ich.konto.admin && ich.abo === 'planr' })}
@@ -2344,7 +2344,7 @@ async function claraZeigen() {
   const { claraLaden, claraOeffnen } = await import('./clara')
   const stand = await claraLaden()
   if (stand?.assistantName) assistentin = stand.assistantName
-  claraOeffnen({ admin: ich.konto.admin, stand, geaendert: (n) => { assistentin = n; zeichnen() } })
+  claraOeffnen({ admin: ich.konto.admin, voll: ich.clara === 'voll', stand, geaendert: (n) => { assistentin = n; zeichnen() } })
 }
 
 async function rechnungenZeigen() {
@@ -2558,7 +2558,7 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   await einstellungenLaden()
   await laden()
   if (ich.praxen?.length !== 0) vorgaengeLive()
-  if (ich.clara === 'planr') {
+  if (claraDa(ich.clara)) {
     void import('./clara').then((c) => c.claraLaden()).then((s) => {
       if (s?.assistantName && s.assistantName !== assistentin) { assistentin = s.assistantName; zeichnen() }
     })

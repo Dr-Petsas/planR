@@ -30,6 +30,11 @@ export function kalenderErlaubt(abo?: string, clara?: string): boolean {
   return abo === 'mas' || clara === 'voll'
 }
 
+/** Eine Assistentin je Praxis: PlanR zeigt sie, sobald die Praxis eine hat – die volle (MAS) wie die der Sprach-KI. */
+export function claraDa(clara?: string): boolean {
+  return clara === 'voll' || clara === 'planr'
+}
+
 export function grundVon(name: string): TerminGrund | '' {
   const n = name.toLocaleLowerCase('de')
   if (n.includes('besprech')) return 'besprechung'
