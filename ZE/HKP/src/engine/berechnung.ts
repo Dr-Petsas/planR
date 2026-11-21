@@ -226,11 +226,34 @@ export function zaehneVon(gebiet: string): string[] {
   return [...zaehne]
 }
 
-/** Zähne, deren Planung (TP) andersartig gegenüber der Regelversorgung ist */
+/** Befunde einer erneuerungsbedürftigen Suprakonstruktion (Befundklasse 7) */
+const SUPRA_FESTSITZEND = new Set(['skw', 'sbw'])
+const SUPRA_PROTHESE = new Set(['sew', 'sow', 'stw'])
+
+/**
+ * Zähne, an denen eine Suprakonstruktion erneuert wird (Befunde 7.1, 7.2, 7.5). Das ist andersartig: Auf dem HKP
+ * bleibt Zeile R leer, die Suprakonstruktion steht in Zeile TP (BMV-Z Anlage 14d). Ausgenommen ist der Ausnahmefall
+ * Nr. 36 ZE-Richtlinie mit Befund 7.6 (atrophierter zahnloser Kiefer): dort ist die Suprakonstruktion Regelversorgung.
+ * Im Plan selbst trägt Zeile R das Kürzel weiter – als Rechengrundlage für Festzuschuss und Leistungen.
+ */
+export function supraErneuerung(plan: HkpPlan): string[] {
+  return ALLE_ZAEHNE.filter((z) => {
+    const v = plan.zaehne[z]
+    if (!v || !(v.TP.trim() || v.R.trim()).toUpperCase().startsWith('S')) return false
+    const b = v.B.trim().toLowerCase()
+    if (SUPRA_FESTSITZEND.has(b)) return true
+    return SUPRA_PROTHESE.has(b) && !(kieferVon(z) === 'OK' ? plan.klinisch?.atrophieOK : plan.klinisch?.atrophieUK)
+  })
+}
+
+/** Zähne, deren Planung andersartig gegenüber der Regelversorgung ist: abweichende Zeile TP oder erneuerte Suprakonstruktion */
 function andersartigeZaehne(plan: HkpPlan): Set<string> {
   const eintraege = Object.entries(plan.zaehne)
   const prothesenKiefer = new Set(eintraege.filter(([, v]) => v.R === 'E').map(([z]) => kieferVon(z)))
-  return new Set(eintraege.filter(([z, v]) => v.TP.trim() && andersartig(v.R, v.TP, prothesenKiefer.has(kieferVon(z)))).map(([z]) => z))
+  return new Set([
+    ...eintraege.filter(([z, v]) => v.TP.trim() && andersartig(v.R, v.TP, prothesenKiefer.has(kieferVon(z)))).map(([z]) => z),
+    ...supraErneuerung(plan),
+  ])
 }
 
 /**
@@ -550,6 +573,9 @@ export function berechnen(plan: HkpPlan, listen: Listen): Ergebnis {
         ? `Direktabrechnung: andersartige Versorgung${direkt.anteil < 1 ? ` (${Math.round(direkt.anteil * 100)} % des Honorars andersartig)` : ''} – der Patient erhält die Rechnung über die Gesamtkosten, die Kasse zahlt ihm den Festzuschuss (Vordruck 3e).`
         : `Mischfall: nur ${Math.round(direkt.anteil * 100)} % des Honorars andersartig (Grenze 50 %) – Abrechnung des Festzuschusses über die KZV, keine Direktabrechnung.`,
     })
+  const supra = supraErneuerung(plan)
+  if (supra.length && versorgungsart === 'andersartig')
+    hinweise.push({ stufe: 'info', text: `Erneuerung der Suprakonstruktion (${supra.join(', ')}): andersartige Versorgung. Auf dem HKP bleibt Zeile R an diesen Zähnen leer, die Suprakonstruktion steht in Zeile TP (BMV-Z Anlage 14d) – so geht der Plan auch an das PVS. Regelversorgung ist sie nur im Ausnahmefall nach Nr. 36 ZE-Richtlinie.` })
   if (plan.zuschuss.haertefall && versorgungsart !== 'regel')
     hinweise.push({ stufe: 'info', text: 'Härtefall bei gleich-/andersartiger Versorgung: Zuschuss ist auf den Festzuschuss in Höhe von 100 % begrenzt.' })
   if (positionen.some(GIPSMODELL) && positionen.some((p) => p.ebene === 'BEB' && p.nr === '0009'))

@@ -4,7 +4,7 @@ import { leererPlan } from '../store/plan'
 import { AUTO, STANDARD_LISTEN, listeWaehlen, stichtag } from '../store/preislisten'
 import { kzvAusPlz } from '../data/kzv'
 import { dateiImportieren } from '../store/import'
-import { befundeZusammenfassen, berechnen, laborVon, zaehneVon, type Listen } from './berechnung'
+import { befundeZusammenfassen, berechnen, laborVon, supraErneuerung, zaehneVon, type Listen } from './berechnung'
 import { TP_ZUORDNUNG, regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './regeln'
 import { nachtraeglichePositionen } from './nachtraeglich'
 import { standardBegruendung } from './begruendung'
@@ -1240,6 +1240,29 @@ describe('Therapieplanung nach den Berechnungsbeispielen des Kompendiums', () =>
     expect(e.direktabrechnung).toBe(false)
     expect(e.hinweise.some((h) => h.text.startsWith('Mischfall'))).toBe(true)
     expect(berechnen(planen({ 16: 'ww' }, {}).plan, LISTEN).direktabrechnung).toBe(false)
+  })
+
+  it('Befundklasse 7: erneuerte Suprakonstruktion ist andersartig, Ausnahmefall Nr. 36 mit 7.6 nicht (BMV-Z Anlage 14d)', () => {
+    const krone = planen({ 36: 'skw' }, {})
+    expect(krone.plan.zaehne['36'].R).toBe('SK')
+    expect(supraErneuerung(krone.plan)).toEqual(['36'])
+    const e = berechnen(krone.plan, LISTEN)
+    expect(e.versorgungsart).toBe('andersartig')
+    expect(e.direktabrechnung).toBe(true)
+    expect(e.hinweise.some((h) => h.text.startsWith('Erneuerung der Suprakonstruktion (36)'))).toBe(true)
+    expect(berechnen({ ...krone.plan, versorgungsart: 'gleichartig' }, LISTEN).versorgungsart).toBe('gleichartig')
+
+    const bruecke = planen({ 24: 'skw', 25: 'sbw', 26: 'skw' }, {})
+    expect(supraErneuerung(bruecke.plan)).toEqual(['24', '25', '26'])
+    expect(berechnen(bruecke.plan, LISTEN).versorgungsart).toBe('andersartig')
+
+    const prothese = planen({ 33: 'sow', 43: 'sow' }, {})
+    expect(berechnen(prothese.plan, LISTEN).versorgungsart).toBe('andersartig')
+    const atrophie = { ...prothese.plan, klinisch: { ...prothese.plan.klinisch, atrophieUK: true } }
+    expect(supraErneuerung(atrophie)).toEqual([])
+    expect(berechnen(atrophie, LISTEN).versorgungsart).not.toBe('andersartig')
+
+    expect(supraErneuerung(planen({ 16: 'ww', 12: 'f' }, { 12: 'SKM' }).plan)).toEqual([])
   })
 
   it('zaehneVon: Bereiche, Listen und Kiefer', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgeKann, bridgeKannGemeldet, bridgePvsGemeldet, bridgeSollPvs, bridgeWaehlen, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, pvsFuerBridge, vermerkText } from './pvs'
+import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgeKann, bridgeKannGemeldet, bridgePvsGemeldet, bridgeSollPvs, bridgeWaehlen, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, pvsFuerBridge, supraErneuerung, vermerkText } from './pvs'
 
 describe('PVS-Vermerk', () => {
   it('ein Plan bzw. MKV und Privatvereinbarung als zwei DS-Win-Pläne', () => {
@@ -144,6 +144,31 @@ describe('PVS-Export: HKP-Daten', () => {
     expect(d.verwaltung).toEqual({ ausstellungsdatum: '2026-10-09' })
     expect(d.patient).toBeUndefined()
     expect(d.ergebnis.hinweise).toBeUndefined()
+  })
+
+  it('erneuerte Suprakonstruktion (Befundklasse 7): Zeile R leer, Kürzel in Zeile TP, andersartig (BMV-Z Anlage 14d)', () => {
+    const ergebnis = { versorgungsart: 'gleichartig', summen: {}, befunde: [{ nr: '7.2' }], positionen: [{ id: 'g', ebene: 'GOZ', nr: '2200', anzahl: 1, zahn: '24' }] }
+    const zaehne = { 24: { B: 'skw', R: 'SKV', TP: '' }, 25: { B: 'sbw', R: 'SBV', TP: '' }, 26: { B: 'skw', R: 'SK', TP: 'SKM' }, 16: { B: 'ww', R: 'K', TP: '' } }
+    const d = JSON.parse(hkpFuerPvs({ zaehne, versorgungsart: 'auto' }, ergebnis))
+    expect(d.zaehne['24']).toEqual({ B: 'skw', R: '', TP: 'SKV', planung: 'SKV' })
+    expect(d.zaehne['25']).toEqual({ B: 'sbw', R: '', TP: 'SBV', planung: 'SBV' })
+    expect(d.zaehne['26']).toEqual({ B: 'skw', R: '', TP: 'SKM', planung: 'SKM' })
+    expect(d.zaehne['16']).toEqual({ B: 'ww', R: 'K', TP: '', planung: '' })
+    expect(d.ergebnis.versorgungsart).toBe('andersartig')
+  })
+
+  it('Suprakonstruktion als Regelversorgung bleibt in Zeile R: Ausnahmefall Nr. 36 (7.6) und von Hand gesetzte Versorgungsart', () => {
+    const ergebnis = { versorgungsart: 'gleichartig', summen: {}, befunde: [], positionen: [{ id: 'g', ebene: 'GOZ', nr: '5230', anzahl: 1, zahn: 'UK' }] }
+    const zaehne = { 33: { B: 'sow', R: 'SO', TP: '' }, 34: { B: 'sew', R: 'SE', TP: '' }, 13: { B: 'sow', R: 'SO', TP: '' } }
+    expect(supraErneuerung({ zaehne, klinisch: { atrophieUK: true } })).toEqual(['13'])
+    const d = JSON.parse(hkpFuerPvs({ zaehne, klinisch: { atrophieOK: true, atrophieUK: true } }, ergebnis))
+    expect(d.zaehne['33'].R).toBe('SO')
+    expect(d.zaehne['34']).toMatchObject({ B: 'sew', R: 'SE', TP: '' })
+    expect(d.ergebnis.versorgungsart).toBe('gleichartig')
+    const hand = JSON.parse(hkpFuerPvs({ zaehne: { 36: { B: 'skw', R: 'SK', TP: '' } }, versorgungsart: 'gleichartig' }, ergebnis))
+    expect(hand.zaehne['36'].R).toBe('SK')
+    expect(hand.ergebnis.versorgungsart).toBe('gleichartig')
+    expect(supraErneuerung({ zaehne: { 36: { B: 'skw', R: '', TP: '' }, 12: { B: 'f', R: 'B', TP: 'SKM' } } })).toEqual([])
   })
 
   it('Zeile TP: Implantat statt Regelbrücke lässt die Anker leer, Regelbrücke und Prothese bleiben', () => {

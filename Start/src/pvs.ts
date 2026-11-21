@@ -101,21 +101,50 @@ export function planungJeZahn(zaehne: Record<string, Obj>, positionen: Obj[]): R
   }))
 }
 
+/** Befunde einer erneuerungsbedürftigen Suprakonstruktion (Befundklasse 7) */
+const SUPRA_FESTSITZEND = new Set(['skw', 'sbw'])
+const SUPRA_PROTHESE = new Set(['sew', 'sow', 'stw'])
+
+/**
+ * Zähne, an denen eine Suprakonstruktion erneuert wird (Befunde 7.1, 7.2, 7.5) – dieselbe Regel wie
+ * supraErneuerung in der HKP-Engine. Ausgenommen: Ausnahmefall Nr. 36 ZE-Richtlinie mit Befund 7.6
+ * (atrophierter zahnloser Kiefer) und Pläne, deren Versorgungsart von Hand auf Regel- oder gleichartige
+ * Versorgung gesetzt ist (Ausnahmefall Nr. 36 a, Einzelzahnlücke).
+ */
+export function supraErneuerung(plan: Obj): string[] {
+  if (plan.versorgungsart === 'regel' || plan.versorgungsart === 'gleichartig') return []
+  const klinisch = (plan.klinisch ?? {}) as Obj
+  return Object.entries((plan.zaehne ?? {}) as Record<string, Obj>).filter(([z, v]) => {
+    if (!(String(v.TP ?? '').trim() || String(v.R ?? '').trim()).toUpperCase().startsWith('S')) return false
+    const b = String(v.B ?? '').trim().toLowerCase()
+    if (SUPRA_FESTSITZEND.has(b)) return true
+    return SUPRA_PROTHESE.has(b) && !(z[0] === '1' || z[0] === '2' ? klinisch.atrophieOK : klinisch.atrophieUK)
+  }).map(([z]) => z)
+}
+
 /**
  * HKP für den Connector: Positionen so, wie MAS sie berechnet hat (inkl. Material, Edelmetall und
  * Zusatzleistungen, Mengen nach Werkstoff) – die gespeicherten Planzeilen allein ergeben falsche Laborsummen.
+ *
+ * Erneuerte Suprakonstruktionen gehen so hinaus, wie sie auf dem HKP stehen (BMV-Z Anlage 14d): Zeile R leer,
+ * Suprakonstruktion in Zeile TP, Versorgung andersartig. Im Plan steht das Kürzel als Rechengrundlage in Zeile R.
  */
 export function hkpFuerPvs(plan: Obj, ergebnis: Obj): string {
   const berechnet = Array.isArray(ergebnis.positionen) ? (ergebnis.positionen as Obj[]) : []
   const zaehne = (plan.zaehne ?? {}) as Record<string, Obj>
   const planung = planungJeZahn(zaehne, berechnet)
+  const supra = new Set(supraErneuerung(plan))
   return JSON.stringify({
     verwaltung: nur(plan.verwaltung, ['ausstellungsdatum']),
     zuschuss: plan.zuschuss,
-    zaehne: Object.fromEntries(Object.entries(zaehne).map(([z, v]) => [z, { ...v, planung: planung[z] }])),
+    zaehne: Object.fromEntries(Object.entries(zaehne).map(([z, v]) => {
+      if (!supra.has(z)) return [z, { ...v, planung: planung[z] }]
+      const tp = String(v.TP ?? '').trim() || String(v.R ?? '').trim()
+      return [z, { ...v, R: '', TP: tp, planung: tp }]
+    })),
     positionen: berechnet.map((p) => nur(p, ['id', 'ebene', 'nr', 'anzahl', 'zahn', 'labor', 'eigen', 'bezeichnung'])),
     ergebnis: {
-      versorgungsart: ergebnis.versorgungsart,
+      versorgungsart: supra.size ? 'andersartig' : ergebnis.versorgungsart,
       summen: ergebnis.summen,
       befunde: ergebnis.befunde,
       positionen: berechnet.map((p) => nur(p, ['id', 'betrag', 'einzelpreis', 'punkte', 'punktwert', 'faktor'])),
