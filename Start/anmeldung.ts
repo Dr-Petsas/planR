@@ -254,6 +254,13 @@ export function praxenVon(z: Zugaenge, k: Pick<Konto, 'uid' | 'clientId' | 'emai
   return [nummer]
 }
 
+/**
+ * Praxen für „Benutzer & Praxen“: Die Liste stammt aus DS-Win. Ist inzwischen ein anderes Praxisprogramm
+ * eingestellt, wird sie nicht mehr gezeigt – gespeichert bleibt sie für den Weg zurück zu DS-Win.
+ */
+export const praxenZurAnzeige = (z: Zugaenge, clientId: string, pvs: string) =>
+  (!pvs || pvs === 'dampsoft' ? z.mandanten[clientId]?.praxen ?? [] : [])
+
 export const darfSehen = (praxen: number[] | null, praxis: number | undefined, haupt: number) =>
   praxen === null || praxen.includes(praxis ?? haupt)
 

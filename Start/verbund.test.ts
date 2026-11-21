@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hauptpraxis, mandantVon, praxenVon, registerVon, type Zugaenge } from './anmeldung.ts'
+import { hauptpraxis, mandantVon, praxenVon, praxenZurAnzeige, registerVon, type Zugaenge } from './anmeldung.ts'
 import {
   bridgeMandanten, claraImVerbund, codeFinden, codeSetzen, codeVerbrauchen, eigenerMandant, eigenesRegister, entkoppeln, gaesteVon, koppeln,
   koppelnPruefen, neuerVerbundCode, verbundVon,
@@ -38,6 +38,15 @@ describe('Praxis-Verbund', () => {
     expect(praxenVon(z, { uid: 'u1', clientId: 'petsas', email: 'dr@pickadoc.de' })).toEqual([1])
     z.benutzer.u3.praxen = []
     expect(praxenVon(z, { uid: 'u3', clientId: 'solo', email: 'team@maik-music.io' })).toEqual([])
+  })
+
+  it('zeigt die DS-Win-Praxen nicht mehr, sobald ein anderes Praxisprogramm eingestellt ist', () => {
+    const z = stand()
+    expect(praxenZurAnzeige(z, 'petsas', 'dampsoft').map((p) => p.nummer)).toEqual([1, 3])
+    expect(praxenZurAnzeige(z, 'petsas', '').map((p) => p.nummer)).toEqual([1, 3])
+    expect(praxenZurAnzeige(z, 'petsas', 'dens')).toEqual([])
+    expect(praxenZurAnzeige(z, 'fremd', 'dampsoft')).toEqual([])
+    expect(z.mandanten.petsas.praxen).toHaveLength(2)
   })
 
   it('Entkoppeln stellt den Stand vor dem Koppeln exakt wieder her', () => {

@@ -30,7 +30,7 @@ import {
 } from './probeEingang.ts'
 import {
   PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, SUDO_COOKIE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, idTokenHolen, mandantVon, neuesToken, registerVon,
-  passwortVergessen, praxenVon, praxisNr, sitzungFinden, sitzungHash, sitzungenAufraeumen, zugaengePruefen,
+  passwortVergessen, praxenVon, praxenZurAnzeige, praxisNr, sitzungFinden, sitzungHash, sitzungenAufraeumen, zugaengePruefen,
   type Konto, type PraxisInfo, type Sitzung, type Zugaenge,
 } from './anmeldung.ts'
 import { spawn } from 'node:child_process'
@@ -468,7 +468,7 @@ async function benutzerEndpunkt(req: IncomingMessage, res: ServerResponse, w: We
     const benutzer = Object.entries(z.benutzer).filter(([, b]) => mandantVon(z, b) === w.mandant)
       .map(([uid, b]) => ({ uid, email: b.email, name: b.name, role: b.role, praxen: praxenVon(z, { uid, clientId: b.clientId, email: b.email }), zuletzt: b.zuletzt, ich: uid === w.konto.uid }))
       .sort((a, b) => a.email.localeCompare(b.email))
-    return json(res, 200, { ok: true, praxen: z.mandanten[clientId]?.praxen ?? [], benutzer })
+    return json(res, 200, { ok: true, praxen: praxenZurAnzeige(z, clientId, (await einstellungenImVerbund(pvsOrt(w))).pvs), benutzer })
   }
   if (req.method !== 'PUT' || !eigeneSeite(req)) return json(res, 405, { ok: false })
   const b = JSON.parse(await lesenBody(req, 2000)) as { uid?: unknown; praxen?: unknown }
