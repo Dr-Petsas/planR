@@ -93,7 +93,7 @@ export function AktuellerBefundLeiste({ plan, setPlan, frei }: {
   frei: boolean
 }) {
   const v = useVerbindung()
-  const { vorname, name, geburtsdatum } = plan.patient
+  const { name, geburtsdatum } = plan.patient
   const wer = patientSchluessel(plan.patient)
   // Mit bekannter Patientennummer (aus „Neuer Plan“ in PlanR) braucht es weder Geburtsdatum noch Namenssuche
   const schluessel = v.sitzung && name.trim() && (/^\d{4}-\d{2}-\d{2}$/.test(geburtsdatum) || pvsNrZu(wer)) ? wer : ''
