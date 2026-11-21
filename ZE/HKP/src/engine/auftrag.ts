@@ -561,9 +561,48 @@ const ERNEUERN = /erneuer|kaputt|\bdefekt|insuffizient|undicht|gebrochen|locker/
 const KUERZEL_AM_ENDE = new RegExp(`(?:^|\\s)(${[...Object.keys(BEFUND_KUERZEL), 'i']
   .sort((a, b) => b.length - a.length).map((k) => k.replace(/[()]/g, '\\$&')).join('|')})$`)
 
+/**
+ * Die Wörter, mit denen Clara einen Befund vorliest (MAS `hkp/vorlesen.js`, BEFUND_WORT) → Kürzel. Liest die Engine
+ * ihren eigenen Satz zurück, gilt diese Tabelle vor den Mustern: „Implantat ohne Suprakonstruktion“ ist i, die
+ * Muster lasen daraus sk (das Handy zeigte nach dem Zurücklesen eine Implantatkrone). Feste Tabelle, kein Muster:
+ * es zählt nur der ganze Satzteil „<Wort>: <Zähne>“, freie Sätze laufen wie bisher über BEFUND_ARTEN.
+ */
+const VORLESE_WORT = new Map<string, string>(([
+  ['nicht erhaltungswürdig', 'x'], ['weitgehend zerstört', 'ww'], ['mit Teildefekt', 'pw'],
+  ['Teilkrone erneuerungsbedürftig', 'pkw'], ['unzureichende Retention', 'ur'], ['überkront', 'k'],
+  ['Krone erneuerungsbedürftig', 'kw'], ['Teleskop vorhanden', 't'], ['Teleskop erneuerungsbedürftig', 'tw'],
+  ['Teleskop-Sekundärteil erneuerungsbedürftig', 't2w'], ['durch Prothese ersetzt', 'e'],
+  ['durch Prothese ersetzt und erneuerungsbedürftig', 'ew'], ['Brückenglied', 'b'],
+  ['Brückenglied erneuerungsbedürftig', 'bw'], ['Adhäsivbrückenanker', 'a'],
+  ['Adhäsivbrückenanker erneuerungsbedürftig', 'aw'], ['Adhäsivbrückenglied', 'ab'],
+  ['Adhäsivbrückenglied erneuerungsbedürftig', 'abw'], ['Wurzelstiftkappe', 'r'],
+  ['Wurzelstiftkappe erneuerungsbedürftig', 'rw'], ['Implantat ohne Suprakonstruktion', 'i'],
+  ['Implantat nicht erhaltungswürdig', 'ix'], ['Implantatkrone', 'sk'], ['Implantatkrone erneuerungsbedürftig', 'skw'],
+  ['Implantatbrückenglied', 'sb'], ['Implantatbrückenglied erneuerungsbedürftig', 'sbw'], ['Implantatteleskop', 'st'],
+  ['Implantatteleskop erneuerungsbedürftig', 'stw'], ['ersetzt durch Implantatprothese', 'se'],
+  ['ersetzt durch Implantatprothese und erneuerungsbedürftig', 'sew'], ['Implantatverbindungselement', 'so'],
+  ['Implantatverbindungselement erneuerungsbedürftig', 'sow'], ['Lückenschluss', ')('],
+] as [string, string][]).map(([wort, code]) => [norm(wort).trim(), code]))
+
+/** Satzteil in Claras Vorleseform („[Oberkiefer:] <Wort>: 16, 13 und 14“) → Kürzel aus der Tabelle, sonst nichts */
+function vorleseWort(teil: string): { code: string; index: number } | undefined {
+  // norm() stellt den Kiefer frei („oberkiefer : implantat …“) – der einzelne Doppelpunkt ist kein Wort
+  const worte = teil.trim().split(' ').map((w) => (w.endsWith(':') ? w.slice(0, -1) : w)).filter(Boolean)
+  const istZahn = (w: string) => REIHE.OK.includes(w) || REIHE.UK.includes(w)
+  let von = 0
+  let bis = worte.length
+  while (von < bis && (worte[von] === 'oberkiefer' || worte[von] === 'unterkiefer')) von++
+  while (bis > von && (istZahn(worte[bis - 1]) || worte[bis - 1] === 'und' || worte[bis - 1] === 'bis')) bis--
+  if (bis === worte.length || von === bis) return undefined
+  const code = VORLESE_WORT.get(worte.slice(von, bis).join(' '))
+  return code === undefined ? undefined : { code, index: Math.max(0, teil.indexOf(worte[von])) }
+}
+
 /** Befund eines Satzteils → Kürzel und Fundstelle; `imAuftrag` überspringt Kürzel und Wörter, die auch eine Versorgung nennen */
 function befundWort(teil: string, imAuftrag = false): { code: string; index: number } | undefined {
   if (!imAuftrag) {
+    const eigen = vorleseWort(teil)
+    if (eigen) return eigen
     const k = KUERZEL_AM_ENDE.exec(teil.trimEnd().replace(/(?:\s[a-z2])+$/, (m) => ` ${m.replace(/\s/g, '')}`))
     if (k) return { code: k[1], index: k.index }
   }

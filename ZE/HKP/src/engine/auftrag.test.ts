@@ -530,4 +530,23 @@ describe('Plan aus Auftrag', () => {
       expect(r.status).toBe('ok')
     })
   })
+
+  describe('Claras eigener Vorlesesatz kommt als dasselbe Kürzel zurück (feste Tabelle)', () => {
+    it('„Implantat ohne Suprakonstruktion“ ist i, nicht die Implantatkrone', () => {
+      const b = befundVerstehen('Oberkiefer: es fehlen 18 und 28; Implantat ohne Suprakonstruktion: 16, 13 und 14; Implantatkrone: 23; vorhanden sind 24 bis 27', 'OK')
+      expect(b['16']).toBe('i')
+      expect(b['13']).toBe('i')
+      expect(b['14']).toBe('i')
+      expect(b['23']).toBe('sk')
+      expect(b['18']).toBe('f')
+      expect(b['25']).toBe('')
+      expect(befundVerstehen('Oberkiefer: Implantat ohne Suprakonstruktion: 23', 'OK')['23']).toBe('i')
+    })
+
+    it('freie Sätze laufen weiter über die Muster', () => {
+      expect(befundVerstehen('16 hat eine Suprakonstruktion', 'OK')['16']).toBe('sk')
+      expect(befundVerstehen('16 ist überkront und die Krone ist defekt', 'OK')['16']).toBe('kw')
+      expect(befundVerstehen('15 fehlt, 14 und 16 sind überkront', 'OK')).toMatchObject({ 15: 'f', 14: 'k', 16: 'k' })
+    })
+  })
 })
