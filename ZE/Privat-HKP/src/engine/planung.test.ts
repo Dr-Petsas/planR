@@ -26,7 +26,8 @@ describe('Befund (01) und Planung', () => {
 describe('Privatplanung', () => {
   it('Einzelkrone vollkeramisch mit Kronenentfernung', () => {
     const n = nummern({ '16': { B: 'kw', TP: 'KM' } })
-    expect(n).toEqual(expect.arrayContaining(['GOZ 0010', 'GOAE 3', 'GOAE 6', 'GOAE 34', 'GOZ 0030', 'GOZ 2290 16', 'GOZ 2210 16', 'GOZ 2270 16', 'BEB 2281 16', 'BEB 2612 16', 'BEB 0021 OK', 'BEB 0002 UK', 'BEB 0402']))
+    expect(n).toEqual(expect.arrayContaining(['GOZ 0010', 'GOAE 3', 'GOAE 6', 'GOZ 0030', 'GOZ 2290 16', 'GOZ 2210 16', 'GOZ 2270 16', 'BEB 2281 16', 'BEB 2612 16', 'BEB 0021 OK', 'BEB 0002 UK', 'BEB 0402']))
+    expect(n).not.toContain('GOAE 34')
     expect(n.some((x) => x.startsWith('GOZ 5'))).toBe(false)
   })
 

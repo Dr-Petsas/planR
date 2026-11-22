@@ -164,7 +164,9 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
   pos('GOZ', '0010', '')
   pos('GOAE', '3', '')
   pos('GOAE', '6', '')
-  pos('GOAE', '34', '')
+  // Ä34 (Erörterung ≥20 Min) bewusst nicht auto: in vielen PVS-Katalogen fehlt die Ziffer
+  // (DENSoffice: „Ä34 nicht im GOZ-Leistungskatalog“); zahnärztlich selten gerechtfertigt.
+  // GOÄ gehören in DENS in den Kostenvoranschlag, nicht in die Privatprothetik.
   for (const z of geplant) if (P(z) !== ')(' && !ZUORDNUNG[P(z)] && !PROTHESENZAHN.test(P(z)) && !['H', 'R'].includes(P(z)))
     hinweise.push(`Kürzel „${P(z)}“ an Zahn ${z} ist unbekannt.`)
   hinweise.push(...befundAbgleich(geplant, B, P))
