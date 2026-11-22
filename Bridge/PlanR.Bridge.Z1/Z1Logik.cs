@@ -43,6 +43,7 @@ public static class Z1Befund
         ["sk"] = 'i', ["st"] = 'i', ["se"] = 'i', ["sb"] = 'b', ["so"] = 'i', ["skw"] = 'i', ["stw"] = 'i', ["sew"] = 'i', ["sbw"] = 'b', ["sow"] = 'i',
     };
 
+    static readonly HashSet<string> Genau = ["", "f", ")(", "e", "b", "k", "t", "x", "ww", "i"];
     static readonly List<string> Kuerzel = [.. NachZ1.Keys.Order(StringComparer.Ordinal)];
 
     public static string Version(string? befund)
@@ -69,6 +70,35 @@ public static class Z1Befund
             ["scope"] = "Z1 führt je Zahn ein Zeichen; erneuerungsbedürftig (w) bleibt in PlanR.",
             ["codes"] = Kuerzel,
         };
+    }
+
+    /// <summary>PlanR-Schreibauftrag {Zahn: Kürzel|healthy|missing} → (neue Z1-Zeichenkette, geänderte Zähne, nur angenähert).</summary>
+    public static (string Neu, List<string> Geaendert, List<string> Ungefaehr) Auftrag(Zeile? roh, Zeile teeth)
+    {
+        if (teeth is null || teeth.Count == 0 || teeth.Count > 32) throw new BefundFehler("Befund ohne Zähne.");
+        var alt = Py.S(roh, "befund");
+        var zeichen = (alt.Length > 32 ? alt : alt.PadRight(32)).ToCharArray();
+        var geaendert = new List<string>();
+        var ungefaehr = new List<string>();
+        foreach (var (z, wertRoh) in teeth)
+        {
+            if (!Py.Ziffern(z) || Array.IndexOf(Reihe, int.Parse(z, CultureInfo.InvariantCulture)) < 0 || wertRoh is not string wert || wert.Length > 8)
+                throw new BefundFehler($"Ungültige Zahnangabe: {z}");
+            var code = wert is "healthy" or "" ? "" : wert == "missing" ? "f" : wert.Trim().ToLowerInvariant();
+            if (!NachZ1.TryGetValue(code, out var neu)) throw new BefundFehler($"Befundkürzel '{code}' an Zahn {z} ist unbekannt.");
+            var i = Array.IndexOf(Reihe, int.Parse(z, CultureInfo.InvariantCulture));
+            if (AusZ1.GetValueOrDefault(zeichen[i], "") != AusZ1.GetValueOrDefault(neu, "")) { zeichen[i] = neu; geaendert.Add(z); }
+            if (!Genau.Contains(code)) ungefaehr.Add(z);
+        }
+        return (new string(zeichen), geaendert, ungefaehr);
+    }
+
+    public static string Meldung(List<string> geaendert, List<string> ungefaehr)
+    {
+        if (geaendert.Count == 0) return "Der Befund in Z1 stimmt schon.";
+        var text = $"In den Z1-Zahnstatus geschrieben: {string.Join(", ", geaendert)}.";
+        if (ungefaehr.Count > 0) text += $" Ohne eigenes Zeichen in Z1, dort in der nächsten Entsprechung: {string.Join(", ", ungefaehr)}.";
+        return text;
     }
 }
 

@@ -1,0 +1,58 @@
+[
+  {
+    "op": "hkp", "patnr": "1",
+    "zeilen": [{"nr": "2200", "art": "q"}, {"nr": "2030a", "art": "q"}, {"nr": "40", "art": "k"}, {"nr": "0010", "art": "1"}],
+    "json": {
+      "verwaltung": {"ausstellungsdatum": "2026-11-10"},
+      "positionen": [
+        {"ebene": "GOZ", "nr": "2200", "anzahl": 1, "zahn": "16"},
+        {"ebene": "GOZ", "nr": "2030a", "anzahl": 1, "zahn": "16"},
+        {"ebene": "BEMA", "nr": "40", "anzahl": 1, "zahn": "16"},
+        {"ebene": "BEL", "nr": "0010", "anzahl": 1, "zahn": ""}
+      ],
+      "zaehne": {"16": {"B": "kw", "R": "K", "TP": "K"}},
+      "ergebnis": {"befunde": [{"nr": "1.1"}]}
+    }
+  },
+  {
+    "op": "hkp", "patnr": "3", "makros": ["kv", "bv"],
+    "zeilen": [{"nr": "19", "art": "g"}, {"nr": "5010", "art": "q"}, {"nr": "0010", "art": "2"}],
+    "json": {
+      "verwaltung": {"ausstellungsdatum": "2026-11-10"},
+      "zaehne": {"15": {"B": "ww", "R": "KV", "TP": "", "planung": "KV"}, "14": {"B": "f", "planung": "BV"}, "13": {"planung": "XY"}},
+      "positionen": [
+        {"id": "a", "ebene": "BEMA", "nr": "19", "anzahl": 3, "zahn": "15-13"},
+        {"id": "b", "ebene": "GOZ", "nr": "5010", "anzahl": 2, "zahn": "15,13"},
+        {"id": "c", "ebene": "BEL", "nr": "0010", "anzahl": 1, "zahn": "", "labor": "fremd"},
+        {"id": "d", "ebene": "MAT", "nr": "", "anzahl": 1, "zahn": "", "bezeichnung": "Gold"}
+      ],
+      "ergebnis": {
+        "summen": {"festzuschuss": 522.01},
+        "befunde": [{"nr": "2.1", "zahnGebiet": "15-13", "anzahl": 1, "einzelbetrag": 363.46, "betrag": 363.46, "text": "Lücke"}],
+        "positionen": [
+          {"id": "a", "betrag": 41.73, "punkte": 19, "punktwert": 0.7321},
+          {"id": "b", "betrag": 383.68, "einzelpreis": 191.84, "faktor": 2.3},
+          {"id": "c", "betrag": 6.16}, {"id": "d", "betrag": 98.16}
+        ]
+      }
+    }
+  },
+  {
+    "op": "hkp", "patnr": "12", "zeilen": [],
+    "json": {
+      "verwaltung": {"ausstellungsdatum": "2026-11-10"},
+      "positionen": [
+        {"ebene": "GOZ", "nr": "2200", "anzahl": 1, "zahn": "16"},
+        {"ebene": "GOZ", "nr": "2030a", "anzahl": 1, "zahn": "16"},
+        {"ebene": "BEMA", "nr": "40", "anzahl": 1, "zahn": "16"},
+        {"ebene": "BEL", "nr": "0010", "anzahl": 1, "zahn": ""}
+      ],
+      "zaehne": {"16": {"B": "kw", "R": "K", "TP": "K"}},
+      "ergebnis": {"befunde": [{"nr": "1.1"}]}
+    }
+  },
+  {
+    "op": "hkp", "patnr": "1", "zeilen": [],
+    "json": {"verwaltung": {"ausstellungsdatum": "2026-11-10"}, "positionen": [{"ebene": "HINWEIS"}]}
+  }
+]

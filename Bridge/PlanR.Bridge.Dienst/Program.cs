@@ -20,6 +20,15 @@ if (Argument(args, "--z1-datei") is { } z1Datei)
     return 0;
 }
 
+// Schreib-Vergleich gegen den Python-Connector: je Zeile eine JSON-Anfrage, je Zeile eine JSON-Antwort (ohne Datenbank).
+if (Argument(args, "--z1-schreib-datei") is { } schreibDatei)
+{
+    Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+    foreach (var zeile in File.ReadAllLines(schreibDatei).Where(z => z.Trim().Length > 0))
+        Console.WriteLine(PlanR.Bridge.Z1.Z1Vergleich.Zeile(zeile));
+    return 0;
+}
+
 var configPfad = Argument(args, "--config") ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PlanR-Bridge", "agent.json");
 
