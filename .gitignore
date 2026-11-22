@@ -16,6 +16,10 @@ ZE/HKP/_quellen/dpf/**/*.exe
 ZE/HKP/_quellen/dpf/**/*.dll
 ZE/HKP/_quellen/dpf/**/*.zip
 
+# .NET (PlanR/Bridge)
+**/bin/
+**/obj/
+
 # Editor / System
 .vscode/*
 !.vscode/extensions.json

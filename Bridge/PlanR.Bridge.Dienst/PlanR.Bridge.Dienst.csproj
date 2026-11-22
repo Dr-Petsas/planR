@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- 32 Bit: die Jet-Engine von Z1 und der DENS-Zugriff gibt es nur dort. -->
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PlanR.Bridge.Dienst</AssemblyName>
+    <Version>0.1.0</Version>
+    <Description>Kompilierte PlanR-Bridge. Wird nicht als Windows-Dienst installiert und nicht zum Download freigegeben.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PlanR.Bridge\PlanR.Bridge.csproj" />
+    <ProjectReference Include="..\PlanR.Bridge.Z1\PlanR.Bridge.Z1.csproj" />
+  </ItemGroup>
+</Project>

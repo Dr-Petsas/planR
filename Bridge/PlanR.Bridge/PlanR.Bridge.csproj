@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PlanR.Bridge</RootNamespace>
+    <AssemblyName>PlanR.Bridge</AssemblyName>
+    <Version>0.1.0</Version>
+    <Description>Kompilierte PlanR-Bridge, Auftragskern. Ersetzt den laufenden Python-Dienst nicht und wird nicht zum Download freigegeben.</Description>
+  </PropertyGroup>
+</Project>
