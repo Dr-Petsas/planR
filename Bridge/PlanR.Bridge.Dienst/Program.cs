@@ -16,6 +16,15 @@ if (Argument(args, "--datei-pruefen") is { } pruefDatei)
     return File.Exists(pruefDatei) ? 0 : 1;
 }
 
+// Signiert ein Update-Paket auf dem Entwickler-PC (paket-bauen.ps1).
+if (args.Length == 4 && args[0] == "--update-signieren")
+{
+    var pem = Environment.GetEnvironmentVariable("PLANR_UPDATE_SCHLUESSEL")
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".planr", "bridge-update.pem");
+    Aktualisieren.SignierenMitPem(pem, args[1], args[2], args[3]);
+    return 0;
+}
+
 // Einrichtungs-Hilfsbefehle für PlanR-Bridge-Setup.exe (einloesen, melden, warten, dswin, dens).
 if (Argument(args, "--einrichten") is { } einrichtBefehl)
 {
@@ -147,7 +156,8 @@ if (args.Contains("--pruefen"))
     using var kurz = new CancellationTokenSource(TimeSpan.FromSeconds(30));
     try
     {
-        await kunde.Abholen(zustand, kurz.Token);
+        // Leerer Status signalisiert PlanR die reine Installationsprüfung (nurPruefung -> HTTP 204 ohne Auftrag).
+        await kunde.Abholen("", kurz.Token);
         Console.WriteLine($"PlanR verbunden ({cfg.Planr}, Mandant {cfg.Mandant}).");
         return zustand == "bereit" ? 0 : 1;
     }

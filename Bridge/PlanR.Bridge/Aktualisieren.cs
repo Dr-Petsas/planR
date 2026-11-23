@@ -39,6 +39,29 @@ public static class Aktualisieren
         Exponent = [0x01, 0x00, 0x01], // 65537
     };
 
+    /// <summary>Signiert ein Update-Paket auf dem Entwickler-PC mit dem privaten PEM-Schlüssel und prüft gegen den öffentlichen Schlüssel.</summary>
+    public static void SignierenMitPem(string pemPfad, string paketPfad, string version, string zielJson, RSAParameters? pruefSchluessel = null)
+    {
+        if (!File.Exists(pemPfad))
+            throw new UpdateFehler($"Privater Update-Schlüssel fehlt: {pemPfad}");
+        var daten = File.ReadAllBytes(paketPfad);
+        using var rsa = RSA.Create();
+        rsa.ImportFromPem(File.ReadAllText(pemPfad, Encoding.UTF8));
+        var signatur = rsa.SignData(daten, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        if (!SignaturGueltig(daten, signatur, pruefSchluessel))
+            throw new UpdateFehler("Privater Schlüssel passt nicht zum eingebauten öffentlichen Schlüssel.");
+        var manifest = new Dictionary<string, object>
+        {
+            ["version"] = version,
+            ["sha256"] = Convert.ToHexString(SHA256.HashData(daten)).ToLowerInvariant(),
+            ["groesse"] = daten.Length,
+            ["signatur"] = Convert.ToHexString(signatur).ToLowerInvariant(),
+            ["erstellt"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss+00:00"),
+        };
+        var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        File.WriteAllText(zielJson, json, new UTF8Encoding(false));
+    }
+
     public static bool SignaturGueltig(byte[] daten, byte[] signatur, RSAParameters? schluessel = null)
     {
         try
@@ -177,12 +200,17 @@ public static class Aktualisieren
 
     public static UpdateInfo InfoLesen(string json)
     {
-        using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
+        if (string.IsNullOrWhiteSpace(json))
+            return new UpdateInfo(false, "", "", "");
+        using var doc = JsonDocument.Parse(json);
         var r = doc.RootElement;
-        var verfuegbar = r.TryGetProperty("verfuegbar", out var v) && v.ValueKind == JsonValueKind.True;
         var version = r.TryGetProperty("version", out var ver) && ver.ValueKind == JsonValueKind.String ? ver.GetString() ?? "" : "";
         var sha = r.TryGetProperty("sha256", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() ?? "" : "";
         var sig = r.TryGetProperty("signatur", out var sg) && sg.ValueKind == JsonValueKind.String ? sg.GetString() ?? "" : "";
+        // PlanR (/api/pvs-agent/update) liefert das Manifest direkt ohne "verfuegbar"-Feld (und HTTP 204 ohne Body, wenn nichts anliegt).
+        var verfuegbar = r.TryGetProperty("verfuegbar", out var v)
+            ? v.ValueKind == JsonValueKind.True
+            : !string.IsNullOrWhiteSpace(version) && !string.IsNullOrWhiteSpace(sig);
         return new UpdateInfo(verfuegbar, version, sha, sig);
     }
 

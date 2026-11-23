@@ -75,6 +75,41 @@ public class LaufzeitTests
     }
 
     [Fact]
+    public void Aktualisieren_liest_PlanR_Manifest_ohne_verfuegbar_Feld_und_signiert_mit_PEM()
+    {
+        // HTTP 204 (leerer Body) -> kein Update
+        Assert.False(Aktualisieren.InfoLesen("").Verfuegbar);
+        Assert.False(Aktualisieren.InfoLesen("{}").Verfuegbar);
+        Assert.False(Aktualisieren.InfoLesen("""{"verfuegbar":false,"version":"2.1","signatur":"aa"}""").Verfuegbar);
+
+        // SignierenMitPem -> Manifest-Format wie PlanR /api/pvs-agent/update (ohne verfuegbar-Feld)
+        var ordner = Verzeichnis();
+        using var rsa = RSA.Create(3072);
+        var pub = rsa.ExportParameters(includePrivateParameters: false);
+        var pemPfad = Path.Combine(ordner, "test.pem");
+        File.WriteAllText(pemPfad, rsa.ExportRSAPrivateKeyPem(), new UTF8Encoding(false));
+
+        var paketPfad = Path.Combine(ordner, "PlanR-Bridge-Update.zip");
+        var zipBytes = ZipErstellen(new Dictionary<string, string>
+        {
+            ["programm/PlanR.Bridge.Dienst.exe"] = "dummy-exe",
+        });
+        File.WriteAllBytes(paketPfad, zipBytes);
+        var manifestPfad = Path.Combine(ordner, "PlanR-Bridge-Update.json");
+
+        Aktualisieren.SignierenMitPem(pemPfad, paketPfad, "2.1", manifestPfad, pub);
+
+        var info = Aktualisieren.InfoLesen(File.ReadAllText(manifestPfad, Encoding.UTF8));
+        Assert.True(info.Verfuegbar);
+        Assert.Equal("2.1", info.Version);
+        Assert.Equal(64, info.Sha256.Length);
+        Assert.Equal(768, info.Signatur.Length);
+
+        var (_, version) = Aktualisieren.Vorbereiten(info, zipBytes, ordner, "2.0", pub, _ => "2.1");
+        Assert.Equal("2.1", version);
+    }
+
+    [Fact]
     public async Task OrtDienst_antwortet_auf_planr_bridge_mit_CORS()
     {
         var ordner = Verzeichnis();
