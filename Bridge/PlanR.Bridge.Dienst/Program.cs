@@ -70,6 +70,41 @@ if (Argument(args, "--dens-datei") is { } densDatei)
     return 0;
 }
 
+// DS-Win-Vergleichslauf gegen den Python-Connector: je Zeile ein GET-Pfad, "H <Header> <Pfad>" oder "POST <Pfad> <JSON>".
+if (Argument(args, "--dswin-datei") is { } dsDatei)
+{
+    Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+    var dsRoot = Environment.GetEnvironmentVariable("DSWIN_ROOT");
+    var darf = args.Contains("--dswin-schreiben") && !string.IsNullOrEmpty(dsRoot);
+    var backupBase = Argument(args, "--dswin-backup");
+    var ds = new PlanR.Bridge.Dampsoft.DsWinConnector(dsRoot, enableWrite: darf, backupBase: backupBase);
+    var json = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    foreach (var zeile in File.ReadAllLines(dsDatei).Where(z => z.Length > 0))
+    {
+        var kopf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var rest = zeile;
+        while (rest.StartsWith("H "))
+        {
+            var p = rest.Split(' ', 3);
+            var kv = p[1].Split(':', 2);
+            kopf[kv[0]] = kv.Length > 1 ? kv[1] : "";
+            rest = p[2];
+        }
+        var teile = rest.StartsWith("POST ") ? rest.Split(' ', 3) : ["GET", rest];
+        var methode = teile[0];
+        var pfad = teile[1];
+        if (methode == "POST" && !darf)
+        {
+            Console.Error.WriteLine("Schreiben nach DS-Win erfordert --dswin-schreiben und DSWIN_ROOT auf eine Datenbankkopie.");
+            return 3;
+        }
+        System.Text.Json.JsonElement? body = teile.Length > 2 ? System.Text.Json.JsonDocument.Parse(teile[2]).RootElement : null;
+        var (status, daten) = ds.Rufen(methode, pfad, body, kopf, 30_000);
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { pfad, status, daten }, json));
+    }
+    return 0;
+}
+
 var configPfad = Argument(args, "--config") ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PlanR-Bridge", "agent.json");
 
