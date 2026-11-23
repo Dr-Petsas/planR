@@ -157,3 +157,8 @@ body.sb-body { margin: 0; background: #f7fbfb; overflow: auto; display: block; }
 .sb-fall-link { padding: 8px 14px; font-size: 13px; color: var(--grau, #6b767d); overflow-wrap: anywhere; border-top: 1px solid var(--linie, #e6e8eb); }
 .sb-originale > summary { cursor: pointer; font-weight: 650; margin: 0 0 10px; }
 .sb-fall-kopf [hidden] { display: none; }
+
+.sb-knopf.rot { color: #b3261e; border-color: #e5b5b1; }
+.sb-knopf.rot:hover { color: #fff; background: #b3261e; border-color: #b3261e; }
+.sb-gesperrt { color: #b3261e; font-weight: 600; }
+.sb-verwalten { flex-wrap: wrap; }

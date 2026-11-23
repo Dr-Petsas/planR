@@ -27,7 +27,7 @@ export interface Buchung {
   /** Upgrade Dokumentation per Sprache, 89 € im Monat, kein Preis je Eintrag */
   doku: boolean
   /** Pickadoc-Konto: sofort angelegt, schon vorhanden (Freischaltung von Hand) oder Anlage fehlgeschlagen */
-  konto?: { status: 'angelegt' | 'vorhanden' | 'manuell'; clientId?: string }
+  konto?: { status: 'angelegt' | 'vorhanden' | 'manuell'; clientId?: string; uid?: string }
   /** Testabo PlanR inklusive Sprachupgrade: Zeitraum und der Vermerk im Mini-Backend */
   testabo?: TestaboVermerk
   /** probe = Zugang aus der öffentlichen Probe; Stammdaten, KZV und Praxissystem fehlen noch */

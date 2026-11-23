@@ -18,7 +18,12 @@ interface Kunde {
   login: { email: string; vorhanden: boolean } | null
   stammdaten: { label: string; wert: string }[]
   plaene: VergleichPlan[]
+  /** PlanR-Konto der Buchung: für den Superuser zu öffnen, gesperrt? */
+  konto?: { email: string; zugang: boolean; gesperrt: boolean } | null
 }
+
+/** Adresse, unter der der Superuser dieses Konto öffnet; leer = PlanR kennt die Pickadoc-Praxis nicht */
+const sudoAdresse = (k: Kunde) => k.login?.vorhanden ? k.login.email : k.konto?.zugang ? k.konto.email : ''
 
 const ICON_PLAN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>'
 const ICON_LOGIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>'
@@ -44,17 +49,19 @@ function huelle(inhalt: string, angemeldet = false) {
 
 function loginZelle(k: Kunde) {
   if (!k.login) return '<span class="sb-login fehlt">—</span>'
-  return k.login.vorhanden
-    ? `<span class="sb-login" title="${esc(k.login.email)}">${esc(k.login.email)}</span>`
-    : `<span class="sb-login fehlt" title="Noch kein Login">${esc(k.login.email)} · kein Login</span>`
+  const sperre = k.konto?.gesperrt ? ' · <b class="sb-gesperrt">gesperrt</b>' : ''
+  if (k.login.vorhanden) return `<span class="sb-login" title="${esc(k.login.email)}">${esc(k.login.email)}${sperre}</span>`
+  return k.konto?.zugang
+    ? `<span class="sb-login fehlt" title="Die Praxis hat sich noch nicht selbst angemeldet">${esc(k.login.email)} · noch nie angemeldet${sperre}</span>`
+    : `<span class="sb-login fehlt" title="Noch kein Login">${esc(k.login.email)} · kein Login${sperre}</span>`
 }
 
 function knoepfe(k: Kunde) {
   const email = k.login?.email ?? ''
   const login = k.art === 'probe'
     ? `<button type="button" class="sb-icon" data-probe-login="${esc(k.id)}" title="Vollständiger Demo-Account ${esc(email)}, Passwort 12345678" aria-label="Demo-Login">${ICON_LOGIN}</button>`
-    : k.login?.vorhanden
-      ? `<button type="button" class="sb-icon" data-sudo="${esc(email)}" title="Als diese Praxis in PlanR anmelden" aria-label="Kunden-Login">${ICON_LOGIN}</button>`
+    : sudoAdresse(k)
+      ? `<button type="button" class="sb-icon" data-sudo="${esc(sudoAdresse(k))}" title="Als diese Praxis in PlanR anmelden" aria-label="Kunden-Login">${ICON_LOGIN}</button>`
       : ''
   const plan = `<button type="button" class="sb-icon" data-auf="${esc(k.id)}" title="${k.art === 'probe' ? 'Hochgeladener Plan und unser Ergebnis' : 'Stammdaten und Pläne'}" aria-label="Ansehen">${ICON_PLAN}</button>`
   return `<span class="sb-tun">${login}${plan}</span>`
@@ -190,9 +197,15 @@ function kundePopup(k: Kunde, sudo: (email: string, meldung: Element | null) => 
   const stamm = k.stammdaten.map((z) => `<div><dt>${esc(z.label)}</dt><dd>${esc(z.wert)}</dd></div>`).join('')
   const login = k.art === 'probe'
     ? `<button type="button" class="sb-knopf voll" data-probe-login="${esc(k.id)}">Demo-Login öffnen</button><span class="sb-fehl">${esc(k.login?.email ?? '')} · Passwort 12345678</span>`
-    : k.login?.vorhanden
-      ? `<button type="button" class="sb-knopf voll" data-sudo="${esc(k.login.email)}">Kunden-Login öffnen</button><span class="sb-fehl">${esc(k.login.email)}</span>`
-      : `<span class="sb-fehl">${k.login ? `Noch kein Login für ${esc(k.login.email)}.` : 'Kein Login hinterlegt.'}</span>`
+    : sudoAdresse(k)
+      ? `<button type="button" class="sb-knopf voll" data-sudo="${esc(sudoAdresse(k))}">Kunden-Login öffnen</button><span class="sb-fehl">${esc(sudoAdresse(k))}</span>`
+      : `<span class="sb-fehl">${k.login ? `Für ${esc(k.login.email)} kennt PlanR keine Pickadoc-Praxis (Konto bestand schon vor der Buchung und hat sich noch nie angemeldet).` : 'Kein Login hinterlegt.'}</span>`
+  // Sperren und Löschen betreffen nur PlanR. Das Pickadoc-Konto der Praxis bleibt, wie es ist.
+  const verwalten = k.konto ? `<div class="sb-leiste sb-verwalten">
+      <button type="button" class="sb-knopf" data-sperren>${k.konto.gesperrt ? 'PlanR-Konto entsperren' : 'PlanR-Konto sperren'}</button>
+      <button type="button" class="sb-knopf rot" data-loeschen>PlanR-Konto löschen</button>
+      <span class="sb-fehl">${k.konto.gesperrt ? 'Gesperrt: Die Praxis kommt nicht in PlanR. ' : ''}Nur PlanR, das Pickadoc-Konto bleibt unberührt.</span>
+    </div>` : ''
   const plaene = k.plaene.map((p) => planVergleich(p, '/probe-eingang/')).join('')
     || '<p class="sb-fehl">Kein Plan hochgeladen.</p>'
   // Der Fall: alle Uploads dieser Praxis im echten Planer. Derselbe Link geht an den Zahnarzt.
@@ -207,6 +220,7 @@ function kundePopup(k: Kunde, sudo: (email: string, meldung: Element | null) => 
     </section>` : ''
   const d = popup(k.name, `
     <div class="sb-leiste">${login}<span class="sb-meldung" data-meldung></span></div>
+    ${verwalten}
     ${stamm ? `<dl class="sb-stamm">${stamm}</dl>` : ''}
     ${fall}
     ${fall ? `<details class="sb-originale"><summary>Hochgeladene Dateien und Zahlen (${k.plaene.length})</summary>${plaene}</details>` : plaene}`)
@@ -241,6 +255,24 @@ function kundePopup(k: Kunde, sudo: (email: string, meldung: Element | null) => 
       zeile.textContent = (e as Error).message || 'Der Plan ließ sich gerade nicht öffnen.'
     }
   })()
+  const konto = k.konto
+  const kontoTun = async (pfad: string, daten: Record<string, unknown>, knopf: HTMLButtonElement) => {
+    const meldung = d.querySelector('[data-meldung]')
+    knopf.disabled = true
+    const r = await fetch(pfad, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten) }).catch(() => null)
+    const a = await r?.json().catch(() => null) as { ok?: boolean; meldung?: string } | null
+    if (a?.ok) { location.reload(); return }
+    if (meldung) meldung.textContent = a?.meldung || 'Das hat nicht geklappt.'
+    knopf.disabled = false
+  }
+  d.querySelector<HTMLButtonElement>('[data-sperren]')?.addEventListener('click', (e) => {
+    if (konto) void kontoTun('/api/probe/eingang/sperren', { email: konto.email, gesperrt: !konto.gesperrt }, e.currentTarget as HTMLButtonElement)
+  })
+  d.querySelector<HTMLButtonElement>('[data-loeschen]')?.addEventListener('click', (e) => {
+    if (!konto) return
+    const frage = `PlanR-Konto von ${k.name} (${konto.email}) löschen?\n\nBuchung, Zugang, Bridge-Schlüssel, Einstellungen und alle Pläne dieser Praxis verschwinden aus PlanR. Die Adresse kann sich danach neu anmelden.\nDas Pickadoc-Konto bleibt bestehen.`
+    if (confirm(frage)) void kontoTun('/api/probe/eingang/loeschen', { email: konto.email }, e.currentTarget as HTMLButtonElement)
+  })
   d.querySelector<HTMLButtonElement>('[data-sudo]')?.addEventListener('click', (e) => {
     sudo((e.currentTarget as HTMLElement).dataset.sudo ?? '', d.querySelector('[data-meldung]'))
   })

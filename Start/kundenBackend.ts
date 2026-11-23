@@ -49,6 +49,8 @@ export interface KundeZeile {
   login: KundeLogin | null
   stammdaten: StammZeile[]
   plaene: KundePlan[]
+  /** PlanR-Konto der Buchung: vom Superuser zu öffnen, gesperrt? (setzt der Server, kundenKonto.ts) */
+  konto?: { email: string; zugang: boolean; gesperrt: boolean } | null
 }
 
 const klein = (s: string) => s.trim().toLowerCase()

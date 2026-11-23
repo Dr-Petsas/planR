@@ -4,7 +4,7 @@
  * Der Versichertenblock (Name, Geburtsdatum, Kasse, Versichertennummer) bleibt außen vor.
  */
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
 export interface ZahnarztKontakt {
@@ -381,6 +381,18 @@ export async function eingangZuordnen(wurzel: string, ids: string[], mandant: st
 export async function eingangFuerMandant(wurzel: string, mandant: string): Promise<ProbeKarte[]> {
   if (!mandant) return []
   return (await eingangListe(wurzel)).filter((k) => k.mandant === mandant)
+}
+
+/** Uploads samt Datei entfernen (Konto in PlanR gelöscht). Liefert die Zahl der entfernten Karten. */
+export async function eingangEntfernen(wurzel: string, passt: (k: ProbeKarte) => boolean): Promise<number> {
+  return exklusiv(async () => {
+    const liste = await indexLesen(wurzel)
+    const weg = liste.filter(passt)
+    if (!weg.length) return 0
+    await indexSchreiben(wurzel, liste.filter((k) => !weg.includes(k)))
+    await Promise.all(weg.map((k) => rm(dateiPfad(wurzel, k.id), { force: true }).catch(() => undefined)))
+    return weg.length
+  })
 }
 
 export async function eingangListe(wurzel: string): Promise<ProbeKarte[]> {
