@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /download
+Disallow: /probe-eingang/
+
+Sitemap: https://planr.pickadoc.de/sitemap.xml

@@ -7,6 +7,7 @@
 import './superuser.css'
 import { logo } from './logo'
 import { esc, planVergleich, popup, zeitText, type VergleichPlan } from './planVergleich'
+import type { FunnelBericht, FunnelKanal, FunnelSchritt, SchrittZaehler } from '../funnel'
 
 interface Kunde {
   id: string
@@ -93,11 +94,88 @@ function anzahl(n: number, eins: string, viele: string) {
   return n === 1 ? `1 ${eins}` : `${n} ${viele}`
 }
 
-function listeZeichnen(alle: Kunde[], monat: string) {
+const FUNNEL_LABELS: [FunnelSchritt, string][] = [
+  ['start', 'Startseite'],
+  ['kalkulator', 'Kalkulator'],
+  ['probe', 'Probe geöffnet'],
+  ['beispiel', 'Beispiel-HKP'],
+  ['upload', 'Eigener Upload'],
+  ['buchung_start', 'Buchung gestartet'],
+  ['buchung_ok', 'Gebucht'],
+]
+const ZEITRAEUME: ['heute' | 'tage7' | 'tage30', string][] = [
+  ['heute', 'Heute'],
+  ['tage7', '7 Tage'],
+  ['tage30', '30 Tage'],
+]
+const KANAELE: ['alle' | FunnelKanal, string][] = [
+  ['alle', 'Alle Kanäle'],
+  ['ads', 'Google Ads'],
+  ['organisch', 'Organisch'],
+  ['direkt', 'Direkt'],
+  ['empfehlung', 'Empfehlung'],
+]
+
+function prozent(teil: number, basis: number): string {
+  if (basis <= 0 || teil <= 0) return '—'
+  const p = Math.min(100, (teil / basis) * 100)
+  return `${p >= 10 ? Math.round(p) : p.toFixed(1).replace('.', ',')} %`
+}
+
+function funnelBlock(bericht: FunnelBericht | null, zeitraum: 'heute' | 'tage7' | 'tage30', kanal: 'alle' | FunnelKanal): string {
+  if (!bericht) return ''
+  const bereich = bericht[zeitraum]
+  const z: SchrittZaehler = kanal === 'alle' ? bereich.gesamt : bereich.kanaele[kanal]
+  const basis = Math.max(z.start, z.probe, z.buchung_start, z.buchung_ok, 0)
+  const karten = FUNNEL_LABELS.map(([key, label]) => {
+    const n = z[key] ?? 0
+    const breite = basis > 0 ? Math.min(100, Math.round((n / basis) * 100)) : 0
+    const quote = key === 'start' ? (n > 0 ? '100 %' : '—') : prozent(n, z.start || basis)
+    return `<div class="sb-funnel-karte${key === 'buchung_ok' ? ' sb-funnel-ziel' : ''}">
+      <small>${esc(label)}</small>
+      <b>${n.toLocaleString('de-DE')}</b>
+      <span>${esc(quote)}</span>
+      <i style="width:${breite}%"></i>
+    </div>`
+  }).join('')
+  const kampagnen = bericht.kampagnen30.length
+    ? `<div class="sb-funnel-kampagnen">
+        <h3>Kampagnen (30 Tage, utm_campaign)</h3>
+        <div class="sb-liste sb-kampagnen-liste">
+          <div class="sb-zeile sb-kopfzeile"><span>Kampagne</span><span class="sb-zahl">Start</span><span class="sb-zahl">Probe</span><span class="sb-zahl">Beispiel</span><span class="sb-zahl">Upload</span><span class="sb-zahl">Buchung</span></div>
+          ${bericht.kampagnen30.map((k) => `<div class="sb-zeile">
+            <span>${esc(k.name)}</span>
+            <span class="sb-zahl">${k.zaehler.start}</span>
+            <span class="sb-zahl">${k.zaehler.probe}</span>
+            <span class="sb-zahl">${k.zaehler.beispiel}</span>
+            <span class="sb-zahl">${k.zaehler.upload}</span>
+            <span class="sb-zahl"><b>${k.zaehler.buchung_ok}</b></span>
+          </div>`).join('')}
+        </div>
+      </div>`
+    : ''
+  return `<section class="sb-block sb-funnel" data-funnel-block>
+    <header>
+      <h2>Besucher-Funnel</h2>
+      <span>Cookie-frei, aggregiert (Stand ${esc(bericht.heuteDatum)}) · Google Ads &amp; organisch</span>
+    </header>
+    <div class="sb-funnel-filter">
+      <div class="sb-pills" role="group" aria-label="Zeitraum">${ZEITRAEUME.map(([id, label]) =>
+        `<button type="button" class="sb-pill${id === zeitraum ? ' aktiv' : ''}" data-funnel-zeit="${id}">${esc(label)}</button>`).join('')}</div>
+      <div class="sb-pills" role="group" aria-label="Kanal">${KANAELE.map(([id, label]) =>
+        `<button type="button" class="sb-pill${id === kanal ? ' aktiv' : ''}" data-funnel-kanal="${id}">${esc(label)}</button>`).join('')}</div>
+    </div>
+    <div class="sb-funnel-grid">${karten}</div>
+    ${kampagnen}
+  </section>`
+}
+
+function listeZeichnen(alle: Kunde[], monat: string, funnel: FunnelBericht | null, zeitraum: 'heute' | 'tage7' | 'tage30' = 'tage7', kanal: 'alle' | FunnelKanal = 'alle') {
   const kunden = alle.filter((k) => k.art !== 'probe')
   const proben = alle.filter((k) => k.art === 'probe')
   return huelle(`
     <p class="sb-meldung" data-sudo-meldung></p>
+    ${funnelBlock(funnel, zeitraum, kanal)}
     <section class="sb-block">
       <header><h2>Kunden</h2><span>${anzahl(kunden.length, 'Kunde', 'Kunden')} · Umsatz netto, laufender Monat</span></header>
       ${kundenListe(kunden, monat)}
@@ -287,8 +365,31 @@ export function probeEingangSeite(app: HTMLElement) {
       }
       const d = await r.json() as { ok?: boolean; kunden?: Kunde[]; monat?: string }
       if (!r.ok || !d.ok || !Array.isArray(d.kunden)) throw new Error('liste')
-      app.innerHTML = listeZeichnen(d.kunden, d.monat ?? '')
-      verdrahten(app, d.kunden)
+      const kunden = d.kunden
+      const monat = d.monat ?? ''
+      const funnel = await fetch('/api/probe/funnel', { cache: 'no-store' })
+        .then((fr) => fr.ok ? fr.json() as Promise<FunnelBericht & { ok?: boolean }> : null)
+        .then((fd) => (fd?.ok ? fd : null))
+        .catch(() => null)
+      let zeitraum: 'heute' | 'tage7' | 'tage30' = 'tage7'
+      let kanal: 'alle' | FunnelKanal = 'alle'
+      const neuZeichnen = () => {
+        app.innerHTML = listeZeichnen(kunden, monat, funnel, zeitraum, kanal)
+        verdrahten(app, kunden)
+        for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-funnel-zeit]')) {
+          knopf.addEventListener('click', () => {
+            zeitraum = knopf.dataset.funnelZeit as 'heute' | 'tage7' | 'tage30'
+            neuZeichnen()
+          })
+        }
+        for (const knopf of app.querySelectorAll<HTMLButtonElement>('[data-funnel-kanal]')) {
+          knopf.addEventListener('click', () => {
+            kanal = knopf.dataset.funnelKanal as 'alle' | FunnelKanal
+            neuZeichnen()
+          })
+        }
+      }
+      neuZeichnen()
     } catch {
       app.innerHTML = huelle('<p class="sb-leer">Die Liste ist gerade nicht erreichbar.</p>')
     }

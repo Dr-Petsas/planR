@@ -111,6 +111,34 @@ body.sb-body { margin: 0; background: #f7fbfb; overflow: auto; display: block; }
 .sb-werte { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin: 14px 0 0; }
 .sb-werte dd { font-variant-numeric: tabular-nums; font-weight: 600; }
 
+/* Conversion-Funnel */
+.sb-funnel-filter { display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 0 22px 14px; }
+.sb-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.sb-pill {
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--sb-grau);
+  background: #f4f8f9; border: 1px solid var(--sb-linie); border-radius: 999px;
+  padding: 5px 12px; cursor: pointer;
+}
+.sb-pill:hover { background: var(--sb-hell); color: var(--sb-dunkel); }
+.sb-pill.aktiv { background: var(--sb-akzent); border-color: var(--sb-akzent); color: #fff; }
+.sb-funnel-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px; padding: 0 22px 18px;
+}
+.sb-funnel-karte {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 14px 14px; border-radius: 12px; background: #f7fbfb; border: 1px solid var(--sb-linie);
+}
+.sb-funnel-karte.sb-funnel-ziel { background: #edf8f5; border-color: #9ed8cb; }
+.sb-funnel-karte small { font-size: 11.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--sb-grau); }
+.sb-funnel-karte b { font-size: 26px; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--sb-text); }
+.sb-funnel-karte span { font-size: 12.5px; color: var(--sb-dunkel); font-variant-numeric: tabular-nums; }
+.sb-funnel-karte i { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--sb-akzent); border-radius: 0 4px 0 0; }
+.sb-funnel-karte.sb-funnel-ziel i { background: #1e9e7e; }
+.sb-funnel-kampagnen { padding: 4px 0 12px; border-top: 1px solid var(--sb-linie); }
+.sb-funnel-kampagnen h3 { margin: 10px 22px 8px; font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--sb-grau); }
+.sb-kampagnen-liste { grid-template-columns: minmax(0, 2fr) repeat(5, 84px); }
+
 @media (max-width: 840px) {
   .sb-liste.kunden { grid-template-columns: minmax(0, 1fr) max-content max-content max-content; }
   .sb-liste .sb-login, .sb-liste .sb-zeit { display: none; }

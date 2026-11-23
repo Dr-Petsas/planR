@@ -55,6 +55,7 @@ import {
   CODE_MINUTEN, bridgeMandanten, claraImVerbund, codeFinden, codeSetzen, codeVerbrauchen, eigenerMandant, eigenesRegister, entkoppeln, gaesteVon, koppeln, koppelnPruefen,
   neuerVerbundCode, verbundVon, type VerbundCode,
 } from './verbund.ts'
+import { funnelAuswerten, funnelBuchen, istFunnelSchritt, type FunnelDatei, type FunnelSchritt } from './funnel.ts'
 
 // Plan, HKP und Befund ins Praxisprogramm: die Bridge sichert und prüft dabei ganze Tabellen (große Praxis: über eine Minute).
 const SCHREIB_MS = 270_000
@@ -85,6 +86,8 @@ const CF_ACCESS = `${ORDNER}/cf-access.json`
 const BRIDGE_WEITER = `${ORDNER}/bridge-weiter.json`
 /** Buchungen von der Startseite (enthalten IBAN – bleiben im Datenordner) */
 const BUCHUNGEN = `${ORDNER}/buchungen.json`
+/** Cookie-freie Conversion-Tageszähler (keine IPs, keine Nutzer-IDs) */
+const FUNNEL = `${ORDNER}/funnel.json`
 /** Installationspaket für den Praxisserver (Bridge: paket-bauen.ps1) */
 const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Bridge.zip`
 /** Dasselbe als Setup in einer Datei; PlanR hängt beim Herunterladen den Einrichtungscode an den Dateinamen. */
@@ -1952,6 +1955,41 @@ function download(req: IncomingMessage, res: ServerResponse, url: string, query 
 }
 
 const buchungBremse = new Bremse(5, 60 * 60_000)
+const funnelBremse = new Bremse(80, 60 * 60_000)
+
+async function funnelSpeichern(schritt: FunnelSchritt, kanal?: unknown, kampagne?: unknown) {
+  try {
+    await exklusiv(async () => {
+      const aktuell = await jsonLesen<FunnelDatei>(FUNNEL, { tage: {} })
+      await jsonSchreiben(FUNNEL, funnelBuchen(aktuell, { schritt, kanal, kampagne }))
+    })
+  } catch { /* Statistik blockiert niemals Buchung oder Seitenaufruf */ }
+}
+
+/** POST: cookie-freier Conversion-Schritt der Landingpage (204). */
+async function funnelEndpunkt(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) { res.statusCode = 405; res.end(); return }
+  if (funnelBremse.gesperrt(ip(req))) { res.statusCode = 429; res.end(); return }
+  const roh = JSON.parse(await lesenBody(req, 2_000)) as { schritt?: unknown; kanal?: unknown; kampagne?: unknown }
+  if (!istFunnelSchritt(roh.schritt) || roh.schritt === 'buchung_ok') {
+    res.statusCode = 400; res.end(); return
+  }
+  funnelBremse.fehler(ip(req))
+  await funnelSpeichern(roh.schritt, roh.kanal, roh.kampagne)
+  res.statusCode = 204
+  res.end()
+}
+
+/** GET: Conversion-Bericht für das Superuser-Dashboard. */
+async function funnelBerichtEndpunkt(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) return json(res, wer.status, { ok: false })
+  const daten = await jsonLesen<FunnelDatei>(FUNNEL, { tage: {} })
+  json(res, 200, { ok: true, ...funnelAuswerten(daten) })
+}
 
 /** POST: Buchung von der Startseite – speichern, Info-Mail an Pickadoc, Bestätigung an die Praxis. Ohne Anmeldung. */
 async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
@@ -1970,6 +2008,7 @@ async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
     const { liste } = testaboAbschliessen(Array.isArray(alle) ? alle : [])
     await jsonSchreiben(BUCHUNGEN, [...liste, b])
   })
+  void funnelSpeichern('buchung_ok', roh.funnelKanal, roh.funnelKampagne)
   const glaeubiger = process.env.PLANR_GLAEUBIGER_ID?.trim() ?? ''
   const info = infoMail(b, glaeubiger)
   const kunde = kundenMail(b, glaeubiger)
@@ -3903,6 +3942,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
+  if (url === '/api/funnel') return void funnelEndpunkt(req, res).catch(() => { if (!res.headersSent) { res.statusCode = 400; res.end() } })
   if (url === '/api/testabo/abschluss') return void testaboAbschlussEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/probe/lesen') return void probeLesen(req, res).catch(fehler500(res))
   if (url === '/api/probe/einordnen') return void probeEinordnen(req, res).catch(fehler500(res))
@@ -3915,6 +3955,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/eingang/fall') return void probeFallLink(req, res).catch(fehler500(res))
   if (url.startsWith('/api/probe/fall/')) return void probeFall(req, res, url.slice('/api/probe/fall/'.length)).catch(fehler500(res))
   if (url === '/api/probe/eingang/login') return void probeLoginAnlegen(req, res).catch(fehler500(res))
+  if (url === '/api/probe/funnel') return void funnelBerichtEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
   if (url.startsWith('/probe-eingang/')) return void probeEingangSeite(req, res, url.slice('/probe-eingang/'.length)).catch(fehler500(res))

@@ -5,6 +5,7 @@ import { PVS_LISTE, pvsVon } from './einstellungen'
 import { DOKU_MONAT, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, TESTABO_PLAENE, TESTABO_TAGE, ibanGueltig, ibanNorm, type Paket } from './paket'
 import { anleitungHtml, anleitungVon, bridgeSetupLaden, codeLesbar } from './einrichtung'
 import { logo } from './logo'
+import { funnelMelden, funnelQuelle } from './funnelClient'
 import { werbungStarten, zielErreicht } from './werbung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
@@ -46,6 +47,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
   const w: Werte = { paket: 'planr_clara', doku: test || dokuAn, 'praxis.rechtsform': 'Einzelpraxis', 'kzv.praxen': '1', 'kzv.zahnaerzte': '1', 'pvs.server': 'server' }
   document.title = test ? 'PlanR 14 Tage testen' : 'PlanR buchen'
   werbungStarten()
+  funnelMelden('buchung_start')
 
   const paket = (): Paket => 'planr_clara'
 
@@ -265,12 +267,15 @@ export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
   function daten() {
     const g = (k: string) => String(w[k] ?? '').trim()
     const teil = (prefix: string) => Object.fromEntries(Object.entries(w).filter(([k]) => k.startsWith(`${prefix}.`)).map(([k, v]) => [k.slice(prefix.length + 1), v]))
+    const quelle = funnelQuelle()
     return {
       paket: paket(), praxis: teil('praxis'), inhaber: teil('inhaber'),
       kzv: { ...teil('kzv'), zahnaerzte: Number(g('kzv.zahnaerzte')), praxen: Number(g('kzv.praxen') || 1), eigenlabor: w['kzv.eigenlabor'] === true },
       pvs: teil('pvs'), hinweis: g('hinweis'), passwort: String(w.passwort ?? ''),
       sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'), doku: test || w.doku === true, testabo: test,
       firma2: (app.querySelector<HTMLInputElement>('[name=firma2]')?.value ?? ''),
+      funnelKanal: quelle.kanal,
+      funnelKampagne: quelle.kampagne,
     }
   }
 

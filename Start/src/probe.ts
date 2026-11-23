@@ -9,9 +9,39 @@ import { blattAusEinlesen, type BlattSummen, type EinleseAntwort, type EinleseSe
 import { blattAusZeilen, planartAusText, planartErkennen, privatSummenAusText, reglerFuer, textSchichtenAusPdf, zeilenAusPdf, zeilenAusText, type Planart, type ProbePosition, type ZahnSchema } from './hkpPdf'
 import { gozPruefen, type Katalog } from './probeKatalog'
 import { FAECHER, anlagenZuordnen, dazu, fachEntscheiden, fachErkennen, gruppenBauen, hat, zaehlt, type Blatt, type Einordnung, type Fach, type Gruppe, type Teil } from './probeFall'
+import { funnelMelden } from './funnelClient'
 import { werbungStarten, zielErreicht } from './werbung'
 
 const LEER: Blatt = { schema: { B: {}, R: {}, TP: {} }, positionen: [] }
+
+/** Sofort klickbarer Beispiel-HKP (Brücke 14–16 & Krone 26, Vollkeramik) für die 1-Klick-Demo ohne eigenes PDF. */
+const BEISPIEL_HKP: Teil = {
+  name: 'Beispiel-HKP · Brücke 14–16 & Krone 26 (Vollkeramik)',
+  fach: 'ze',
+  kasse: true,
+  planart: 'hkp',
+  planer: 'hkp',
+  gozAnteil: true,
+  schema: {
+    B: { 14: 'ww', 15: 'f', 16: 'ww', 26: 'ww', 36: 'k', 46: 'k', 38: 'f', 48: 'f' },
+    R: { 14: 'KV', 15: 'BV', 16: 'KV', 26: 'K' },
+    TP: { 14: 'KM', 15: 'BM', 16: 'KM', 26: 'KM' },
+  },
+  positionen: [
+    { ebene: 'GOZ', nr: '5010', zahn: '14', anzahl: 1, faktor: 2.3 },
+    { ebene: 'GOZ', nr: '5070', zahn: '15', anzahl: 1, faktor: 2.3 },
+    { ebene: 'GOZ', nr: '5010', zahn: '16', anzahl: 1, faktor: 2.3 },
+    { ebene: 'GOZ', nr: '2210', zahn: '26', anzahl: 1, faktor: 2.3 },
+  ],
+  summen: {
+    gesamt: 2950,
+    honorarGoz: 790,
+    labor: 1420,
+    festzuschuss: 1656.23,
+    eigenanteil: 1293.77,
+  },
+  dateien: [],
+}
 
 function summenVomPrivat(text: string): BlattSummen {
   const s = privatSummenAusText(text)
@@ -169,6 +199,13 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
         <p class="hp-lead">PlanR liest Befund, Regelversorgung, Therapieplanung, GOZ und Labor und setzt sie in den HKP-Planer. Dort stehen Teil 1, Teil 2, die Anlagen und die Regler.</p>`}
       </div>
       <form class="hp-probe-ablage">
+        ${fallToken ? '' : `<div class="hp-probe-beispiel">
+          <div>
+            <b>Kein PDF zur Hand? Direkt im Planer testen.</b>
+            <span>Beispiel-HKP (Brücke 14–16 &amp; Krone 26) mit einem Klick öffnen – ohne Upload, ohne Anmeldung.</span>
+          </div>
+          <button type="button" class="hp-knopf hp-knopf-pink" data-beispiel>Beispiel-HKP öffnen →</button>
+        </div>`}
         <p class="hp-probe-pflicht">Patientendaten unkenntlich machen, bevor Sie etwas hier ablegen: Name, Geburtsdatum, Adresse, Telefon und Versichertennummer dürfen auf dem Blatt nicht mehr lesbar sein.</p>
         <label class="hp-probe-haken"><input type="checkbox" data-frei> Ich habe die Patientendaten unkenntlich gemacht.</label>
         <label class="hp-probe-feld">
@@ -191,6 +228,13 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
     </section>
     <section class="hp-sektion hp-probe-plan" hidden data-ergebnis>
       <div class="hp-zugang" data-zugang hidden></div>
+      <div class="hp-probe-demo-banner" data-beispiel-leiste hidden>
+        <span><b>Beispiel-HKP geladen:</b> Ziehen Sie links im Planer an den Reglern und sehen Sie das Umsatz-Plus live.</span>
+        <div class="hp-probe-demo-ctas">
+          <a class="hp-knopf hp-knopf-pink" href="#buchen-test">14 Tage kostenlos testen</a>
+          <a class="hp-knopf" href="#top" data-beispiel-hoch>Eigenen HKP testen ↑</a>
+        </div>
+      </div>
       <div class="hp-fall">
         <div class="hp-fall-reiter" role="tablist" data-reiter></div>
         <p class="hp-fall-hinweis" data-fall-hinweis></p>
@@ -203,6 +247,7 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
     </section>
   </div>`
   werbungStarten()
+  if (!fallToken) funnelMelden('probe')
   const nav = app.querySelector('.hp-nav nav')
   void fetch('/api/probe/eingang', { cache: 'no-store' }).then((r) => {
     if (!r.ok || !nav || nav.querySelector('[data-eingang]')) return
@@ -590,6 +635,26 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
     if (!fallToken) ergebnis.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  const beispielLeiste = wurzel.querySelector<HTMLElement>('[data-beispiel-leiste]')
+  const beispielKnopf = wurzel.querySelector<HTMLButtonElement>('[data-beispiel]')
+  beispielKnopf?.addEventListener('click', () => {
+    merkToken = ''
+    fall = [{ ...BEISPIEL_HKP, schema: { B: { ...BEISPIEL_HKP.schema.B }, R: { ...BEISPIEL_HKP.schema.R }, TP: { ...BEISPIEL_HKP.schema.TP } }, positionen: BEISPIEL_HKP.positionen.map((p) => ({ ...p })), summen: { ...BEISPIEL_HKP.summen }, dateien: [] }]
+    reglerStand = {}
+    const zugangEl = wurzel.querySelector<HTMLElement>('[data-zugang]')
+    if (zugangEl) { zugangEl.hidden = true; zugangEl.innerHTML = '' }
+    ergebnis.classList.remove('hp-vor-zugang')
+    if (beispielLeiste) beispielLeiste.hidden = false
+    zeigen('ze')
+    status.textContent = 'Beispiel-HKP geöffnet (Brücke 14–16 & Krone 26). Ziehen Sie unten im Planer an den Reglern.'
+    funnelMelden('beispiel')
+    ergebnis.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+  wurzel.querySelector<HTMLAnchorElement>('[data-beispiel-hoch]')?.addEventListener('click', (ev) => {
+    ev.preventDefault()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  })
+
   dateiFeld.addEventListener('change', async (ev) => {
     const dateien = [...((ev.target as HTMLInputElement).files ?? [])]
     if (!dateien.length) return
@@ -597,6 +662,8 @@ export function probeSeite(app: HTMLElement, fallToken = '') {
       status.textContent = 'Bitte zuerst bestätigen, dass die Patientendaten unkenntlich sind.'
       return
     }
+    if (beispielLeiste) beispielLeiste.hidden = true
+    funnelMelden('upload')
     const quellen: Quelle[] = []
     for (const d of dateien) quellen.push({ name: d.name, type: d.type, puff: await d.arrayBuffer() })
     await lesen(quellen)

@@ -2389,7 +2389,8 @@ async function rechnungenZeigen() {
 }
 
 const app = document.querySelector<HTMLDivElement>('#app')!
-app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
+const istSsrStart = app.dataset.ssr === 'homepage'
+if (!istSsrStart) app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
 /** Ohne Anmeldung: Startseite für Besucher, #anmelden zeigt die Anmeldung */
 function ohneAnmeldung() {
   document.body.classList.remove('planr-app')
@@ -2587,6 +2588,12 @@ function planerSpeicher(mandant: string, name?: string) {
 
 ausPickadoc().then(ichLaden).then(async (wer) => {
   if (!wer) return ohneAnmeldung()
+  document.body.classList.remove('hp-body')
+  document.documentElement.classList.remove('hp-html')
+  if (app.dataset.ssr) {
+    delete app.dataset.ssr
+    app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
+  }
   planerSpeicher(wer.mandant)
   addEventListener('hashchange', () => {
     if (location.hash === '#probe' || location.hash.startsWith('#fall/')) void probeOeffnen()

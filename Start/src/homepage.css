@@ -232,6 +232,24 @@ html.hp-html { height: auto; overflow-x: hidden; overscroll-behavior: none; back
 .hp-klein { margin-top: 18px; font-size: 14px; color: var(--hp-grau); }
 .hp-probe-ablage, .hp-probe-liste { margin: 0; }
 .hp-probe-ablage { display: flex; flex-direction: column; gap: 14px; }
+.hp-picture { display: contents; }
+.hp-probe-beispiel {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 18px;
+  padding: 16px 18px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 122, 168, 0.16), rgba(63, 216, 181, 0.12));
+  border: 1px solid rgba(255, 122, 168, 0.42);
+}
+.hp-probe-beispiel > div { flex: 1 1 260px; display: flex; flex-direction: column; gap: 4px; }
+.hp-probe-beispiel b { color: #f7fffc; font-size: 16px; }
+.hp-probe-beispiel span { color: #cfe3e1; font-size: 14px; line-height: 1.45; }
+.hp-probe-demo-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 18px;
+  padding: 14px 18px; border-bottom: 1px solid var(--hp-linie);
+  background: linear-gradient(90deg, rgba(63, 216, 181, 0.14), rgba(255, 122, 168, 0.12));
+  color: #e8f7f5; font-size: 14.5px;
+}
+.hp-probe-demo-banner[hidden] { display: none; }
+.hp-probe-demo-ctas { display: flex; flex-wrap: wrap; gap: 10px; }
 .hp-probe-feld {
   position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
   padding: 26px 22px; border-radius: 18px; border: 0; cursor: pointer; color: #042026;
