@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:engine": "vite build -c vite.engine.config.ts && node tools/engine-nach-mas.mjs",
+    "test": "vitest run",
     "lint": "oxlint",
     "preview": "vite preview"
   },

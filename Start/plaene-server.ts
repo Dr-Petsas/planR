@@ -61,7 +61,7 @@ import { funnelAuswerten, funnelBuchen, istFunnelSchritt, type FunnelDatei, type
 const SCHREIB_MS = 270_000
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
-const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine' | 'einstellungen') => `${ORDNER}/mandanten/${mandant}/${name}.json`
+const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine' | 'einstellungen' | 'einst-stand') => `${ORDNER}/mandanten/${mandant}/${name}.json`
 /** Pickadoc-Praxis → Mandant, Benutzer → DS-Win-Praxen (anmeldung.ts) */
 const ZUGAENGE = `${ORDNER}/zugaenge.json`
 const SITZUNGEN = `${ORDNER}/sitzungen.json`
@@ -2753,7 +2753,7 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
     }
   }
   const l = await pvsBefundLesen(req, w, (k) => String(body[k] ?? q.get(k) ?? '').trim())
-  if (!('nummer' in l)) return json(res, l.status, l.daten)
+  if (!istBefundGelesen(l)) return json(res, l.status, l.daten)
   if (req.method === 'GET') {
     // Offene Änderungen aus dem Gespräch gehören zum aktuellen Befund (nächster Plan, Freigabe)
     const b = befundAnsicht(await befundGelesen(w, l))
@@ -2809,6 +2809,7 @@ async function internDoku(req: IncomingMessage, w: Wer, res: ServerResponse) {
 
 type BefundFehler = { status: number; daten: Record<string, unknown>; nummer?: string }
 interface BefundGelesen { c: PvsWeg; rufen: Rufer; nummer: string; befund: PvsBefund; label: string; geburt: string }
+const istBefundGelesen = (x: BefundGelesen | BefundFehler): x is BefundGelesen => 'befund' in x
 /** Ohne neues Lesen gilt der gemerkte Stand aus dem Praxisprogramm so lange als frisch */
 const BEFUND_FRISCH_MS = 10 * 60_000
 
@@ -2924,9 +2925,9 @@ async function befundAenderungAnwenden(req: IncomingMessage, w: Wer, angabe: (k:
   let basis = alt && Date.now() - Date.parse(alt.gelesen) < BEFUND_FRISCH_MS ? alt : undefined
   if (!basis) {
     const l = await pvsBefundLesen(req, w, angabe)
-    if (!('nummer' in l) && !alt) return l
+    if (!istBefundGelesen(l) && !alt) return l
     // Praxisprogramm nicht lesbar: auf dem gemerkten Stand weiter (er zeigt seinen Lesestand selbst)
-    basis = 'nummer' in l ? await befundGelesen(w, l) : alt!
+    basis = istBefundGelesen(l) ? await befundGelesen(w, l) : alt!
   }
   const b = basis
   return (await befundAendern(w.mandant, b.patient, (a) => nachAenderung(a ?? b, zaehne, wer)))!
@@ -2986,7 +2987,7 @@ async function befundEndpunkt(req: IncomingMessage, res: ServerResponse, url: st
   }
   if (req.method === 'GET' && url === '/api/befund') {
     const l = await pvsBefundLesen(req, w, (k) => (q.get(k) ?? '').trim())
-    if ('nummer' in l) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
+    if (istBefundGelesen(l)) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
     // PVS gerade nicht erreichbar: der gemerkte Stand mit Hinweis
     const gemerkt = l.nummer || (q.get('patient') ?? '')
     const alt = /^\d{1,9}$/.test(gemerkt) ? (await befundeLesen(m))[gemerkt] : undefined
@@ -3026,7 +3027,7 @@ async function befundEndpunkt(req: IncomingMessage, res: ServerResponse, url: st
  */
 async function befundFreigabe(req: IncomingMessage, w: Wer, nummer: string, wo: string, res: ServerResponse) {
   const l = await pvsBefundLesen(req, w, (k) => (k === 'patient' ? nummer : ''))
-  if (!('nummer' in l)) return json(res, l.status, l.daten)
+  if (!istBefundGelesen(l)) return json(res, l.status, l.daten)
   const frisch = await befundGelesen(w, l)
   const kiefer = offeneKiefer(frisch)
   if (!kiefer.length) {
@@ -3056,7 +3057,7 @@ async function befundLinkEndpunkt(req: IncomingMessage, res: ServerResponse, url
     const alt = (await befundeLesen(w.mandant))[nummer]
     if (alt && Date.now() - Date.parse(alt.gelesen) < BEFUND_FRISCH_MS) return json(res, 200, { ok: true, befund: befundAnsicht(alt) })
     const l = await pvsBefundLesen(req, w, angabe)
-    if ('nummer' in l) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
+    if (istBefundGelesen(l)) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
     return alt ? json(res, 200, { ok: true, befund: befundAnsicht(alt), meldung: String(l.daten.meldung ?? '') }) : json(res, l.status, l.daten)
   }
   if (req.method !== 'POST') return json(res, 404, { ok: false })
@@ -3621,7 +3622,6 @@ async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     if (!fall) return json(res, 404, { ok: false, meldung: 'Zu diesen Plänen liegt keine Datei.' })
     return json(res, 200, { ok: true, token: fall.token })
   }
-  if (req.method !== 'GET') return json(res, 405, { ok: false })
   if (url === '/api/importe/stand') {
     if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
     const roh = JSON.parse(await lesenBody(req, 8000) || '{}') as { modul?: unknown; nummer?: unknown; regler?: unknown; nachher?: unknown }
@@ -3645,6 +3645,7 @@ async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     await eingangStand(ORDNER, ziel.id, stand)
     return json(res, 200, { ok: true })
   }
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
   if (url === '/api/importe') {
     const karten = await importeMitPlan(await eingangFuerMandant(ORDNER, w.mandant))
     const namen = new Map(karten.map((k) => [k.id, k.dateiname]))

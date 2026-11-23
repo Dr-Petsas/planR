@@ -1,4 +1,4 @@
-import { createHash, createPublicKey, randomBytes, timingSafeEqual, verify, type JsonWebKey } from 'node:crypto'
+import { createHash, createPublicKey, randomBytes, timingSafeEqual, verify, type webcrypto } from 'node:crypto'
 
 /**
  * PVS-Agenten: Je Praxis (Mandant) baut ein Agent auf dem Praxisserver die Verbindung zu PlanR selbst auf
@@ -155,7 +155,7 @@ export function emailErlaubt(liste: AgentListe, mandant: string, email: string):
 
 export interface AccessEinstellung { team: string; aud: string }
 export interface AccessIdentitaet { email?: string; dienst?: string }
-type Jwk = JsonWebKey & { kid?: string }
+type Jwk = webcrypto.JsonWebKey & { kid?: string }
 
 const b64json = (teil: string) => JSON.parse(Buffer.from(teil, 'base64url').toString('utf8')) as Record<string, unknown>
 

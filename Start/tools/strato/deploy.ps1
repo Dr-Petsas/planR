@@ -12,11 +12,22 @@
 
 .PARAMETER Caddy
   Caddy-Eintrag für planr.pickadoc.de anlegen (nur beim ersten Mal nötig).
+
+.PARAMETER OhnePruefung
+  Überspringt das zentrale Release-Gate (tools\release-gate.ps1). Nur für bewusste Notfälle verwenden.
 #>
-param([switch]$Daten, [switch]$Caddy)
+param([switch]$Daten, [switch]$Caddy, [switch]$OhnePruefung)
 $ErrorActionPreference = 'Stop'
 $wurzel = (Resolve-Path "$PSScriptRoot\..\..\..").Path
 $hier = $PSScriptRoot
+if (-not $OhnePruefung) {
+  & (Join-Path $wurzel 'tools\release-gate.ps1')
+  if ($LASTEXITCODE) { throw 'Release-Gate fehlgeschlagen – Deploy abgebrochen.' }
+} else {
+  Write-Warning 'Deploy ohne Release-Gate (-OhnePruefung).'
+}
+$commit = (git -C $wurzel rev-parse --short HEAD 2>$null)
+if ($commit) { Write-Host "Deploy-Stand: Commit $commit" }
 $bau = Join-Path $env:TEMP 'planr-strato'
 $server = 'asterisk-live'
 $utf8 = New-Object Text.UTF8Encoding($false)

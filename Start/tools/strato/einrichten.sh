@@ -68,9 +68,36 @@ UNIT
 
 systemctl daemon-reload
 systemctl enable planr >/dev/null 2>&1
+
+rollback() {
+  echo "FEHLER nach Deploy – stelle vorigen Stand (/srv/planr/*.alt) wieder her!" >&2
+  if [ -d /srv/planr/start.alt ]; then
+    rm -rf /srv/planr/start.kaputt
+    mv /srv/planr/start /srv/planr/start.kaputt || true
+    mv /srv/planr/start.alt /srv/planr/start
+  fi
+  if [ -d /srv/planr/planer.alt ]; then
+    rm -rf /srv/planr/planer.kaputt
+    mv /srv/planr/planer /srv/planr/planer.kaputt || true
+    mv /srv/planr/planer.alt /srv/planr/planer
+  fi
+  systemctl restart planr || true
+  sleep 4
+  systemctl is-active planr || true
+  rm -f /tmp/start.tgz /tmp/planer.tgz /tmp/data.tgz
+  exit 1
+}
+
 systemctl restart planr
 sleep 6
-systemctl is-active planr
-curl -s -o /dev/null -w "lokal / %{http_code}\n" -H "Host: planr.pickadoc.de" http://127.0.0.1:5189/
-curl -s -w " [%{http_code}]\n" -H "Host: planr.pickadoc.de" http://127.0.0.1:5189/api/anmeldung
+systemctl is-active --quiet planr || rollback
+code_root=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: planr.pickadoc.de" http://127.0.0.1:5189/ || echo 000)
+api_raw=$(curl -s -w "\n%{http_code}" -H "Host: planr.pickadoc.de" http://127.0.0.1:5189/api/anmeldung || echo -e "\n000")
+code_api=$(echo "$api_raw" | tail -n 1)
+body_api=$(echo "$api_raw" | head -n -1)
+echo "active"
+echo "lokal / $code_root"
+echo "$body_api [$code_api]"
+[ "$code_root" = "200" ] || rollback
+[ "$code_api" = "401" ] || rollback
 rm -f /tmp/start.tgz /tmp/planer.tgz /tmp/data.tgz
