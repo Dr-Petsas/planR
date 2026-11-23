@@ -55,6 +55,36 @@ public sealed class PlanRKunde : IDisposable
         antwort.EnsureSuccessStatusCode();
     }
 
+    public async Task<string> HoleText(string pfad, CancellationToken halt)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{cfg.Planr}{pfad}");
+        Kopf(req);
+        using var antwort = await http.SendAsync(req, halt);
+        antwort.EnsureSuccessStatusCode();
+        return await antwort.Content.ReadAsStringAsync(halt);
+    }
+
+    public async Task<byte[]> HoleBytes(string pfad, int maxBytes, CancellationToken halt)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{cfg.Planr}{pfad}");
+        Kopf(req);
+        using var antwort = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, halt);
+        antwort.EnsureSuccessStatusCode();
+        if (antwort.Content.Headers.ContentLength is { } len && len > maxBytes)
+            throw new UpdateFehler("Update-Paket zu groß.");
+        await using var strom = await antwort.Content.ReadAsStreamAsync(halt);
+        using var speicher = new MemoryStream();
+        var puffer = new byte[64 * 1024];
+        int gelesen;
+        while ((gelesen = await strom.ReadAsync(puffer, halt)) > 0)
+        {
+            if (speicher.Length + gelesen > maxBytes)
+                throw new UpdateFehler("Update-Paket zu groß.");
+            speicher.Write(puffer, 0, gelesen);
+        }
+        return speicher.ToArray();
+    }
+
     void Kopf(HttpRequestMessage req)
     {
         req.Headers.TryAddWithoutValidation("X-PlanR-Mandant", cfg.Mandant);
@@ -78,33 +108,76 @@ public sealed class PlanRAbgelehnt : Exception
 
 public static class Schleife
 {
-    public static async Task EinZug(PlanRKunde kunde, IConnector connector, Konfig cfg, string zustand, CancellationToken halt)
+    static readonly object WechselSperre = new();
+
+    public static async Task EinZug(
+        PlanRKunde kunde,
+        IConnector connector,
+        Konfig cfg,
+        string zustand,
+        CancellationToken halt,
+        Laufend? laufend = null,
+        Action<string>? log = null)
     {
         var auftrag = await kunde.Abholen(zustand, halt);
         if (kunde.Vorgabe is { Length: > 0 } neu && neu != kunde.Pvs)
-            Praxis.Uebernehmen(neu, connector, kunde, cfg);
+        {
+            lock (WechselSperre)
+            {
+                if (neu != kunde.Pvs)
+                {
+                    laufend?.Abwarten(TimeSpan.FromSeconds(60));
+                    if (Praxis.Uebernehmen(neu, connector, kunde, cfg))
+                        log?.Invoke($"PVS umgestellt auf {neu}.");
+                }
+            }
+        }
         if (auftrag is null) return;
         var id = auftrag.Value.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
-        var (status, daten) = Ausfuehren.Auftrag(auftrag.Value, connector, cfg, zustand);
+        var fehler = zustand == "bereit" ? "" : zustand;
+        int status;
+        Dictionary<string, object?> daten;
+        using (laufend?.Beginnen())
+        {
+            (status, daten) = Ausfuehren.Auftrag(auftrag.Value, connector, cfg, fehler);
+        }
         await kunde.Antworten(id, status, daten, halt);
     }
 
     /// <summary>Wie die Python-Schleife: ein Fehler beendet den Arbeiter nicht.</summary>
-    public static async Task Arbeit(PlanRKunde kunde, IConnector connector, Konfig cfg, Func<string> zustand, CancellationToken halt)
+    public static async Task Arbeit(
+        PlanRKunde kunde,
+        IConnector connector,
+        Konfig cfg,
+        Func<string> zustand,
+        CancellationToken halt,
+        Laufend? laufend = null,
+        Action<string>? log = null,
+        int? fehlerPauseMs = null)
     {
+        var pauseMs = fehlerPauseMs ?? 2000;
+        var maxPauseMs = fehlerPauseMs ?? 30_000;
         while (!halt.IsCancellationRequested)
         {
             try
             {
-                await EinZug(kunde, connector, cfg, zustand(), halt);
+                await EinZug(kunde, connector, cfg, zustand(), halt, laufend, log);
+                pauseMs = fehlerPauseMs ?? 2000;
             }
             catch (OperationCanceledException)
             {
                 break;
             }
-            catch (Exception)
+            catch (PlanRAbgelehnt exc)
             {
-                try { await Task.Delay(20, halt); } catch (OperationCanceledException) { break; }
+                log?.Invoke(exc.Message);
+                try { await Task.Delay(fehlerPauseMs ?? 60_000, halt); } catch (OperationCanceledException) { break; }
+            }
+            catch (Exception exc)
+            {
+                log?.Invoke($"Verbindung zu PlanR unterbrochen: {exc.Message}");
+                try { await Task.Delay(pauseMs, halt); } catch (OperationCanceledException) { break; }
+                pauseMs = Math.Min(pauseMs * 2, maxPauseMs);
             }
         }
     }

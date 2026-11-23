@@ -1,0 +1,46 @@
+name: PlanR Release-Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Gemeinsame Bausteine & Preislisten synchron
+        run: node tools/gemeinsam.mjs --pruefen
+
+      - name: Start (Typecheck, Tests, Build)
+        working-directory: Start
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Alle 12 Planer (Typecheck & Tests)
+        run: |
+          set -euo pipefail
+          for dir in \
+            ZE/HKP ZE/HKP-Probe ZE/Privat-HKP \
+            Implantologie/Privat-Impl \
+            KONS/MKV KONS/Privat-Kons \
+            PAR/Kassen-PAR PAR/Privat-PAR \
+            KB/Kassen-KB KB/Privat-KB \
+            KFO/Kassen-KFO KFO/Privat-KFO
+          do
+            echo "=== $dir ==="
+            (
+              cd "$dir"
+              npm ci --no-audit --no-fund
+              npx tsc -b --noEmit
+              npx vitest run
+            )
+          done

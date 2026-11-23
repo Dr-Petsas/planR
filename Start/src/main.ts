@@ -223,7 +223,7 @@ function auswahlSchliessen() {
 }
 
 /** Wechseln, wenn die Planer neu gebaut wurden, damit der Browser nicht die alte Seite behält. */
-const PLANER_STAND = '20261110g'
+const PLANER_STAND = '20261123a'
 
 function planUrl(p: PlanKarte): string | null {
   const planer = planerZuModul(p.modul)
@@ -863,9 +863,9 @@ function einstellungKarte(): string {
         </label>` : ''}
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Anbindung an dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
         ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge ${agent?.lokal ? 'auf diesem PC' : 'auf dem Praxisserver'}: ${agent ? (agent.verbunden ? `verbunden (${esc(bridgeStand(agent, einstellungen.pvs))})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
-          · <button type="button" class="link-knopf" disabled>PlanR-Bridge herunterladen</button> momentan gesperrt</p>` : ''}
+          ${ich.konto.admin ? ' · <button type="button" class="link-knopf" data-bridge-laden>Bridge herunterladen</button>' : ' · Herunterladen kann sie der Praxis-Admin.'}</p>` : ''}
         ${agent?.lokal ? '<p class="pvs-info">Dieser Browser arbeitet mit der Bridge auf diesem PC; die Wahl oben gilt nur hier. <button type="button" class="link-knopf" data-ort-vergessen>Stattdessen den Praxisserver verwenden</button></p>'
-          : ich.konto.admin ? '<p class="pvs-info">Demo-PC oder Einzelplatz: <button type="button" class="link-knopf" disabled>Bridge für einen einzelnen PC herunterladen</button> momentan gesperrt</p>' : ''}
+          : ich.konto.admin ? '<p class="pvs-info">Demo-PC oder Einzelplatz: <button type="button" class="link-knopf" data-bridge-pc>Bridge für einen einzelnen PC herunterladen</button> – Browser auf diesem PC arbeiten dann mit dem Praxisprogramm dort.</p>' : ''}
         ${katalogBlock()}
         ${benutzerBlock(benutzer)}
         ${ich.konto.admin ? verbundBlock() : ''}
@@ -1322,13 +1322,39 @@ function agentFenster(zeigen: boolean) {
   if (zeigen) claraBuendig()
 }
 
+function claraZeile(): HTMLFormElement {
+  let form = document.getElementById('clara-zeile') as HTMLFormElement | null
+  if (!form) {
+    form = document.createElement('form')
+    form.id = 'clara-zeile'
+    form.hidden = true
+    form.method = 'dialog'
+    const liste = document.createElement('button')
+    liste.type = 'button'
+    liste.dataset.liste = ''
+    liste.hidden = true
+    liste.textContent = 'Zur Liste'
+    const feld = document.createElement('input')
+    feld.type = 'text'
+    feld.placeholder = 'KVA in Prosa, Frage oder Änderung …'
+    feld.autocomplete = 'off'
+    feld.enterKeyHint = 'send'
+    const senden = document.createElement('button')
+    senden.type = 'submit'
+    senden.textContent = 'Senden'
+    form.append(liste, feld, senden)
+  }
+  return form
+}
+
 /** Einzeilige Clara sitzt auf derselben Kante wie die KI-Zeile. Aufgeklappt wächst sie nach oben. */
 function claraBuendig() {
   const spalte = document.getElementById('clara-spalte')
   const zeile = document.getElementById('clara-zeile')
   if (!spalte || !zeile || !document.body.classList.contains('plan-offen') || spalte.classList.contains('agent-weg')) return
   const r = zeile.getBoundingClientRect()
-  if (window.matchMedia('(max-width: 800px)').matches) {
+  if (r.height < 10 || r.width < 10) return
+  if (claraMobil()) {
     const rand = 10
     spalte.style.left = `${rand}px`
     spalte.style.right = `${rand}px`
@@ -1442,6 +1468,8 @@ function planRahmenLauschen(frame: HTMLIFrameElement) {
 let claraPlan = ''
 
 function claraLeiste() {
+  document.documentElement.classList.remove('hp-html')
+  document.body.classList.remove('hp-body')
   document.body.classList.add('planr-app')
   document.body.classList.toggle('plan-offen', !!planBlick)
   const spalte = claraSpalte()
@@ -1464,14 +1492,17 @@ function claraLeiste() {
     spalte.style.height = ''
     spalte.style.maxHeight = ''
   }
-  const form = document.getElementById('clara-zeile') as HTMLFormElement | null
+  const form = claraZeile()
   const slot = document.getElementById('clara-slot')
-  if (!form || !slot) return
+  if (!slot) return
   slot.append(form)
   form.hidden = false
   const zurueck = form.querySelector<HTMLButtonElement>('[data-liste]')
   if (zurueck) zurueck.hidden = !planBlick
-  if (planBlick) requestAnimationFrame(claraBuendig)
+  if (planBlick) {
+    claraBuendig()
+    requestAnimationFrame(claraBuendig)
+  }
   claraOverlay()
   if (form.dataset.an) return
   form.dataset.an = '1'
@@ -1713,6 +1744,7 @@ function planChrome(): boolean {
     mail.innerHTML = versendet ? BRIEF_GESENDET : BRIEF
   }
   document.querySelector('[data-speichern]')?.remove()
+  requestAnimationFrame(claraBuendig)
   return true
 }
 
@@ -1798,7 +1830,7 @@ function zeichnen() {
       </aside>
   <main>
         ${planBlick
-          ? `<iframe class="plan-rahmen" src="${esc(planBlick.url)}" data-url="${esc(planBlick.url)}" title="${esc(planBlick.titel)}"></iframe>`
+          ? `<iframe class="plan-rahmen" name="planr-rahmen" src="${esc(planBlick.url)}" data-url="${esc(planBlick.url)}" title="${esc(planBlick.titel)}"></iframe>`
           : `${planSichtLeiste(planZahl)}${sichtbar.length
           ? `<div class="liste" role="table">
               <div class="zeile kopfzeile" role="row">
@@ -2089,7 +2121,7 @@ function zeichnen() {
     }
     void aboSenden()
   })
-  app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', (ev) => { ev.preventDefault() })
+  app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', () => { auswahlSchliessen(); void einrichtungZeigen(true) })
   app.querySelector<HTMLButtonElement>('[data-ort-vergessen]')?.addEventListener('click', () => { ortVergessen(); location.reload() })
   app.querySelector<HTMLButtonElement>('[data-bridge-pc]')?.addEventListener('click', async (ev) => {
     const knopf = ev.currentTarget as HTMLButtonElement
@@ -2307,7 +2339,11 @@ function vorgaengeLive() {
     clearTimeout(uhr)
     uhr = window.setTimeout(() => { if (!document.hidden) void laden().catch(() => {}) }, 1200)
   })
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !terminBlick) void laden().catch(() => {}) })
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return
+    if (document.body.classList.contains('plan-offen')) requestAnimationFrame(claraBuendig)
+    if (!terminBlick) void laden().catch(() => {})
+  })
 }
 
 async function katalogLaden() {
@@ -2353,7 +2389,8 @@ async function rechnungenZeigen() {
 }
 
 const app = document.querySelector<HTMLDivElement>('#app')!
-app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
+const istSsrStart = app.dataset.ssr === 'homepage'
+if (!istSsrStart) app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
 /** Ohne Anmeldung: Startseite für Besucher, #anmelden zeigt die Anmeldung */
 function ohneAnmeldung() {
   document.body.classList.remove('planr-app')
@@ -2364,10 +2401,9 @@ function ohneAnmeldung() {
   }
   let ansicht = ''
   const zeigen = async () => {
-    if (location.hash === '#bridge') location.hash = '#connect'
     const soll = location.hash === '#probe-eingang' ? '#probe-eingang'
       : location.hash.startsWith('#fall/') ? location.hash
-      : (['#anmelden', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
+      : (['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
       : location.hash === '#probe' ? '#probe'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' || location.hash === '#buchen-test' ? location.hash : 'start'
     if (soll === ansicht) return
@@ -2376,7 +2412,7 @@ function ohneAnmeldung() {
     const hp = await import('./homepage')
     if (soll === 'anmelden') {
       if (vorher !== 'start') hp.homepage(app)
-      anmeldePopup(sitzungHinweis || '', () => {
+      anmeldePopup(sitzungHinweis || (location.hash === '#bridge' ? 'Bitte als Praxis-Admin anmelden – danach laden Sie die Bridge herunter.' : ''), () => {
         ansicht = 'start'
         sitzungHinweisLoeschen()
         history.replaceState(null, '', location.pathname + location.search)
@@ -2497,15 +2533,25 @@ document.addEventListener('keydown', (ev) => {
   zeichnen()
 })
 
+function claraSichern() {
+  document.body.classList.remove('planr-app', 'plan-offen', 'clara-lesen')
+  const form = document.getElementById('clara-zeile') as HTMLFormElement | null
+  if (form) {
+    form.hidden = true
+    document.body.append(form)
+  }
+  document.getElementById('clara-spalte')?.remove()
+}
+
 /** #probe: Ablage · #fall/<token>: ein Fall unter seinem Link */
 function probeOeffnen() {
-  document.body.classList.remove('planr-app', 'plan-offen')
+  claraSichern()
   const token = location.hash.startsWith('#fall/') ? location.hash.slice(6) : ''
   return import('./probe').then(({ probeSeite }) => probeSeite(app, token))
 }
 
 function probeEingangOeffnen() {
-  document.body.classList.remove('planr-app', 'plan-offen')
+  claraSichern()
   return import('./probeEingangSeite').then(({ probeEingangSeite }) => probeEingangSeite(app))
 }
 
@@ -2542,6 +2588,12 @@ function planerSpeicher(mandant: string, name?: string) {
 
 ausPickadoc().then(ichLaden).then(async (wer) => {
   if (!wer) return ohneAnmeldung()
+  document.body.classList.remove('hp-body')
+  document.documentElement.classList.remove('hp-html')
+  if (app.dataset.ssr) {
+    delete app.dataset.ssr
+    app.innerHTML = '<p class="leer">Pläne werden geladen …</p>'
+  }
   planerSpeicher(wer.mandant)
   addEventListener('hashchange', () => {
     if (location.hash === '#probe' || location.hash.startsWith('#fall/')) void probeOeffnen()
@@ -2569,9 +2621,8 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   if (probe) { /* Einrichtung und Zuordnung gehören zum Abo */ }
   else if (location.hash === '#zuordnung' && ich.konto.admin) void zuordnungOeffnen()
   else if (location.hash === '#rechnungen' && ich.konto.admin && ich.abo === 'planr') void rechnungenZeigen()
-  else if (location.hash === '#bridge') location.hash = '#connect'
-  else if (location.hash === '#einrichtung' || neu) {
+  else if (location.hash === '#einrichtung' || location.hash === '#bridge' || neu) {
     sessionStorage.setItem('planr-einrichtung', '1')
-    void einrichtungZeigen(false)
+    void einrichtungZeigen(location.hash === '#bridge')
   }
 }).catch(() => { app.innerHTML = '<p class="leer">Die Planliste ist gerade nicht erreichbar.</p>' })

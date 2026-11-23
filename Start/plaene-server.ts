@@ -55,12 +55,13 @@ import {
   CODE_MINUTEN, bridgeMandanten, claraImVerbund, codeFinden, codeSetzen, codeVerbrauchen, eigenerMandant, eigenesRegister, entkoppeln, gaesteVon, koppeln, koppelnPruefen,
   neuerVerbundCode, verbundVon, type VerbundCode,
 } from './verbund.ts'
+import { funnelAuswerten, funnelBuchen, istFunnelSchritt, type FunnelDatei, type FunnelSchritt } from './funnel.ts'
 
 // Plan, HKP und Befund ins Praxisprogramm: die Bridge sichert und prüft dabei ganze Tabellen (große Praxis: über eine Minute).
 const SCHREIB_MS = 270_000
 const ORDNER = process.env.PLANR_DATEN?.trim() || 'F:/PlanR/Start/data'
 /** Ablage eines Mandanten: Pläne, Papierkorb, Inhalte, Eingang, Behandler – jede Praxis für sich */
-const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine' | 'einstellungen') => `${ORDNER}/mandanten/${mandant}/${name}.json`
+const ABLAGE = (mandant: string, name: 'plaene' | 'geloescht' | 'inhalte' | 'eingang' | 'behandler' | 'befunde' | 'versendet' | 'termine' | 'einstellungen' | 'einst-stand') => `${ORDNER}/mandanten/${mandant}/${name}.json`
 /** Pickadoc-Praxis → Mandant, Benutzer → DS-Win-Praxen (anmeldung.ts) */
 const ZUGAENGE = `${ORDNER}/zugaenge.json`
 const SITZUNGEN = `${ORDNER}/sitzungen.json`
@@ -85,7 +86,9 @@ const CF_ACCESS = `${ORDNER}/cf-access.json`
 const BRIDGE_WEITER = `${ORDNER}/bridge-weiter.json`
 /** Buchungen von der Startseite (enthalten IBAN – bleiben im Datenordner) */
 const BUCHUNGEN = `${ORDNER}/buchungen.json`
-/** Installationspaket für den Praxisserver (pvsConnectoR: agent/paket-bauen.ps1) */
+/** Cookie-freie Conversion-Tageszähler (keine IPs, keine Nutzer-IDs) */
+const FUNNEL = `${ORDNER}/funnel.json`
+/** Installationspaket für den Praxisserver (Bridge: paket-bauen.ps1) */
 const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Bridge.zip`
 /** Dasselbe als Setup in einer Datei; PlanR hängt beim Herunterladen den Einrichtungscode an den Dateinamen. */
 const AGENT_SETUP = `${ORDNER}/downloads/PlanR-Bridge-Setup.exe`
@@ -1906,10 +1909,10 @@ const DOWNLOAD_SEITE = `<!doctype html><html lang="de"><head><meta charset="utf-
 a.knopf{display:inline-block;background:#1f6feb;color:#fff;padding:.7rem 1.2rem;border-radius:.5rem;text-decoration:none;font-weight:600}
 code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem 0}</style></head><body>
 <h1>PlanR-Bridge für den Praxisserver</h1>
-<p>Die Bridge verbindet DS-Win bzw. DENS auf dem Praxisserver mit PlanR. Sie baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Python ist im Paket enthalten.</p>
+<p>Die Bridge verbindet DS-Win, DENSoffice bzw. Z1.PRO auf dem Praxisserver mit PlanR. Sie baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Zusätzliche Software ist nicht nötig.</p>
 <p><a class="knopf" href="/download/PlanR-Bridge.zip">Download erneut starten</a></p>
 <p>Beim Öffnen von <b>planr.pickadoc.de/download</b> startet die Datei von selbst. Sie heißt PlanR-Bridge.zip und liegt im Ordner Downloads. Eine Anmeldung ist nicht nötig.</p>
-<h2>Einrichten (einmal, auf dem Server mit DS-Win bzw. DENS)</h2>
+<h2>Einrichten (einmal, auf dem Server mit DS-Win, DENSoffice bzw. Z1.PRO)</h2>
 <p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden.</p>
 <ol>
 <li>ZIP auf den Server kopieren und entpacken (Rechtsklick → „Alle extrahieren“).</li>
@@ -1921,7 +1924,7 @@ code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem
 <p>Entfernen: <code>Entfernen.cmd</code> im entpackten Ordner doppelklicken. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>
 </body></html>`
 
-const BRIDGE_DOWNLOAD_FREI = false
+const BRIDGE_DOWNLOAD_FREI = true
 const BRIDGE_DOWNLOAD_SPERRE = 'Der Download der PlanR-Bridge ist gesperrt.'
 
 function bridgeDownloadSperren(res: ServerResponse) {
@@ -1948,10 +1951,45 @@ function download(req: IncomingMessage, res: ServerResponse, url: string, query 
     res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge.zip"')
     res.setHeader('Content-Length', String(daten.length))
     res.end(req.method === 'HEAD' ? undefined : daten)
-  }).catch(() => json(res, 404, { ok: false, meldung: 'Das Bridge-Paket ist noch nicht gebaut (pvsConnectoR: agent/paket-bauen.ps1).' }))
+  }).catch(() => json(res, 404, { ok: false, meldung: 'Das Bridge-Paket ist noch nicht gebaut (Bridge: paket-bauen.ps1).' }))
 }
 
 const buchungBremse = new Bremse(5, 60 * 60_000)
+const funnelBremse = new Bremse(80, 60 * 60_000)
+
+async function funnelSpeichern(schritt: FunnelSchritt, kanal?: unknown, kampagne?: unknown) {
+  try {
+    await exklusiv(async () => {
+      const aktuell = await jsonLesen<FunnelDatei>(FUNNEL, { tage: {} })
+      await jsonSchreiben(FUNNEL, funnelBuchen(aktuell, { schritt, kanal, kampagne }))
+    })
+  } catch { /* Statistik blockiert niemals Buchung oder Seitenaufruf */ }
+}
+
+/** POST: cookie-freier Conversion-Schritt der Landingpage (204). */
+async function funnelEndpunkt(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) { res.statusCode = 405; res.end(); return }
+  if (funnelBremse.gesperrt(ip(req))) { res.statusCode = 429; res.end(); return }
+  const roh = JSON.parse(await lesenBody(req, 2_000)) as { schritt?: unknown; kanal?: unknown; kampagne?: unknown }
+  if (!istFunnelSchritt(roh.schritt) || roh.schritt === 'buchung_ok') {
+    res.statusCode = 400; res.end(); return
+  }
+  funnelBremse.fehler(ip(req))
+  await funnelSpeichern(roh.schritt, roh.kanal, roh.kampagne)
+  res.statusCode = 204
+  res.end()
+}
+
+/** GET: Conversion-Bericht für das Superuser-Dashboard. */
+async function funnelBerichtEndpunkt(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) return json(res, wer.status, { ok: false })
+  const daten = await jsonLesen<FunnelDatei>(FUNNEL, { tage: {} })
+  json(res, 200, { ok: true, ...funnelAuswerten(daten) })
+}
 
 /** POST: Buchung von der Startseite – speichern, Info-Mail an Pickadoc, Bestätigung an die Praxis. Ohne Anmeldung. */
 async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
@@ -1970,6 +2008,7 @@ async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
     const { liste } = testaboAbschliessen(Array.isArray(alle) ? alle : [])
     await jsonSchreiben(BUCHUNGEN, [...liste, b])
   })
+  void funnelSpeichern('buchung_ok', roh.funnelKanal, roh.funnelKampagne)
   const glaeubiger = process.env.PLANR_GLAEUBIGER_ID?.trim() ?? ''
   const info = infoMail(b, glaeubiger)
   const kunde = kundenMail(b, glaeubiger)
@@ -2714,7 +2753,7 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
     }
   }
   const l = await pvsBefundLesen(req, w, (k) => String(body[k] ?? q.get(k) ?? '').trim())
-  if (!('nummer' in l)) return json(res, l.status, l.daten)
+  if (!istBefundGelesen(l)) return json(res, l.status, l.daten)
   if (req.method === 'GET') {
     // Offene Änderungen aus dem Gespräch gehören zum aktuellen Befund (nächster Plan, Freigabe)
     const b = befundAnsicht(await befundGelesen(w, l))
@@ -2770,6 +2809,7 @@ async function internDoku(req: IncomingMessage, w: Wer, res: ServerResponse) {
 
 type BefundFehler = { status: number; daten: Record<string, unknown>; nummer?: string }
 interface BefundGelesen { c: PvsWeg; rufen: Rufer; nummer: string; befund: PvsBefund; label: string; geburt: string }
+const istBefundGelesen = (x: BefundGelesen | BefundFehler): x is BefundGelesen => 'befund' in x
 /** Ohne neues Lesen gilt der gemerkte Stand aus dem Praxisprogramm so lange als frisch */
 const BEFUND_FRISCH_MS = 10 * 60_000
 
@@ -2885,9 +2925,9 @@ async function befundAenderungAnwenden(req: IncomingMessage, w: Wer, angabe: (k:
   let basis = alt && Date.now() - Date.parse(alt.gelesen) < BEFUND_FRISCH_MS ? alt : undefined
   if (!basis) {
     const l = await pvsBefundLesen(req, w, angabe)
-    if (!('nummer' in l) && !alt) return l
+    if (!istBefundGelesen(l) && !alt) return l
     // Praxisprogramm nicht lesbar: auf dem gemerkten Stand weiter (er zeigt seinen Lesestand selbst)
-    basis = 'nummer' in l ? await befundGelesen(w, l) : alt!
+    basis = istBefundGelesen(l) ? await befundGelesen(w, l) : alt!
   }
   const b = basis
   return (await befundAendern(w.mandant, b.patient, (a) => nachAenderung(a ?? b, zaehne, wer)))!
@@ -2947,7 +2987,7 @@ async function befundEndpunkt(req: IncomingMessage, res: ServerResponse, url: st
   }
   if (req.method === 'GET' && url === '/api/befund') {
     const l = await pvsBefundLesen(req, w, (k) => (q.get(k) ?? '').trim())
-    if ('nummer' in l) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
+    if (istBefundGelesen(l)) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
     // PVS gerade nicht erreichbar: der gemerkte Stand mit Hinweis
     const gemerkt = l.nummer || (q.get('patient') ?? '')
     const alt = /^\d{1,9}$/.test(gemerkt) ? (await befundeLesen(m))[gemerkt] : undefined
@@ -2987,7 +3027,7 @@ async function befundEndpunkt(req: IncomingMessage, res: ServerResponse, url: st
  */
 async function befundFreigabe(req: IncomingMessage, w: Wer, nummer: string, wo: string, res: ServerResponse) {
   const l = await pvsBefundLesen(req, w, (k) => (k === 'patient' ? nummer : ''))
-  if (!('nummer' in l)) return json(res, l.status, l.daten)
+  if (!istBefundGelesen(l)) return json(res, l.status, l.daten)
   const frisch = await befundGelesen(w, l)
   const kiefer = offeneKiefer(frisch)
   if (!kiefer.length) {
@@ -3017,7 +3057,7 @@ async function befundLinkEndpunkt(req: IncomingMessage, res: ServerResponse, url
     const alt = (await befundeLesen(w.mandant))[nummer]
     if (alt && Date.now() - Date.parse(alt.gelesen) < BEFUND_FRISCH_MS) return json(res, 200, { ok: true, befund: befundAnsicht(alt) })
     const l = await pvsBefundLesen(req, w, angabe)
-    if ('nummer' in l) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
+    if (istBefundGelesen(l)) return json(res, 200, { ok: true, befund: befundAnsicht(await befundGelesen(w, l)) })
     return alt ? json(res, 200, { ok: true, befund: befundAnsicht(alt), meldung: String(l.daten.meldung ?? '') }) : json(res, l.status, l.daten)
   }
   if (req.method !== 'POST') return json(res, 404, { ok: false })
@@ -3582,7 +3622,6 @@ async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     if (!fall) return json(res, 404, { ok: false, meldung: 'Zu diesen Plänen liegt keine Datei.' })
     return json(res, 200, { ok: true, token: fall.token })
   }
-  if (req.method !== 'GET') return json(res, 405, { ok: false })
   if (url === '/api/importe/stand') {
     if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
     const roh = JSON.parse(await lesenBody(req, 8000) || '{}') as { modul?: unknown; nummer?: unknown; regler?: unknown; nachher?: unknown }
@@ -3606,6 +3645,7 @@ async function importeEndpunkt(req: IncomingMessage, res: ServerResponse, url: s
     await eingangStand(ORDNER, ziel.id, stand)
     return json(res, 200, { ok: true })
   }
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
   if (url === '/api/importe') {
     const karten = await importeMitPlan(await eingangFuerMandant(ORDNER, w.mandant))
     const namen = new Map(karten.map((k) => [k.id, k.dateiname]))
@@ -3903,6 +3943,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
+  if (url === '/api/funnel') return void funnelEndpunkt(req, res).catch(() => { if (!res.headersSent) { res.statusCode = 400; res.end() } })
   if (url === '/api/testabo/abschluss') return void testaboAbschlussEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/probe/lesen') return void probeLesen(req, res).catch(fehler500(res))
   if (url === '/api/probe/einordnen') return void probeEinordnen(req, res).catch(fehler500(res))
@@ -3915,6 +3956,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/eingang/fall') return void probeFallLink(req, res).catch(fehler500(res))
   if (url.startsWith('/api/probe/fall/')) return void probeFall(req, res, url.slice('/api/probe/fall/'.length)).catch(fehler500(res))
   if (url === '/api/probe/eingang/login') return void probeLoginAnlegen(req, res).catch(fehler500(res))
+  if (url === '/api/probe/funnel') return void funnelBerichtEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
   if (url.startsWith('/probe-eingang/')) return void probeEingangSeite(req, res, url.slice('/probe-eingang/'.length)).catch(fehler500(res))

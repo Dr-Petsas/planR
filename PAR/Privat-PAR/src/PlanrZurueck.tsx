@@ -33,6 +33,17 @@ export function PlanrLeiste({ punkte, aktiv, onWahl, versand = false }: {
   return null
 }
 
+/** Prüft, ob der Planer im PlanR-Rahmen mit eigener KI-Zeile (#clara-zeile) läuft. */
+function hatPlanrRahmen(): boolean {
+  if (window.parent === window) return false
+  if (window.name === 'planr-rahmen') return true
+  try {
+    return !!window.parent.document.getElementById('clara-zeile')
+  } catch {
+    return false
+  }
+}
+
 export function PlanrZurueck() {
   useEffect(() => arbeitStandard(), [])
   useEffect(() => blaetterEinpassen(), [])
@@ -43,6 +54,7 @@ export function PlanrZurueck() {
     ? `https://planr.pickadoc-tunnel.com/${q}`
     : `${window.location.protocol}//${window.location.hostname || '127.0.0.1'}:5189/${q}`
   const eingebettet = window.parent !== window
+  const imPlanrRahmen = hatPlanrRahmen()
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
     <button type="button" style={navKnopf} title="Zurück" aria-label="Zurück" onClick={() => planNav('zurueck')}>‹</button>
@@ -61,7 +73,7 @@ export function PlanrZurueck() {
       </svg>
     </a>}
     <button type="button" style={navKnopf} title="Vor" aria-label="Vor" onClick={() => planNav('vor')}>›</button>
-    {eingebettet ? null : <KiZeile />}
+    {imPlanrRahmen ? null : <KiZeile />}
     </span>
   )
 }

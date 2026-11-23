@@ -63,7 +63,7 @@ export function Befundleiste({ patient, zeile, planId = '', onUebernehmen, onBef
   /** kurzer Satz, was das Übernehmen in diesem Planer bewirkt */
   hinweis?: string
 }) {
-  const { vorname, name, geburtsdatum } = patient
+  const { name, geburtsdatum } = patient
   const wer = patientSchluessel(patient)
   // Mit bekannter Patientennummer (aus „Neuer Plan“ in PlanR) braucht es weder Geburtsdatum noch Namenssuche
   const schluessel = name.trim() && (/^\d{4}-\d{2}-\d{2}$/.test(geburtsdatum) || pvsNrZu(wer)) ? wer : ''

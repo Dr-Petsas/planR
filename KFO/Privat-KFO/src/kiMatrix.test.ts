@@ -5,7 +5,6 @@ import { kfoKi } from './kiPlan'
 import { probeDienst } from './kiProbe'
 
 /** Probe-Matrix gegen das echte Modell. Start: VITE_KI_LIVE=1 npx vitest run src/kiMatrix.test.ts */
-const hinzu = (ebene: string, nr: string, anzahl = 1): KiSchritt => ({ op: 'hinzu', ebene, nr, zahn: '', anzahl } as KiSchritt)
 const bau = (lesen: () => any, schreiben: (p: any) => void) => kfoKi(() => ({ plan: lesen(), gesperrt: false, einst: E }), schreiben)
 const start = () => probeDienst<any>(bau).anwenden(neuerPlan('PKFO-1', E) as any, [{ op: 'schalter', name: 'aufgabe.umformungOk', wert: true } as KiSchritt, { op: 'schalter', name: 'aufgabe.regelbiss', wert: true } as KiSchritt]).plan
 

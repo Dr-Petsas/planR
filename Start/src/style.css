@@ -749,8 +749,11 @@ body.planr-app.plan-offen main {
   grid-column: 1 / -1; grid-row: 1; width: 100%; margin: 0; border-radius: 0; box-shadow: none;
 }
 #clara-ruhe { display: none; }
+.clara-zu { display: none; }
 body.planr-app.plan-offen #clara-spalte {
   pointer-events: auto; position: fixed; z-index: 50; box-sizing: border-box;
+  left: 16px; top: auto; right: auto; bottom: 10px;
+  width: calc(var(--links) - 52px); height: var(--chat-hoch);
   margin: 0; overflow: hidden;
   display: flex; flex-direction: column; justify-content: flex-end;
   background: transparent;
@@ -766,6 +769,7 @@ body.planr-app.plan-offen #clara-spalte:not(.clara-auf) .balken { display: none;
 body.planr-app.plan-offen #clara-spalte #clara-ruhe { display: flex; }
 body.planr-app.plan-offen #clara-spalte:has(#clara-agenten .agent) #clara-ruhe { display: none; }
 body.planr-app.plan-offen #clara-spalte.clara-auf {
+  height: auto; max-height: calc(100dvh - var(--chat-hoch) - 24px);
   padding: 10px 10px 9px; background: #fff; border-radius: 16px;
   box-shadow: 0 16px 40px rgba(22, 48, 58, .18);
 }
@@ -911,7 +915,6 @@ body.planr-app.plan-offen #clara-spalte.zieht { cursor: grabbing; user-select: n
   #clara-zeile button { height: 44px; padding: 0 14px; }
   /* Antworten liegen nur im Overlay über der Chatzeile. */
   body.planr-app #clara-spalte { display: none !important; }
-  .clara-zu { display: none; }
   body.planr-app.clara-lesen #clara-spalte {
     display: flex !important; position: fixed !important; z-index: 200 !important;
     left: 10px !important; right: 10px !important; top: auto !important; width: auto !important;

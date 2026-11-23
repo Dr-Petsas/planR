@@ -12,11 +12,22 @@
 
 .PARAMETER Caddy
   Caddy-Eintrag für planr.pickadoc.de anlegen (nur beim ersten Mal nötig).
+
+.PARAMETER OhnePruefung
+  Überspringt das zentrale Release-Gate (tools\release-gate.ps1). Nur für bewusste Notfälle verwenden.
 #>
-param([switch]$Daten, [switch]$Caddy)
+param([switch]$Daten, [switch]$Caddy, [switch]$OhnePruefung)
 $ErrorActionPreference = 'Stop'
 $wurzel = (Resolve-Path "$PSScriptRoot\..\..\..").Path
 $hier = $PSScriptRoot
+if (-not $OhnePruefung) {
+  & (Join-Path $wurzel 'tools\release-gate.ps1')
+  if ($LASTEXITCODE) { throw 'Release-Gate fehlgeschlagen – Deploy abgebrochen.' }
+} else {
+  Write-Warning 'Deploy ohne Release-Gate (-OhnePruefung).'
+}
+$commit = (git -C $wurzel rev-parse --short HEAD 2>$null)
+if ($commit) { Write-Host "Deploy-Stand: Commit $commit" }
 $bau = Join-Path $env:TEMP 'planr-strato'
 $server = 'asterisk-live'
 $utf8 = New-Object Text.UTF8Encoding($false)
@@ -40,8 +51,23 @@ foreach ($h in $planer.Keys) {
 }
 
 Push-Location (Join-Path $wurzel 'Start')
+# Optionale Google-Ads-/Analytics-IDs fuer den Frontend-Build (liegt nur lokal in data\, nie im Repo)
+$werbung = Join-Path $wurzel 'Start\data\planr-werbung.env'
+$werbungKeys = @()
+if (Test-Path $werbung) {
+  foreach ($zeile in (Get-Content $werbung -Encoding UTF8)) {
+    $z = $zeile.Trim()
+    if ($z -match '^(VITE_GOOGLE_[A-Z_]+)=(.*)$') {
+      [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2].Trim('"', "'"), 'Process')
+      $werbungKeys += $Matches[1]
+    }
+  }
+  if ($werbungKeys.Count) { Write-Host "Google-Ads-Variablen geladen: $($werbungKeys -join ', ')" }
+}
 npm run build --silent
-if ($LASTEXITCODE) { Pop-Location; throw 'Startseite ließ sich nicht bauen.' }
+$buildRc = $LASTEXITCODE
+foreach ($k in $werbungKeys) { [Environment]::SetEnvironmentVariable($k, $null, 'Process') }
+if ($buildRc) { Pop-Location; throw 'Startseite ließ sich nicht bauen.' }
 robocopy . "$bau\start" /E /XD node_modules (Join-Path $wurzel 'Start\data') logs tools .vite /XF tsconfig.tsbuildinfo *.test.ts /NFL /NDL /NJH /NJS /NP | Out-Null
 Pop-Location
 

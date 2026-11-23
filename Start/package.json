@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "build": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit && vite build",
     "build:sprache": "vite build -c vite.sprache.config.ts && node tools/sprache-nach-mas.mjs",
     "preview": "vite preview",
     "test": "vitest run"

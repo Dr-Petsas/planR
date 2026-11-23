@@ -1,4 +1,4 @@
-import { createHash, createPublicKey, randomBytes, timingSafeEqual, verify, type JsonWebKey } from 'node:crypto'
+import { createHash, createPublicKey, randomBytes, timingSafeEqual, verify, type webcrypto } from 'node:crypto'
 
 /**
  * Anmeldung mit dem Pickadoc-Konto (Firebase Authentication, Projekt docgenda).
@@ -17,7 +17,7 @@ export interface Konto {
   admin: boolean
 }
 
-type Jwk = JsonWebKey & { kid?: string }
+type Jwk = webcrypto.JsonWebKey & { kid?: string }
 const b64json = (teil: string) => JSON.parse(Buffer.from(teil, 'base64url').toString('utf8')) as Record<string, unknown>
 
 /** Rollen, die PlanR nie öffnen: Patienten-Konten des Patientenportals. */

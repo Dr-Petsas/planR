@@ -3,8 +3,9 @@ import './buchung.css'
 import { KZVEN } from './data/kzv'
 import { PVS_LISTE, pvsVon } from './einstellungen'
 import { DOKU_MONAT, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, TESTABO_PLAENE, TESTABO_TAGE, ibanGueltig, ibanNorm, type Paket } from './paket'
-import { anleitungHtml } from './einrichtung'
+import { anleitungHtml, anleitungVon, bridgeSetupLaden, codeLesbar } from './einrichtung'
 import { logo } from './logo'
+import { funnelMelden, funnelQuelle } from './funnelClient'
 import { werbungStarten, zielErreicht } from './werbung'
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
@@ -46,6 +47,7 @@ export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
   const w: Werte = { paket: 'planr_clara', doku: test || dokuAn, 'praxis.rechtsform': 'Einzelpraxis', 'kzv.praxen': '1', 'kzv.zahnaerzte': '1', 'pvs.server': 'server' }
   document.title = test ? 'PlanR 14 Tage testen' : 'PlanR buchen'
   werbungStarten()
+  funnelMelden('buchung_start')
 
   const paket = (): Paket => 'planr_clara'
 
@@ -265,12 +267,15 @@ export function buchungSeite(app: HTMLElement, dokuAn = false, test = false) {
   function daten() {
     const g = (k: string) => String(w[k] ?? '').trim()
     const teil = (prefix: string) => Object.fromEntries(Object.entries(w).filter(([k]) => k.startsWith(`${prefix}.`)).map(([k, v]) => [k.slice(prefix.length + 1), v]))
+    const quelle = funnelQuelle()
     return {
       paket: paket(), praxis: teil('praxis'), inhaber: teil('inhaber'),
       kzv: { ...teil('kzv'), zahnaerzte: Number(g('kzv.zahnaerzte')), praxen: Number(g('kzv.praxen') || 1), eigenlabor: w['kzv.eigenlabor'] === true },
       pvs: teil('pvs'), hinweis: g('hinweis'), passwort: String(w.passwort ?? ''),
       sepa: { ...teil('sepa'), mandat: w['sepa.mandat'] === true }, zustimmung: teil('zustimmung'), doku: test || w.doku === true, testabo: test,
       firma2: (app.querySelector<HTMLInputElement>('[name=firma2]')?.value ?? ''),
+      funnelKanal: quelle.kanal,
+      funnelKampagne: quelle.kampagne,
     }
   }
 
@@ -322,15 +327,31 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
         <p class="bu-haekchen">✓</p>
         <h2>${testabo ? 'Ihr Testabo ist gestartet.' : 'Vielen Dank – Ihre Buchung ist eingegangen.'}</h2>
         <p class="bu-text">${testabo ? `Buchungsnummer <b>${esc(id)}</b>. ${esc(testabo.vermerk)} Die Zugangsdaten gehen an <b>${esc(email)}</b>. Am ${esc(bis)} endet der Zugang.` : `Buchungsnummer <b>${esc(id)}</b>. Die Zugangsdaten gehen an <b>${esc(email)}</b>.`}</p>
-        <h3>${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
-        <p><button type="button" class="neu-knopf" disabled>PlanR-Bridge herunterladen</button></p>
-        <p class="bu-klein">momentan gesperrt</p>
         <ol class="bu-weiter">
           ${zugang}
+          <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Installation der Bridge, Verbindung, Preise &amp; Positionen.</li>
         </ol>
+        <h3>${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
+        ${anleitungVon(pvsId) ? `<p><button type="button" class="neu-knopf" data-bridge-laden>PlanR-Bridge herunterladen</button></p>
+          <p class="bu-klein" data-bridge-meldung>${angemeldet ? 'Das Setup ist für Ihre Praxis vorbereitet – bei der Installation muss nichts eingegeben werden.' : 'Zum Herunterladen melden Sie sich kurz an; danach startet der Download.'}</p>` : ''}
         ${anleitungHtml(pvsId)}
-        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a>${angemeldet ? '<a class="link-knopf" href="/#einrichtung">Zu PlanR</a>' : `<a class="link-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a>`}</div>
+        <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a>${angemeldet ? '<a class="neu-knopf" href="/#einrichtung">Zu PlanR</a>' : `<a class="neu-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a>`}</div>
       </div>
     </div>`
+  const knopf = app.querySelector<HTMLButtonElement>('[data-bridge-laden]')
+  const hinweis = app.querySelector<HTMLElement>('[data-bridge-meldung]')
+  knopf?.addEventListener('click', async () => {
+    if (!angemeldet) { location.hash = '#bridge'; return }
+    knopf.disabled = true
+    knopf.textContent = 'Setup wird vorbereitet …'
+    const r = await bridgeSetupLaden()
+    knopf.disabled = false
+    knopf.textContent = r.ok ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'
+    if (r.ok) {
+      if (hinweis) hinweis.textContent = `✓ Heruntergeladen (Ordner „Downloads“). Jetzt die Datei öffnen und mit „Ja“ bestätigen – den Fortschritt sehen Sie auch in PlanR unter „Zu PlanR“.${r.code ? ` Fragt das Setup nach einem Code: ${codeLesbar(r.code)}` : ''}`
+    }
+    else if (r.status === 401 || r.status === 403) location.hash = '#bridge'
+    else if (hinweis) hinweis.textContent = r.meldung
+  })
   scrollTo(0, 0)
 }
