@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PlanR.Bridge\PlanR.Bridge.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="dens_laborzuordnung.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

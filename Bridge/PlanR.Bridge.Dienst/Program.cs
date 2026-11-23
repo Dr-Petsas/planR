@@ -46,6 +46,30 @@ if (Argument(args, "--z1-schreib-datei") is { } schreibDatei)
     return 0;
 }
 
+// DENS-Vergleichslauf gegen den Python-Connector: je Zeile ein GET-Pfad oder "POST <Pfad> <JSON>".
+if (Argument(args, "--dens-datei") is { } densDatei)
+{
+    Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+    var darf = args.Contains("--dens-schreiben") && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DENS_OFFICE_INI"));
+    var dens = new PlanR.Bridge.Dens.DensConnector();
+    var json = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    foreach (var zeile in File.ReadAllLines(densDatei).Where(z => z.Length > 0))
+    {
+        var teile = zeile.StartsWith("POST ") ? zeile.Split(' ', 3) : ["GET", zeile];
+        var methode = teile[0];
+        var pfad = teile[1];
+        if (methode == "POST" && !darf)
+        {
+            Console.Error.WriteLine("Schreiben nach DENS erfordert --dens-schreiben und DENS_OFFICE_INI auf eine Datenbankkopie.");
+            return 3;
+        }
+        System.Text.Json.JsonElement? body = teile.Length > 2 ? System.Text.Json.JsonDocument.Parse(teile[2]).RootElement : null;
+        var (status, daten) = dens.Rufen(methode, pfad, body, new Dictionary<string, string>(), 30_000);
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { pfad, status, daten }, json));
+    }
+    return 0;
+}
+
 var configPfad = Argument(args, "--config") ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PlanR-Bridge", "agent.json");
 

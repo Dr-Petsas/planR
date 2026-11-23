@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PlanR.Bridge\PlanR.Bridge.csproj" />
     <ProjectReference Include="..\PlanR.Bridge.Z1\PlanR.Bridge.Z1.csproj" />
+    <ProjectReference Include="..\PlanR.Bridge.Dens\PlanR.Bridge.Dens.csproj" />
   </ItemGroup>
 </Project>
