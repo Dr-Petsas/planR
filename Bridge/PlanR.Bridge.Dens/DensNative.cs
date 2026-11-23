@@ -1000,12 +1000,6 @@ public sealed class DensNative
                         Put(child, 0, 6, provider);
                         Check(d_fillnewA(10064, child, task, 0), "Planleistung anlegen");
                         Check(d_connectA(set, task, 0), "Planleistung verknüpfen");
-                        if (BitConverter.ToInt16(child, 88) == 0)
-                        {
-                            Check(d_setorA(20044, task, 0), "GOZ-Leistungstext-Eigentümer");
-                            Check(d_fillnewA(10065, new byte[RecordSize(65)], task, 0), "GOZ-Leistungstext anlegen");
-                            Check(d_connectA(20044, task, 0), "GOZ-Leistungstext verknüpfen");
-                        }
                         writtenServices.Add(Convert.ToBase64String(child));
                         count++;
                     }
@@ -1381,9 +1375,6 @@ public sealed class DensNative
                 Put(s, 0, 6, provider);
                 Check(d_fillnewA(10064, s, task, 0), "Planleistung anlegen");
                 Check(d_connectA(20043, task, 0), "Planleistung verknüpfen");
-                Check(d_setorA(20044, task, 0), "GOZ-Leistungstext-Eigentümer");
-                Check(d_fillnewA(10065, new byte[RecordSize(65)], task, 0), "GOZ-Leistungstext anlegen");
-                Check(d_connectA(20044, task, 0), "GOZ-Leistungstext verknüpfen");
                 writtenServices.Add(Convert.ToBase64String(s));
             }
             var planFindingNumber = missing.Count > 0 ? AddPlanFinding(data, id, number, provider, now, 2) : (short)0;

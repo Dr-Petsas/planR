@@ -200,7 +200,7 @@ public static class DensHkp
                     ["number"] = n,
                     ["finding"] = Text(raw, 418 + i * 4, 4),
                     ["regular"] = planned.TryGetValue(n.ToString(), out var reg) ? reg : "",
-                    ["therapy"] = Text(raw, 248 + i * 5, 5),
+                    ["therapy"] = Text(raw, 546 + i * 4, 4),
                 });
             }
             plan["toothSchema"] = schema;
@@ -913,7 +913,8 @@ public static class DensHkp
         for (var i = 0; i < FdiOrder.Length; i++)
         {
             var n = FdiOrder[i];
-            Put(plan, 248 + i * 5, 5, therapy.GetValueOrDefault(n, ""));
+            // Kassen-Therapieplanung, je Zahn 4 Byte. Ab 248 stehen DENS-Plansymbole, die bleiben leer.
+            Put(plan, 546 + i * 4, 4, therapy.GetValueOrDefault(n, ""));
             var fnd = findings.GetValueOrDefault(n, "");
             Put(plan, 418 + i * 4, 4, fnd.Length > 0 ? fnd : " ");
         }
