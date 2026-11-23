@@ -81,7 +81,7 @@ public static class Ausfuehren
 
 public static class Umfrage
 {
-    public const string Version = "0.1.0";
+    public const string Version = "2.0";
 
     public static string Abfrage(string pvs, string? status, IReadOnlyList<string>? kann)
     {

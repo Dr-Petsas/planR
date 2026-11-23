@@ -1,9 +1,25 @@
 using PlanR.Bridge;
+using PlanR.Bridge.Dampsoft;
+using PlanR.Bridge.Dens;
+using PlanR.Bridge.Dienst;
+using PlanR.Bridge.Z1;
 
 if (args.Contains("--version"))
 {
     Console.WriteLine(Umfrage.Version);
     return 0;
+}
+
+// Prüft eine Datei unter dem laufenden Windows-Konto (Setup -> KontoEinrichten ohne Python).
+if (Argument(args, "--datei-pruefen") is { } pruefDatei)
+{
+    return File.Exists(pruefDatei) ? 0 : 1;
+}
+
+// Einrichtungs-Hilfsbefehle für PlanR-Bridge-Setup.exe (einloesen, melden, warten, dswin, dens).
+if (Argument(args, "--einrichten") is { } einrichtBefehl)
+{
+    return await Einrichten.Ausfuehren(einrichtBefehl);
 }
 
 // Vergleichslauf gegen den Python-Connector: je Zeile der Datei ein GET-Pfad, je Zeile der Ausgabe eine Antwort.
@@ -12,11 +28,10 @@ if (Argument(args, "--z1-datei") is { } z1Datei)
     Console.OutputEncoding = new System.Text.UTF8Encoding(false);
     // Geschrieben wird im Vergleichslauf nur in eine ausdrücklich über Z1_MDB benannte Kopie, nie in die Praxisdatenbank.
     var darf = args.Contains("--z1-schreiben") && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("Z1_MDB"));
-    var z1 = new PlanR.Bridge.Z1.Z1Connector(PlanR.Bridge.Z1.Z1Daten.Pfad(), schreiben: darf);
+    var z1 = new Z1Connector(Z1Daten.Pfad(), schreiben: darf);
     var json = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     foreach (var zeile in File.ReadAllLines(z1Datei).Where(z => z.Length > 0))
     {
-        // "POST <Pfad> <JSON>" schreibt, alles andere ist ein GET-Pfad.
         var teile = zeile.StartsWith("POST ") ? zeile.Split(' ', 3) : ["GET", zeile];
         var pfad = teile[1];
         System.Text.Json.JsonElement? body = teile.Length > 2 ? System.Text.Json.JsonDocument.Parse(teile[2]).RootElement : null;
@@ -30,7 +45,7 @@ if (Argument(args, "--z1-datei") is { } z1Datei)
 if (Argument(args, "--z1-abzug") is { } tabellen)
 {
     Console.OutputEncoding = new System.Text.UTF8Encoding(false);
-    var daten = new PlanR.Bridge.Z1.Z1Daten(PlanR.Bridge.Z1.Z1Daten.Pfad());
+    var daten = new Z1Daten(Z1Daten.Pfad());
     foreach (var tabelle in tabellen.Split(','))
         foreach (var satz in daten.Abzug(tabelle))
             Console.WriteLine(tabelle + "\t" + satz);
@@ -42,7 +57,7 @@ if (Argument(args, "--z1-schreib-datei") is { } schreibDatei)
 {
     Console.OutputEncoding = new System.Text.UTF8Encoding(false);
     foreach (var zeile in File.ReadAllLines(schreibDatei).Where(z => z.Trim().Length > 0))
-        Console.WriteLine(PlanR.Bridge.Z1.Z1Vergleich.Zeile(zeile));
+        Console.WriteLine(Z1Vergleich.Zeile(zeile));
     return 0;
 }
 
@@ -51,7 +66,7 @@ if (Argument(args, "--dens-datei") is { } densDatei)
 {
     Console.OutputEncoding = new System.Text.UTF8Encoding(false);
     var darf = args.Contains("--dens-schreiben") && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DENS_OFFICE_INI"));
-    var dens = new PlanR.Bridge.Dens.DensConnector();
+    var dens = new DensConnector();
     var json = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     foreach (var zeile in File.ReadAllLines(densDatei).Where(z => z.Length > 0))
     {
@@ -77,7 +92,7 @@ if (Argument(args, "--dswin-datei") is { } dsDatei)
     var dsRoot = Environment.GetEnvironmentVariable("DSWIN_ROOT");
     var darf = args.Contains("--dswin-schreiben") && !string.IsNullOrEmpty(dsRoot);
     var backupBase = Argument(args, "--dswin-backup");
-    var ds = new PlanR.Bridge.Dampsoft.DsWinConnector(dsRoot, enableWrite: darf, backupBase: backupBase);
+    var ds = new DsWinConnector(dsRoot, enableWrite: darf, backupBase: backupBase);
     var json = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     foreach (var zeile in File.ReadAllLines(dsDatei).Where(z => z.Length > 0))
     {
@@ -119,14 +134,124 @@ catch (KonfigFehler exc)
     return 2;
 }
 
+var log = new Protokoll(cfg.Ordner);
+var pvs = ConnectorVerwalter.Erkennen(cfg);
+
+// --pruefen: prüft PVS-Connector + Erreichbarkeit von PlanR und beendet sich mit 0/1.
 if (args.Contains("--pruefen"))
 {
-    Console.WriteLine($"Konfiguration gültig. Mandant {cfg.Mandant}, PVS {cfg.Pvs}.");
-    return 0;
+    using var verwalter = new ConnectorVerwalter(cfg, log, pvs);
+    var zustand = verwalter.Zustand();
+    Console.WriteLine(zustand == "bereit" ? $"Connector bereit ({pvs})." : $"Connector: {zustand}");
+    using var kunde = new PlanRKunde(cfg, pvs);
+    using var kurz = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    try
+    {
+        await kunde.Abholen(zustand, kurz.Token);
+        Console.WriteLine($"PlanR verbunden ({cfg.Planr}, Mandant {cfg.Mandant}).");
+        return zustand == "bereit" ? 0 : 1;
+    }
+    catch (Exception exc)
+    {
+        Console.Error.WriteLine($"PlanR nicht erreichbar: {exc.Message}");
+        return 1;
+    }
 }
 
-Console.Error.WriteLine("Die kompilierte Bridge ersetzt den laufenden Dienst noch nicht. Der Download in PlanR bleibt gesperrt.");
-return 4;
+// Produktivbetrieb: 3 Arbeiter + Erreichbarkeits-Wächter + Einzelplatz-Erkennung + signierte Updates.
+log.Info($"PlanR-Bridge {Umfrage.Version} startet (Mandant {cfg.Mandant}, PVS {pvs}, PlanR {cfg.Planr})");
+
+using var haltQuelle = new CancellationTokenSource();
+var updateNeustart = 0;
+
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;
+    haltQuelle.Cancel();
+};
+AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+{
+    try { haltQuelle.Cancel(); } catch { }
+};
+
+using var connector = new ConnectorVerwalter(cfg, log, pvs);
+using var kundeAktiv = new PlanRKunde(cfg, pvs);
+var laufend = new Laufend();
+
+using OrtDienst? ort = Ort.IstEinzelplatz(cfg.Mandant) ? new OrtDienst(cfg, log) : null;
+ort?.Starten();
+
+// Hintergrund-Scan nach vorhandenen Praxisprogrammen für die Umschalt-Anzeige in PlanR.
+_ = Task.Run(() =>
+{
+    try
+    {
+        var gefunden = Praxis.Vorhanden(cfg, connector.Pvs, () =>
+        {
+            var (ds, _) = DsWinPfad.FindRoot();
+            return !string.IsNullOrEmpty(ds) && DsWinPfad.Valid(ds) ? "dampsoft" : null;
+        });
+        // Auch DENS-Autoerkennung ergänzen, wenn keine densini explizit in agent.json steht.
+        var menge = new SortedSet<string>(gefunden, StringComparer.Ordinal);
+        if (!menge.Contains("dens") && !string.IsNullOrEmpty(DensPfad.Ini()))
+            menge.Add("dens");
+        kundeAktiv.Kann = menge.ToList();
+        log.Info($"Erkannte Praxisprogramme: {string.Join(", ", kundeAktiv.Kann)}");
+    }
+    catch (Exception exc)
+    {
+        log.Warn($"PVS-Erkennung: {exc.Message}");
+    }
+}, haltQuelle.Token);
+
+const int ArbeiterAnzahl = 3;
+var aufgaben = new List<Task>(ArbeiterAnzahl + 2);
+for (var i = 0; i < ArbeiterAnzahl; i++)
+{
+    aufgaben.Add(Task.Run(() => Schleife.Arbeit(
+        kundeAktiv,
+        connector,
+        cfg,
+        connector.Zustand,
+        haltQuelle.Token,
+        laufend,
+        log.Info), haltQuelle.Token));
+}
+
+// Periodische Erreichbarkeits-Prüfung (30 s): holt DS-Win/DENS/Z1 zurück, sobald Freigabe wieder da ist.
+aufgaben.Add(Task.Run(async () =>
+{
+    while (!haltQuelle.IsCancellationRequested)
+    {
+        try { await Task.Delay(TimeSpan.FromSeconds(30), haltQuelle.Token); }
+        catch (OperationCanceledException) { break; }
+        connector.Nachsehen();
+    }
+}, haltQuelle.Token));
+
+// Selbstaktualisierung (RSA-3072-signiertes Paket, prüft nach 2 min und danach stündlich).
+aufgaben.Add(Task.Run(() => Aktualisieren.Schleife(
+    kundeAktiv,
+    cfg,
+    laufend,
+    log,
+    () =>
+    {
+        Interlocked.Exchange(ref updateNeustart, 1);
+        haltQuelle.Cancel();
+    },
+    haltQuelle.Token), haltQuelle.Token));
+
+try
+{
+    await Task.WhenAll(aufgaben);
+}
+catch (OperationCanceledException) { }
+
+laufend.Abwarten(TimeSpan.FromSeconds(10));
+var exitCode = Volatile.Read(ref updateNeustart) == 1 ? Aktualisieren.ExitCodeNeustart : 0;
+log.Info($"PlanR-Bridge beendet (Code {exitCode}).");
+return exitCode;
 
 static string? Argument(string[] args, string name)
 {

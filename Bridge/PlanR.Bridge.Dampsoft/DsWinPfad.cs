@@ -248,13 +248,23 @@ public static class DsWinPfad
         return found;
     }
 
-    public static (string? Root, string FoundBy) FindRoot()
+    public static (string? Root, string FoundBy, List<(string Root, string Label, long Stamp)> Candidates) FindAll()
     {
         var env = Environment.GetEnvironmentVariable("DSWIN_ROOT");
-        if (!string.IsNullOrEmpty(env)) return (Path.GetFullPath(env).TrimEnd('\\'), "DSWIN_ROOT");
+        if (!string.IsNullOrEmpty(env))
+        {
+            var abs = Path.GetFullPath(env).TrimEnd('\\');
+            return (abs, "DSWIN_ROOT", [(abs, "DSWIN_ROOT", DataStamp(abs))]);
+        }
         var found = Collect((RunningPrograms, "laufendes DS-Win"));
         if (found.Count == 0) found = Collect((Shortcuts, "Verknüpfung"), (Drives, "Laufwerkssuche"));
-        return found.Count == 0 ? (null, "nicht gefunden") : (found[0].Root, found[0].Label);
+        return found.Count == 0 ? (null, "nicht gefunden", found) : (found[0].Root, found[0].Label, found);
+    }
+
+    public static (string? Root, string FoundBy) FindRoot()
+    {
+        var (root, by, _) = FindAll();
+        return (root, by);
     }
 
     public static string? WriteBlocker(string root)

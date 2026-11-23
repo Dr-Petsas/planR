@@ -8,8 +8,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PlanR.Bridge.Dienst</AssemblyName>
-    <Version>0.1.0</Version>
-    <Description>Kompilierte PlanR-Bridge. Wird nicht als Windows-Dienst installiert und nicht zum Download freigegeben.</Description>
+    <Version>2.0.0</Version>
+    <Description>PlanR-Bridge: verbindet DS-Win, DENSoffice oder CGM Z1.PRO sicher mit PlanR.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PlanR.Bridge\PlanR.Bridge.csproj" />
