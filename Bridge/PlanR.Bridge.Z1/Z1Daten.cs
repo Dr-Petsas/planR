@@ -65,6 +65,25 @@ public sealed class Z1Daten(string mdb)
         return rows;
     }
 
+    /// <summary>Alle Sätze einer Tabelle als sortierte JSON-Zeilen: nur für den Vergleich zweier Datenbankkopien.</summary>
+    public List<string> Abzug(string tabelle) => Lesen(conn =>
+    {
+        if (!Regex.IsMatch(tabelle, @"\A[A-Z0-9]{1,20}\z")) throw new Z1Eingabe("Tabelle ungültig.");
+        var rows = new List<string>();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT * FROM [{tabelle}]";
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            var row = new SortedDictionary<string, object?>(StringComparer.Ordinal);
+            for (var i = 0; i < r.FieldCount; i++)
+                row[r.GetName(i)] = r.IsDBNull(i) ? null : r.GetValue(i) is byte[] b ? Convert.ToBase64String(b) : Convert.ToString(r.GetValue(i), System.Globalization.CultureInfo.InvariantCulture);
+            rows.Add(System.Text.Json.JsonSerializer.Serialize(row));
+        }
+        rows.Sort(StringComparer.Ordinal);
+        return rows;
+    });
+
     /// <summary>Gebührenliste (Tabelle GO).</summary>
     public List<Zeile> Katalog() => Lesen(conn =>
         Zeilen(conn, "SELECT LSTNR, ANALOGNR, GOART, KURZTEXT, GEBPKT, LAB1PREIS FROM [GO]", ["nr", "analog", "art", "text", "punkte", "lab"]));

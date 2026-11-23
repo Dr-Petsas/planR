@@ -10,13 +10,30 @@ if (args.Contains("--version"))
 if (Argument(args, "--z1-datei") is { } z1Datei)
 {
     Console.OutputEncoding = new System.Text.UTF8Encoding(false);
-    var z1 = new PlanR.Bridge.Z1.Z1Connector(PlanR.Bridge.Z1.Z1Daten.Pfad(), schreiben: false);
+    // Geschrieben wird im Vergleichslauf nur in eine ausdrücklich über Z1_MDB benannte Kopie, nie in die Praxisdatenbank.
+    var darf = args.Contains("--z1-schreiben") && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("Z1_MDB"));
+    var z1 = new PlanR.Bridge.Z1.Z1Connector(PlanR.Bridge.Z1.Z1Daten.Pfad(), schreiben: darf);
     var json = new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-    foreach (var pfad in File.ReadAllLines(z1Datei).Where(z => z.Length > 0))
+    foreach (var zeile in File.ReadAllLines(z1Datei).Where(z => z.Length > 0))
     {
-        var (status, daten) = z1.Rufen("GET", pfad, null, new Dictionary<string, string>(), 10_000);
+        // "POST <Pfad> <JSON>" schreibt, alles andere ist ein GET-Pfad.
+        var teile = zeile.StartsWith("POST ") ? zeile.Split(' ', 3) : ["GET", zeile];
+        var pfad = teile[1];
+        System.Text.Json.JsonElement? body = teile.Length > 2 ? System.Text.Json.JsonDocument.Parse(teile[2]).RootElement : null;
+        var (status, daten) = z1.Rufen(teile[0], pfad, body, new Dictionary<string, string>(), 10_000);
         Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { pfad, status, daten }, json));
     }
+    return 0;
+}
+
+// Abzug einzelner Z1-Tabellen (kommagetrennt), um zwei Datenbankkopien nach einem Schreibvergleich gegenüberzustellen.
+if (Argument(args, "--z1-abzug") is { } tabellen)
+{
+    Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+    var daten = new PlanR.Bridge.Z1.Z1Daten(PlanR.Bridge.Z1.Z1Daten.Pfad());
+    foreach (var tabelle in tabellen.Split(','))
+        foreach (var satz in daten.Abzug(tabelle))
+            Console.WriteLine(tabelle + "\t" + satz);
     return 0;
 }
 
