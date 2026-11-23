@@ -749,7 +749,7 @@ const HTML = `
     <div class="hp-stroeme" aria-hidden="true"><span></span><span class="mobil"></span><span class="mobil"></span></div>
     <div class="hp-sektion-kopf hp-ein">
       <h2>PlanR für deine Praxis</h2>
-      <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat, Passwort. Der Bridge-Download ist momentan gesperrt. Der Einrichtungsassistent führt dich bis zum ersten HKP aus deinem PVS.</p>
+      <p>Online buchen in fünf Minuten – Stammdaten, KZV, SEPA-Mandat, Passwort. Danach sofort anmelden: Der Einrichtungsassistent führt dich bis zum ersten HKP aus deinem PVS.</p>
     </div>
     <div class="hp-kontakt-wege hp-ein">
       <a class="hp-knopf hp-knopf-voll" href="#buchen-clara">Jetzt online buchen</a>

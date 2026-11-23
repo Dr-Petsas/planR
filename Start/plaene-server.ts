@@ -85,7 +85,7 @@ const CF_ACCESS = `${ORDNER}/cf-access.json`
 const BRIDGE_WEITER = `${ORDNER}/bridge-weiter.json`
 /** Buchungen von der Startseite (enthalten IBAN – bleiben im Datenordner) */
 const BUCHUNGEN = `${ORDNER}/buchungen.json`
-/** Installationspaket für den Praxisserver (pvsConnectoR: agent/paket-bauen.ps1) */
+/** Installationspaket für den Praxisserver (Bridge: paket-bauen.ps1) */
 const AGENT_PAKET = `${ORDNER}/downloads/PlanR-Bridge.zip`
 /** Dasselbe als Setup in einer Datei; PlanR hängt beim Herunterladen den Einrichtungscode an den Dateinamen. */
 const AGENT_SETUP = `${ORDNER}/downloads/PlanR-Bridge-Setup.exe`
@@ -1906,10 +1906,10 @@ const DOWNLOAD_SEITE = `<!doctype html><html lang="de"><head><meta charset="utf-
 a.knopf{display:inline-block;background:#1f6feb;color:#fff;padding:.7rem 1.2rem;border-radius:.5rem;text-decoration:none;font-weight:600}
 code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem 0}</style></head><body>
 <h1>PlanR-Bridge für den Praxisserver</h1>
-<p>Die Bridge verbindet DS-Win bzw. DENS auf dem Praxisserver mit PlanR. Sie baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Python ist im Paket enthalten.</p>
+<p>Die Bridge verbindet DS-Win, DENSoffice bzw. Z1.PRO auf dem Praxisserver mit PlanR. Sie baut die Verbindung selbst auf; am Server wird kein Port geöffnet. Zusätzliche Software ist nicht nötig.</p>
 <p><a class="knopf" href="/download/PlanR-Bridge.zip">Download erneut starten</a></p>
 <p>Beim Öffnen von <b>planr.pickadoc.de/download</b> startet die Datei von selbst. Sie heißt PlanR-Bridge.zip und liegt im Ordner Downloads. Eine Anmeldung ist nicht nötig.</p>
-<h2>Einrichten (einmal, auf dem Server mit DS-Win bzw. DENS)</h2>
+<h2>Einrichten (einmal, auf dem Server mit DS-Win, DENSoffice bzw. Z1.PRO)</h2>
 <p>Am besten auf dem Rechner, auf dem der DS-Win-Ordner (<code>TDAMP</code>) liegt und den die Arbeitsplätze als Netzlaufwerk verbinden.</p>
 <ol>
 <li>ZIP auf den Server kopieren und entpacken (Rechtsklick → „Alle extrahieren“).</li>
@@ -1921,7 +1921,7 @@ code{background:#eef2f6;padding:.1rem .3rem;border-radius:.25rem}li{margin:.4rem
 <p>Entfernen: <code>Entfernen.cmd</code> im entpackten Ordner doppelklicken. Notaus: Datei <code>STOP</code> in <code>C:\\ProgramData\\PlanR-Bridge</code> anlegen.</p>
 </body></html>`
 
-const BRIDGE_DOWNLOAD_FREI = false
+const BRIDGE_DOWNLOAD_FREI = true
 const BRIDGE_DOWNLOAD_SPERRE = 'Der Download der PlanR-Bridge ist gesperrt.'
 
 function bridgeDownloadSperren(res: ServerResponse) {
@@ -1948,7 +1948,7 @@ function download(req: IncomingMessage, res: ServerResponse, url: string, query 
     res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge.zip"')
     res.setHeader('Content-Length', String(daten.length))
     res.end(req.method === 'HEAD' ? undefined : daten)
-  }).catch(() => json(res, 404, { ok: false, meldung: 'Das Bridge-Paket ist noch nicht gebaut (pvsConnectoR: agent/paket-bauen.ps1).' }))
+  }).catch(() => json(res, 404, { ok: false, meldung: 'Das Bridge-Paket ist noch nicht gebaut (Bridge: paket-bauen.ps1).' }))
 }
 
 const buchungBremse = new Bremse(5, 60 * 60_000)

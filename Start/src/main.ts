@@ -863,9 +863,9 @@ function einstellungKarte(): string {
         </label>` : ''}
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Anbindung an dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
         ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge ${agent?.lokal ? 'auf diesem PC' : 'auf dem Praxisserver'}: ${agent ? (agent.verbunden ? `verbunden (${esc(bridgeStand(agent, einstellungen.pvs))})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
-          · <button type="button" class="link-knopf" disabled>PlanR-Bridge herunterladen</button> momentan gesperrt</p>` : ''}
+          ${ich.konto.admin ? ' · <button type="button" class="link-knopf" data-bridge-laden>Bridge herunterladen</button>' : ' · Herunterladen kann sie der Praxis-Admin.'}</p>` : ''}
         ${agent?.lokal ? '<p class="pvs-info">Dieser Browser arbeitet mit der Bridge auf diesem PC; die Wahl oben gilt nur hier. <button type="button" class="link-knopf" data-ort-vergessen>Stattdessen den Praxisserver verwenden</button></p>'
-          : ich.konto.admin ? '<p class="pvs-info">Demo-PC oder Einzelplatz: <button type="button" class="link-knopf" disabled>Bridge für einen einzelnen PC herunterladen</button> momentan gesperrt</p>' : ''}
+          : ich.konto.admin ? '<p class="pvs-info">Demo-PC oder Einzelplatz: <button type="button" class="link-knopf" data-bridge-pc>Bridge für einen einzelnen PC herunterladen</button> – Browser auf diesem PC arbeiten dann mit dem Praxisprogramm dort.</p>' : ''}
         ${katalogBlock()}
         ${benutzerBlock(benutzer)}
         ${ich.konto.admin ? verbundBlock() : ''}
@@ -2121,7 +2121,7 @@ function zeichnen() {
     }
     void aboSenden()
   })
-  app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', (ev) => { ev.preventDefault() })
+  app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', () => { auswahlSchliessen(); void einrichtungZeigen(true) })
   app.querySelector<HTMLButtonElement>('[data-ort-vergessen]')?.addEventListener('click', () => { ortVergessen(); location.reload() })
   app.querySelector<HTMLButtonElement>('[data-bridge-pc]')?.addEventListener('click', async (ev) => {
     const knopf = ev.currentTarget as HTMLButtonElement
@@ -2400,10 +2400,9 @@ function ohneAnmeldung() {
   }
   let ansicht = ''
   const zeigen = async () => {
-    if (location.hash === '#bridge') location.hash = '#connect'
     const soll = location.hash === '#probe-eingang' ? '#probe-eingang'
       : location.hash.startsWith('#fall/') ? location.hash
-      : (['#anmelden', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
+      : (['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
       : location.hash === '#probe' ? '#probe'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' || location.hash === '#buchen-test' ? location.hash : 'start'
     if (soll === ansicht) return
@@ -2412,7 +2411,7 @@ function ohneAnmeldung() {
     const hp = await import('./homepage')
     if (soll === 'anmelden') {
       if (vorher !== 'start') hp.homepage(app)
-      anmeldePopup(sitzungHinweis || '', () => {
+      anmeldePopup(sitzungHinweis || (location.hash === '#bridge' ? 'Bitte als Praxis-Admin anmelden – danach laden Sie die Bridge herunter.' : ''), () => {
         ansicht = 'start'
         sitzungHinweisLoeschen()
         history.replaceState(null, '', location.pathname + location.search)
@@ -2615,9 +2614,8 @@ ausPickadoc().then(ichLaden).then(async (wer) => {
   if (probe) { /* Einrichtung und Zuordnung gehören zum Abo */ }
   else if (location.hash === '#zuordnung' && ich.konto.admin) void zuordnungOeffnen()
   else if (location.hash === '#rechnungen' && ich.konto.admin && ich.abo === 'planr') void rechnungenZeigen()
-  else if (location.hash === '#bridge') location.hash = '#connect'
-  else if (location.hash === '#einrichtung' || neu) {
+  else if (location.hash === '#einrichtung' || location.hash === '#bridge' || neu) {
     sessionStorage.setItem('planr-einrichtung', '1')
-    void einrichtungZeigen(false)
+    void einrichtungZeigen(location.hash === '#bridge')
   }
 }).catch(() => { app.innerHTML = '<p class="leer">Die Planliste ist gerade nicht erreichbar.</p>' })
