@@ -40,6 +40,24 @@ describe.skipIf(!KI_LIVE)('KI-Zeile live: Kassen-HKP', { timeout: 240_000 }, () 
     expect(rechnen(r.plan).positionen.some((x) => x.zahn.includes('26'))).toBe(true)
   })
 
+  it('nimmt zwei Kronen dazu, ohne nach dem Befund zu fragen, und lässt die Brücke stehen', async () => {
+    const bruecke = mit(zahn('14', { befund: 'kw' }), zahn('15', { befund: 'f' }), zahn('16', { befund: 'kw' }))
+    const r = await zug(bruecke, 'Füge noch zwei Kronen hinzu, an 24 und 25.')
+    expect(z(r.plan, '24').B).toBe('ww')
+    expect(z(r.plan, '25').B).toBe('ww')
+    expect(z(r.plan, '15').B).toBe('f')
+    expect(rechnen(r.plan).summen.gesamt).toBeGreaterThan(rechnen(bruecke).summen.gesamt)
+  })
+
+  it('stellt die Verblendung einer Brücke um', async () => {
+    const bruecke = mit(zahn('14', { befund: 'kw' }), zahn('15', { befund: 'f' }), zahn('16', { befund: 'kw' }))
+    const voll = await zug(bruecke, 'Die Brücke soll voll verblendet werden.')
+    expect(z(voll.plan, '16').TP).toBe('KM')
+    const r = await zug(voll.plan, 'vestibuläre Verblendung')
+    expect(z(r.plan, '16').TP ?? '').toBe('')
+    expect(rechnen(r.plan).summen.gesamt).toBeLessThan(rechnen(voll.plan).summen.gesamt)
+  })
+
   it('kürzt um eine Krone', async () => {
     const r = await zug(mit(zahn('16', { befund: 'ww' }), zahn('26', { befund: 'ww' })), 'Die Krone an 26 machen wir doch nicht, nur 16 bleibt.')
     expect(rechnen(r.plan).positionen.some((x) => x.zahn.includes('26'))).toBe(false)

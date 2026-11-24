@@ -20,8 +20,8 @@ import { kiDienst, kiName, zahnText, zahnWerte, type KiSchalter, type KiSchritt,
 import { planPruefen } from './pruefung'
 
 export const ZAHNFELDER: KiZahnFeld[] = [
-  { name: 'befund', text: 'Befund (Zeile B, Kleinbuchstaben)', werte: { '': 'leer, kein Befund', ...BEFUND_KUERZEL } },
-  { name: 'planung', text: 'Therapieplanung (Zeile TP, Großbuchstaben; leer = Regelversorgung gilt)', werte: { '': 'leer, keine abweichende Planung', ...THERAPIE_KUERZEL } },
+  { name: 'befund', text: 'Befund (Zeile B). Neue Krone an einem Zahn: befund ww (kw, wenn eine Krone erneuert wird), ohne planung und ohne Rückfrage. f nur, wenn der Arzt sagt, dass der Zahn fehlt.', werte: { '': 'leer, kein Befund', ...BEFUND_KUERZEL } },
+  { name: 'planung', text: 'Therapieplanung (Zeile TP; leer = Regelversorgung gilt). Nur für eine Versorgung, die von der Regelversorgung abweicht; eine gewöhnliche Krone folgt aus dem Befund.', werte: { '': 'leer, keine abweichende Planung', ...THERAPIE_KUERZEL } },
   { name: 'brueckeAnfang', text: 'Brückenspanne beginnt an diesem Zahn', ja: true },
   { name: 'brueckeEnde', text: 'Brückenspanne endet an diesem Zahn', ja: true },
   {
@@ -58,6 +58,7 @@ export function schalter(plan: HkpPlan, praxis?: PraxisListen): KiSchalter[] {
       { name: 'implantat.system', text: `Implantatsystem für die Preise der Implantatteile (durchschnitt = noch nicht gewählt, Mittelwert; ${IMPLANTATSYSTEME.filter((s) => s.id !== 'durchschnitt').map((s) => `${s.id} = ${s.hersteller} ${s.system}`).join(', ')})`, wert: implantatsystem(plan.implantat.system).id, werte: IMPLANTATSYSTEME.map((s) => s.id) },
     ] : []),
     { name: 'bemerkung', text: 'Bemerkungen auf dem Heil- und Kostenplan (freier Text)', wert: plan.bemerkungen ?? '' },
+    { name: 'kronenDazu', text: 'Neue Kronen dazunehmen: Wert = Zahnnummern mit Komma, z. B. 24,25. Das ist der Weg für jeden Auftrag »Krone dazu« oder »Zahn X braucht eine Krone«, auch für Zähne, die bisher nicht im Plan stehen: genau dieser eine Schritt, kein Schritt zahn, keine Rückfrage nach Befund oder Material. Den Befund trägt der Planer selbst ein, das Material folgt dem Plan.', wert: '' },
     ...REPARATUR_ARTEN.map((a) => ({
       name: `reparatur.${a.id}`,
       text: `Wiederherstellung ${a.id.split('-')[0]}: ${a.titel.slice(0, 110)}; Wert = Gebiet (${a.je === 'kiefer' ? 'OK oder UK' : 'Zahnnummern mit Komma, z. B. 14,15'}), leer = nicht geplant`,
@@ -78,6 +79,9 @@ function zielSchalter(plan: HkpPlan, praxis?: PraxisListen): KiSchalter[] {
   return [{ name: 'zielEigenanteil', text: `Zielbetrag: gewünschter Eigenanteil des Patienten in Euro; der Planer stellt Honorarfaktor, Zusatzleistungen und Eigenlabor-Preise passend ein (möglich ${euro(min)} bis ${euro(max)})`, wert: Math.round(jetzt * 100) / 100 }]
 }
 
+/** Kronen und Teilkronen sitzen auf einem vorhandenen Zahn, nie auf einer Lücke. */
+const KRONE_AUF_ZAHN = new Set(['K', 'KV', 'KM', 'KH', 'KVH', 'KMH', 'PK', 'PKV', 'PKM'])
+
 /** Trägt Befund und Planung eines Zahns ein wie das Zahnschema in Teil 1. */
 export function zahnSetzen(plan: HkpPlan, zahn: string, w: KiZahnWerte): { plan: HkpPlan; text: string } | string {
   const alt = plan.zaehne[zahn] ?? { B: '', R: '', TP: '' }
@@ -89,6 +93,9 @@ export function zahnSetzen(plan: HkpPlan, zahn: string, w: KiZahnWerte): { plan:
   if (w.brueckeAnfang !== undefined) neu.bAnfang = w.brueckeAnfang === true || undefined
   if (w.brueckeEnde !== undefined) neu.bEnde = w.brueckeEnde === true || undefined
   if (!neu.TP) { neu.bAnfang = undefined; neu.bEnde = undefined }
+  if (neu.B === 'f' && KRONE_AUF_ZAHN.has(neu.TP) && (neu.B !== alt.B || neu.TP !== alt.TP)) {
+    return `Zahn ${zahn}: eine Krone (${neu.TP}) kann nicht auf einem fehlenden Zahn (Befund f) stehen. Steht der Zahn und braucht eine neue Krone, ist der Befund ww und die Planung bleibt leer; soll eine Krone erneuert werden, kw.`
+  }
   if (neu.B === alt.B && neu.TP === alt.TP && !!neu.bAnfang === !!alt.bAnfang && !!neu.bEnde === !!alt.bEnde) return `Zahn ${zahn} steht schon so im Plan.`
   return { plan: { ...plan, zaehne: { ...plan.zaehne, [zahn]: neu } }, text: zahnText(ZAHNFELDER, zahn, w.planung === undefined && alt.TP && !neu.TP ? { ...w, planung: '' } : w) }
 }
@@ -200,6 +207,20 @@ export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[], praxis: Praxis
       getan.push(neu ? `Bemerkung eingetragen: »${neu.length > 80 ? `${neu.slice(0, 80)}…` : neu}«` : 'Bemerkung geleert')
       continue
     }
+    if (s.name === 'kronenDazu') {
+      const zz = gebietAufloesen(String(s.wert ?? '')).zaehne
+      if (!zz.length) { nicht.push('Neue Kronen: ich brauche die Zahnnummern.'); continue }
+      for (const z of zz) {
+        const b = p.zaehne[z]?.B ?? ''
+        if (b === 'f') { nicht.push(`Zahn ${z} fehlt laut Befund; eine Krone kann dort nicht stehen.`); continue }
+        if (b === 'ww' || b === 'kw' || b === 'pw') { nicht.push(`Zahn ${z} bekommt in diesem Plan schon eine Krone.`); continue }
+        if (b && b !== 'k') { nicht.push(`Zahn ${z} trägt den Befund ${b}; eine neue Krone trage ich dort nicht von selbst ein.`); continue }
+        const r = zahnSetzen(p, z, { befund: b === 'k' ? 'kw' : 'ww' })
+        if (typeof r === 'string') nicht.push(r)
+        else { p = r.plan; getan.push(`Zahn ${z}: neue Krone (Befund ${b === 'k' ? 'kw, vorhandene Krone wird erneuert' : 'ww'})`); rechnen = true }
+      }
+      continue
+    }
     if (s.name.startsWith('reparatur.')) {
       const r = reparaturSetzen(p, s.name.slice(10), String(s.wert ?? ''))
       if (typeof r === 'string') nicht.push(r)
@@ -234,10 +255,15 @@ export function hkpAnwenden(plan: HkpPlan, schritte: KiSchritt[], praxis: Praxis
   if (rechnen) { const r = neuRechnen(p); p = r.plan; hinweise.push(...r.hinweise) }
   if (ausfText.length) {
     const r = ausfuehrungAnwenden(p, ausf)
-    p = r.plan
-    getan.push(...ausfText)
-    hinweise.push(...r.hinweise)
-    rechnen = true
+    // Nur die Verblendung genannt und am Zahnschema ändert sich nichts: der Plan trägt sie schon so (z. B. vestibulär = Regelversorgung).
+    if (Object.keys(ausf).length === 1 && ausf.verblendung && JSON.stringify(r.plan.zaehne) === JSON.stringify(p.zaehne)) {
+      nicht.push('Die Kronen und Brücken dieses Plans sind schon so verblendet; am Plan ändert sich dadurch nichts.')
+    } else {
+      p = r.plan
+      getan.push(...ausfText)
+      hinweise.push(...r.hinweise)
+      rechnen = true
+    }
   }
   for (const [zahn, w] of stoffe) {
     const info = WERKSTOFFE[w]
@@ -316,7 +342,7 @@ export function hkpKi(lesen: () => { plan: HkpPlan; ergebnis: Ergebnis; listen: 
         abformung: plan.abformung || 'noch nicht festgelegt',
         kronenmaterial: einheitenVon(plan).map((x) => { const w = werkstoffVon(x, plan.werkstoffe ?? {}); return `${x.zahn}: ${WERKSTOFFE[w.werkstoff].kurz}${w.gewaehlt ? '' : ' (Vorgabe, noch nicht gewählt)'}` }).join('; ') || 'keine Einheit mit Kronenmaterial',
         ...(e.zusatzNichtAngesetzt.length ? { nichtAngesetzt: e.zusatzNichtAngesetzt.join('; ') } : {}),
-        aufbau: 'Ich kann Befund und Therapieplanung je Zahn im Zahnschema ändern und die Angaben aus SCHALTER setzen (Bonus, Härtefall, Versorgungsart, Abformung, Labor, Kronenmaterial, Verblendung, Implantatangaben, Bemerkung, Wiederherstellungen, Zielbetrag); der Planer rechnet daraus Regelversorgung, Festzuschüsse und Positionen neu. Einzelne Positionen (BEMA, GOZ, BEL, BEB) kann ich hinzufügen, in Anzahl oder GOZ-Faktor ändern und entfernen. Was aus Zahnschema oder Ausführung folgt, ändere ich dort und nicht an der einzelnen Zeile. Die Regelversorgung folgt hier allein aus dem Befund: Soll die Versorgung eines Zahns ganz entfallen, leere ich seinen Befund (Feld befund auf leer); die Therapieplanung zu leeren heißt nur zurück zur Regelversorgung.',
+        aufbau: 'Ich kann Befund und Therapieplanung je Zahn im Zahnschema ändern und die Angaben aus SCHALTER setzen (Bonus, Härtefall, Versorgungsart, Abformung, Labor, Kronenmaterial, Verblendung, Implantatangaben, Bemerkung, Wiederherstellungen, Zielbetrag); der Planer rechnet daraus Regelversorgung, Festzuschüsse und Positionen neu. Einzelne Positionen (BEMA, GOZ, BEL, BEB) kann ich hinzufügen, in Anzahl oder GOZ-Faktor ändern und entfernen. Was aus Zahnschema oder Ausführung folgt, ändere ich dort und nicht an der einzelnen Zeile. Die Regelversorgung folgt hier allein aus dem Befund: Soll die Versorgung eines Zahns ganz entfallen, leere ich seinen Befund (Feld befund auf leer); die Therapieplanung zu leeren heißt nur zurück zur Regelversorgung. Eine neue Krone an einem Zahn plane ich über seinen Befund: ww (erhaltungswürdiger Zahn mit weitgehender Zerstörung), wenn die Praxis keinen Befund nennt; kw, wenn dort eine vorhandene Krone erneuert wird. Die Therapieplanung bleibt dabei leer, die Krone ergibt sich als Regelversorgung. Das gilt auch für einen Zahn, der bisher nicht im Plan steht: ich trage ihn so ein und frage weder nach Befund noch nach Kronenmaterial (dafür gilt die Vorgabe). Den Befund f (fehlend) setze ich nur, wenn die Praxis sagt, dass der Zahn fehlt; ein fehlender Zahn bekommt nie eine Krone.',
         ...(plan.reparaturen.length ? { wiederherstellungen: plan.reparaturen.map((r) => `${r.art}: ${r.gebiet || 'ohne Gebiet'}`).join('; ') } : {}),
       },
       schalter: schalter(plan, lesen().praxis), zahnfelder: ZAHNFELDER,

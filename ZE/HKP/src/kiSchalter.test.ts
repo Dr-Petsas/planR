@@ -52,6 +52,48 @@ describe('KI-Zeile: Angaben im Kassen-HKP', () => {
     expect(schalter(r.plan).find((s) => s.name === 'kronenmaterial')?.wert).toBe('zirkon')
   })
 
+  it('Verblendung: voll und zurück ändern den Plan; was schon so ist, wird nicht als Änderung gemeldet', () => {
+    const p = hkpAnwenden(leererPlan(), [zahn('14', { befund: 'kw' }), zahn('15', { befund: 'f' }), zahn('16', { befund: 'kw' })]).plan
+    // Die Regelbrücke 14-16 ist schon vestibulär verblendet (KV, BV, K): das ist keine Änderung.
+    const gleich = hkpAnwenden(p, [sch('verblendung', 'vestibulaer')])
+    expect(gleich.getan).toEqual([])
+    expect(gleich.nicht[0]).toContain('schon so verblendet')
+    expect(gleich.plan).toBe(p)
+    const voll = hkpAnwenden(p, [sch('verblendung', 'voll')])
+    expect(voll.nicht).toEqual([])
+    expect(voll.plan.zaehne['16'].TP).toBe('KM')
+    expect(rechnen(voll.plan).summen.gesamt).toBeGreaterThan(rechnen(p).summen.gesamt)
+    const zurueck = hkpAnwenden(voll.plan, [sch('verblendung', 'vestibulaer')])
+    expect(zurueck.nicht).toEqual([])
+    expect(zurueck.plan.zaehne['16'].TP).toBe('')
+    expect(rechnen(zurueck.plan).summen.gesamt).toBeCloseTo(rechnen(p).summen.gesamt, 2)
+  })
+
+  it('Kronen dazu: der Planer trägt den Befund selbst ein und lässt den Rest stehen', () => {
+    const vor = mitKrone()
+    const r = hkpAnwenden(vor, [{ op: 'schalter', name: 'kronenDazu', wert: '24,25' }])
+    expect(r.nicht).toEqual([])
+    expect(r.plan.zaehne['24']?.B).toBe('ww')
+    expect(r.plan.zaehne['25']?.B).toBe('ww')
+    expect(r.plan.zaehne['24']?.TP ?? '').toBe('')
+    for (const z of Object.keys(vor.zaehne)) if (z !== '24' && z !== '25') expect(r.plan.zaehne[z]?.B).toBe(vor.zaehne[z]?.B)
+    expect(rechnen(r.plan).summen.gesamt).toBeGreaterThan(rechnen(vor).summen.gesamt)
+    // Ein fehlender Zahn bekommt keine Krone.
+    const luecke = hkpAnwenden(vor, [zahn('24', { befund: 'f' })]).plan
+    const n = hkpAnwenden(luecke, [{ op: 'schalter', name: 'kronenDazu', wert: '24' }])
+    expect(n.getan).toEqual([])
+    expect(n.nicht[0]).toContain('fehlt')
+  })
+
+  it('eine Krone auf einem fehlenden Zahn nimmt der Planer nicht an', () => {
+    const r = hkpAnwenden(mitKrone(), [zahn('24', { befund: 'f', planung: 'K' })])
+    expect(r.getan).toEqual([])
+    expect(r.nicht[0]).toContain('fehlenden Zahn')
+    expect(r.plan.zaehne['24']?.B ?? '').toBe('')
+    // Ein Brückenglied auf der Lücke bleibt möglich.
+    expect(hkpAnwenden(mitKrone(), [zahn('24', { befund: 'f', planung: 'B' })]).nicht).toEqual([])
+  })
+
   it('Material an einem einzelnen Zahn, auch im selben Schritt wie der Befund', () => {
     const r = hkpAnwenden(leererPlan(), [zahn('16', { befund: 'ww', werkstoff: 'hochgold' }), zahn('26', { befund: 'ww' })])
     expect(r.nicht).toEqual([])
