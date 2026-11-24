@@ -884,12 +884,36 @@ public static class DsWinSchreiben
 
         public string? GoaeCode(string nr)
         {
-            // GOZ08 speichert GOÄ kleingeschrieben („ä3“). Großes „Ä“ + falscher Zeichensatz
-            // landete als Byte 0x8E und erschien in DS-Win als Ž3.
+            // Treffer = Ziffern existieren (auch als Ž3/Ä3). Rückgabe immer „ä…“, nie das
+            // vergiftete Katalogkürzel. Goz wird hier nicht umgeschrieben — die saubere
+            // GOZ08-Zeile legt PlanRows/GebuehrFehlt bei Bedarf neu an.
             var ziffern = GoaeZiffern(nr);
-            foreach (var c in new[] { "\u00E4" + ziffern, "\u00C4" + ziffern, "A" + ziffern, ziffern })
-                if (Goz.TryGetValue(c.ToUpperInvariant(), out var g)) return g;
-            return null;
+            if (ziffern.Length == 0) return null;
+            var canon = GoaeGebNr(ziffern);
+            string? fund = null;
+            foreach (var c in new[] { canon, "\u00C4" + ziffern, "A" + ziffern, ziffern })
+            {
+                if (Goz.TryGetValue(c.ToUpperInvariant(), out var g)) { fund = g; break; }
+            }
+            if (fund is null)
+            {
+                foreach (var (key, g) in Goz)
+                {
+                    if (GoaeZiffern(key) == ziffern && key.Length > ziffern.Length) { fund = g; break; }
+                }
+            }
+            if (fund is null) return null;
+            if (!Einfach.ContainsKey(canon) && Einfach.TryGetValue(fund, out var preis))
+                Einfach[canon] = preis;
+            return canon;
+        }
+
+        /// <summary>True, wenn GOZ08 die GOÄ bereits als kleines ä+Ziffern führt.</summary>
+        public bool GoaeSauber(string nr)
+        {
+            var canon = GoaeGebNr(nr);
+            return Goz.TryGetValue(canon.ToUpperInvariant(), out var g)
+                && string.Equals(g, canon, StringComparison.Ordinal);
         }
 
         public string? BemaCode(string nr)
@@ -900,11 +924,11 @@ public static class DsWinSchreiben
         }
     }
 
-    /// <summary>GOÄ-Ziffer ohne Präfix (PlanR liefert „3“, Katalog „ä3“/„Ä3“/„A3“).</summary>
+    /// <summary>GOÄ-Ziffer ohne Präfix (PlanR „3“, Katalog „ä3“/„Ä3“/„Ž3“/„A3“).</summary>
     public static string GoaeZiffern(string? nr)
     {
         var s = (nr ?? "").Trim();
-        if (s.Length > 0 && "äÄAa".Contains(s[0])) s = s[1..].TrimStart();
+        while (s.Length > 0 && !char.IsDigit(s[0])) s = s[1..].TrimStart();
         return s;
     }
 
@@ -927,7 +951,9 @@ public static class DsWinSchreiben
     {
         var lv = Str(p, "level");
         var code = lv == "GOAE" ? GoaeGebNr(Str(p, "number")) : Str(p, "number");
-        if (gebuehren.Goz.TryGetValue(code.ToUpperInvariant(), out var known))
+        // GOÄ: nur die exakte Schreibweise „ä3“ zählt als vorhanden — „Ä3“/„Ž3“ sind Altlast.
+        if (gebuehren.Goz.TryGetValue(code.ToUpperInvariant(), out var known)
+            && (lv != "GOAE" || string.Equals(known, code, StringComparison.Ordinal)))
             return (known, null);
         var factor = Dbl(p, "factor", 1.0);
         if (factor == 0) factor = 1.0;
@@ -1207,7 +1233,7 @@ public static class DsWinSchreiben
             var code = lv == "GOZ"
                 ? gebuehren.GozCode(nr, isMkv, gegen.GetValueOrDefault(Str(p, "tooth"), ""))
                 : gebuehren.GoaeCode(nr);
-            if (code is null)
+            if (code is null || (lv == "GOAE" && !gebuehren.GoaeSauber(nr)))
             {
                 var (c, neu) = GebuehrFehlt(p, gebuehren);
                 code = c;
@@ -1424,15 +1450,17 @@ public static class DsWinSchreiben
         var dst = app.Open(path);
         if (app.E.LockAll(dst) != 0) throw new HkpError("GOZ-Liste ist gerade gesperrt.");
         var empty = Blank(fields, width);
+        // Exakter Vergleich (nicht ToUpper): sonst blockiert vergiftetes „Ä3“/„Ž3“ (Byte 0x8E)
+        // das Anlegen der sauberen GOÄ-Zeile „ä3“.
         var vorhanden = vorhandenRows
             .Where(r => DbfTabelle.Active(r, fields, encoding))
-            .Select(r => (Convert.ToString(DbfTabelle.Value(r, fields, "GEBNR", encoding)) ?? "").Trim().ToUpperInvariant())
+            .Select(r => (Convert.ToString(DbfTabelle.Value(r, fields, "GEBNR", encoding)) ?? "").Trim())
             .ToHashSet(StringComparer.Ordinal);
         var breite = fields.TryGetValue("BEZ", out var bf) ? bf.Length : 200;
         foreach (var p in inserts)
         {
             var fee = Str(p, "fee");
-            if (vorhanden.Contains(fee.ToUpperInvariant())) continue;
+            if (vorhanden.Contains(fee)) continue;
             var txt = Str(p, "text");
             if (txt.Length == 0) txt = fee;
             if (txt.Length > breite) txt = txt[..breite];

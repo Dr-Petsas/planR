@@ -48,4 +48,15 @@ public class DsWinEncodingTests
         if (!File.Exists(patient) || !File.Exists(goz)) return;
         Assert.Equal("cp1252", DsWinPfad.GuessEncoding(patient));
     }
+
+    [Fact]
+    public void GoaeZiffern_entfernt_auch_vergiftetes_Prefix()
+    {
+        Assert.Equal("3", DsWinSchreiben.GoaeZiffern("Ž3"));
+        Assert.Equal("3", DsWinSchreiben.GoaeZiffern("Ä3"));
+        Assert.Equal("34", DsWinSchreiben.GoaeZiffern("ä34"));
+        Assert.Equal("ä3", DsWinSchreiben.GoaeGebNr("Ž3"));
+        Assert.Equal("ä5004", DsWinSchreiben.GoaeGebNr("5004"));
+    }
 }
+
