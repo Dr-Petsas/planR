@@ -9,6 +9,7 @@ import {
 import { planerZuModul } from './src/planer.ts'
 import { behandlungsschritte, positionenAusFassung, positionenAusHkp, schritteAnzahl, type Schritte } from './src/schritte.ts'
 import { nachSchritten } from './src/rechnungGliederung.ts'
+import { dsWinPlanText } from './pvsText.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsFreiKonten, pvsStehtFest, pvsVon } from './src/einstellungen.ts'
 import {
@@ -984,11 +985,12 @@ async function planInsPvs(req: IncomingMessage, w: Wer, modul: string, nummer: s
       // Dieselbe Folge wie die Behandlungsschritte. Überschriften gibt es nur auf der Rechnung, nicht in dieser Übergabe.
       // Die Sitzung gehört den Behandlungsschritten, das Praxisprogramm kennt das Feld nicht.
       const roh = Array.isArray(voll.positionen) ? voll.positionen as Record<string, unknown>[] : []
-      const plan = {
+      const geordnet = {
         ...voll,
         positionen: nachSchritten(roh, (p) => ({ ebene: String(p.ebene ?? ''), nr: String(p.nr ?? ''), sitzung: Number(p.sitzung) || 0 }), modul === 'privat-impl')
           .map(({ sitzung: _s, ...rest }) => rest),
       }
+      const plan = c.id === 'dampsoft' ? dsWinPlanText(geordnet) : geordnet
       const anlage = await c.rufen<{ number?: number; label?: string; hinweise?: string[] }>(`/patients/${encodeURIComponent(wahl.id)}/plaene/import`, {
         method: 'POST', body: { json: JSON.stringify(plan) }, ms: SCHREIB_MS, headers: { 'X-DSWIN-EDIT': '1' },
       })
