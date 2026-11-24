@@ -884,7 +884,10 @@ public static class DsWinSchreiben
 
         public string? GoaeCode(string nr)
         {
-            foreach (var c in new[] { "Ä" + nr, "A" + nr, nr })
+            // GOZ08 speichert GOÄ kleingeschrieben („ä3“). Großes „Ä“ + falscher Zeichensatz
+            // landete als Byte 0x8E und erschien in DS-Win als Ž3.
+            var ziffern = GoaeZiffern(nr);
+            foreach (var c in new[] { "\u00E4" + ziffern, "\u00C4" + ziffern, "A" + ziffern, ziffern })
                 if (Goz.TryGetValue(c.ToUpperInvariant(), out var g)) return g;
             return null;
         }
@@ -896,6 +899,17 @@ public static class DsWinSchreiben
             return Bema.Contains(nr) ? nr : null;
         }
     }
+
+    /// <summary>GOÄ-Ziffer ohne Präfix (PlanR liefert „3“, Katalog „ä3“/„Ä3“/„A3“).</summary>
+    public static string GoaeZiffern(string? nr)
+    {
+        var s = (nr ?? "").Trim();
+        if (s.Length > 0 && "äÄAa".Contains(s[0])) s = s[1..].TrimStart();
+        return s;
+    }
+
+    /// <summary>Schreibweise wie in GOZ08: kleines ä + Ziffern (Unicode \u00E4, encoding-sicher).</summary>
+    public static string GoaeGebNr(string? nr) => "\u00E4" + GoaeZiffern(nr);
 
     static void ZuschlagAngleichen(Dictionary<string, object?> p)
     {
@@ -912,7 +926,7 @@ public static class DsWinSchreiben
     static (string Code, Dictionary<string, object?>? Neu) GebuehrFehlt(Dictionary<string, object?> p, Gebuehren gebuehren)
     {
         var lv = Str(p, "level");
-        var code = lv == "GOAE" ? "Ä" + Str(p, "number") : Str(p, "number");
+        var code = lv == "GOAE" ? GoaeGebNr(Str(p, "number")) : Str(p, "number");
         if (gebuehren.Goz.TryGetValue(code.ToUpperInvariant(), out var known))
             return (known, null);
         var factor = Dbl(p, "factor", 1.0);

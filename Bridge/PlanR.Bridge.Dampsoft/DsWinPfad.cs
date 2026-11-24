@@ -288,41 +288,62 @@ public static class DsWinPfad
         if (!string.IsNullOrEmpty(env)) return env;
         try
         {
-            var b = File.ReadAllBytes(dbfPath);
-            if (b.Length < 32) return "cp850";
-            var count = BitConverter.ToUInt32(b, 4);
-            var header = BitConverter.ToUInt16(b, 8);
-            var width = BitConverter.ToUInt16(b, 10);
-            var spans = new List<(int Start, int Length)>();
-            var offset = 1;
-            for (var i = 32; i < header - 1 && i + 32 <= b.Length; i += 32)
+            var (dos, win) = UmlautScore(dbfPath, TextFields);
+            // GOÄ steht in GOZ08 als „ä3“: Byte E4 = cp1252, Byte 84 = cp850.
+            // Ohne Umlaute in NAME/VORNAME war der alte Default cp850 – dann wurde Ä als 0x8E
+            // geschrieben und DS-Win zeigte Ž3 („chinesische Zeichen mit 3“) statt ä3.
+            var goz = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(dbfPath)) ?? "", "GOZ08.DBF");
+            if (File.Exists(goz))
             {
-                if (b[i] == 13) break;
-                var len = b[i + 16];
-                var nul = Array.IndexOf(b, (byte)0, i, 11);
-                var nameLen = nul < 0 ? 11 : nul - i;
-                var name = Encoding.ASCII.GetString(b, i, nameLen);
-                if (TextFields.Contains(name)) spans.Add((offset, len));
-                offset += len;
-            }
-            int dos = 0, win = 0;
-            for (uint r = 0; r < count; r++)
-            {
-                var rowStart = (long)header + r * width;
-                if (rowStart + width > b.Length) break;
-                foreach (var (s, l) in spans)
+                var (gozDos, gozWin) = UmlautScore(goz, new HashSet<string>(StringComparer.Ordinal)
                 {
-                    for (var k = 0; k < l; k++)
-                    {
-                        var bt = b[rowStart + s + k];
-                        if (Cp850Umlauts.Contains(bt)) dos++;
-                        if (Cp1252Umlauts.Contains(bt)) win++;
-                    }
-                }
+                    "GEBNR", "KUERZEL", "DGEBNR", "BEZ",
+                });
+                dos += gozDos;
+                win += gozWin;
             }
+            if (win == dos) return "cp1252";
             return win > dos ? "cp1252" : "cp850";
         }
-        catch { return "cp850"; }
+        catch { return "cp1252"; }
+    }
+
+    static (int Dos, int Win) UmlautScore(string dbfPath, HashSet<string> felder)
+    {
+        var b = File.ReadAllBytes(dbfPath);
+        if (b.Length < 32) return (0, 0);
+        var count = BitConverter.ToUInt32(b, 4);
+        var header = BitConverter.ToUInt16(b, 8);
+        var width = BitConverter.ToUInt16(b, 10);
+        var spans = new List<(int Start, int Length)>();
+        var offset = 1;
+        for (var i = 32; i < header - 1 && i + 32 <= b.Length; i += 32)
+        {
+            if (b[i] == 13) break;
+            var len = b[i + 16];
+            var nul = Array.IndexOf(b, (byte)0, i, 11);
+            var nameLen = nul < 0 ? 11 : nul - i;
+            var name = Encoding.ASCII.GetString(b, i, nameLen);
+            if (felder.Contains(name)) spans.Add((offset, len));
+            offset += len;
+        }
+        int dos = 0, win = 0;
+        var max = Math.Min(count, 50_000u);
+        for (uint r = 0; r < max; r++)
+        {
+            var rowStart = (long)header + r * width;
+            if (rowStart + width > b.Length) break;
+            foreach (var (s, l) in spans)
+            {
+                for (var k = 0; k < l; k++)
+                {
+                    var bt = b[rowStart + s + k];
+                    if (Cp850Umlauts.Contains(bt)) dos++;
+                    if (Cp1252Umlauts.Contains(bt)) win++;
+                }
+            }
+        }
+        return (dos, win);
     }
 
     // --- praxen.py ---
