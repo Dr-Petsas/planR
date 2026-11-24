@@ -48,9 +48,12 @@ export const r2 = (x: number) => Math.round(x * 100) / 100
 
 const FDI = /^[1-4][1-8]$/
 
-/** Zahnangabe wie DS-Win sie annimmt: Zahn, Liste, Spanne, OK/UK; Regionen und Freitext entfallen. */
+/** Seitenzahn-Region als Spanne: DS-Win und DENS behalten die, eine nackte Region wie OK-R verwerfen sie. */
+const REGION_SPANNE: Record<string, string> = { 'OK-R': '14-18', 'OK-L': '24-28', 'UK-R': '44-48', 'UK-L': '34-38' }
+
+/** Zahnangabe wie DS-Win sie annimmt: Zahn, Liste, Spanne, OK/UK. */
 export function pvsZahn(z: string | undefined): string {
-  const teile = String(z ?? '').split(/[,\s]+/).filter(Boolean)
+  const teile = String(z ?? '').split(/[,\s]+/).filter(Boolean).map((t) => REGION_SPANNE[t] ?? t)
   const gut = teile.filter((t) => FDI.test(t) || /^[1-4][1-8]-[1-4][1-8]$/.test(t) || t === 'OK' || t === 'UK')
   const kiefer = gut.filter((t) => t === 'OK' || t === 'UK')
   if (kiefer.length) return kiefer.length === 2 ? 'OK,UK' : kiefer[0]

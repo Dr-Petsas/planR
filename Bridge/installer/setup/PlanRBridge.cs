@@ -174,10 +174,11 @@ static class Werkzeug
             if (!p.WaitForExit(ms))
             {
                 try { p.Kill(); } catch (Exception) { }
+                try { p.WaitForExit(5000); } catch (Exception) { }
                 Protokoll.Schreiben(Path.GetFileName(datei) + ": nach " + ms / 1000 + " s abgebrochen");
                 return -1;
             }
-            p.WaitForExit();
+            try { p.WaitForExit(5000); } catch (Exception) { }
             return p.ExitCode;
         }
     }
@@ -672,6 +673,10 @@ class Einrichtung
     public string PvsName = "Ihr Praxisprogramm";
     /// Grund, warum der Connector nicht nach DS-Win zurückschreibt ("" = er schreibt)
     public string NurLesen = "";
+    /// PlanR hat den neuen Dienst in diesem Setup-Lauf als bereit gesehen
+    public bool BeiPlanR;
+    /// Dienst läuft, die Rückmeldung von PlanR kam in diesem Lauf noch nicht
+    public string Offen = "";
     /// Mehrere DS-Win-Ordner gefunden: welcher genommen wurde und welche nicht
     public string DsWinHinweis = "";
     /// Für den Abschluss im Fenster und in PlanR
@@ -682,6 +687,7 @@ class Einrichtung
             var teile = new List<string>();
             if (NurLesen != "") teile.Add("Nur Lesen: " + NurLesen);
             if (DsWinHinweis != "") teile.Add(DsWinHinweis);
+            if (Offen != "") teile.Add(Offen);
             return string.Join("\n", teile);
         }
     }
@@ -709,7 +715,7 @@ class Einrichtung
         PraxisprogrammSuchen();
         Schritt(3, "Der Windows-Dienst „PlanR-Bridge“ wird eingerichtet …");
         DienstEinrichten();
-        Schritt(4, "Warte, bis sich die Bridge bei PlanR meldet …");
+        Schritt(4, "Die Verbindung zu PlanR wird geprüft …");
         VerbindungPruefen();
         schritt = 5;
         Melden("Fertig", false, "", Hinweis);
@@ -1055,7 +1061,7 @@ class Einrichtung
         var verbunden = false;
         var status = "";
         var fertig = false;
-        Helfer.Rufen("warten", new Dictionary<string, object> { { "config", Bridge.AgentJson }, { "sekunden", 150 } }, 200000, d =>
+        Helfer.Rufen("warten", new Dictionary<string, object> { { "config", Bridge.AgentJson }, { "sekunden", 20 } }, 35000, d =>
         {
             if (d.ContainsKey("fertig"))
             {
@@ -1065,16 +1071,47 @@ class Einrichtung
             }
             verbunden = Json.Wahr(d, "verbunden");
             status = Json.Text(d, "status");
-            anzeige.Info(!verbunden ? "Warte, bis sich der Dienst bei PlanR meldet …" : status == "bereit" ? "Die Bridge ist bereit." : "Die Bridge meldet: " + status);
+            anzeige.Info(!verbunden ? "Der Dienst startet, PlanR wird geprüft …" : status == "bereit" ? "Die Bridge ist bereit." : "Die Bridge meldet: " + status);
         });
-        if (fertig) return;
+        if (fertig)
+        {
+            BeiPlanR = true;
+            return;
+        }
+        var laeuft = DienstLaeuft();
+        if (laeuft)
+        {
+            Offen = verbunden && status != "" && status != "bereit"
+                ? "Der Dienst „PlanR-Bridge“ läuft. PlanR meldet gerade: " + status + ". Die Verbindung kommt von selbst."
+                : "Der Dienst „PlanR-Bridge“ läuft. Er meldet sich bei PlanR von selbst.";
+            Protokoll.Schreiben(Offen);
+            return;
+        }
         var details = Protokoll.Ende(Path.Combine(Bridge.Ziel, "agent.log"), 25);
 #if !PROBE
         details += "\n" + Dienste.Ereignisse();
 #endif
         if (!verbunden)
-            throw new SetupFehler("Der Dienst läuft, meldet sich aber nicht bei PlanR. Blockiert eine Firewall oder ein Proxy die Verbindung nach planr.pickadoc.de?", details);
+            throw new SetupFehler("Der Dienst „PlanR-Bridge“ läuft nicht und hat sich nicht bei PlanR gemeldet.", details);
         throw new SetupFehler("Die Bridge meldet: " + status, details);
+    }
+
+    static bool DienstLaeuft()
+    {
+#if PROBE
+        var p = ProbeAgent;
+        return p != null && !p.HasExited;
+#else
+        try
+        {
+            using (var sc = new ServiceController(Bridge.Dienst))
+                return sc.Status == ServiceControllerStatus.Running || sc.Status == ServiceControllerStatus.StartPending;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+#endif
     }
 }
 
@@ -1265,7 +1302,9 @@ class SetupFenster : Form, IAnzeige
         fertig = true;
         for (var k = 0; k < 5; k++) Zeigen(k, 2);
         balken.Value = 1000;
-        meldung.Text = einrichtung.NurLesen == ""
+        meldung.Text = !einrichtung.BeiPlanR
+            ? "Fertig! Der Dienst „PlanR-Bridge“ ist eingerichtet.\nEr verbindet sich mit PlanR von selbst – dieses Fenster können Sie schließen."
+            : einrichtung.NurLesen == ""
             ? "Fertig! PlanR ist mit " + einrichtung.PvsName + " verbunden.\nIm Browser geht es von selbst weiter – dieses Fenster können Sie schließen."
             : "Fertig! PlanR liest jetzt aus " + einrichtung.PvsName + ". Pläne zurück nach DS-Win schreiben geht hier aber nicht (siehe unten).\nIm Browser geht es von selbst weiter – dieses Fenster können Sie schließen.";
         detail.Text = "Die Bridge startet ab jetzt automatisch mit Windows.";

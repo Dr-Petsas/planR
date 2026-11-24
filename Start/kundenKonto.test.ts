@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Buchung } from './buchung'
 import type { Zugaenge } from './anmeldung'
-import { istGesperrt, kontoStand, kontoUmfang, loeschPlan, sperreLoesen, sperreSetzen, sperrenPruefen, sudoKonto } from './kundenKonto'
+import { geloeschtFreigeben, geloeschtMerken, istPlanrGeloescht, istGesperrt, kontoMerken, kontoStand, kontoUmfang, loeschPlan, pvsVormerken, sperreLoesen, sperreSetzen, sperrenPruefen, sudoKonto } from './kundenKonto'
 
 const buchung = (id: string, email: string, konto?: Buchung['konto']) => ({
   id, eingang: '2026-11-20T10:00:00.000Z', paket: 'planr',
@@ -33,6 +33,22 @@ describe('Superuser-Zugang', () => {
   it('kennt ohne Praxis und ohne Anmeldung kein Konto', () => {
     expect(sudoKonto([buchung('b2', 'alt@praxis.de', { status: 'vorhanden' })], leer, 'alt@praxis.de')).toBeNull()
     expect(sudoKonto([max], leer, 'fremd@praxis.de')).toBeNull()
+  })
+
+  it('merkt eine nachgelesene Praxis an der Buchung, ohne eine schon bekannte zu überschreiben', () => {
+    const ohne = buchung('b3', 'max@mustermann.de', { status: 'manuell' })
+    const neu = kontoMerken([ohne, max], 'max@mustermann.de', { clientId: 'CliNeu', uid: 'uidNeu' })
+    expect(neu?.find((b) => b.id === 'b3')?.konto).toEqual({ status: 'angelegt', clientId: 'CliNeu', uid: 'uidNeu' })
+    expect(neu?.find((b) => b.id === 'b1')?.konto?.clientId).toBe('CliMax1')
+    expect(sudoKonto(kontoMerken([ohne], 'max@mustermann.de', { clientId: 'CliNeu' }) ?? [], leer, 'max@mustermann.de')?.clientId).toBe('CliNeu')
+  })
+
+  it('übernimmt das Praxisprogramm aus der Buchung, solange die Praxis es noch nicht gespeichert hat', () => {
+    const b = { ...max, pvs: { id: 'dens', version: '', server: 'arbeitsplatz', it: '' } } as Buchung
+    expect(pvsVormerken([b], leer, 'max@mustermann.de', '')).toEqual({ mandant: 'p-climax1', pvs: 'dens' })
+    expect(pvsVormerken([b], leer, 'max@mustermann.de', 'dampsoft')).toBeNull()
+    expect(pvsVormerken([max], leer, 'max@mustermann.de', '')).toBeNull()
+    expect(pvsVormerken([{ ...b, pvs: { id: 'unbekannt', version: '', server: 'unbekannt', it: '' } }], leer, 'max@mustermann.de', '')).toBeNull()
   })
 })
 
@@ -104,5 +120,15 @@ describe('Löschen', () => {
     expect(loeschPlan([max], gast, 'max@mustermann.de')).toHaveProperty('fehler')
     const haupt: Zugaenge = { ...leer, mandanten: { CliBerg: { mandant: 'p-climax1', verbund: { haupt: 'CliMax1' } } } as unknown as Zugaenge['mandanten'] }
     expect(loeschPlan([max], haupt, 'max@mustermann.de')).toHaveProperty('fehler')
+  })
+
+  it('lässt ein gelöschtes PlanR-Konto erst nach einer neuen Buchung wieder herein', () => {
+    const weg = geloeschtMerken([], { email: 'Max@Mustermann.de', clientIds: ['CliMax1'] }, 'superuser@pickadoc.de', '2026-11-23T10:00:00.000Z')
+    expect(istPlanrGeloescht(weg, { email: 'max@mustermann.de' })).toBe(true)
+    expect(istPlanrGeloescht(weg, { clientId: 'CliMax1' })).toBe(true)
+    expect(istPlanrGeloescht(weg, { email: 'andere@praxis.de' })).toBe(false)
+    const frei = geloeschtFreigeben(weg, { email: 'max@mustermann.de' })
+    expect(frei).toEqual([])
+    expect(istPlanrGeloescht(frei, { clientId: 'CliMax1' })).toBe(false)
   })
 })

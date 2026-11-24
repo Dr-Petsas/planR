@@ -15,7 +15,6 @@ public sealed class DsWinConnector : IConnector
     static readonly Regex FindingRe = new(@"^/patients/([0-9]{1,5})/befunde/01(/dummy)?$", RegexOptions.Compiled);
     static readonly Regex DokuRe = new(@"^/patients/([0-9]{1,5})/dokumentation$", RegexOptions.Compiled);
     static readonly Regex HkpDummyRe = new(@"^/patients/([0-9]{1,5})/hkps$", RegexOptions.Compiled);
-    static readonly Regex IsoDateRe = new(@"^\d{4}-\d{2}-\d{2}$", RegexOptions.Compiled);
 
     readonly string _root;
     readonly string _foundBy;
@@ -88,6 +87,25 @@ public sealed class DsWinConnector : IConnector
             _enableWrite = false;
             _readOnlyError = "Schreibweg ist deaktiviert.";
         }
+
+        // Patientenliste und Befunde einmal lesen, solange noch niemand sucht.
+        var patientDatei = _patientDbf;
+        var zeichensatz = _encoding;
+        var daten = _daten;
+        _ = Task.Run(() =>
+        {
+            DbfTabelle.Warm(patientDatei, zeichensatz);
+            try
+            {
+                if (!Directory.Exists(daten)) return;
+                foreach (var dir in Directory.EnumerateDirectories(daten, "PRAX*"))
+                {
+                    var befund = Path.Combine(dir, "BEFUND.DBF");
+                    if (File.Exists(befund)) DbfTabelle.TableGecacht(befund);
+                }
+            }
+            catch { /* der nächste Befund lädt selbst */ }
+        });
     }
 
     static string? Header(IReadOnlyDictionary<string, string>? headers, string name)
@@ -110,10 +128,9 @@ public sealed class DsWinConnector : IConnector
 
     Dictionary<string, object?> Patient(string number, HashSet<int>? z)
     {
-        var found = DbfTabelle.ReadPatients(_patientDbf, _encoding)
-            .Where(r => Convert.ToString(r["patientNumber"]) == number).ToList();
-        if (found.Count != 1) throw new PraxisFehler("Patient nicht eindeutig gefunden.");
-        var row = found[0];
+        var (zeile, mehrdeutig) = DbfTabelle.NachNummer(_patientDbf, _encoding, number);
+        if (mehrdeutig || zeile is null) throw new PraxisFehler("Patient nicht eindeutig gefunden.");
+        var row = zeile;
         var praxis = row.TryGetValue("praxis", out var pv) && pv is not null ? Convert.ToInt32(pv, CultureInfo.InvariantCulture) : 1;
         row["praxis"] = praxis;
         if (z is not null && !z.Contains(praxis)) throw new PraxisFehler("Patient nicht gefunden.");
@@ -289,38 +306,23 @@ public sealed class DsWinConnector : IConnector
 
         try
         {
-            var rows = DbfTabelle.ReadPatients(_patientDbf, _encoding)
-                .Where(row => z is null || z.Contains(row.TryGetValue("praxis", out var pv) && pv is not null ? Convert.ToInt32(pv, CultureInfo.InvariantCulture) : 1))
-                .ToList();
             if (pathPart == "/patients")
             {
-                var terms = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-                var found = new List<Dictionary<string, object?>>();
-                foreach (var row in rows)
-                {
-                    var geburt = Convert.ToString(row.GetValueOrDefault("birthDate")) ?? "";
-                    var deutsch = IsoDateRe.IsMatch(geburt)
-                        ? string.Join('.', geburt.Split('-').Reverse())
-                        : "";
-                    var text = string.Join(' ',
-                        Convert.ToString(row.GetValueOrDefault("patientNumber")) ?? "",
-                        Convert.ToString(row.GetValueOrDefault("patientId")) ?? "",
-                        Convert.ToString(row.GetValueOrDefault("lastName")) ?? "",
-                        Convert.ToString(row.GetValueOrDefault("firstName")) ?? "",
-                        geburt, deutsch).ToLowerInvariant();
-                    if (terms.All(t => text.Contains(t, StringComparison.Ordinal)))
-                        found.Add(row);
-                }
-                var page = found.Skip(offset).Take(limit).ToList();
+                var (page, total) = DbfTabelle.Suchen(_patientDbf, _encoding, query, limit, offset,
+                    z is null ? null : p => z.Contains(p));
                 return Ok(200, new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
-                    ["items"] = page, ["total"] = found.Count, ["limit"] = limit, ["offset"] = offset,
+                    ["items"] = page, ["total"] = total, ["limit"] = limit, ["offset"] = offset,
                 });
             }
             var number = Uri.UnescapeDataString(pathPart["/patients/".Length..]);
-            var hit = rows.Where(r => Convert.ToString(r["patientNumber"]) == number).ToList();
-            if (hit.Count > 1) return Fehler(409, "Patient number is ambiguous");
-            return hit.Count == 1 ? Ok(200, hit[0]) : Fehler(404, "Patient not found");
+            var (zeile, mehrdeutig) = DbfTabelle.NachNummer(_patientDbf, _encoding, number);
+            if (mehrdeutig) return Fehler(409, "Patient number is ambiguous");
+            if (zeile is null) return Fehler(404, "Patient not found");
+            var praxis = zeile.TryGetValue("praxis", out var pv) && pv is not null
+                ? Convert.ToInt32(pv, CultureInfo.InvariantCulture) : 1;
+            if (z is not null && !z.Contains(praxis)) return Fehler(404, "Patient not found");
+            return Ok(200, zeile);
         }
         catch (SourceChanged) { return Fehler(409, "Source changed during read; retry"); }
         catch (Exception ex) when (ex is IOException or SourceError or DbfError or InvalidOperationException or FormatException)

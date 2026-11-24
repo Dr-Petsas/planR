@@ -200,7 +200,7 @@ public static class DensHkp
                     ["number"] = n,
                     ["finding"] = Text(raw, 418 + i * 4, 4),
                     ["regular"] = planned.TryGetValue(n.ToString(), out var reg) ? reg : "",
-                    ["therapy"] = Text(raw, 546 + i * 4, 4),
+                    ["therapy"] = Text(raw, 248 + i * 5, 5),
                 });
             }
             plan["toothSchema"] = schema;
@@ -435,9 +435,14 @@ public static class DensHkp
         return outList;
     }
 
+    // DENS legt jede Leistung als eigenen Satz an. Ein digitaler Eigenlabor-Plan
+    // (BEB je Krone) liegt weit über 100 Zeilen; 64 KB reichen dafür nicht.
+    const int MaxHkpBytes = 262144;
+    const int MaxHkpPositionen = 500;
+
     public static Dictionary<string, object?> ParsePlanrHkp(string text)
     {
-        if (string.IsNullOrWhiteSpace(text) || Encoding.UTF8.GetByteCount(text) > 65536)
+        if (string.IsNullOrWhiteSpace(text) || Encoding.UTF8.GetByteCount(text) > MaxHkpBytes)
             throw new HkpImportError("HKP-JSON ist leer oder zu groß.");
         JsonDocument doc;
         try { doc = JsonDocument.Parse(text); }
@@ -449,8 +454,11 @@ public static class DensHkp
             || !Prop(data, "positionen", out var positions) || !Prop(result, "summen", out var amounts)
             || administration.ValueKind != JsonValueKind.Object || result.ValueKind != JsonValueKind.Object || positions.ValueKind != JsonValueKind.Array)
             throw new HkpImportError("HKP-JSON enthält keine unterstützten Planfelder.");
-        if (positions.GetArrayLength() is < 1 or > 100)
+        var positionsAnzahl = positions.GetArrayLength();
+        if (positionsAnzahl < 1)
             throw new HkpImportError("HKP-JSON enthält keine unterstützten Planpositionen.");
+        if (positionsAnzahl > MaxHkpPositionen)
+            throw new HkpImportError($"HKP-JSON enthält {positionsAnzahl} Planpositionen. Der DENS-Connector übernimmt höchstens {MaxHkpPositionen}.");
         var versorgung = PropNotNull(result, "versorgungsart", out var vEl) && vEl.ValueKind == JsonValueKind.String && vEl.GetString() is { Length: > 0 } vs ? vs : "regel";
         if (versorgung is not ("regel" or "gleichartig" or "andersartig"))
             throw new HkpImportError("Versorgungsart ist ungültig.");
@@ -913,8 +921,7 @@ public static class DensHkp
         for (var i = 0; i < FdiOrder.Length; i++)
         {
             var n = FdiOrder[i];
-            // Kassen-Therapieplanung, je Zahn 4 Byte. Ab 248 stehen DENS-Plansymbole, die bleiben leer.
-            Put(plan, 546 + i * 4, 4, therapy.GetValueOrDefault(n, ""));
+            Put(plan, 248 + i * 5, 5, therapy.GetValueOrDefault(n, ""));
             var fnd = findings.GetValueOrDefault(n, "");
             Put(plan, 418 + i * 4, 4, fnd.Length > 0 ? fnd : " ");
         }

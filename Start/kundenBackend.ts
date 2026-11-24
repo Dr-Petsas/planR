@@ -8,7 +8,8 @@ import { PAKETE, SERVER } from './src/paket.ts'
 import { kzvNachNr } from './src/data/kzv.ts'
 import { pvsVon } from './src/einstellungen.ts'
 import type { ProbeStand, ZahnarztKontakt } from './probeEingang.ts'
-import { probeEmail } from './probeEingang.ts'
+import { BETREIBER, probeEmail } from './probeEingang.ts'
+import { istGesperrt, type Sperre } from './kundenKonto.ts'
 
 export interface ProbeKurz {
   id: string
@@ -39,8 +40,8 @@ export interface StammZeile { label: string; wert: string }
 
 export interface KundeZeile {
   id: string
-  /** kunde = gebucht · probe = Upload aus der Probe, mit oder ohne Testzugang */
-  art: 'kunde' | 'probe'
+  /** kunde = gebucht · probe = Upload aus der Probe · mas = Pickadoc-Anmeldung ohne PlanR-Buchung */
+  art: 'kunde' | 'probe' | 'mas'
   /** In PlanR angelegte Pläne */
   plaeneAnzahl: number | null
   /** Netto im laufenden Monat, in Cent */
@@ -49,6 +50,8 @@ export interface KundeZeile {
   login: KundeLogin | null
   stammdaten: StammZeile[]
   plaene: KundePlan[]
+  /** Pickadoc-Mandant, falls die Zeile einen hat. Daran schaltet der Pickadoc-Superuser MAS. */
+  clientId: string | null
   /** PlanR-Konto der Buchung: vom Superuser zu öffnen, gesperrt? (setzt der Server, kundenKonto.ts) */
   konto?: { email: string; zugang: boolean; gesperrt: boolean } | null
 }
@@ -151,6 +154,7 @@ export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: s
       login: loginFuer([...mails], bekannt),
       stammdaten: stammdaten(b),
       plaene: eigene.map(planVon),
+      clientId: b.konto?.clientId || null,
     }
   })
   const rest = new Map<string, ProbeKurz[]>()
@@ -179,7 +183,67 @@ export function kundenBauen(buchungen: Buchung[], plaene: ProbeKurz[], logins: s
         zeile('E-Mail', k.email),
       ].filter((z): z is StammZeile => !!z),
       plaene: gruppe.map(planVon),
+      clientId: null,
     }
   })
   return [...ausBuchung, ...ausProbe].sort((a, b) => a.name.localeCompare(b.name, 'de'))
+}
+
+export interface MasBenutzer {
+  email: string
+  name: string
+  clientId: string
+  role: string
+  zuletzt: string
+}
+
+const rolleText = (role: string) => role === 'doctor' ? 'Arzt' : role === 'admin' ? 'Admin' : role
+
+/**
+ * Pickadoc-Anmeldungen, die PlanR über MAS öffnen und keine eigene Buchungszeile haben.
+ * Steht die Adresse schon an einer Buchung, bleibt sie bei den Kunden.
+ */
+export function masKonten(buchungen: Buchung[], benutzer: MasBenutzer[], sperren: Sperre[] = []): KundeZeile[] {
+  const belegt = new Set(buchungen.flatMap(mailsVonBuchung))
+  const jeEmail = new Map<string, MasBenutzer>()
+  for (const b of benutzer) {
+    const email = klein(b.email)
+    if (!email.includes('@') || email === BETREIBER || belegt.has(email) || !b.clientId) continue
+    const alt = jeEmail.get(email)
+    if (!alt || b.zuletzt > alt.zuletzt) jeEmail.set(email, { ...b, email })
+  }
+  return [...jeEmail.values()].map((b) => ({
+    id: `mas-${b.email}`,
+    art: 'mas' as const,
+    plaeneAnzahl: null,
+    umsatzCent: null,
+    name: b.name.trim() || b.email,
+    login: { email: b.email, vorhanden: true },
+    stammdaten: [
+      zeile('Zugang', 'Pickadoc / MAS'),
+      zeile('Rolle', rolleText(b.role)),
+      zeile('Praxis-Kennung', b.clientId),
+      zeile('Zuletzt', b.zuletzt.slice(0, 16).replace('T', ' ')),
+    ].filter((z): z is StammZeile => !!z),
+    plaene: [],
+    clientId: b.clientId,
+    konto: { email: b.email, zugang: true, gesperrt: istGesperrt(sperren, { email: b.email, clientId: b.clientId }) },
+  })).sort((a, b) => a.name.localeCompare(b.name, 'de'))
+}
+
+const istProbeBuchung = (b: Buchung) => b.quelle === 'probe' && b.testabo?.status !== 'abo'
+
+/**
+ * Ein Probe-Interessent aus der Liste. Hochgeladene Pläne und, falls vorhanden, die Probe-Buchung.
+ * Eine echte Kundenbuchung bleibt. Das Pickadoc-Konto ist hier nicht beteiligt.
+ */
+export function probeLoeschen(buchungen: Buchung[], plaene: ProbeKurz[], id: string): { email: string; buchungIds: string[]; planIds: string[] } | null {
+  const zeile = kundenBauen(buchungen, plaene, []).find((k) => k.id === id)
+  if (!zeile || zeile.art !== 'probe') return null
+  const planIds = zeile.plaene.map((p) => p.id)
+  const email = (zeile.login?.email ?? '').trim().toLowerCase()
+  if (!buchungen.some((b) => b.id === id)) return { email, buchungIds: [], planIds }
+  const eigene = buchungen.filter((b) => b.id === id || (email.includes('@') && klein(b.inhaber?.email ?? '') === email))
+  if (eigene.some((b) => !istProbeBuchung(b))) return null
+  return { email, buchungIds: eigene.map((b) => b.id), planIds }
 }

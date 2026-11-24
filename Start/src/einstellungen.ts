@@ -47,7 +47,7 @@ export function einstellungenPruefen(roh: unknown): Einstellungen {
 
 /** Konten, die das Praxisprogramm jederzeit wechseln dürfen (Entwicklung); kommagetrennte E-Mail-Adressen */
 export const pvsFreiKonten = (liste: string | undefined) =>
-  new Set((liste ?? 'contact@maik-music.io,development@pickadoc.de').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean))
+  new Set((liste ?? 'contact@maik-music.io,development@pickadoc.de,dr.petsas@pickadoc.de').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean))
 
 /**
  * Eine Praxis hat genau ein Praxisprogramm: Ist es gewählt und die Bridge eingerichtet, steht es fest.

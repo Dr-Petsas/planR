@@ -124,13 +124,15 @@ export function planen(plan: Plan, _einst: Einstellungen): PlanungsErgebnis {
     const simultan = Object.keys(plan.zaehne).some((z) => regionVon(z) === r && IMPLANTAT_KUERZEL.has(tpVon(plan, z)))
     const opSitz = simultan ? S_IMPLANTATION : S_AUFBAU
 
-    const sinus = !!(o.sinusIntern || o.sinusExtern)
+    const kavitaeten = Object.keys(plan.zaehne).filter((z) => regionVon(z) === r && IMPLANTAT_KUERZEL.has(tpVon(plan, z))).length
+    const intern = !!o.sinusIntern && kavitaeten > 0
+    if (o.sinusIntern && !kavitaeten) hinweise.push(`${r}: Interner Sinuslift nur zusammen mit einem Implantat, nicht angesetzt.`)
+    const sinus = intern || !!o.sinusExtern
     const kamm = o.augmentation === true || (sinus && o.augmentation !== false && !o.boneSplitting)
     if (kamm) push(goz('9100', r, opSitz, 'Aufbau des Alveolarfortsatzes (GBR)'))
     if (o.boneSplitting) push(goz('9130', r, opSitz, 'Bone Splitting / Spreading'))
-    if (o.sinusIntern) {
-      const kavitaeten = Object.keys(plan.zaehne).filter((z) => regionVon(z) === r && IMPLANTAT_KUERZEL.has(tpVon(plan, z))).length
-      push({ ...goz('9110', r, opSitz, 'Interner Sinuslift (geschlossene Sinusbodenelevation)'), anzahl: Math.max(1, kavitaeten) })
+    if (intern) {
+      push({ ...goz('9110', r, opSitz, 'Interner Sinuslift (geschlossene Sinusbodenelevation)'), anzahl: kavitaeten })
     }
     if (o.sinusExtern) push(goz('9120', r, opSitz, 'Externer Sinuslift (Knochenfensterung)'))
     if (sinus) {

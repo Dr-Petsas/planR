@@ -318,7 +318,7 @@ public static class DsWinBefund
 
     public static Dictionary<string, object?> ReadFindings(string dataRoot, string patient, int praxis, string encoding)
     {
-        var (fields, rows, width) = DbfTabelle.Table(Path.Combine(dataRoot, $"PRAX{praxis}", "BEFUND.DBF"));
+        var (fields, rows, width) = DbfTabelle.TableGecacht(Path.Combine(dataRoot, $"PRAX{praxis}", "BEFUND.DBF"));
         ValidateLayout(fields, width);
         var (_, current) = WaehleAktuell(fields, rows, patient, encoding);
         var history = Befundzeilen(fields, rows, patient, "0", true, encoding)

@@ -9,6 +9,7 @@ import { sitzungHash } from './anmeldung'
 const CLIENT = 'zzzPvsFestTest'
 const PRAXIS = 'p'.repeat(43)
 const ENTWICKLER = 'e'.repeat(43)
+const ARZT = 'a'.repeat(43)
 const ordner = mkdtempSync(join(tmpdir(), 'planr-pvsfest-'))
 
 const json = (res: import('node:http').ServerResponse, status: number, d: unknown) => {
@@ -23,7 +24,7 @@ const mas = createServer((req, res) => {
 
 let planr: Server
 let basis = ''
-interface Antwort { ok: boolean; mandant?: string; pvsFest?: boolean; meldung?: string; einstellungen?: { pvs: string } }
+interface Antwort { ok: boolean; mandant?: string; pvsFest?: boolean; pvsWahl?: boolean; meldung?: string; einstellungen?: { pvs: string } }
 const lesen = (token: string) =>
   fetch(`${basis}/api/einstellungen`, { headers: { Cookie: `planr_sitzung=${token}` } }).then((r) => r.json()) as Promise<Antwort>
 const setzen = async (token: string, pvs: string) => {
@@ -39,13 +40,17 @@ beforeAll(async () => {
   process.env.PLANR_DATEN = ordner
   process.env.PLANR_MAS = `http://127.0.0.1:${(mas.address() as { port: number }).port}`
   process.env.PLANR_HKP_KEY = 'k'
-  process.env.PLANR_PVS_FREI = 'Entwickler@example.org'
+  process.env.PLANR_PVS_FREI = 'Entwickler@example.org,arzt@example.org'
   const jetzt = Date.now()
-  const sitzung = (token: string, email: string) => ({
+  const sitzung = (token: string, email: string, admin = true) => ({
     hash: sitzungHash(token), erneuern: '', seit: new Date(jetzt).toISOString(), geprueft: jetzt, zuletzt: jetzt,
-    konto: { uid: email, email, name: 'Test', clientId: CLIENT, role: 'admin', admin: true },
+    konto: { uid: email, email, name: 'Test', clientId: CLIENT, role: admin ? 'admin' : 'doctor', admin },
   })
-  writeFileSync(join(ordner, 'sitzungen.json'), JSON.stringify([sitzung(PRAXIS, 'praxis@example.org'), sitzung(ENTWICKLER, 'entwickler@example.org')]))
+  writeFileSync(join(ordner, 'sitzungen.json'), JSON.stringify([
+    sitzung(PRAXIS, 'praxis@example.org'),
+    sitzung(ENTWICKLER, 'entwickler@example.org'),
+    sitzung(ARZT, 'arzt@example.org', false),
+  ]))
   const { plaeneMiddleware } = await import('./plaene-server')
   planr = createServer((req, res) => plaeneMiddleware(req, res, () => json(res, 404, { ok: false })))
   await new Promise<void>((r) => planr.listen(0, '127.0.0.1', r))
@@ -78,9 +83,15 @@ describe('Praxisprogramm steht fest', () => {
   })
 
   it('das Entwicklerkonto wechselt weiter zwischen allen Praxisprogrammen', async () => {
-    expect(await lesen(ENTWICKLER)).toMatchObject({ pvsFest: false })
+    expect(await lesen(ENTWICKLER)).toMatchObject({ pvsFest: false, pvsWahl: true })
     expect((await setzen(ENTWICKLER, 'dampsoft')).status).toBe(200)
     expect((await setzen(ENTWICKLER, 'cgm-z1pro')).status).toBe(200)
     expect(await lesen(PRAXIS)).toMatchObject({ pvsFest: true, einstellungen: { pvs: 'cgm-z1pro' } })
+  })
+
+  it('ein Arzt-Entwicklerkonto wählt ebenfalls jedes Praxisprogramm, die Praxis bleibt fest', async () => {
+    expect(await lesen(ARZT)).toMatchObject({ pvsFest: false, pvsWahl: true })
+    expect((await setzen(ARZT, 'dens')).status).toBe(200)
+    expect(await lesen(PRAXIS)).toMatchObject({ pvsFest: true, pvsWahl: false, einstellungen: { pvs: 'dens' } })
   })
 })

@@ -23,6 +23,7 @@ describe('Einstellungen', () => {
     expect(pvsStehtFest({ pvs: 'dens', bridge: true, frei: true })).toBe(false)
     expect(pvsFreiKonten(undefined).has('contact@maik-music.io')).toBe(true)
     expect(pvsFreiKonten(undefined).has('development@pickadoc.de')).toBe(true)
+    expect(pvsFreiKonten(undefined).has('dr.petsas@pickadoc.de')).toBe(true)
     expect([...pvsFreiKonten(' A@b.de, c@d.de ,')]).toEqual(['a@b.de', 'c@d.de'])
     expect(pvsFreiKonten('').size).toBe(0)
   })

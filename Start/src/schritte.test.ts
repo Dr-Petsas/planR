@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alleRegelOrte, behandlungsschritte, positionenAusFassung, schritteAnzahl, zuschlaege, type SchrittPosition } from './schritte'
+import { alleRegelOrte, behandlungsschritte, positionenAusFassung, positionenAusHkp, schritteAnzahl, zuschlaege, type SchrittPosition } from './schritte'
 import { RECHNUNG_ORT, mitUeberschrift, nachSchritten } from './rechnungGliederung'
 
 const p = (ebene: string, nr: string, zahn = '', mehr: Partial<SchrittPosition> = {}): SchrittPosition => ({ ebene, nr, zahn, anzahl: 1, ...mehr })
@@ -86,6 +86,22 @@ describe('behandlungsschritte', () => {
     expect(positionenAusFassung([{ positionen: [p('GOZ', '2100', '16')] }, { positionen: [p('GOZ', '2197', '16')] }])).toHaveLength(2)
     expect(positionenAusFassung(undefined)).toEqual([])
     expect(schritteAnzahl(behandlungsschritte([]))).toBe(0)
+  })
+
+  it('leitet die Schritte eines geschriebenen HKP aus dem Plan ab', () => {
+    const plan = {
+      positionen: [
+        p('GOZ', '2210', '16'),
+        p('BEMA', '19', '15'),
+        { ebene: 'BEB', nr: '0002', zahn: '16', anzahl: 1 },
+        { ebene: 'GOZ', nr: '0110', zahn: '', anzahl: 1 },
+      ],
+    }
+    const ausText = positionenAusHkp(JSON.stringify(plan))
+    expect(ausText).toHaveLength(4)
+    expect(schritteAnzahl(behandlungsschritte(ausText))).toBe(2)
+    expect(positionenAusHkp('')).toEqual([])
+    expect(positionenAusHkp('{')).toEqual([])
   })
 })
 

@@ -142,6 +142,24 @@ describe('Sinuslift und Augmentation', () => {
     expect(r.hinweise.join(' ')).toMatch(/3090/)
   })
 
+  it('externer Sinuslift ohne Implantat bleibt die eigene Leistung', () => {
+    const p = plan({
+      zaehne: {},
+      regionen: { 'OK-R': { sinusExtern: true, augmentation: false, material: 'xenogen' } },
+    })
+    const nrs = gozNrs(p)
+    expect(nrs).toContain('9120')
+    expect(nrs).not.toContain('9010')
+    expect(nrs).not.toContain('9000')
+    expect(nrs).not.toContain('9110')
+  })
+
+  it('interner Sinuslift ohne Implantat wird nicht berechnet', () => {
+    const p = plan({ zaehne: {}, regionen: { 'OK-R': { sinusIntern: true, augmentation: false } } })
+    expect(gozNrs(p)).not.toContain('9110')
+    expect(kalkulieren(p, E).hinweise.join(' ')).toMatch(/nur zusammen mit einem Implantat/)
+  })
+
   it('interner Sinuslift je Kavität', () => {
     const p = plan({
       zaehne: { '24': { B: 'f', TP: 'I' }, '26': { B: 'f', TP: 'I' } },

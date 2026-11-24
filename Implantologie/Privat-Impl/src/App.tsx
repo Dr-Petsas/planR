@@ -12,6 +12,7 @@ import { PraxisPreise } from './components/PraxisPreise'
 import { euro, kalkulieren } from './engine/berechnung'
 import { pvsPlaene } from './engine/pvs'
 import { geplanteRegionen, implantatZaehne } from './engine/planung'
+import { regionVon } from './engine/zahnschema'
 import { importAusZe } from './engine/bruecke'
 import { neuerPlan, planMigrieren, useEinstellungen, useImplAblage, usePlan } from './store'
 import { ungespeichert } from './ablage'
@@ -25,7 +26,7 @@ import { implKi, kiZeilen } from './kiPlan'
 import { planKiHoeren } from './arbeitFenster'
 import { Pruefmodul } from './components/Pruefmodul'
 import { PatientFelder } from './components/Stammdaten'
-import type { Plan } from './types'
+import { REGIONEN, type Plan, type Region } from './types'
 import { mitPatient, neuAusAdresse, patientName, type Patient } from './stammdaten'
 import { Befundleiste, useBefundMitPlan } from './components/Befundleiste'
 import { befundZeile } from './befund01'
@@ -149,7 +150,9 @@ export default function App() {
   }
 
   const implTeeth = implantatZaehne(plan)
-  const regionen = geplanteRegionen(plan)
+  const geplant = new Set(geplanteRegionen(plan))
+  const regionen = REGIONEN.filter((r) => r === 'OK-R' || r === 'OK-L' || geplant.has(r))
+  const implantatRegion = Object.fromEntries(regionen.map((r) => [r, implTeeth.some((z) => regionVon(z) === r)])) as Partial<Record<Region, boolean>>
 
   return (
     <div className="app">
@@ -226,7 +229,7 @@ export default function App() {
               {regionen.length > 0 && (
                 <div className="region-block">
                   <h4>Chirurgische Maßnahmen je Region</h4>
-                  <RegionenBoxen regionen={regionen} wert={plan.regionen} onChange={(r) => setPlan({ ...plan, regionen: r })} />
+                  <RegionenBoxen regionen={regionen} implantat={implantatRegion} wert={plan.regionen} onChange={(r) => setPlan({ ...plan, regionen: r })} />
                 </div>
               )}
               <Hinweise liste={kalk.hinweise} />

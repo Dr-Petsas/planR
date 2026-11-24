@@ -7,7 +7,7 @@ import {
   type Eingang, type Grab, type PlanKarte,
 } from './src/plaene.ts'
 import { planerZuModul } from './src/planer.ts'
-import { behandlungsschritte, positionenAusFassung, schritteAnzahl } from './src/schritte.ts'
+import { behandlungsschritte, positionenAusFassung, positionenAusHkp, schritteAnzahl, type Schritte } from './src/schritte.ts'
 import { nachSchritten } from './src/rechnungGliederung.ts'
 import { GOZ_KLASSEN_IDS } from './src/gozKlassen.ts'
 import { einstellungenPruefen, LEER, MANDANT_RE, pvsFreiKonten, pvsStehtFest, pvsVon } from './src/einstellungen.ts'
@@ -29,15 +29,15 @@ import {
   type PlanSumme, type ProbeKarte,
 } from './probeEingang.ts'
 import {
-  PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, SUDO_COOKIE, benutzerVermerken, darfSehen, einloggen, erneuern, hauptpraxis, idTokenHolen, mandantVon, neuesToken, registerVon,
+  FIREBASE, PRUEFEN_MS, SITZUNG_COOKIE, SITZUNG_TAGE, SUDO_COOKIE, benutzerVermerken, darfSehen, einloggen, erneuern, googleSchluessel, hauptpraxis, idTokenHolen, mandantVon, neuesToken, registerVon, tokenPruefen,
   passwortVergessen, praxenVon, praxenZurAnzeige, praxisNr, sitzungFinden, sitzungHash, sitzungenAufraeumen, zugaengePruefen,
   type Konto, type PraxisInfo, type Sitzung, type Zugaenge,
 } from './anmeldung.ts'
 import { spawn } from 'node:child_process'
 import { timingSafeEqual } from 'node:crypto'
 import { isoDatum, nummerAusSuche, patientPerNummer, stammdatenAusPvs } from './pvsPatient.ts'
-import { kundenBauen, type KundeZahlen } from './kundenBackend.ts'
-import { istGesperrt, kontoStand, kontoUmfang, loeschPlan, sperreLoesen, sperreSetzen, sperrenPruefen, sudoKonto, type Sperre } from './kundenKonto.ts'
+import { kundenBauen, masKonten, probeLoeschen, type KundeZahlen, type ProbeKurz } from './kundenBackend.ts'
+import { geloeschtFreigeben, geloeschtMerken, geloeschtPruefen, istGesperrt, istPlanrGeloescht, kontoMerken, kontoStand, kontoUmfang, loeschPlan, pvsVormerken, sperreLoesen, sperreSetzen, sperrenPruefen, sudoKonto, type Geloescht, type Sperre } from './kundenKonto.ts'
 import { PROBE_PASSWORT } from './demoKonto.ts'
 import { zipMitDatei } from './zipAnhang.ts'
 import {
@@ -57,6 +57,7 @@ import {
   neuerVerbundCode, verbundVon, type VerbundCode,
 } from './verbund.ts'
 import { funnelAuswerten, funnelBuchen, istFunnelSchritt, type FunnelDatei, type FunnelSchritt } from './funnel.ts'
+import { rahmenToken, sitzungsCookie } from './sitzungsCookie.ts'
 
 // Plan, HKP und Befund ins Praxisprogramm: die Bridge sichert und prüft dabei ganze Tabellen (große Praxis: über eine Minute).
 const SCHREIB_MS = 270_000
@@ -208,6 +209,16 @@ const KONTO_GESPERRT = 'Ihr PlanR-Zugang ist gesperrt. Bitte rufen Sie uns an: 0
 /** Anfragen mit gültiger Sitzung, deren PlanR-Konto gesperrt ist */
 const gesperrteAnfrage = new WeakSet<IncomingMessage>()
 
+/** Gelöschte PlanR-Konten. Eine neue Buchung nimmt die Adresse wieder von der Liste. */
+const GELOESCHT = `${ORDNER}/geloeschte-konten.json`
+let geloeschte: Geloescht[] | null = null
+const geloeschteLesen = async () => (geloeschte ??= geloeschtPruefen(await jsonLesen<unknown>(GELOESCHT, [])))
+const geloeschteSchreiben = async (liste: Geloescht[]) => { geloeschte = liste; await jsonSchreiben(GELOESCHT, liste) }
+const KONTO_GELOESCHT = 'Dieses PlanR-Konto wurde gelöscht. Eine neue Buchung legt es neu an. Das Pickadoc-Konto bleibt bestehen.'
+const geloeschteAnfrage = new WeakSet<IncomingMessage>()
+const planrKontoWeg = async (k: { email?: string; clientId?: string; role?: string }) =>
+  !darfEingangSehen(k.email ?? '', k.role) && istPlanrGeloescht(await geloeschteLesen(), k)
+
 let sitzungen: Sitzung[] | null = null
 let sitzungKette: Promise<unknown> = Promise.resolve()
 /** Sitzungen und Zugänge haben eine eigene Warteschlange – sie laufen auch innerhalb von `exklusiv`. */
@@ -229,9 +240,14 @@ function werAus(z: Zugaenge, konto: Konto): Wer {
 }
 
 /** Sitzung zum Cookie; alle PRUEFEN_MS fragt PlanR bei Firebase nach, ob das Konto noch gilt (gesperrt, Rolle geändert). */
+/** Cookie, im DENS-ONE-Rahmen der mitgeschickte Sitzungskopf. */
+function sitzungsToken(req: IncomingMessage): string {
+  return rahmenToken(req.headers['x-planr-sitzung']) || cookieWert(req.headers.cookie, SITZUNG_COOKIE)
+}
+
 async function werIst(req: IncomingMessage): Promise<Wer | null> {
   const sudoToken = cookieWert(req.headers.cookie, SUDO_COOKIE)
-  const normal = cookieWert(req.headers.cookie, SITZUNG_COOKIE)
+  const normal = sitzungsToken(req)
   const s = await sitzungExklusiv(async (liste) => (sudoToken && sitzungFinden(liste, sudoToken)) || (normal && sitzungFinden(liste, normal)) || null)
   if (!s) return null
   const jetzt = Date.now()
@@ -254,6 +270,11 @@ async function werIst(req: IncomingMessage): Promise<Wer | null> {
     gesperrteAnfrage.add(req)
     return null
   }
+  if (!s.sudo && await planrKontoWeg(s.konto)) {
+    await sitzungExklusiv((liste) => sitzungenSpeichern(liste.filter((x) => x.hash !== s.hash)))
+    geloeschteAnfrage.add(req)
+    return null
+  }
   // Buchung beendet (MAS oder PlanR-Abo gekündigt): die Sitzung gilt nicht mehr
   if (!s.sudo && !darfEingangSehen(s.konto.email, s.konto.role)) {
   const b = await berechtigung(s.konto.clientId)
@@ -271,7 +292,18 @@ async function werIst(req: IncomingMessage): Promise<Wer | null> {
 /** Anfragen mit gültiger Sitzung, deren Praxis PlanR nicht (mehr) gebucht hat */
 const abgelehnt = new WeakSet<IncomingMessage>()
 
-const sicher = (req: IncomingMessage) => (req.headers['x-forwarded-proto'] === 'https' || String(req.headers.host ?? '').endsWith('.pickadoc-tunnel.com') ? '; Secure' : '')
+const istSicher = (req: IncomingMessage) => req.headers['x-forwarded-proto'] === 'https' || String(req.headers.host ?? '').endsWith('.pickadoc-tunnel.com')
+const sicher = (req: IncomingMessage) => (istSicher(req) ? '; Secure' : '')
+
+/** Beendet die Sitzung im eigenen Fenster und, falls vorhanden, im DENS-ONE-Rahmen. */
+function sitzungWeg(req: IncomingMessage): string[] {
+  const secure = istSicher(req)
+  const leer = (name: string, rahmen: boolean) => sitzungsCookie(name, '', 0, secure, rahmen)
+  return secure
+    ? [leer(SITZUNG_COOKIE, false), leer(SITZUNG_COOKIE, true), leer(SUDO_COOKIE, false)]
+    : [leer(SITZUNG_COOKIE, false), leer(SUDO_COOKIE, false)]
+}
+
 const anmeldeBremse = new Bremse(8, 15 * 60_000)
 /** Absender: Cloudflare-Tunnel bzw. Caddy (nur wenn die Anfrage lokal ankommt, sonst ist der Kopf gefälscht) */
 const ip = (req: IncomingMessage) => {
@@ -380,16 +412,15 @@ async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   if (req.method === 'GET') {
     const w = await werIst(req)
     if (w) return json(res, 200, { ...werInfo(w, await zugaengeLesen()), testabo: await testaboInfo(w.konto.clientId) })
-    return json(res, 401, { ok: false, anmelden: true, ...(gesperrteAnfrage.has(req) ? { meldung: KONTO_GESPERRT } : abgelehnt.has(req) ? { meldung: NICHT_GEBUCHT } : {}) })
+    return json(res, 401, { ok: false, anmelden: true, ...(gesperrteAnfrage.has(req) ? { meldung: KONTO_GESPERRT } : geloeschteAnfrage.has(req) ? { meldung: KONTO_GELOESCHT } : abgelehnt.has(req) ? { meldung: NICHT_GEBUCHT } : {}) })
   }
   if (!eigeneSeite(req)) return json(res, 403, { ok: false })
   if (req.method === 'DELETE') {
-    const token = cookieWert(req.headers.cookie, SITZUNG_COOKIE)
+    const token = sitzungsToken(req)
     const sudo = cookieWert(req.headers.cookie, SUDO_COOKIE)
     const weg = new Set([token, sudo].filter(Boolean).map(sitzungHash))
     if (weg.size) await sitzungExklusiv((liste) => sitzungenSpeichern(liste.filter((x) => !weg.has(x.hash))))
-    const leer = `Path=/; Max-Age=0; HttpOnly; SameSite=Lax${sicher(req)}`
-    res.setHeader('Set-Cookie', [`${SITZUNG_COOKIE}=; ${leer}`, `${SUDO_COOKIE}=; ${leer}`])
+    res.setHeader('Set-Cookie', sitzungWeg(req))
     return json(res, 200, { ok: true })
   }
   if (req.method !== 'POST') return json(res, 405, { ok: false })
@@ -425,16 +456,23 @@ async function anmeldungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   }
   const { konto, erneuern: refresh } = r.wert
   if (!darfEingangSehen(konto.email, konto.role) && istGesperrt(await sperrenLesen(), konto)) return json(res, 403, { ok: false, meldung: KONTO_GESPERRT })
+  if (await planrKontoWeg(konto)) return json(res, 403, { ok: false, meldung: KONTO_GELOESCHT })
   const frei = await berechtigung(konto.clientId)
   if (!frei) return json(res, 503, { ok: false, meldung: 'Die Freischaltung lässt sich gerade nicht prüfen. Bitte in ein paar Minuten erneut versuchen.' })
   // Der Probe-Eingang ist kein Kunden-Backend: der Betreiber kommt auch ohne gebuchtes PlanR hinein.
   if (!frei.erlaubt && !darfEingangSehen(konto.email, konto.role)) return json(res, 403, { ok: false, meldung: NICHT_GEBUCHT })
-  const z = await sitzungStarten(req, res, konto, refresh)
-  json(res, 200, { ...werInfo(werAus(z, konto), z), testabo: await testaboInfo(konto.clientId) })
+  const gestartet = await sitzungStarten(req, res, konto, refresh, !!uebergabe)
+  json(res, 200, {
+    ...werInfo(werAus(gestartet.z, konto), gestartet.z),
+    testabo: await testaboInfo(konto.clientId),
+    // Nur für den Rahmen: der Browser verwirft das Cookie auf der fremden Seite, die Seite schickt den Wert als Kopf.
+    ...(uebergabe ? { rahmenSitzung: gestartet.token } : {}),
+  })
 }
 
 /** Konto vermerken, Sitzung anlegen und das Cookie setzen (Anmeldung und frisch gebuchte Praxis). */
-async function sitzungStarten(req: IncomingMessage, res: ServerResponse, konto: Konto, refresh: string): Promise<Zugaenge> {
+async function sitzungStarten(req: IncomingMessage, res: ServerResponse, konto: Konto, refresh: string, rahmen = false): Promise<{ z: Zugaenge; token: string }> {
+  if (await planrKontoWeg(konto)) throw new Error('planr-geloescht')
   const z = await sitzungExklusiv(async () => {
     const neu = benutzerVermerken(await zugaengeLesen(), konto)
     await jsonSchreiben(ZUGAENGE, neu)
@@ -443,8 +481,8 @@ async function sitzungStarten(req: IncomingMessage, res: ServerResponse, konto: 
   const token = neuesToken()
   const jetzt = Date.now()
   await sitzungExklusiv((liste) => sitzungenSpeichern([...liste, { hash: sitzungHash(token), konto, erneuern: refresh, seit: new Date(jetzt).toISOString(), geprueft: jetzt, zuletzt: jetzt }]))
-  res.setHeader('Set-Cookie', `${SITZUNG_COOKIE}=${token}; Path=/; Max-Age=${SITZUNG_TAGE * 86400}; HttpOnly; SameSite=Lax${sicher(req)}`)
-  return z
+  res.setHeader('Set-Cookie', sitzungsCookie(SITZUNG_COOKIE, token, SITZUNG_TAGE * 86400, istSicher(req), rahmen))
+  return { z, token }
 }
 
 async function passwortEndpunkt(req: IncomingMessage, res: ServerResponse) {
@@ -508,7 +546,7 @@ async function benutzerEndpunkt(req: IncomingMessage, res: ServerResponse, w: We
 
 /** MAS läuft am Praxis-PC; PlanR auf dem Server erreicht es über PLANR_MAS (z. B. https://mas.pickadoc-tunnel.com). */
 const MAS = `${process.env.PLANR_MAS?.trim().replace(/\/+$/, '') || 'http://127.0.0.1:4000'}/planr`
-interface HkpDoc { id?: string; status?: string; version?: number; planJson?: string; dateien?: { id?: string; art?: string }[] }
+interface HkpDoc { id?: string; status?: string; version?: number; aktualisiert?: string; planJson?: string; dateien?: { id?: string; art?: string }[] }
 
 /** HKP-Register des Mandanten (zugaenge.json, sonst die eigene Pickadoc-Praxis) – nie das einer anderen */
 const mas = (w: Wer, pfad: string, init: { method?: string; body?: unknown } = {}) => masPlanr(w, `/hkp${pfad}`, init)
@@ -604,6 +642,25 @@ const hkpHolen = async (w: Wer, id: string): Promise<HkpDoc | null> => {
   const r = await mas(w, `/${encodeURIComponent(id)}`)
   const h = r.ok ? (r.daten.hkp as HkpDoc & { praxis?: unknown }) : null
   return h && darfSehen(w.praxen, praxisNr(h.praxis) ?? undefined, w.haupt) ? h : null
+}
+
+/** Geschriebene HKPs liegen im Register, nicht in inhalte.json. Die Schritte kommen aus den gespeicherten Positionen. */
+const hkpSchrittCache = new Map<string, Schritte>()
+async function hkpSchritte(w: Wer, id: string, stand = ''): Promise<Schritte | null> {
+  const key = `${w.mandant}|${id}|${stand}`
+  const da = stand ? hkpSchrittCache.get(key) : undefined
+  if (da) return da
+  const h = await hkpHolen(w, id)
+  if (!h) return null
+  const schritte = behandlungsschritte(positionenAusHkp(h.planJson))
+  if (stand) {
+    hkpSchrittCache.set(key, schritte)
+    if (hkpSchrittCache.size > 200) {
+      const erst = hkpSchrittCache.keys().next().value
+      if (erst) hkpSchrittCache.delete(erst)
+    }
+  }
+  return schritte
 }
 
 /**
@@ -810,7 +867,7 @@ const termineLesen = async (m: string) => {
 }
 
 async function refreshHolen(req: IncomingMessage): Promise<string> {
-  const token = cookieWert(req.headers.cookie, SITZUNG_COOKIE)
+  const token = sitzungsToken(req)
   if (!token) return ''
   const s = await sitzungExklusiv(async (liste) => sitzungFinden(liste, token))
   return s?.erneuern ?? ''
@@ -1693,14 +1750,15 @@ function einstellungen(req: IncomingMessage, res: ServerResponse, w: Wer) {
       .then(([e, bridge]) => {
         const stand = bridge?.stand
         const agent = bridge ? { verbunden: !!stand, pvs: stand?.pvs, version: stand?.version, lokal: !!w.ort } : null
-        const pvsFest = pvsStehtFest({ pvs: e.pvs, bridge: !!bridge, frei: pvsFrei(w) })
-        json(res, 200, { ok: true, mandant, einstellungen: e, agent, admin: w.konto.admin, pvsFest })
+        const frei = pvsFrei(w)
+        const pvsFest = pvsStehtFest({ pvs: e.pvs, bridge: !!bridge, frei })
+        json(res, 200, { ok: true, mandant, einstellungen: e, agent, admin: w.konto.admin, pvsFest, pvsWahl: frei })
       })
       .catch(() => json(res, 500, { ok: false }))
     return
   }
   if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 403, { ok: false })
-  if (!w.konto.admin) return json(res, 403, { ok: false, meldung: 'Die Einstellungen ändern dürfen nur Praxis-Admins.' })
+  if (!w.konto.admin && !pvsFrei(w)) return json(res, 403, { ok: false, meldung: 'Die Einstellungen ändern dürfen nur Praxis-Admins.' })
   lesenBody(req, 20_000).then((text) => exklusiv(async () => {
     const neu = { ...einstellungenPruefen(JSON.parse(text)), geaendert: new Date().toISOString() }
     const [bisher, bridge] = await Promise.all([einstellungenImVerbund(pvsOrt(w)), bridgeFuer(pvsOrt(w))])
@@ -1949,6 +2007,58 @@ function bridgeDownloadSperren(res: ServerResponse) {
   res.end(BRIDGE_DOWNLOAD_SPERRE)
 }
 
+/** Acht Zeichen aus dem Dateinamen, ohne Muster für Sätze. */
+function setupCodeAusUrl(url: string): string | null {
+  const anfang = '/download/PlanR-Bridge-Setup-'
+  const ende = '.exe'
+  if (!url.startsWith(anfang) || !url.endsWith(ende)) return null
+  const code = url.slice(anfang.length, -ende.length)
+  if (code.length !== 8) return null
+  for (const ch of code) {
+    const ok = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9')
+    if (!ok) return null
+  }
+  return code
+}
+
+/** Angemeldet: die Adresse selbst heißt PlanR-Bridge-Setup-CODE.exe. Speichern unter behält dann die Praxis. */
+async function setupExeSenden(req: IncomingMessage, res: ServerResponse, url: string) {
+  const daten = await readFile(AGENT_SETUP).catch(() => null)
+  if (!daten || daten.length < 1024 || daten.toString('latin1', 0, 2) !== 'MZ') {
+    return json(res, 404, { ok: false, meldung: 'Das Bridge-Setup ist noch nicht gebaut (Bridge: paket-bauen.ps1).' })
+  }
+  const ausUrl = setupCodeAusUrl(url)
+  if (ausUrl) {
+    const treffer = setupCodeFinden(await agentenLesen(), ausUrl)
+    if (!treffer) return json(res, 404, { ok: false, meldung: 'Diese Bridge-Datei ist abgelaufen. Bitte in PlanR erneut herunterladen.' })
+    res.setHeader('X-PlanR-Code', ausUrl)
+    res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable')
+    res.setHeader('Content-Disposition', `attachment; filename="PlanR-Bridge-Setup-${ausUrl}.exe"`)
+    res.setHeader('Content-Length', String(daten.length))
+    res.end(req.method === 'HEAD' ? undefined : daten)
+    return
+  }
+  const w = await werIst(req).catch(() => null)
+  if (w?.mandant) {
+    const code = neuerSetupCode()
+    const praxis = (await zugaengeLesen()).mandanten[w.konto.clientId]?.praxen?.[0]?.name ?? ''
+    await exklusiv(async () => {
+      const liste = await agentenLesen()
+      liste[w.mandant] = setupCodeSetzen(liste[w.mandant], code, praxis, Date.now())
+      await jsonSchreiben(AGENTEN, liste)
+    })
+    console.log('[planr] Bridge-Setup für', w.mandant, 'von', w.konto.email)
+    res.statusCode = 302
+    res.setHeader('Location', `/download/PlanR-Bridge-Setup-${code}.exe`)
+    res.end()
+    return
+  }
+  res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable')
+  res.setHeader('Content-Disposition', 'attachment; filename="PlanR-Bridge-Setup.exe"')
+  res.setHeader('Content-Length', String(daten.length))
+  res.end(req.method === 'HEAD' ? undefined : daten)
+}
+
 function download(req: IncomingMessage, res: ServerResponse, url: string, query = '') {
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { ok: false })
   // Cloudflare hält .zip sonst zwischengespeichert und liefert nach einem Neubau das alte Paket.
@@ -1959,6 +2069,10 @@ function download(req: IncomingMessage, res: ServerResponse, url: string, query 
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.end(DOWNLOAD_SEITE.replace('STAND', stand))
     })
+    return
+  }
+  if (url === '/download/PlanR-Bridge-Setup.exe' || setupCodeAusUrl(url)) {
+    void setupExeSenden(req, res, url)
     return
   }
   readFile(AGENT_PAKET).then((daten) => {
@@ -2021,7 +2135,10 @@ async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
   await exklusiv(async () => {
     const alle = await jsonLesen<Buchung[]>(BUCHUNGEN, [])
     const { liste } = testaboAbschliessen(Array.isArray(alle) ? alle : [])
-    await jsonSchreiben(BUCHUNGEN, [...liste, b])
+    // Dieselbe Adresse hatte schon eine Buchung ohne Praxis (Konto existierte in Pickadoc). Die neue Anlage trägt die Kennung nach.
+    const fund = b.konto.clientId ? { clientId: b.konto.clientId, ...(b.konto.uid ? { uid: b.konto.uid } : {}) } : null
+    const basis = fund ? (kontoMerken(liste, b.inhaber.email, fund) ?? liste) : liste
+    await jsonSchreiben(BUCHUNGEN, [...basis, b])
   })
   void funnelSpeichern('buchung_ok', roh.funnelKanal, roh.funnelKampagne)
   const glaeubiger = process.env.PLANR_GLAEUBIGER_ID?.trim() ?? ''
@@ -2032,6 +2149,7 @@ async function buchungEndpunkt(req: IncomingMessage, res: ServerResponse) {
     mailSenden(ORDNER, { an: b.inhaber.email, betreff: kunde.betreff, text: kunde.text, antwortAn: infoAdresse() }),
   ])
   if (!infoOk) console.error('[planr] Buchung', b.id, 'gespeichert, Info-Mail fehlt – data/buchungen.json prüfen')
+  await geloeschteSchreiben(geloeschtFreigeben(await geloeschteLesen(), { email: b.inhaber.email, clientIds: b.konto.clientId ? [b.konto.clientId] : [] }))
   let angemeldet = false
   if (b.konto.status === 'angelegt' && b.konto.clientId) {
     // Praxissystem aus der Buchung übernehmen und gleich anmelden: Die Bestätigungsseite lädt die Bridge direkt.
@@ -2079,6 +2197,23 @@ async function testaboAbschlussEndpunkt(req: IncomingMessage, res: ServerRespons
     mailSenden(ORDNER, { an: b.inhaber.email, betreff: kunde.betreff, text: kunde.text, antwortAn: infoAdresse() }),
   ])
   json(res, 200, { ok: true })
+}
+
+/** Bestehende Praxis zur E-Mail, nur gelesen. Legt nichts an und ändert das Pickadoc-Konto nicht. */
+async function praxisFinden(email: string): Promise<{ clientId: string; uid?: string } | null> {
+  try {
+    const r = await fetch(`${MAS}/konto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-PlanR-Key': masSchluessel() },
+      body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(8_000),
+    })
+    const d = await r.json().catch(() => ({})) as { ok?: boolean; clientId?: string; uid?: string }
+    if (!r.ok || !d.clientId) return null
+    return { clientId: d.clientId, ...(d.uid ? { uid: d.uid } : {}) }
+  } catch {
+    return null
+  }
 }
 
 /** Praxis und Admin-Konto in Pickadoc anlegen (über MAS). Es gibt keine Uhr: die Buchung wartet, bis die Anlage antwortet. */
@@ -3585,8 +3720,9 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
     // Die Adresse hat schon einen Zugang: Mit dem richtigen Passwort ist das die Anmeldung, die Pläne kommen dazu.
     const a = await einloggen(email, passwort).catch(() => null)
     if (!a?.ok) return json(res, 409, { ok: false, vorhanden: true, meldung: 'Für diese Adresse gibt es schon einen Zugang. Bitte das Passwort dieses Zugangs eingeben.' })
-    const z = await sitzungStarten(req, res, a.wert.konto, a.wert.erneuern)
-    const uebernommen = await eingangZuordnen(ORDNER, ids, mandantVon(z, a.wert.konto), email, Date.now(), !!fall)
+    if (await planrKontoWeg(a.wert.konto)) return json(res, 403, { ok: false, meldung: KONTO_GELOESCHT })
+    const gestartet = await sitzungStarten(req, res, a.wert.konto, a.wert.erneuern)
+    const uebernommen = await eingangZuordnen(ORDNER, ids, mandantVon(gestartet.z, a.wert.konto), email, Date.now(), !!fall)
     return json(res, 200, { ok: true, email, angemeldet: true, uebernommen, vorhanden: true })
   }
   if (konto.status !== 'angelegt' || !konto.clientId) {
@@ -3601,6 +3737,7 @@ async function probeZugang(req: IncomingMessage, res: ServerResponse) {
   const mandant = mandantVon(await zugaengeLesen(), { clientId: konto.clientId })
   const uebernommen = await eingangZuordnen(ORDNER, ids, mandant, email, Date.now(), !!fall)
   let angemeldet = false
+  await geloeschteSchreiben(geloeschtFreigeben(await geloeschteLesen(), { email, clientIds: konto.clientId ? [konto.clientId] : [] }))
   const a = await einloggen(email, passwort).catch(() => null)
   if (a?.ok && a.wert.konto.clientId === konto.clientId) {
     await sitzungStarten(req, res, a.wert.konto, a.wert.erneuern)
@@ -3793,8 +3930,7 @@ async function probeAnmeldung(req: IncomingMessage, res: ServerResponse) {
   if (req.method === 'DELETE') {
     const token = cookieWert(req.headers.cookie, SITZUNG_COOKIE)
     if (token) await sitzungExklusiv((liste) => sitzungenSpeichern(liste.filter((x) => x.hash !== sitzungHash(token))))
-    const leer = `Path=/; Max-Age=0; HttpOnly; SameSite=Lax${sicher(req)}`
-    res.setHeader('Set-Cookie', [`${SITZUNG_COOKIE}=; ${leer}`, `${SUDO_COOKIE}=; ${leer}`])
+    res.setHeader('Set-Cookie', sitzungWeg(req))
     return json(res, 200, { ok: true })
   }
   if (req.method !== 'POST') return json(res, 405, { ok: false })
@@ -3822,9 +3958,29 @@ async function probeSudo(req: IncomingMessage, res: ServerResponse) {
   const email = String((JSON.parse(await lesenBody(req, 500)) as { email?: unknown }).email ?? '').trim().toLowerCase().slice(0, 200)
   if (!email.includes('@')) return json(res, 400, { ok: false, meldung: 'Bitte die E-Mail-Adresse des Kundenkontos.' })
   // Auch ohne ersten Login der Praxis: die Buchung kennt die Pickadoc-Praxis, das reicht für den Zugang.
-  const [z, buchungen] = await Promise.all([zugaengeLesen(), exklusiv(() => buchungenStand())])
-  const konto = sudoKonto(buchungen, z, email)
+  let [z, buchungen] = await Promise.all([zugaengeLesen(), exklusiv(() => buchungenStand())])
+  let konto = sudoKonto(buchungen, z, email)
+  // Die Buchung kennt die Praxis nicht: einmal nur nachlesen, ob das Konto doch existiert. Nichts anlegen, nichts ändern.
+  if (!konto) {
+    const fund = await praxisFinden(email)
+    if (fund) {
+      buchungen = await exklusiv(async () => {
+        const alle = await buchungenStand()
+        const neu = kontoMerken(alle, email, fund)
+        if (neu) await jsonSchreiben(BUCHUNGEN, neu)
+        return neu ?? alle
+      })
+      konto = sudoKonto(buchungen, z, email)
+    }
+  }
   if (!konto) return json(res, 404, { ok: false, meldung: 'Zu dieser Adresse kennt PlanR keine Pickadoc-Praxis: Das Konto wurde nicht über PlanR angelegt und hat sich noch nie angemeldet.' })
+  // Die Praxis hat das Programm schon bei der Buchung genannt. Ohne diesen Eintrag fragt der Assistent beim Betreten noch einmal.
+  await exklusiv(async () => {
+    const alle = await jsonLesen<Record<string, unknown>>(EINSTELLUNGEN, {})
+    const vormerk = pvsVormerken(buchungen, z, email, einstellungenPruefen(alle[mandantVon(z, konto)] ?? {}).pvs)
+    if (!vormerk) return
+    await jsonSchreiben(EINSTELLUNGEN, { ...alle, [vormerk.mandant]: { ...einstellungenPruefen({ pvs: vormerk.pvs, bridge: true }), geaendert: new Date().toISOString() } })
+  }).catch(() => undefined)
   const token = neuesToken()
   const jetzt = Date.now()
   await sitzungExklusiv((liste) => sitzungenSpeichern([...liste, {
@@ -3868,8 +4024,9 @@ async function kontoSperren(req: IncomingMessage, res: ServerResponse) {
 
 /**
  * Superuser löscht ein PlanR-Konto: POST {email}.
- * Buchung, Zugang, Sitzungen, Bridge-Schlüssel, Einstellungen und die Ablage der Praxis verschwinden aus PlanR,
- * die Adresse ist danach frei für eine neue Anmeldung. Das Pickadoc-Konto wird nicht angefasst.
+ * Buchung, Zugang, Sitzungen, Bridge-Schlüssel, Einstellungen und die Ablage der Praxis verschwinden aus PlanR.
+ * Dieselben Zugangsdaten öffnen PlanR nicht wieder, bis eine neue Buchung die Adresse freigibt.
+ * Das Pickadoc-Konto wird nicht angefasst.
  * Die Ablage wandert nach data/geloeschte-konten/ (Rechnungen müssen aufbewahrt werden); PlanR liest dort nichts mehr.
  */
 async function kontoLoeschen(req: IncomingMessage, res: ServerResponse) {
@@ -3922,6 +4079,7 @@ async function kontoLoeschen(req: IncomingMessage, res: ServerResponse) {
     }
     sperren = sperreLoesen(await sperrenLesen(), plan.umfang)
     await jsonSchreiben(GESPERRT, sperren)
+    await geloeschteSchreiben(geloeschtMerken(await geloeschteLesen(), plan.umfang, wer.konto.email))
     for (const id of plan.umfang.clientIds) berechtigungen.delete(id)
     return plan
   })
@@ -3930,6 +4088,57 @@ async function kontoLoeschen(req: IncomingMessage, res: ServerResponse) {
   const ablagen = new Set(ergebnis.mandanten)
   await eingangEntfernen(ORDNER, (k) => (k.login ?? '').trim().toLowerCase() === email || (!!k.mandant && ablagen.has(k.mandant)))
   console.log('[planr] Konto gelöscht:', email, 'Praxen', ergebnis.umfang.clientIds.join(',') || '-', 'durch', wer.konto.email)
+  return json(res, 200, { ok: true })
+}
+
+/** Superuser entfernt einen Probe-Interessenten: Uploads und die Probe-Buchung. Ein Kundenkonto bleibt. Das Pickadoc-Konto bleibt. */
+async function probeInteressentLoeschen(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method !== 'POST' || !eigeneSeite(req)) return json(res, 405, { ok: false })
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) return json(res, wer.status, { ok: false, meldung: 'Nur der Betreiber kann einen Probe-Interessenten löschen.' })
+  const id = String((JSON.parse(await lesenBody(req, 500) || '{}') as { id?: unknown }).id ?? '').trim().slice(0, 80)
+  if (!id) return json(res, 400, { ok: false, meldung: 'Der Interessent fehlt.' })
+  const karten = await eingangListe(ORDNER)
+  const kurz: ProbeKurz[] = karten.map((k) => ({ id: k.id, zeit: k.zeit, dateiname: k.dateiname, kontakt: k.kontakt, stand: k.stand, login: k.login }))
+  const [buchungen, z] = await Promise.all([buchungenStand(), zugaengeLesen()])
+  const ziel = probeLoeschen(buchungen, kurz, id)
+  if (!ziel) return json(res, 404, { ok: false, meldung: 'Diesen Probe-Interessenten gibt es nicht mehr.' })
+  if (ziel.buchungIds.length && ziel.email.includes('@')) {
+    const versuch = loeschPlan(buchungen, z, ziel.email)
+    if (!('fehler' in versuch) && versuch.entfernt.every((b) => b.quelle === 'probe' && b.testabo?.status !== 'abo')) {
+      const weg = await exklusiv(async () => {
+        const aktuell = await buchungenStand()
+        const plan = await sitzungExklusiv(async (liste) => {
+          const p = loeschPlan(aktuell, await zugaengeLesen(), ziel.email)
+          if ('fehler' in p) return p
+          if (p.entfernt.some((b) => b.quelle !== 'probe' || b.testabo?.status === 'abo')) return { fehler: 'Daraus ist schon ein Kundenkonto geworden.' }
+          await jsonSchreiben(ZUGAENGE, p.zugaenge)
+          const praxen = new Set(p.umfang.clientIds), uids = new Set(p.umfang.uids)
+          await sitzungenSpeichern(liste.filter((s) => !praxen.has(s.konto.clientId) && !uids.has(s.konto.uid) && s.konto.email.toLowerCase() !== ziel.email))
+          return p
+        })
+        if ('fehler' in plan) return plan
+        await jsonSchreiben(BUCHUNGEN, plan.buchungen)
+        return plan
+      })
+      if ('fehler' in weg) return json(res, 400, { ok: false, meldung: weg.fehler })
+    } else if ('fehler' in versuch) {
+      await exklusiv(async () => {
+        const alle = await buchungenStand()
+        await jsonSchreiben(BUCHUNGEN, alle.filter((b) => !ziel.buchungIds.includes(b.id)))
+      })
+    } else {
+      return json(res, 400, { ok: false, meldung: 'Daraus ist schon ein Kundenkonto geworden.' })
+    }
+  }
+  const planIds = new Set(ziel.planIds)
+  await eingangEntfernen(ORDNER, (k) => planIds.has(k.id))
+  if (ziel.email.includes('@')) {
+    const clientIds = buchungen.filter((b) => ziel.buchungIds.includes(b.id)).map((b) => b.konto?.clientId ?? '').filter(Boolean)
+    await geloeschteSchreiben(geloeschtMerken(await geloeschteLesen(), { email: ziel.email, clientIds }, wer.konto.email))
+  }
+  console.log('[planr] Probe-Interessent gelöscht:', id, ziel.email || '-', 'durch', wer.konto.email)
   return json(res, 200, { ok: true })
 }
 
@@ -3992,10 +4201,8 @@ async function probeLoginAnlegen(req: IncomingMessage, res: ServerResponse) {
   return json(res, 200, { ok: true, email })
 }
 
-async function probeEingangJson(req: IncomingMessage, res: ServerResponse) {
-  if (req.method !== 'GET') return json(res, 405, { ok: false })
-  const wer = await betreiberDerProbe(req)
-  if (!('konto' in wer)) return json(res, wer.status, { ok: false })
+/** Dieselbe Liste, die der PlanR-Superuser sieht. Der Pickadoc-Superuser liest sie über den Schlüssel. */
+async function superuserKunden() {
   const liste = await importeMitPlan(await eingangListe(ORDNER))
   const [z, buchungen] = await Promise.all([zugaengeLesen(), buchungenStand()])
   const monat = monatVon(new Date().toISOString())
@@ -4013,9 +4220,44 @@ async function probeEingangJson(req: IncomingMessage, res: ServerResponse) {
     }
   }))
   const gesperrt = await sperrenLesen()
-  const kunden = kundenBauen(buchungen, liste, Object.values(z.benutzer).map((b) => b.email), zahlen)
-    .map((k) => ({ ...k, konto: kontoStand(buchungen, z, gesperrt, k.id) }))
-  return json(res, 200, { ok: true, kunden, monat: monatsname(monat) })
+  const kunden = [
+    ...kundenBauen(buchungen, liste, Object.values(z.benutzer).map((b) => b.email), zahlen)
+      .map((k) => ({ ...k, konto: kontoStand(buchungen, z, gesperrt, k.id) })),
+    ...masKonten(buchungen, Object.values(z.benutzer), gesperrt),
+  ]
+  return { kunden, monat: monatsname(monat) }
+}
+
+async function probeEingangJson(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  const wer = await betreiberDerProbe(req)
+  if (!('konto' in wer)) return json(res, wer.status, { ok: false })
+  return json(res, 200, { ok: true, ...(await superuserKunden()) })
+}
+
+const PICKADOC_APP = /^https:\/\/(docgenda\.(web\.app|firebaseapp\.com)|([a-z0-9-]+\.)?pickadoc\.de)$|^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
+
+/** GET /api/intern/kunden — dieselbe Liste. Schlüssel oder Pickadoc-Superuser-Token. */
+async function internKunden(req: IncomingMessage, res: ServerResponse) {
+  const her = String(req.headers.origin ?? '')
+  if (PICKADOC_APP.test(her)) {
+    res.setHeader('Access-Control-Allow-Origin', her)
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-PlanR-Key')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    res.setHeader('Vary', 'Origin')
+  }
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return }
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  const soll = Buffer.from(masSchluessel())
+  const ist = Buffer.from(String(req.headers['x-planr-key'] ?? ''))
+  const schluessel = soll.length > 0 && soll.length === ist.length && timingSafeEqual(soll, ist)
+  if (!schluessel) {
+    const token = /^Bearer\s+(\S+)/i.exec(String(req.headers.authorization ?? ''))?.[1] ?? ''
+    const konto = token ? await tokenPruefen(token, googleSchluessel, Date.now(), FIREBASE.projekt, true).catch(() => null) : null
+    if (konto?.role !== 'superuser') return json(res, 401, { ok: false })
+  }
+  return json(res, 200, { ok: true, ...(await superuserKunden()) })
 }
 
 async function probeEingangSeite(req: IncomingMessage, res: ServerResponse, id = '') {
@@ -4051,7 +4293,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/pvs-agent/auftrag' || url === '/api/pvs-agent/antwort' || url === '/api/pvs-agent/setup' ||
     url === '/api/pvs-agent/update' || url === '/api/pvs-agent/update/paket') return agentEndpunkt(req, res, url, query)
   if (url === '/api/bridge-setup/einloesen') return void bridgeSetupEinloesen(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Der Einrichtungscode kam nicht an.' }) })
-  if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip' || url === '/download/PlanR-Bridge.zip') return download(req, res, url, query)
+  if (url === '/download' || url === '/download/' || url === '/download/PlanR-Agent.zip' || url === '/download/PlanR-Bridge.zip' || url === '/download/PlanR-Bridge-Setup.exe' || setupCodeAusUrl(url)) return download(req, res, url, query)
   if (url === '/api/anmeldung') return void anmeldungEndpunkt(req, res).catch(() => { if (!res.headersSent) json(res, 400, { ok: false, meldung: 'Anmeldung hat nicht geklappt.' }) })
   if (url === '/api/passwort-vergessen') return void passwortEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/buchung') return void buchungEndpunkt(req, res).catch(fehler500(res))
@@ -4070,6 +4312,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/eingang/login') return void probeLoginAnlegen(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang/sperren') return void kontoSperren(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang/loeschen') return void kontoLoeschen(req, res).catch(fehler500(res))
+  if (url === '/api/probe/eingang/probe-loeschen') return void probeInteressentLoeschen(req, res).catch(fehler500(res))
   if (url === '/api/probe/funnel') return void funnelBerichtEndpunkt(req, res).catch(fehler500(res))
   if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
@@ -4081,6 +4324,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/intern/plaene' || url === '/api/intern/plan' || url === '/api/intern/plan/loeschen' || url === '/api/intern/plan/zurueck') {
     return void internPlaene(req, res, url, query).catch(fehler500(res))
   }
+  if (url === '/api/intern/kunden') return void internKunden(req, res).catch(fehler500(res))
   if (url === '/api/befund/link' || url.startsWith('/api/befund/link/')) return void befundLinkEndpunkt(req, res, url, query).catch(fehler500(res))
   if (!url.startsWith('/api/')) return next()
   kopf(res, herkunft(req))
@@ -4090,7 +4334,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
     return
   }
   werIst(req).then((w) => {
-    if (!w) return json(res, 401, { ok: false, anmelden: true, meldung: gesperrteAnfrage.has(req) ? KONTO_GESPERRT : abgelehnt.has(req) ? NICHT_GEBUCHT : 'Bitte mit Benutzername und Passwort anmelden.' })
+    if (!w) return json(res, 401, { ok: false, anmelden: true, meldung: gesperrteAnfrage.has(req) ? KONTO_GESPERRT : geloeschteAnfrage.has(req) ? KONTO_GELOESCHT : abgelehnt.has(req) ? NICHT_GEBUCHT : 'Bitte mit Benutzername und Passwort anmelden.' })
     return angemeldet(req, res, url, query, w, next)
   }).catch(fehler500(res))
 }
@@ -4204,6 +4448,13 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
     const modul = q.get('modul') ?? ''
     const nummer = q.get('nummer') ?? ''
     if (!MODUL_RE.test(modul) || !nummer || nummer.length > 80) return json(res, 400, { ok: false })
+    if (modul === 'hkp') {
+      hkpSchritte(w, nummer).then((schritte) => {
+        if (!schritte) return json(res, 404, { ok: false })
+        json(res, 200, { ok: true, schritte })
+      }).catch(() => json(res, 500, { ok: false }))
+      return
+    }
     Promise.all([dateiLesen(m), inhalteLesen(m)]).then(([datei, inhalte]) => {
       const k = datei.find((x) => x.modul === modul && x.nummer === nummer && sichtbar(w, x))
       if (!k) return json(res, 404, { ok: false })
@@ -4246,13 +4497,22 @@ function angemeldetWeiter(req: IncomingMessage, res: ServerResponse, url: string
         if (vs) k.versendet = versandText(vs)
         const termin = termine[schluessel(k.modul, k.nummer)]
         if (termin?.iso) k.termin = termin.iso
-        const anzahl = schritteAnzahl(behandlungsschritte(positionenAusFassung(inhalte[schluessel(k.modul, k.nummer)]?.pvs), k.modul === 'privat-impl'))
-        if (anzahl) k.schritte = anzahl
+        if (k.modul !== 'hkp') {
+          const anzahl = schritteAnzahl(behandlungsschritte(positionenAusFassung(inhalte[schluessel(k.modul, k.nummer)]?.pvs), k.modul === 'privat-impl'))
+          if (anzahl) k.schritte = anzahl
+        }
         if (!k.kennung) {
           const kennung = kennungVon((inhalte[schluessel(k.modul, k.nummer)]?.plan as { patient?: unknown } | undefined)?.patient)
           if (kennung) k.kennung = kennung
         }
       }
+      await Promise.all(liste.filter((k) => k.modul === 'hkp').map(async (k) => {
+        try {
+          const schritte = await hkpSchritte(w, k.nummer, k.geaendert)
+          const anzahl = schritte ? schritteAnzahl(schritte) : 0
+          if (anzahl) k.schritte = anzahl
+        } catch { /* Register gerade nicht erreichbar: die Zeile bleibt ohne Schritte-Knopf */ }
+      }))
       return { liste, termine }
     }).then(async ({ liste, termine }) => {
       const abgeglichen = await termineAbgleichen(req, w, liste, termine)

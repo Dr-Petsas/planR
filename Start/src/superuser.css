@@ -33,8 +33,9 @@ body.sb-body { margin: 0; background: #f7fbfb; overflow: auto; display: block; }
 
 /* Liste über die ganze Breite */
 .sb-liste { display: grid; width: 100%; column-gap: 16px; padding-inline: 22px; }
-.sb-liste.kunden { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.4fr) 140px 190px 120px; }
-.sb-liste.proben { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.4fr) 150px 110px 120px; }
+.sb-liste.kunden { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr) 110px 150px minmax(280px, auto); }
+.sb-liste.mas { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.3fr) 110px 150px minmax(140px, auto); }
+.sb-liste.proben { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.4fr) 150px 90px minmax(220px, auto); }
 .sb-zeile {
   display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center;
   padding: 11px 22px; margin-inline: -22px; border-top: 1px solid var(--sb-linie); min-width: 0;
@@ -52,7 +53,9 @@ body.sb-body { margin: 0; background: #f7fbfb; overflow: auto; display: block; }
 .sb-login.fehlt { color: var(--sb-grau); }
 .sb-zahl { text-align: right; font-variant-numeric: tabular-nums; }
 .sb-zeit { color: var(--sb-grau); font-size: 13px; }
-.sb-tun { display: flex; justify-content: flex-end; gap: 6px; overflow: visible; }
+.sb-tun { display: flex; justify-content: flex-end; align-items: center; gap: 6px; overflow: visible; white-space: normal; }
+.sb-zeile > .sb-tun { overflow: visible; }
+.sb-tun .sb-knopf { padding: 6px 10px; font-size: 13px; }
 .sb-icon {
   display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; cursor: pointer;
   color: var(--sb-dunkel); background: #fff; border: 1px solid var(--sb-linie); border-radius: 9px;
@@ -142,8 +145,8 @@ body.sb-body { margin: 0; background: #f7fbfb; overflow: auto; display: block; }
 @media (max-width: 840px) {
   .sb-liste.kunden { grid-template-columns: minmax(0, 1fr) max-content max-content max-content; }
   .sb-liste .sb-login, .sb-liste .sb-zeit { display: none; }
-  .sb-liste.proben .sb-zahl { display: none; }
-  .sb-liste.proben { grid-template-columns: minmax(0, 1fr) max-content; }
+  .sb-liste.proben .sb-zahl, .sb-liste.mas .sb-zeit { display: none; }
+  .sb-liste.proben, .sb-liste.mas { grid-template-columns: minmax(0, 1fr) max-content; }
   .sb-vergleich { grid-template-columns: 1fr; }
   .sb-ergebnis { border-left: 0; border-top: 1px solid var(--linie, #e6e8eb); }
   .sb-blatt iframe { height: 46vh; }

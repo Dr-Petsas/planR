@@ -5,6 +5,11 @@
   "punktwert": 0.0582873,
   "hinweis": "Nur die nach § 6 Abs. 2 GOZ für Zahnärzte zugänglichen Nummern. Faktorrahmen nach § 5 GOÄ: persönliche Leistungen 1,0–3,5 (Schwelle 2,3); Abschnitte A/E/O 1,0–2,5 (Schwelle 1,8); Nr. 250 höchstens 2,5; Zuschlag 5377 nur einfacher Satz.",
   "eintraege": [
+    { "nr": "1", "text": "Beratung – auch mittels Fernsprecher", "punkte": 80, "abschnitt": "B", "kat": "B", "maxFaktor": 3.5, "schwelle": 2.3 },
+    { "nr": "3", "text": "Eingehende, das gewöhnliche Maß übersteigende Beratung – auch mittels Fernsprecher –, mindestens 10 Minuten", "punkte": 150, "abschnitt": "B", "kat": "B", "maxFaktor": 3.5, "schwelle": 2.3 },
+    { "nr": "5", "text": "Symptombezogene Untersuchung", "punkte": 80, "abschnitt": "B", "kat": "B", "maxFaktor": 3.5, "schwelle": 2.3 },
+    { "nr": "6", "text": "Vollständige Untersuchung mindestens eines Organsystems (Kauorgan)", "punkte": 100, "abschnitt": "B", "kat": "B", "maxFaktor": 3.5, "schwelle": 2.3 },
+    { "nr": "34", "text": "Erörterung der Auswirkungen einer Erkrankung auf die Lebensgestaltung, mindestens 20 Minuten (Aufklärungsgespräch)", "punkte": 300, "abschnitt": "B", "kat": "B", "maxFaktor": 3.5, "schwelle": 2.3 },
     { "nr": "250", "text": "Blutentnahme mittels Spritze, Kanüle oder Katheter aus der Vene", "punkte": 40, "abschnitt": "C II Blutentnahmen", "kat": "C", "maxFaktor": 2.5, "schwelle": 1.8 },
     { "nr": "251", "text": "Blutentnahme mittels Spritze oder Kanüle aus der Arterie", "punkte": 60, "abschnitt": "C II Blutentnahmen", "kat": "C", "maxFaktor": 3.5, "schwelle": 2.3 },
     { "nr": "252", "text": "Injektion, subkutan, submukös, intrakutan oder intramuskulär", "punkte": 40, "abschnitt": "C II Injektionen", "kat": "C", "maxFaktor": 3.5, "schwelle": 2.3 },

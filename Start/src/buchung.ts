@@ -3,7 +3,7 @@ import './buchung.css'
 import { KZVEN } from './data/kzv'
 import { PVS_LISTE, pvsVon } from './einstellungen'
 import { DOKU_MONAT, PAKETE, PRO_PLAN, RECHTSFORMEN, SERVER, TESTABO_PLAENE, TESTABO_TAGE, ibanGueltig, ibanNorm, type Paket } from './paket'
-import { anleitungHtml, anleitungVon, bridgeSetupLaden, codeLesbar } from './einrichtung'
+import { anleitungHtml, anleitungVon, bridgeDateiLaden } from './einrichtung'
 import { logo } from './logo'
 import { funnelMelden, funnelQuelle } from './funnelClient'
 import { werbungStarten, zielErreicht } from './werbung'
@@ -332,26 +332,21 @@ function bestaetigung(app: HTMLElement, id: string, email: string, pvsId: string
           <li><b>Einrichtung:</b> Nach der ersten Anmeldung führt Sie der Assistent durch alles: Praxissystem, Installation der Bridge, Verbindung, Preise &amp; Positionen.</li>
         </ol>
         <h3>${esc(pvs?.name ?? 'Ihr Praxissystem')} verbinden</h3>
-        ${anleitungVon(pvsId) ? `<p><button type="button" class="neu-knopf" data-bridge-laden>PlanR-Bridge herunterladen</button></p>
-          <p class="bu-klein" data-bridge-meldung>${angemeldet ? 'Das Setup ist für Ihre Praxis vorbereitet – bei der Installation muss nichts eingegeben werden.' : 'Zum Herunterladen melden Sie sich kurz an; danach startet der Download.'}</p>` : ''}
+        ${angemeldet && anleitungVon(pvsId) ? `<p><button type="button" class="neu-knopf" data-bridge oncontextmenu="event.preventDefault()">PlanR-Bridge herunterladen</button></p>
+          <p class="bu-klein" data-bridge-hinweis>Links klicken. Speichern unter legt die Datei ohne Ihre Praxis ab.</p>` : ''}
         ${anleitungHtml(pvsId)}
         <div class="bu-fuss"><a class="link-knopf" href="#top">← Zur Startseite</a>${angemeldet ? '<a class="neu-knopf" href="/#einrichtung">Zu PlanR</a>' : `<a class="neu-knopf" href="#anmelden">${konto === 'angelegt' ? 'Jetzt anmelden' : 'Zur Anmeldung'}</a>`}</div>
       </div>
     </div>`
-  const knopf = app.querySelector<HTMLButtonElement>('[data-bridge-laden]')
-  const hinweis = app.querySelector<HTMLElement>('[data-bridge-meldung]')
-  knopf?.addEventListener('click', async () => {
-    if (!angemeldet) { location.hash = '#bridge'; return }
+  app.querySelector<HTMLButtonElement>('[data-bridge]')?.addEventListener('click', async (ev) => {
+    const knopf = ev.currentTarget as HTMLButtonElement
     knopf.disabled = true
-    knopf.textContent = 'Setup wird vorbereitet …'
-    const r = await bridgeSetupLaden()
+    const r = await bridgeDateiLaden()
     knopf.disabled = false
-    knopf.textContent = r.ok ? 'Erneut herunterladen' : 'PlanR-Bridge herunterladen'
-    if (r.ok) {
-      if (hinweis) hinweis.textContent = `✓ Heruntergeladen (Ordner „Downloads“). Jetzt die Datei öffnen und mit „Ja“ bestätigen – den Fortschritt sehen Sie auch in PlanR unter „Zu PlanR“.${r.code ? ` Fragt das Setup nach einem Code: ${codeLesbar(r.code)}` : ''}`
+    if (!r.ok) {
+      const hinweis = app.querySelector('[data-bridge-hinweis]')
+      if (hinweis) hinweis.textContent = r.meldung
     }
-    else if (r.status === 401 || r.status === 403) location.hash = '#bridge'
-    else if (hinweis) hinweis.textContent = r.meldung
   })
   scrollTo(0, 0)
 }

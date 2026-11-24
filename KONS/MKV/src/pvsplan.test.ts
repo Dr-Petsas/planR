@@ -5,7 +5,8 @@ describe('Plan fürs Praxisprogramm', () => {
   it('Zahnangaben wie DS-Win', () => {
     expect(pvsZahn('16')).toBe('16')
     expect(pvsZahn('34-36')).toBe('34-36')
-    expect(pvsZahn('OK-R')).toBe('')
+    expect(pvsZahn('OK-R')).toBe('14-18')
+    expect(pvsZahn('OK-L')).toBe('24-28')
     expect(pvsZahn('UK')).toBe('UK')
     expect(pvsZahn(undefined)).toBe('')
   })

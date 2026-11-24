@@ -63,6 +63,8 @@ let fotoStand = 0
 let einstellungen: Einstellungen = LEER
 /** Praxisprogramm steht fest (Bridge eingerichtet, kein Entwicklerkonto): Anzeige statt Auswahl */
 let pvsFest = false
+/** Entwicklerkonto: alle Praxisprogramme bleiben wählbar, auch ohne Praxis-Admin. */
+let pvsWahl = false
 /** Bearbeitungsstand im offenen Dialog */
 let entwurf: Einstellungen = LEER
 /** PlanR-Bridge auf dem Praxisserver (null = für diesen Mandanten keine eingerichtet) */
@@ -842,7 +844,7 @@ function einstellungKarte(): string {
       <button type="button" class="wahl-grund" data-wahl-zu aria-label="Einstellungen schließen"></button>
       <form class="wahl-karte einstellungen" data-einst>
         <div class="wahl-kopf">
-          <h2>Einstellungen${ich.konto.admin ? '' : ' <small>nur lesen – ändern darf der Praxis-Admin</small>'}</h2>
+          <h2>Einstellungen${ich.konto.admin || pvsWahl ? '' : ' <small>nur lesen – ändern darf der Praxis-Admin</small>'}</h2>
           <button type="button" data-wahl-zu aria-label="Schließen">✕</button>
         </div>
         ${pvsFest && p
@@ -863,7 +865,7 @@ function einstellungKarte(): string {
         </label>` : ''}
         ${p && e.bridge && !p.bereit ? '<p class="pvs-hinweis">Die Anbindung an dieses PVS ist noch nicht fertig. Die Einstellung wird gespeichert, übertragen wird erst, wenn sie bereitsteht.</p>' : ''}
         ${p && e.bridge ? `<p class="pvs-info">PlanR-Bridge ${agent?.lokal ? 'auf diesem PC' : 'auf dem Praxisserver'}: ${agent ? (agent.verbunden ? `verbunden (${esc(bridgeStand(agent, einstellungen.pvs))})` : 'eingerichtet, gerade nicht verbunden') : 'nicht eingerichtet'}
-          ${ich.konto.admin ? ' · <button type="button" class="link-knopf" data-bridge-laden>Bridge herunterladen</button>' : ' · Herunterladen kann sie der Praxis-Admin.'}</p>` : ''}
+          · <button type="button" class="link-knopf" data-bridge-laden oncontextmenu="event.preventDefault()">Bridge herunterladen</button></p>` : ''}
         ${agent?.lokal ? '<p class="pvs-info">Dieser Browser arbeitet mit der Bridge auf diesem PC; die Wahl oben gilt nur hier. <button type="button" class="link-knopf" data-ort-vergessen>Stattdessen den Praxisserver verwenden</button></p>'
           : ich.konto.admin ? '<p class="pvs-info">Demo-PC oder Einzelplatz: <button type="button" class="link-knopf" data-bridge-pc>Bridge für einen einzelnen PC herunterladen</button> – Browser auf diesem PC arbeiten dann mit dem Praxisprogramm dort.</p>' : ''}
         ${katalogBlock()}
@@ -872,7 +874,7 @@ function einstellungKarte(): string {
         <div class="einst-fuss">
           <span>${einstellungen.geaendert ? `Gespeichert ${esc(zeit(einstellungen.geaendert))}` : 'Noch nicht gespeichert'}</span>
           <button type="button" class="import-knopf" data-wahl-zu>Abbrechen</button>
-          <button type="submit" class="neu-knopf"${geaendert && ich.konto.admin ? '' : ' disabled'}>Speichern</button>
+          <button type="submit" class="neu-knopf"${geaendert && (ich.konto.admin || pvsWahl) ? '' : ' disabled'}>Speichern</button>
     </div>
       </form>
     </div>`
@@ -1997,7 +1999,7 @@ function zeichnen() {
       entwurf = { ...entwurf, pvs, bridge: pvs ? entwurf.bridge : false }
       zeichnen()
       // Globaler Schalter: gilt sofort für Suche, Übernahme, Übergabe, Preise und die Bridge auf dem Praxisserver
-      if (ich.konto.admin) void einstellungenSpeichern(true)
+      if (ich.konto.admin || pvsWahl) void einstellungenSpeichern(true)
     })
     form.querySelector<HTMLInputElement>('[data-bridge]')!.addEventListener('change', (ev) => {
       entwurf = { ...entwurf, bridge: (ev.target as HTMLInputElement).checked }
@@ -2121,8 +2123,14 @@ function zeichnen() {
     }
     void aboSenden()
   })
-  app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', () => { auswahlSchliessen(); void einrichtungZeigen(true) })
   app.querySelector<HTMLButtonElement>('[data-ort-vergessen]')?.addEventListener('click', () => { ortVergessen(); location.reload() })
+  app.querySelector<HTMLButtonElement>('[data-bridge-laden]')?.addEventListener('click', async (ev) => {
+    const knopf = ev.currentTarget as HTMLButtonElement
+    knopf.disabled = true
+    const r = await (await import('./einrichtung')).bridgeDateiLaden()
+    knopf.disabled = false
+    if (!r.ok) alert(r.meldung)
+  })
   app.querySelector<HTMLButtonElement>('[data-bridge-pc]')?.addEventListener('click', async (ev) => {
     const knopf = ev.currentTarget as HTMLButtonElement
     knopf.disabled = true
@@ -2355,9 +2363,10 @@ async function katalogLaden() {
 
 async function einstellungenLaden() {
   try {
-    const d = await (await fetch('/api/einstellungen', { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent; pvsFest?: boolean }
+    const d = await (await fetch('/api/einstellungen', { cache: 'no-store' })).json() as { einstellungen?: Einstellungen; agent?: typeof agent; pvsFest?: boolean; pvsWahl?: boolean }
     if (d.einstellungen) einstellungen = d.einstellungen
     pvsFest = d.pvsFest === true
+    pvsWahl = d.pvsWahl === true
     agent = d.agent ?? null
   } catch { /* Maske startet leer */ }
   await katalogLaden()
@@ -2403,7 +2412,7 @@ function ohneAnmeldung() {
   const zeigen = async () => {
     const soll = location.hash === '#probe-eingang' ? '#probe-eingang'
       : location.hash.startsWith('#fall/') ? location.hash
-      : (['#anmelden', '#bridge', '#einrichtung'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
+      : (['#anmelden', '#einrichtung', '#bridge'].includes(location.hash) || sitzungHinweis) ? 'anmelden'
       : location.hash === '#probe' ? '#probe'
       : location.hash === '#buchen' || location.hash === '#buchen-clara' || location.hash === '#buchen-doku' || location.hash === '#buchen-test' ? location.hash : 'start'
     if (soll === ansicht) return
@@ -2411,10 +2420,17 @@ function ohneAnmeldung() {
     ansicht = soll
     const hp = await import('./homepage')
     if (soll === 'anmelden') {
-      if (vorher !== 'start') hp.homepage(app)
-      anmeldePopup(sitzungHinweis || (location.hash === '#bridge' ? 'Bitte als Praxis-Admin anmelden – danach laden Sie die Bridge herunter.' : ''), () => {
-        ansicht = 'start'
+      // #anmelden von der Buchung aus: Bestätigung bleibt, die Startseite ersetzt sie nicht.
+      const ausBuchung = String(vorher).startsWith('#buchen')
+      if (vorher !== 'start' && !ausBuchung) hp.homepage(app)
+      anmeldePopup(sitzungHinweis || '', () => {
         sitzungHinweisLoeschen()
+        if (ausBuchung) {
+          ansicht = vorher
+          history.replaceState(null, '', location.pathname + location.search + vorher)
+          return
+        }
+        ansicht = 'start'
         history.replaceState(null, '', location.pathname + location.search)
       })
     } else if (soll === '#probe' || soll.startsWith('#fall/')) {

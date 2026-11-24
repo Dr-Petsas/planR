@@ -19,7 +19,7 @@ export const ENGINE_STAND = typeof __IMPL_ENGINE_STAND__ === 'string' ? __IMPL_E
 
 export interface Rueckfrage {
   status: 'rueckfrage'
-  grund: 'zaehne' | 'befund_konflikt' | 'zeitpunkt' | 'sinus' | 'material' | 'entnahme'
+  grund: 'zaehne' | 'befund_konflikt' | 'zeitpunkt' | 'sinus' | 'seite' | 'material' | 'entnahme'
   frage: string
   /** bei befund_konflikt und zeitpunkt: der betroffene Zahn */
   zahn?: string
@@ -216,12 +216,66 @@ const WEICHGEWEBE: Record<string, string> = { btt: 'Bindegewebstransplantat', fs
 const SEDIERUNG: Record<string, string> = { lachgas: 'Lachgas', analgosedierung: 'Analgosedierung', itn: 'Vollnarkose' }
 
 /** Gesprochener Auftrag + 01 → gerechneter Kostenvoranschlag Implantologie (ohne Nummer) oder Rückfrage */
+/** „Implantat“ ist gewollt. „kein Implantat“ und „ohne Implantat“ zählen nicht. */
+function implantGewollt(text: string): boolean {
+  const k = text.toLowerCase()
+  let von = 0
+  while (von < k.length) {
+    const i = k.indexOf('implant', von)
+    if (i < 0) return false
+    const davor = k.slice(Math.max(0, i - 16), i)
+    const verneint = davor.endsWith('kein ') || davor.endsWith('keine ') || davor.endsWith('keinen ')
+      || davor.endsWith('ohne ') || davor.endsWith('nicht ')
+    if (!verneint) return true
+    von = i + 'implant'.length
+  }
+  return false
+}
+
+/** Externer Sinuslift ist eine eigene Leistung. Ein Zahn nennt dann die Kieferhälfte, kein Implantat. */
+function externAllein(auftragText: string, a: ImplAuftrag): boolean {
+  if (implantGewollt(auftragText)) return false
+  const je = a.sinusJe
+  const extern = !!(a.regionen.sinusExtern || je?.['OK-R']?.sinusExtern || je?.['OK-L']?.sinusExtern)
+  const intern = !!(a.regionen.sinusIntern || je?.['OK-R']?.sinusIntern || je?.['OK-L']?.sinusIntern)
+  return extern && !intern && !a.sinusOffen
+}
+
+function seitenExtern(a: ImplAuftrag): Region[] {
+  const seiten = new Set<Region>()
+  if (a.sinusJe?.['OK-R']?.sinusExtern) seiten.add('OK-R')
+  if (a.sinusJe?.['OK-L']?.sinusExtern) seiten.add('OK-L')
+  if (!seiten.size && a.regionen.sinusExtern) {
+    for (const z of a.zaehne) {
+      const r = regionVon(z)
+      if (r === 'OK-R' || r === 'OK-L') seiten.add(r)
+    }
+  }
+  return [...seiten]
+}
+
 export function implEntwurf(auftragText: string, befund: Record<string, string> = {}, optionen: ImplOptionen = {}): ImplEntwurf | Rueckfrage {
   const a = implAuftragVerstehen(auftragText)
-  if (!a.zaehne.length) {
-    return { status: 'rueckfrage', grund: 'zaehne', frage: 'An welchen Zähnen soll ich Implantate planen?' }
+  const allein = externAllein(auftragText, a)
+  const internGesagt = !!(a.regionen.sinusIntern || a.sinusJe?.['OK-R']?.sinusIntern || a.sinusJe?.['OK-L']?.sinusIntern)
+  if (!allein && a.sinusOffen && !a.zaehne.length) {
+    return { status: 'rueckfrage', grund: 'sinus', frage: 'Interner oder externer Sinuslift?' }
   }
-  const zaehne = sortiert(a.zaehne)
+  let regionenVorgabe: Region[] | null = null
+  if (allein) {
+    regionenVorgabe = seitenExtern(a)
+    if (!regionenVorgabe.length) {
+      return { status: 'rueckfrage', grund: 'seite', frage: 'Ein externer Sinuslift geht je Kieferhälfte. Rechts oder links im Oberkiefer?' }
+    }
+  } else if (!a.zaehne.length) {
+    return {
+      status: 'rueckfrage', grund: 'zaehne',
+      frage: internGesagt
+        ? 'Ein interner Sinuslift geht nur zusammen mit einem Implantat. An welchen Zähnen soll ich das Implantat planen?'
+        : 'An welchen Zähnen soll ich Implantate planen?',
+    }
+  }
+  const zaehne = allein ? [] : sortiert(a.zaehne)
   const mitBefund = Object.values(befund).some((c) => String(c ?? '').trim())
   const hinweise: string[] = []
   const sofort: string[] = []
@@ -253,7 +307,7 @@ export function implEntwurf(auftragText: string, befund: Record<string, string> 
       frage: `Laut Befund steht an ${zahn} noch ${befundName(code)}. Soll der Zahn raus und sofort implantiert werden, oder meinen Sie einen anderen Zahn?`,
     }
   }
-  const regionen = REGIONEN.filter((r) => zaehne.some((z) => regionVon(z) === r))
+  const regionen = regionenVorgabe ?? REGIONEN.filter((r) => zaehne.some((z) => regionVon(z) === r))
   const sinusRegionen = regionen.filter(IST_OK_SEITE)
   if (a.sinusOffen && sinusRegionen.length) {
     return { status: 'rueckfrage', grund: 'sinus', frage: 'Interner oder externer Sinuslift?' }
@@ -350,7 +404,9 @@ export function implVersorgungSatz(z: ImplZusammenfassung): string {
   const teile: string[] = []
   if (z.spaet.length) teile.push(`${z.spaet.length > 1 ? 'Implantate' : 'Implantat'} an ${liste(z.spaet)}`)
   if (z.sofort.length) teile.push(`${z.sofort.length > 1 ? 'Sofortimplantate' : 'Sofortimplantat'} an ${liste(z.sofort)}`)
-  return `${teile.join(', ')}${z.massnahmen.length ? `; dazu ${liste(z.massnahmen)}` : ''}`
+  const mass = z.massnahmen.length ? liste(z.massnahmen) : ''
+  if (teile.length && mass) return `${teile.join(', ')}; dazu ${mass}`
+  return teile.join(', ') || mass
 }
 
 export { euro }

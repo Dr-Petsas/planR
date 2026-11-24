@@ -86,8 +86,25 @@ async function herunterladen(url: string, name: string): Promise<Download> {
   }
 }
 
-/** Bridge-Setup der eigenen Praxis; der Einrichtungscode steht im Dateinamen. status 401/403: nicht (als Admin) angemeldet. */
-export const bridgeSetupLaden = () => herunterladen('/api/bridge-setup', 'PlanR-Bridge-Setup.exe')
+/** Bridge der angemeldeten Praxis. Der Dateiname trägt den Zugang, das Setup fragt nicht. */
+export async function bridgeDateiLaden(): Promise<Download> {
+  try {
+    const r = await fetch('/download/PlanR-Bridge-Setup.exe', { cache: 'no-store' })
+    if (!r.ok) return { ok: false, status: r.status, meldung: String(((await r.json().catch(() => ({}))) as { meldung?: string }).meldung ?? 'Der Download hat nicht geklappt.') }
+    const adresse = URL.createObjectURL(await r.blob())
+    const a = document.createElement('a')
+    a.href = adresse
+    a.download = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') ?? '')?.[1] ?? 'PlanR-Bridge-Setup.exe'
+    document.body.append(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(adresse), 60_000)
+    return { ok: true, code: r.headers.get('X-PlanR-Code') ?? '' }
+  } catch {
+    return { ok: false, status: 0, meldung: 'Der Download hat nicht geklappt. Bitte die Internetverbindung prüfen.' }
+  }
+}
+
 /** Setup für einen einzelnen PC (Demo, Einzelplatz): Jeder PC, auf dem es läuft, bekommt seine eigene Bridge. */
 export const bridgeSetupPcLaden = () => herunterladen('/api/bridge-setup?lokal=1', 'PlanR-Bridge-Setup.exe')
 /** ZIP-Paket mit Installieren.cmd für IT-Dienstleister (Zugang liegt im Paket) */
@@ -229,8 +246,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
           : stand?.eingerichtet && !paketGeladen
             ? '<p class="ein-hinweis">Die PlanR-Bridge wurde schon einmal eingerichtet, ist aber gerade nicht verbunden. Ist der Computer mit der Bridge eingeschaltet und hat er Internet? Dann verbindet sie sich von selbst. Nur wenn dieser Computer neu ist, laden Sie die Bridge noch einmal herunter.</p>'
           : '<p class="ein-text">Drücken Sie auf den grünen Knopf. Ihr Computer holt dann eine Datei aus dem Internet. Das dauert ein paar Sekunden.</p>'}
-        ${!o.admin ? '<p class="ein-hinweis">Das Herunterladen macht die Person, die PlanR für die Praxis angemeldet hat – die Datei enthält den Zugang Ihrer Praxis.</p>'
-          : `<p><button type="button" class="neu-knopf ein-riesig" data-setup${laeuft ? ' disabled' : ''}>${laeuft ? 'Einen Moment, die Datei wird vorbereitet …' : paketGeladen ? 'Noch einmal herunterladen' : stand?.verbunden ? 'Trotzdem neu herunterladen' : '⬇  PlanR-Bridge herunterladen'}</button></p>`}
+        <p><button type="button" class="neu-knopf ein-riesig" data-setup oncontextmenu="event.preventDefault()"${laeuft ? ' disabled' : ''}>${laeuft ? 'Einen Moment, die Datei wird vorbereitet …' : paketGeladen ? 'Noch einmal herunterladen' : stand?.verbunden ? 'Trotzdem neu herunterladen' : '⬇  PlanR-Bridge herunterladen'}</button></p>
         ${paketGeladen ? '<p class="ein-ok big">✓ Die Datei ist da. Sie liegt im Ordner „Downloads“. Jetzt unten auf „Weiter“.</p>' : ''}
         <details class="ein-mehr"><summary>Der Browser fragt etwas oder warnt?</summary><p>Fragt der Browser, ob Sie die Datei behalten möchten: auf <b>„Behalten“</b> klicken. Die Datei kommt von uns und ist sicher.</p></details>
         ${o.admin ? `<p class="ein-klein" data-zip-platz>${zipGeladen ? '✓ ZIP-Paket heruntergeladen: entpacken und <code>Installieren.cmd</code> als Administrator ausführen.'
@@ -319,7 +335,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
     laeuft = true
     meldung = ''
     zeichnen()
-    const r = await (zip ? bridgePaketLaden() : bridgeSetupLaden())
+    const r = await (zip ? bridgePaketLaden() : bridgeDateiLaden())
     if (r.ok) {
       if (zip) zipGeladen = true
       else { paketGeladen = true; code = r.code }
@@ -504,9 +520,11 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
 
   void Promise.all([standLaden(), katalogLaden()]).then(() => {
     const namen = schrittNamen()
+    // Von der Buchungsbestätigung (#bridge): nach der Anmeldung direkt die Datei holen, nicht nur die Seite zeigen.
+    let bridgeSofort = false
     // Läuft das Setup gerade (Meldung jünger als zehn Minuten), geht es direkt dorthin, wo man ihm zusieht.
     if (stand?.setup && !stand.setup.fertig && stand.setup.vor < 600 && !stand.verbunden && namen.includes('Öffnen')) { ort = 'server'; zuSchritt('Öffnen') }
-    else if (o.bridgeLaden && namen.includes('Herunterladen')) { ort = 'server'; zuSchritt('Herunterladen') }
+    else if (o.bridgeLaden && namen.includes('Herunterladen')) { ort = 'server'; zuSchritt('Herunterladen'); bridgeSofort = true }
     else if (steht() && katalog?.anzahl) zuSchritt('Fertig')
     else if (stand?.verbunden) zuSchritt('Preise')
     else if (stand?.eingerichtet && namen.includes('Öffnen')) { ort = 'server'; zuSchritt('Herunterladen') }
@@ -514,6 +532,7 @@ export function einrichtungOeffnen(o: { admin: boolean; einstellungen: Einstellu
     else if (einst.pvs) zuSchritt('Fertig')
     bekannt = true
     zeichnen()
+    if (bridgeSofort && !stand?.verbunden && !paketGeladen) void laden(false)()
   })
   zeichnen()
 }

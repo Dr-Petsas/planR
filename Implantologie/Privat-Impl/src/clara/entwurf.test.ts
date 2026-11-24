@@ -29,6 +29,31 @@ describe('Implantologie per Sprache', () => {
     expect(implVersorgungSatz(r.zusammenfassung)).toBe('Implantat an 26; dazu externer Sinuslift, Knochenaufbau und navigiert mit Bohrschablone')
   })
 
+  it('externer Sinuslift allein, ohne Implantat', () => {
+    expect(implEntwurf('externer Sinuslift')).toMatchObject({
+      status: 'rueckfrage', grund: 'seite',
+      frage: 'Ein externer Sinuslift geht je Kieferhälfte. Rechts oder links im Oberkiefer?',
+    })
+    for (const satz of [
+      'Sinuslift extern an 16, xenogenes Knochenersatzmaterial',
+      'Sinuslift extern an 16, xenogenes Knochenersatzmaterial, kein Implantat',
+    ]) {
+    const r = ok(implEntwurf(satz))
+    expect(r.plan.zaehne).toEqual({})
+    expect(r.plan.regionen['OK-R']).toMatchObject({ sinusExtern: true, material: 'xenogen' })
+    expect(goz(r)).toContain('9120@OK-R')
+    expect(goz(r).join(' ')).not.toMatch(/9010|9000|9110/)
+    expect(implVersorgungSatz(r.zusammenfassung)).not.toMatch(/Implantat/)
+    }
+  })
+
+  it('interner Sinuslift ohne Zahn fragt nach dem Implantat', () => {
+    expect(implEntwurf('interner Sinuslift')).toMatchObject({
+      status: 'rueckfrage', grund: 'zaehne',
+      frage: 'Ein interner Sinuslift geht nur zusammen mit einem Implantat. An welchen Zähnen soll ich das Implantat planen?',
+    })
+  })
+
   it('Sinuslift ohne Art: Rückfrage; danach Material, dann interner Lift', () => {
     const f = implEntwurf('Implantat 16 mit Sinuslift')
     expect(f).toMatchObject({ status: 'rueckfrage', grund: 'sinus', frage: 'Interner oder externer Sinuslift?' })

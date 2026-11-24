@@ -24,7 +24,7 @@ const b64json = (teil: string) => JSON.parse(Buffer.from(teil, 'base64url').toSt
 const GESPERRT = new Set(['patient'])
 
 /** Prüft ein Firebase-ID-Token (RS256, Aussteller/Empfänger docgenda, Laufzeit). Ergebnis: Konto oder null. */
-export async function tokenPruefen(token: string, schluessel: () => Promise<Jwk[]>, jetzt = Date.now(), projekt = FIREBASE.projekt): Promise<Konto | null> {
+export async function tokenPruefen(token: string, schluessel: () => Promise<Jwk[]>, jetzt = Date.now(), projekt = FIREBASE.projekt, ohnePraxis = false): Promise<Konto | null> {
   const teile = token.split('.')
   if (teile.length !== 3) return null
   let kopf: Record<string, unknown>, inhalt: Record<string, unknown>
@@ -49,7 +49,8 @@ export async function tokenPruefen(token: string, schluessel: () => Promise<Jwk[
   if (typeof inhalt.sub !== 'string' || !inhalt.sub) return null
   const role = String(inhalt.role ?? '').toLowerCase()
   const clientId = String(inhalt.clientId ?? '').trim()
-  if (GESPERRT.has(role) || !/^[A-Za-z0-9_-]{1,64}$/.test(clientId)) return null
+  if (GESPERRT.has(role)) return null
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(clientId) && !(ohnePraxis && role === 'superuser')) return null
   return {
     uid: inhalt.sub,
     email: String(inhalt.email ?? '').trim().toLowerCase(),

@@ -41,13 +41,44 @@ export async function ichLaden(): Promise<Ich | null> {
 }
 
 /** Pickadoc-Oberflächen, die PlanR mit ihrer Anmeldung öffnen dürfen */
-const PICKADOC = ['https://cal.pickadoc.de', 'https://docgenda.web.app', 'https://docgenda.firebaseapp.com', 'http://localhost:3000']
+const PICKADOC = ['https://cal.pickadoc.de', 'https://docgenda.web.app', 'https://docgenda.firebaseapp.com', 'https://dens-one.pickadoc-tunnel.com', 'http://localhost:3000']
 
 /**
  * Aus Pickadoc (Sophie) geöffnet (`#pickadoc`), als eigener Tab oder eingebettet unter der Pickadoc-Leiste:
  * PlanR meldet sich beim öffnenden bzw. umgebenden Fenster und bekommt dessen Firebase-Sitzung per
  * postMessage – nie über die Adresse, damit nichts im Verlauf landet.
  */
+const RAHMEN_MERK = 'planr.rahmen'
+/** Gleicher Name und gleiche Frist wie die Sitzung auf dem Server (anmeldung.ts). */
+const RAHMEN_COOKIE = 'planr_sitzung'
+const RAHMEN_TAGE = 30
+
+/** Der Rahmen behält kein Cookie. Jede Anfrage an die eigene API trägt die Sitzung im Kopf. */
+function rahmenKopf() {
+  if (window.parent === window) return
+  const original = window.fetch.bind(window)
+  window.fetch = async (eingabe, init) => {
+    let token = ''
+    try { token = sessionStorage.getItem(RAHMEN_MERK) || '' } catch { token = '' }
+    if (!token) return original(eingabe, init)
+    const url = typeof eingabe === 'string' ? eingabe : eingabe instanceof URL ? eingabe.href : eingabe.url
+    if (!url.includes('/api/')) return original(eingabe, init)
+    const headers = new Headers(init?.headers ?? (eingabe instanceof Request ? eingabe.headers : undefined))
+    if (!headers.has('X-PlanR-Sitzung')) headers.set('X-PlanR-Sitzung', token)
+    if (eingabe instanceof Request) return original(new Request(eingabe, { ...init, headers }))
+    return original(eingabe, { ...init, headers })
+  }
+}
+
+function rahmenMerken(token: string) {
+  try { sessionStorage.setItem(RAHMEN_MERK, token) } catch { /* privater Modus: die Sitzung gilt für diesen Seitenaufbau */ }
+  if (location.protocol !== 'https:') return
+  // Dieselbe Sitzung als Cookie, damit die Planer sie mitschicken, ohne den Kopf zu kennen.
+  document.cookie = `${RAHMEN_COOKIE}=${token}; Path=/; Max-Age=${RAHMEN_TAGE * 86400}; Secure; SameSite=None; Partitioned`
+}
+
+rahmenKopf()
+
 export function ausPickadoc(): Promise<boolean> {
   if (location.hash !== '#pickadoc') return Promise.resolve(false)
   history.replaceState(null, '', location.pathname + location.search)
@@ -62,6 +93,8 @@ export function ausPickadoc(): Promise<boolean> {
       const r = await fetch('/api/anmeldung', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uebergabe: d.refreshToken }),
       }).catch(() => null)
+      const daten = r?.ok ? await r.json().catch(() => null) as { rahmenSitzung?: unknown } | null : null
+      if (typeof daten?.rahmenSitzung === 'string') rahmenMerken(daten.rahmenSitzung)
       ende(!!r?.ok)
     }
     window.addEventListener('message', empfang)

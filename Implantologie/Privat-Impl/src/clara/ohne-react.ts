@@ -3,3 +3,4 @@ export const useSyncExternalStore = <T>(_abo: unknown, lesen: () => T): T => les
 export const useState = <T>(wert: T) => [wert, () => {}] as [T, (n: T) => void]
 export const useEffect = (_fn: unknown, _deps?: unknown) => {}
 export const useCallback = <T>(fn: T, _deps?: unknown) => fn
+export const useRef = <T>(wert: T) => ({ current: wert })

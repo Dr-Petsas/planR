@@ -389,6 +389,18 @@ export function alleRegelOrte(): Record<string, { a: Abschnitt; rang: number }> 
 
 export const zuschlaege = KEIN_SCHRITT
 
+/** Positionen aus dem gespeicherten HKP (planJson). Die Übersicht hat dafür keinen Eintrag in inhalte.json. */
+export function positionenAusHkp(planJson: unknown): SchrittPosition[] {
+  let plan = planJson
+  if (typeof planJson === 'string') {
+    if (!planJson.trim()) return []
+    try { plan = JSON.parse(planJson) } catch { return [] }
+  }
+  if (!plan || typeof plan !== 'object') return []
+  const liste = (plan as { positionen?: unknown }).positionen
+  return Array.isArray(liste) ? liste.filter((p) => p && typeof p === 'object') as SchrittPosition[] : []
+}
+
 /** Positionen aus der gespeicherten Fassung eines Plans (ein oder zwei Pläne fürs Praxisprogramm). */
 export function positionenAusFassung(pvs: unknown): SchrittPosition[] {
   if (!Array.isArray(pvs)) return []

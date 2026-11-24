@@ -2,9 +2,11 @@ import type { Plan, Region, RegionOptionen } from '../types'
 import { REGION_NAME } from '../types'
 
 interface Props {
-  /** nur die Regionen, in denen etwas geplant ist */
+  /** Regionen, in denen etwas geplant ist, plus die Oberkiefer-Seitenzahnbereiche für den Sinuslift */
   regionen: Region[]
   wert: Partial<Record<Region, RegionOptionen>>
+  /** Interner Sinuslift nur, wo in der Region ein Implantat geplant ist */
+  implantat?: Partial<Record<Region, boolean>>
   onChange: (regionen: Plan['regionen']) => void
 }
 
@@ -21,7 +23,7 @@ const WEICH_WAHL: [NonNullable<RegionOptionen['weichgewebe']>, string][] = [
   ['btt', 'Bindegewebetransplantat'], ['vestibulumplastik', 'Vestibulumplastik'], ['tuberplastik', 'Tuberplastik'],
 ]
 
-export function RegionenBoxen({ regionen, wert, onChange }: Props) {
+export function RegionenBoxen({ regionen, wert, implantat, onChange }: Props) {
   if (!regionen.length) return null
   const setzen = (r: Region, aend: Partial<RegionOptionen>) =>
     onChange({ ...wert, [r]: { ...wert[r], ...aend } })
@@ -35,7 +37,7 @@ export function RegionenBoxen({ regionen, wert, onChange }: Props) {
             <legend>{REGION_NAME[r]}</legend>
             <div className="region-grid">
               <label className="chk"><input type="checkbox" checked={!!o.augmentation} onChange={(e) => setzen(r, { augmentation: e.target.checked })} /> Augmentation (GBR)</label>
-              <label className="chk"><input type="checkbox" checked={!!o.sinusIntern} onChange={(e) => setzen(r, e.target.checked ? { sinusIntern: true, sinusExtern: false, augmentation: o.boneSplitting ? o.augmentation : true, material: o.material || 'xenogen' } : { sinusIntern: false })} /> Sinuslift intern</label>
+              <label className="chk" title={implantat?.[r] || o.sinusIntern ? undefined : 'Interner Sinuslift nur zusammen mit einem Implantat in dieser Region'}><input type="checkbox" checked={!!o.sinusIntern} disabled={!implantat?.[r] && !o.sinusIntern} onChange={(e) => setzen(r, e.target.checked ? { sinusIntern: true, sinusExtern: false, augmentation: o.boneSplitting ? o.augmentation : true, material: o.material || 'xenogen' } : { sinusIntern: false })} /> Sinuslift intern</label>
               <label className="chk"><input type="checkbox" checked={!!o.sinusExtern} onChange={(e) => setzen(r, e.target.checked ? { sinusExtern: true, sinusIntern: false, augmentation: o.boneSplitting ? o.augmentation : true, material: o.material || 'xenogen', membran: o.membran && o.membran !== 'keine' ? o.membran : 'resorbierbar' } : { sinusExtern: false })} /> Sinuslift extern</label>
               <label className="chk"><input type="checkbox" checked={!!o.blockEntnahme} onChange={(e) => setzen(r, { blockEntnahme: e.target.checked })} /> Blockentnahme</label>
               <label className="chk"><input type="checkbox" checked={!!o.ringEntnahme} onChange={(e) => setzen(r, { ringEntnahme: e.target.checked })} /> Ringentnahme</label>

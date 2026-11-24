@@ -22,6 +22,12 @@ public static class DbfTabelle
     static readonly object CacheLock = new();
     static (string Path, string Enc, long Size, long Mtime)? _patCacheKey;
     static List<Dictionary<string, object?>> _patCacheRows = [];
+    static string[] _suchtext = [];
+    // Erste Zeile der Nummer, oder -1 wenn die Nummer mehrfach vorkommt.
+    static Dictionary<string, int> _nachNummer = new(StringComparer.Ordinal);
+
+    static readonly object TableCacheLock = new();
+    static readonly Dictionary<string, (long Size, long Mtime, Dictionary<string, DbfField> Fields, List<byte[]> Rows, int Width)> _tabellen = new(StringComparer.OrdinalIgnoreCase);
 
     public static byte[] ReadBytesShared(string path)
     {
@@ -40,6 +46,29 @@ public static class DbfTabelle
 
     public static string Revision(byte[] record) =>
         Convert.ToHexString(SHA256.HashData(record)).ToLowerInvariant();
+
+    /// <summary>
+    /// Dieselbe Tabelle wie <see cref="Table"/>, aber nur einmal je Dateistand.
+    /// Befund und Suche lesen sie bei jedem Anruf; die Datei selbst ändert sich selten.
+    /// Schreiber lesen weiter frisch über <see cref="Table"/>.
+    /// </summary>
+    public static (Dictionary<string, DbfField> Fields, List<byte[]> Rows, int Width) TableGecacht(string path)
+    {
+        var fi = new FileInfo(path);
+        if (!fi.Exists) throw new FileNotFoundException("DBF-Datei fehlt.", path);
+        var sig = (fi.Length, fi.LastWriteTimeUtc.Ticks);
+        lock (TableCacheLock)
+        {
+            if (_tabellen.TryGetValue(path, out var alt) && alt.Size == sig.Item1 && alt.Mtime == sig.Item2)
+                return (alt.Fields, alt.Rows, alt.Width);
+        }
+        var fresh = Table(path);
+        lock (TableCacheLock)
+        {
+            _tabellen[path] = (sig.Item1, sig.Item2, fresh.Fields, fresh.Rows, fresh.Width);
+        }
+        return fresh;
+    }
 
     public static (Dictionary<string, DbfField> Fields, List<byte[]> Rows, int Width) Table(string path)
     {
@@ -162,15 +191,123 @@ public static class DbfTabelle
             if (_patCacheKey != key)
             {
                 _patCacheRows = LiesPatienten(path, encoding);
+                IndexBauen();
                 _patCacheKey = key;
             }
             return _patCacheRows.Select(r => new Dictionary<string, object?>(r, StringComparer.Ordinal)).ToList();
         }
     }
 
+    /// <summary>Lädt die Patientenliste, ohne auf eine Suche zu warten. Wirft nie.</summary>
+    public static void Warm(string path, string encoding)
+    {
+        try { ReadPatients(path, encoding); } catch { /* die nächste Suche lädt selbst */ }
+    }
+
+    /// <summary>
+    /// Namenssuche über die gemerkte Liste. Kopiert nur die Trefferseite, nicht jede Akte.
+    /// </summary>
+    public static (List<Dictionary<string, object?>> Page, int Total) Suchen(
+        string path, string encoding, string query, int limit, int offset, Func<int, bool>? praxisErlaubt)
+    {
+        lock (CacheLock)
+        {
+            Lesen(path, encoding);
+            var terms = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            var page = new List<Dictionary<string, object?>>();
+            var total = 0;
+            for (var i = 0; i < _patCacheRows.Count; i++)
+            {
+                var row = _patCacheRows[i];
+                var praxis = row.TryGetValue("praxis", out var pv) && pv is not null
+                    ? Convert.ToInt32(pv, CultureInfo.InvariantCulture) : 1;
+                if (praxisErlaubt is not null && !praxisErlaubt(praxis)) continue;
+                var text = _suchtext[i];
+                var passt = true;
+                foreach (var t in terms)
+                {
+                    if (text.Contains(t, StringComparison.Ordinal)) continue;
+                    passt = false;
+                    break;
+                }
+                if (!passt) continue;
+                if (total >= offset && page.Count < limit)
+                    page.Add(new Dictionary<string, object?>(row, StringComparer.Ordinal));
+                total++;
+            }
+            return (page, total);
+        }
+    }
+
+    /// <summary>Eine Akte nach Nummer, ohne die ganze Liste zu kopieren.</summary>
+    public static (Dictionary<string, object?>? Zeile, bool Mehrdeutig) NachNummer(string path, string encoding, string number)
+    {
+        lock (CacheLock)
+        {
+            Lesen(path, encoding);
+            if (!_nachNummer.TryGetValue(number, out var i)) return (null, false);
+            if (i < 0) return (null, true);
+            return (new Dictionary<string, object?>(_patCacheRows[i], StringComparer.Ordinal), false);
+        }
+    }
+
+    static void Lesen(string path, string encoding)
+    {
+        var fi = new FileInfo(path);
+        if (!fi.Exists) throw new FileNotFoundException("Patiententabelle fehlt.", path);
+        var key = (path, encoding, fi.Length, fi.LastWriteTimeUtc.Ticks);
+        if (_patCacheKey == key) return;
+        _patCacheRows = LiesPatienten(path, encoding);
+        IndexBauen();
+        _patCacheKey = key;
+    }
+
+    static void IndexBauen()
+    {
+        _suchtext = new string[_patCacheRows.Count];
+        _nachNummer = new Dictionary<string, int>(_patCacheRows.Count, StringComparer.Ordinal);
+        for (var i = 0; i < _patCacheRows.Count; i++)
+        {
+            var row = _patCacheRows[i];
+            var nr = Convert.ToString(row.GetValueOrDefault("patientNumber")) ?? "";
+            if (nr.Length > 0)
+            {
+                if (_nachNummer.ContainsKey(nr)) _nachNummer[nr] = -1;
+                else _nachNummer[nr] = i;
+            }
+            var geburt = Convert.ToString(row.GetValueOrDefault("birthDate")) ?? "";
+            var deutsch = geburt.Length == 10 && geburt[4] == '-' && geburt[7] == '-' && ZiffernDatum(geburt)
+                ? geburt.Substring(8, 2) + "." + geburt.Substring(5, 2) + "." + geburt.Substring(0, 4)
+                : "";
+            _suchtext[i] = string.Join(' ',
+                nr,
+                Convert.ToString(row.GetValueOrDefault("patientId")) ?? "",
+                Convert.ToString(row.GetValueOrDefault("lastName")) ?? "",
+                Convert.ToString(row.GetValueOrDefault("firstName")) ?? "",
+                geburt, deutsch).ToLowerInvariant();
+        }
+    }
+
+    static bool ZiffernDatum(string s)
+    {
+        for (var i = 0; i < s.Length; i++)
+        {
+            if (i is 4 or 7) { if (s[i] != '-') return false; }
+            else if (s[i] < '0' || s[i] > '9') return false;
+        }
+        return true;
+    }
+
     public static void CacheLeeren()
     {
-        lock (CacheLock) { _patCacheKey = null; _patCacheRows = []; }
+        lock (CacheLock)
+        {
+            _patCacheKey = null;
+            _patCacheRows = [];
+            _suchtext = [];
+            _nachNummer = new Dictionary<string, int>(StringComparer.Ordinal);
+        }
+        lock (TableCacheLock) { _tabellen.Clear(); }
     }
 
     static List<Dictionary<string, object?>> LiesPatienten(string path, string encoding)

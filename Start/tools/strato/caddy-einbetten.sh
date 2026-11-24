@@ -1,9 +1,9 @@
 #!/bin/bash
-# Erlaubt das Einbetten von PlanR in Pickadoc (Sophie) und in die Clara-App (Flip-Seite Befund):
+# Erlaubt das Einbetten von PlanR in Pickadoc (Sophie), die Clara-App und DENS ONE:
 # frame-ancestors im planr.pickadoc.de-Block. Mehrfach aufrufbar; ersetzt eine ältere Liste.
 set -eu
 F=/etc/caddy/Caddyfile
-QUELLEN="'self' https://cal.pickadoc.de https://docgenda.web.app https://docgenda.firebaseapp.com https://mas.pickadoc-tunnel.com http://localhost:3000"
+QUELLEN="'self' https://cal.pickadoc.de https://docgenda.web.app https://docgenda.firebaseapp.com https://mas.pickadoc-tunnel.com https://dens-one.pickadoc-tunnel.com http://localhost:3000"
 if grep -qF "frame-ancestors $QUELLEN\"" "$F"; then
   echo "schon drin"
   exit 0

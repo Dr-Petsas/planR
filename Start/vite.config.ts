@@ -5,7 +5,12 @@ import { homepageHtml } from './src/homepageHtml.ts'
 // Die Planer holen Punktwerte und Preislisten unter /daten/ – von anderen Ports und Tunnel-Hosts.
 // PUT /api/plaene nimmt die Köpfe gespeicherter Pläne entgegen.
 const cors = {
-  origin: [/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^https:\/\/[a-z0-9-]+\.pickadoc-tunnel\.com$/],
+  origin: [
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+    /^https:\/\/[a-z0-9-]+\.pickadoc-tunnel\.com$/,
+    /^https:\/\/docgenda\.(web\.app|firebaseapp\.com)$/,
+    /^https:\/\/([a-z0-9-]+\.)?pickadoc\.de$/,
+  ],
   methods: ['GET', 'PUT', 'OPTIONS'],
 }
 

@@ -5,6 +5,7 @@
 import type { Buchung } from './buchung.ts'
 import type { Konto, Zugaenge } from './anmeldung.ts'
 import { mandantVon } from './anmeldung.ts'
+import { MANDANT_RE, pvsVon } from './src/einstellungen.ts'
 import { BETREIBER } from './probeEingang.ts'
 import { gaesteVon, verbundVon } from './verbund.ts'
 
@@ -58,6 +59,40 @@ export function sudoKonto(buchungen: Buchung[], z: Zugaenge, adresse: string): K
   }
 }
 
+/**
+ * Die Buchung kannte die Praxis nicht (Anlage antwortete mit Fehler, das Konto entstand aber doch).
+ * Schreibt nur die Kennung an die PlanR-Buchung. Das Pickadoc-Konto bleibt, wie es ist.
+ */
+export function kontoMerken(buchungen: Buchung[], adresse: string, fund: { clientId: string; uid?: string }): Buchung[] | null {
+  const email = klein(adresse)
+  const clientId = fund.clientId.trim()
+  if (!email.includes('@') || !clientId) return null
+  let getroffen = false
+  const neu = buchungen.map((b) => {
+    if (!gehoertZu(b, email) || b.konto?.clientId) return b
+    getroffen = true
+    const status = b.konto?.status === 'vorhanden' ? 'vorhanden' as const : 'angelegt' as const
+    return { ...b, konto: { status, clientId, ...(fund.uid ? { uid: fund.uid } : {}) } }
+  })
+  return getroffen ? neu : null
+}
+
+/**
+ * Praxisprogramm aus der Buchung, wenn die Praxis es bei der Anmeldung schon genannt hat
+ * und PlanR es noch nicht gespeichert hat. Eine schon gespeicherte Wahl bleibt.
+ */
+export function pvsVormerken(buchungen: Buchung[], z: Zugaenge, adresse: string, bisherPvs: string): { mandant: string; pvs: string } | null {
+  if (bisherPvs) return null
+  const email = klein(adresse)
+  const b = buchungen.find((x) => gehoertZu(x, email) && x.konto?.clientId && pvsVon(x.pvs?.id ?? ''))
+  const clientId = b?.konto?.clientId
+  const pvs = b?.pvs?.id
+  if (!b || !clientId || !pvs) return null
+  const mandant = mandantVon(z, { clientId })
+  if (!MANDANT_RE.test(mandant)) return null
+  return { mandant, pvs }
+}
+
 // ---------- Sperre ----------
 
 export interface Sperre { email: string; clientIds: string[]; am: string; von: string }
@@ -88,6 +123,30 @@ export function sperreSetzen(liste: Sperre[], u: KontoUmfang, von: string, jetzt
 
 export function sperreLoesen(liste: Sperre[], u: KontoUmfang): Sperre[] {
   return liste.filter((s) => s.email !== u.email && !s.clientIds.some((c) => u.clientIds.includes(c)))
+}
+
+/**
+ * PlanR-Konten, die der Superuser gelöscht hat. Dieselbe Adresse kommt mit dem
+ * bestehenden Pickadoc-Passwort nicht wieder hinein, bis eine neue PlanR-Buchung
+ * die Adresse freigibt. Das Pickadoc-Konto bleibt.
+ */
+export type Geloescht = Sperre
+
+export const geloeschtPruefen = sperrenPruefen
+export const istPlanrGeloescht = istGesperrt
+
+export function geloeschtMerken(liste: Geloescht[], u: { email: string; clientIds: string[] }, von: string, jetzt = new Date().toISOString()): Geloescht[] {
+  const email = klein(u.email)
+  if (!email.includes('@')) return liste
+  const clientIds = [...new Set(u.clientIds.filter((c) => !!c))]
+  return [...geloeschtFreigeben(liste, { email, clientIds }), { email, clientIds, am: jetzt, von }]
+}
+
+/** Neue PlanR-Buchung: die Adresse und ihre Praxis dürfen sich wieder anmelden. */
+export function geloeschtFreigeben(liste: Geloescht[], u: { email?: string; clientIds?: string[] }): Geloescht[] {
+  const email = klein(u.email)
+  const ids = new Set(u.clientIds ?? [])
+  return liste.filter((s) => s.email !== email && !s.clientIds.some((c) => ids.has(c)))
 }
 
 /** Für die Liste des Superusers: lässt sich das Konto der Buchung öffnen, ist es gesperrt? */

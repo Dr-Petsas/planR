@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Buchung } from './buchung'
-import { kundenBauen, type ProbeKurz } from './kundenBackend'
+import { probeBuchung } from './buchung'
+import { kundenBauen, masKonten, probeLoeschen, type ProbeKurz } from './kundenBackend'
 
 const buchung = {
   id: 'b1',
@@ -57,5 +58,27 @@ describe('kundenBauen', () => {
     expect(pantas.login).toEqual({ email: 'pantas@pickadoc.de', vorhanden: false })
     expect(pantas.plaene).toHaveLength(1)
     expect(pantas.stammdaten.find((z) => z.label === 'Praxis')?.wert).toContain('Pantas')
+  })
+
+  it('löscht einen Probe-Upload und eine Probe-Buchung, ein Kundenkonto nicht', () => {
+    const pantas = kundenBauen([], [fremd], []).find((k) => k.name === 'DR. PANTAS')!
+    expect(probeLoeschen([], [fremd], pantas.id)).toEqual({ email: 'pantas@pickadoc.de', buchungIds: [], planIds: ['p2'] })
+    const probe = probeBuchung('anna@praxis-berg.de', { titel: '', vorname: 'Anna', nachname: 'Berg', praxis: 'Praxis Berg' }, { telefon: '', anschrift: '' })!
+    const upload: ProbeKurz = { ...plan, login: probe.inhaber.email, kontakt: { ...plan.kontakt, email: '' } }
+    expect(probeLoeschen([probe], [upload], probe.id)?.buchungIds).toEqual([probe.id])
+    expect(probeLoeschen([probe], [upload], probe.id)?.planIds).toEqual(['p1'])
+    expect(probeLoeschen([buchung], [plan], buchung.id)).toBeNull()
+    expect(probeLoeschen([probe], [upload], 'fehlt')).toBeNull()
+  })
+
+  it('zeigt Pickadoc-Anmeldungen ohne Buchung und lässt gebuchte Adressen bei den Kunden', () => {
+    const zeilen = masKonten([buchung], [
+      { email: 'anton@berg.de', name: 'Anton Berg', clientId: 'c1', role: 'admin', zuletzt: '2026-11-23T10:00:00.000Z' },
+      { email: 'dr.petsas@pickadoc.de', name: 'Dr. Petsas', clientId: 'MEe4', role: 'doctor', zuletzt: '2026-11-23T10:35:00.000Z' },
+      { email: 'superuser@pickadoc.de', name: 'Superuser', clientId: 'x', role: 'superuser', zuletzt: '2026-11-23T10:00:00.000Z' },
+    ])
+    expect(zeilen.map((k) => k.login?.email)).toEqual(['dr.petsas@pickadoc.de'])
+    expect(zeilen[0]).toMatchObject({ art: 'mas', name: 'Dr. Petsas', clientId: 'MEe4', konto: { email: 'dr.petsas@pickadoc.de', zugang: true, gesperrt: false } })
+    expect(zeilen[0].stammdaten.find((z) => z.label === 'Rolle')?.wert).toBe('Arzt')
   })
 })
