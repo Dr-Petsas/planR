@@ -66,7 +66,9 @@ export async function kiProbe<P>(o: {
 }): Promise<ProbeErgebnis<P>> {
   const lesen = (plan: P): PlanBlick => {
     const b = o.blick(plan)
-    return { ...b, hinweise: b.hinweise.length ? b.hinweise : planPruefen(b.positionen, { begruendung: o.begruendung ?? true }) }
+    // Wie live: Prüfmodul-Meldungen mit Art/ids; fehlt das Widget, prüft die Probe selbst.
+    const pruef = planPruefen(b.positionen, { begruendung: o.begruendung ?? true })
+    return { ...b, hinweise: b.hinweise.some((h) => h.art && h.ids?.length) ? b.hinweise : (pruef.length ? pruef : b.hinweise) }
   }
   let plan = o.plan
   let blick = lesen(plan)

@@ -108,6 +108,17 @@ export const pruefMerken = (m: Meldung[], nochLaeuft = false) => { gemerkt = m; 
 export const pruefGemerkt = () => gemerkt
 export const pruefLaeuft = () => laeuft
 
+/**
+ * Hinweise für den KI-Blick: das Prüfmodul ist die Quelle (Art + ids zum Korrigieren).
+ * Unvollständige Planer-Hinweise (nur Text, ohne art/ids) dürfen es nicht verdrängen —
+ * sonst verwirft der Korrekturlauf jeden Schritt als „ohne Meldung“.
+ */
+export function hinweiseMitPruef(eigene: Meldung[]): Meldung[] {
+  const pruef = pruefGemerkt()
+  if (pruef.length) return pruef
+  return eigene
+}
+
 const zahl = (x: number) => x.toLocaleString('de-DE', { maximumFractionDigits: 2 })
 export const kiName = (p: { ebene: string; nr: string; zahn?: string }) =>
   `${p.ebene === 'GOAE' ? 'GOÄ' : p.ebene} ${p.nr}${p.zahn ? ` (${p.zahn})` : ''}`
@@ -267,7 +278,7 @@ export function kiDienst<P>(o: {
       const { plan, gesperrt } = o.lesen()
       const b = o.blick(plan, gesperrt)
       const kann = b.kann.includes('zurueck') || !b.kann.length ? b.kann : [...b.kann, 'zurueck' as const]
-      return { ...b, kann, hinweise: b.hinweise.length ? b.hinweise : pruefGemerkt() }
+      return { ...b, kann, hinweise: hinweiseMitPruef(b.hinweise) }
     },
     aendern: (schritte) => {
       const { plan, gesperrt } = o.lesen()
@@ -423,7 +434,7 @@ export function listenZeilen(zeilen: ListenZeile[], o: { ebene?: (z: ListenZeile
   })
 }
 
-export interface ListenPos { id: string; ebene?: string; nr: string; anzahl: number; faktor?: number; preis?: number; text?: string }
+export interface ListenPos { id: string; ebene?: string; nr: string; anzahl: number; faktor?: number; preis?: number; text?: string; begruendung?: string }
 
 /** Schritte auf eine Positionsliste anwenden (Pläne ohne Zahnbezug der einzelnen Zeile). */
 export function listeAnwenden<T extends ListenPos>(
@@ -464,13 +475,13 @@ export function listeAnwenden<T extends ListenPos>(
       const aend = {
         ...(s.anzahl !== undefined ? { anzahl: s.anzahl } : {}), ...(s.faktor !== undefined ? { faktor: s.faktor } : {}),
         ...(s.preis !== undefined ? { preis: s.preis } : {}),
+        ...(s.begruendung !== undefined ? { begruendung: s.begruendung } : {}),
       }
-      if (s.begruendung !== undefined) nicht.push(`${kiName(z)}: die Begründung führt dieser Planer im Dokument; dort steht ein Vorschlag, den Sie anpassen können.`)
       if (!Object.keys(aend).length) continue
       l = l.map((x) => (x.id === s.id ? { ...x, ...aend } : x))
       const was = [
         s.anzahl !== undefined ? `Anzahl ${s.anzahl}` : '', s.faktor !== undefined ? `Faktor ${zahl(s.faktor)}` : '',
-        s.preis !== undefined ? `Preis ${zahl(s.preis)} €` : '',
+        s.preis !== undefined ? `Preis ${zahl(s.preis)} €` : '', s.begruendung !== undefined ? 'Begründung eingetragen' : '',
       ].filter(Boolean).join(', ')
       getan.push(`${kiName(z)}: ${was}`)
     }
@@ -567,7 +578,7 @@ export function listenDienst<P extends { nummer: string }, T extends ListenPos>(
 /** Nur lesen: der Planer zeigt der KI-Zeile den Plan, Änderungen laufen über die Seite. */
 export function leseDienst(blick: () => PlanBlick, gesamt: () => number): PlanKiDienst {
   return {
-    lesen: () => { const b = blick(); return { ...b, kann: [], hinweise: b.hinweise.length ? b.hinweise : pruefGemerkt() } },
+    lesen: () => { const b = blick(); return { ...b, kann: [], hinweise: hinweiseMitPruef(b.hinweise) } },
     aendern: () => ({ getan: [], nicht: ['In diesem Planer ändere ich noch nichts selbst. Ich sage Ihnen, wo Sie es einstellen.'], gesamt: gesamt() }),
   }
 }

@@ -3,7 +3,7 @@
  * Der zuletzt angemeldete Dienst gewinnt; ohne Anmeldung gilt die Regel-Antwort ohne Schreiben.
  */
 import { arbeitVerstehen, type ArbeitErgebnis, type ArbeitStand } from './arbeitDialog'
-import { pruefGemerkt, pruefLaeuft, type KiSchritt, type PlanKiDienst } from './planKi'
+import { hinweiseMitPruef, pruefLaeuft, type KiSchritt, type PlanKiDienst } from './planKi'
 
 export const ARBEIT = 'planr-arbeit'
 
@@ -87,7 +87,9 @@ export function planrLeiste(punkte: PlanPunkt[], aktiv: string, wahl: (id: strin
 }
 
 function empfangen(ev: MessageEvent) {
-  if (ev.source !== window.parent) return
+  // PlanR-Rahmen: Quelle ist das Elternfenster. Einzelner Planer: die KI-Zeile spricht mit sich selbst.
+  const von = ev.source as Window | null
+  if (von !== window.parent && von !== window) return
   const d = ev.data as { type?: string; id?: string; aktion?: string; text?: string; vorschlag?: string; schritte?: unknown } | null
   if (!d) return
   if (d.type === 'planr-reiter' && leiste && typeof d.id === 'string') {
@@ -103,13 +105,14 @@ function empfangen(ev: MessageEvent) {
     return
   }
   if (d.type !== ARBEIT || typeof d.id !== 'string') return
+  const ziel = von || window.parent
   if (d.aktion === 'lesen' || d.aktion === 'aendern') {
-    const zurueck = (mehr: Record<string, unknown>) => window.parent.postMessage({ type: ARBEIT, id: d.id, text: '', vorschlag: '', ...mehr }, ev.origin || '*')
+    const zurueck = (mehr: Record<string, unknown>) => ziel.postMessage({ type: ARBEIT, id: d.id, text: '', vorschlag: '', ...mehr }, ev.origin || '*')
     if (!ki) return zurueck({ art: 'fremd' })
     try {
       if (d.aktion === 'lesen') {
         const blick = ki.lesen()
-        return zurueck({ art: 'blick', blick: { ...blick, hinweise: blick.hinweise.length ? blick.hinweise : pruefGemerkt(), pruefLaeuft: pruefLaeuft() } })
+        return zurueck({ art: 'blick', blick: { ...blick, hinweise: hinweiseMitPruef(blick.hinweise), pruefLaeuft: pruefLaeuft() } })
       }
       return zurueck({ art: 'geaendert', ergebnis: ki.aendern(Array.isArray(d.schritte) ? d.schritte as KiSchritt[] : []) })
     } catch {
@@ -123,7 +126,7 @@ function empfangen(ev: MessageEvent) {
       : null
   if (!anfrage) return
   const antwort = (custom ?? standardDienst)(anfrage)
-  window.parent.postMessage({ type: ARBEIT, id: d.id, art: antwort.art, text: antwort.text, vorschlag: antwort.vorschlag ?? '' }, ev.origin || '*')
+  ziel.postMessage({ type: ARBEIT, id: d.id, art: antwort.art, text: antwort.text, vorschlag: antwort.vorschlag ?? '' }, ev.origin || '*')
 }
 
 function sicher() {

@@ -17,6 +17,7 @@ import { positionAendern, rechnen as planRechnen, type PraxisListen } from './cl
 import { aufZielpreis, preisSpanne } from './clara/zielpreis'
 import { euro, neueId } from './format'
 import { kiDienst, kiName, zahnText, zahnWerte, type KiSchalter, type KiSchritt, type KiZahnFeld, type KiZahnWerte, type PlanBlick, type PlanKiDienst } from './planKi'
+import { planPruefen } from './pruefung'
 
 export const ZAHNFELDER: KiZahnFeld[] = [
   { name: 'befund', text: 'Befund (Zeile B, Kleinbuchstaben)', werte: { '': 'leer, kein Befund', ...BEFUND_KUERZEL } },
@@ -129,8 +130,12 @@ function positionSchritt(plan: HkpPlan, s: Einzel, praxis: PraxisListen): { plan
     if (s.faktor < 1 || s.faktor > 3.5) return `${kiName(p)}: der Faktor muss zwischen 1,0 und 3,5 liegen; darüber nur mit Vereinbarung nach § 2 GOZ.`
     aend.faktor = s.faktor; was.push(`Faktor ${String(s.faktor).replace('.', ',')}`)
   }
+  if (s.begruendung !== undefined) {
+    if (p.ebene !== 'GOZ') return `${kiName(p)}: eine Begründung nach § 10 Abs. 3 GOZ gibt es nur bei GOZ-Positionen.`
+    aend.faktorBegruendung = s.begruendung; was.push('Begründung eingetragen')
+  }
   if (s.preis !== undefined) return `${kiName(p)}: der Preis folgt aus der Gebühren- bzw. Preisliste. Einen eigenen Preis trage ich im Kassen-HKP nicht ein.`
-  if (!was.length) return `${kiName(p)}: es fehlt, was sich ändern soll (Anzahl oder GOZ-Faktor).`
+  if (!was.length) return `${kiName(p)}: es fehlt, was sich ändern soll (Anzahl, GOZ-Faktor oder Begründung).`
   return { plan: { ...plan, positionen: plan.positionen.map((x) => (x.id === p.id ? { ...x, ...aend, auto: false } : x)), ausgeschlossen: aus }, text: `${kiName(p)}: ${was.join(', ')}` }
 }
 
@@ -286,15 +291,19 @@ export function hkpKi(lesen: () => { plan: HkpPlan; ergebnis: Ergebnis; listen: 
         return teile.length ? `${nr}: ${teile.join(', ')}` : ''
       }).filter(Boolean)
     const s = e.summen
-    return {
-      planart: 'kassen-hkp', name: 'Heil- und Kostenplan Zahnersatz der gesetzlichen Kasse (BEMA, GOZ, BEL II/BEB, Festzuschüsse)',
-      nummer: '', gesperrt, kann: gesperrt ? [] : ['schalter', 'zahn', 'hinzu', 'setze', 'weg', 'zurueck'], ebenen: EBENEN,
-      positionen: e.positionen.map((p) => ({
+    const positionen = e.positionen.map((p) => {
+      const begruendung = p.faktorBegruendung || p.begruendung
+      return {
         id: p.id, ebene: p.ebene, nr: p.nr, zahn: p.zahn, anzahl: p.anzahl,
         ...(p.faktor !== undefined ? { faktor: p.faktor } : {}),
         einzel: p.einzelpreis, betrag: p.betrag, text: p.bezeichnung,
-        ...(p.auto ? { auto: true } : {}), ...(p.begruendung ? { begruendung: p.begruendung } : {}),
-      })),
+        ...(p.auto ? { auto: true } : {}), ...(begruendung ? { begruendung } : {}),
+      }
+    })
+    return {
+      planart: 'kassen-hkp', name: 'Heil- und Kostenplan Zahnersatz der gesetzlichen Kasse (BEMA, GOZ, BEL II/BEB, Festzuschüsse)',
+      nummer: '', gesperrt, kann: gesperrt ? [] : ['schalter', 'zahn', 'hinzu', 'setze', 'weg', 'zurueck'], ebenen: EBENEN,
+      positionen,
       summen: {
         bemaHonorar: s.bemaHonorar, gozHonorar: s.gozHonorar, materialUndLabor: s.materialUndLabor, gesamt: s.gesamt,
         festzuschuss: s.festzuschuss, kassenanteil: s.kassenanteil, eigenanteil: s.eigenanteil,
@@ -311,7 +320,8 @@ export function hkpKi(lesen: () => { plan: HkpPlan; ergebnis: Ergebnis; listen: 
         ...(plan.reparaturen.length ? { wiederherstellungen: plan.reparaturen.map((r) => `${r.art}: ${r.gebiet || 'ohne Gebiet'}`).join('; ') } : {}),
       },
       schalter: schalter(plan, lesen().praxis), zahnfelder: ZAHNFELDER,
-      hinweise: e.hinweise.map((h) => ({ stufe: h.stufe, text: h.text })),
+      // Mit Art und ids, damit die KI-Zeile Prüfmodul-Fehler korrigieren kann (dieser Planer hat kein Pruefmodul-Widget).
+      hinweise: planPruefen(positionen, { begruendung: true, hinweise: e.hinweise.map((h) => h.text) }),
     }
     },
   })
