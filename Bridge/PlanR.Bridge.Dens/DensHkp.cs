@@ -829,6 +829,10 @@ public static class DensHkp
         return (fallback, LabEstimateCents(fallback, surcharge), surcharge);
     }
 
+    /// <summary>Offsets im Plansatz PROTHETIK_PLAN_RDM (674 Byte), Wert jeweils Prozent mal 100.</summary>
+    public const int PlanBonusProz = 88;      // PROTH_BONUS_PROZ
+    public const int PlanHkpBonusProz = 190;  // PROTH_HKP_BONUS_PROZ
+
     public static Dictionary<string, object?> EncodeHkpBundle(Dictionary<string, object?> imported)
     {
         var versorgung = Convert.ToString(imported.GetValueOrDefault("versorgungsart")) is { Length: > 0 } v ? v : "regel";
@@ -909,7 +913,11 @@ public static class DensHkp
         BitConverter.GetBytes(VersorgungCode[versorgung]).CopyTo(plan, 132);
         BitConverter.GetBytes(GozPunktwertRaw).CopyTo(plan, 236);
         BitConverter.GetBytes(labCents).CopyTo(plan, 84);
-        BitConverter.GetBytes((short)Math.Round(Convert.ToDouble(imported["bonusPercent"]) * 100.0, MidpointRounding.ToEven)).CopyTo(plan, 88);
+        var bonusRaw = (short)Math.Round(Convert.ToDouble(imported["bonusPercent"]) * 100.0, MidpointRounding.ToEven);
+        BitConverter.GetBytes(bonusRaw).CopyTo(plan, PlanBonusProz);
+        // DENS rechnet "Betrag Euro" je Befund und die "Vorläufige Summe" der Ansicht "Befunde für Zuschüsse / Festsetzung"
+        // mit diesem zweiten Prozentfeld; bleibt es 0, stehen dort 0,00, obwohl die Festzuschusszeilen stimmen.
+        BitConverter.GetBytes(bonusRaw).CopyTo(plan, PlanHkpBonusProz);
         if (pointValue != 0)
         {
             var pvRaw = (int)Math.Round(pointValue * 10000.0, MidpointRounding.ToEven);
