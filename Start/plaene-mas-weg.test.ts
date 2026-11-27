@@ -32,11 +32,12 @@ let basis = ''
 const VON_AUSSEN = { 'X-Forwarded-For': '203.0.113.7' }
 
 interface Auftrag { id: string; method: string; pfad: string }
-/** Bridge, wie sie sich bei PlanR meldet: holt Aufträge ab und beantwortet jede Suche mit einer leeren Liste. */
+/** Bridge, wie sie sich bei PlanR meldet: holt Aufträge ab und beantwortet sie; ohne eigene Antwort mit einer leeren Liste. */
 class Bridge {
   auftraege: Auftrag[] = []
   private ende = new AbortController()
   private lauf: Promise<void> = Promise.resolve()
+  antwort: (pfad: string) => { status: number; daten: unknown } = () => ({ status: 200, daten: { items: [] } })
   constructor(private kennung: string, private pvs: string) {}
   private kopf() {
     return { ...VON_AUSSEN, 'X-PlanR-Mandant': this.kennung, Authorization: `Bearer ${SCHLUESSEL[this.kennung]}`, 'Content-Type': 'application/json' }
@@ -50,7 +51,7 @@ class Bridge {
         const d = r.status === 200 ? await r.json() as { auftrag?: Auftrag } : {}
         if (!d.auftrag) continue
         this.auftraege.push(d.auftrag)
-        await fetch(`${basis}/api/pvs-agent/antwort`, { method: 'POST', headers: this.kopf(), body: JSON.stringify({ id: d.auftrag.id, status: 200, daten: { items: [] } }) })
+        await fetch(`${basis}/api/pvs-agent/antwort`, { method: 'POST', headers: this.kopf(), body: JSON.stringify({ id: d.auftrag.id, ...this.antwort(d.auftrag.pfad) }) })
       }
     })()
   }
@@ -78,13 +79,13 @@ async function bisVerbunden(pc: boolean) {
   throw new Error('Bridge hat sich nicht gemeldet')
 }
 
-const leistungen = async () => {
+const leistungen = async (mehr: Record<string, string> = {}) => {
   // Zuletzt wurde am PC mit der eigenen Bridge gearbeitet.
   await browser(true)
-  const r = await fetch(`${basis}/api/intern/pvs/leistungen?${new URLSearchParams({ clientId: CLIENT, vorname: 'Erika', name: 'Beispiel', geburt: '1970-01-01' })}`, {
+  const r = await fetch(`${basis}/api/intern/pvs/leistungen?${new URLSearchParams({ clientId: CLIENT, vorname: 'Erika', name: 'Beispiel', geburt: '1970-01-01', ...mehr })}`, {
     headers: { ...VON_AUSSEN, 'X-PlanR-Key': 'k' },
   })
-  return { status: r.status, d: await r.json() as { ok: boolean; pvs?: string; meldung?: string } }
+  return { status: r.status, d: await r.json() as { ok: boolean; pvs?: string; meldung?: string; leistungen?: Record<string, unknown>[] } }
 }
 
 beforeAll(async () => {
@@ -145,6 +146,31 @@ describe('Abfragen von MAS gehen an das eingestellte Praxisprogramm der Praxis',
     expect([501, 503]).not.toContain(r.status)
     expect(r.d.pvs ?? 'DS-Win').toBe('DS-Win')
     expect(derPraxis.auftraege.map((a) => `${a.method} ${a.pfad.split('?')[0]}`)).toEqual(['GET /patients'])
+    expect(amPc.auftraege).toEqual([])
+  })
+
+  it('Leistungen: mit der Patientennummer aus der Übernahme wird der Patient trotz zweitem Vornamen und einem Tag Versatz gefunden', async () => {
+    const patient = { patientNumber: '7', firstName: 'Erika Maria', lastName: 'Beispiel', birthDate: '1970-01-02' }
+    const zeile = { date: '2026-09-14', kind: 'bema', nr: '13b', text: 'Füllung zweiflächig', zahn: '36', anzahl: 1 }
+    derPraxis.antwort = (pfad) => {
+      const p = pfad.split('?')[0]
+      if (p === '/patients') return { status: 200, daten: { items: [patient] } }
+      if (p === '/patients/7') return { status: 200, daten: patient }
+      if (p === '/patients/7/leistungen') return { status: 200, daten: { entries: [zeile] } }
+      return { status: 404, daten: { error: 'unbekannt' } }
+    }
+    const ab = derPraxis.auftraege.length
+    const ohne = await leistungen()
+    expect(ohne.status).toBe(409)
+    expect(ohne.d.meldung).toContain('anderem Geburtsdatum')
+    const mit = await leistungen({ nummer: '7' })
+    expect(mit.status).toBe(200)
+    expect(mit.d.leistungen).toEqual([zeile])
+    expect((await leistungen({ nummer: '8' })).status).toBe(409)
+    expect((await leistungen({ nummer: '7x' })).status).toBe(400)
+    expect(derPraxis.auftraege.slice(ab).map((a) => `${a.method} ${a.pfad.split('?')[0]}`)).toEqual([
+      'GET /patients', 'GET /patients/7', 'GET /patients/7/leistungen', 'GET /patients/8',
+    ])
     expect(amPc.auftraege).toEqual([])
   })
 })

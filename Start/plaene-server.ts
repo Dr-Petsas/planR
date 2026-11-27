@@ -15,6 +15,7 @@ import { einstellungenPruefen, LEER, MANDANT_RE, pvsFreiKonten, pvsStehtFest, pv
 import {
   PVS_BEFUND, PVS_OFFEN, PVS_CONNECTOR, PVS_PLANER, PVS_SUCHE, bridgeFolgtEinstellung, bridgeKann, bridgeKannGemeldet, bridgePvsGemeldet, bridgeSollPvs, bridgeWaehlen, planInsPvsMoeglich, pvsFuerBridge, befundAuftrag, befundAusPvs, hkpFuerPvs, patientWaehlen, vermerkText, type PlanPatient, type PvsBefund, type PvsTreffer, type PvsVermerk, type PvsWahl,
 } from './src/pvs.ts'
+import { patientFuerLesen } from './src/pvsLesen.ts'
 import {
   AgentHub, Bremse, accessPruefen, accessSchluessel, auftragErlaubt, cookieWert, neuerSchluessel, neuerSetupCode, nurPruefung, paketSchluesselSetzen, schluesselHash, schluesselPasst,
   setupCodeFinden, setupCodeSetzen, Anwesenheit, neueOrtKennung, ortGueltig, type AccessEinstellung, type AgentListe, type AgentStand,
@@ -2919,9 +2920,10 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
 const LEISTUNGEN_PRAXEN = new Set((process.env.PLANR_LEISTUNGEN_PRAXEN ?? 'MEe4ZQHEzOPzLcexyhdT').split(',').map((s) => s.trim()).filter(Boolean))
 
 /**
- * GET /api/intern/pvs/leistungen?clientId=&vorname=&name=&geburt=: abgerechnete Leistungen des Patienten aus der
- * Karteikarte in DS-Win (Datum, Gebührennummer, Text aus dem Leistungsverzeichnis, Zahn, Anzahl) – nur lesen, nur ein
- * eindeutiger Treffer nach Name und Geburtsdatum, nur für freigegebene Praxen.
+ * GET /api/intern/pvs/leistungen?clientId=&vorname=&name=&geburt=[&nummer=]: abgerechnete Leistungen des Patienten aus
+ * der Karteikarte in DS-Win (Datum, Gebührennummer, Text aus dem Leistungsverzeichnis, Zahn, Anzahl) – nur lesen, nur
+ * für freigegebene Praxen, nur bei genau einem Treffer nach der Leseregel (patientFuerLesen). `nummer` ist die
+ * Patientennummer in DS-Win, wenn die Akte in Pickadoc von dort übernommen wurde.
  */
 async function internLeistungen(req: IncomingMessage, w: Wer, q: URLSearchParams, res: ServerResponse) {
   if (req.method !== 'GET') return json(res, 405, { ok: false })
@@ -2931,11 +2933,20 @@ async function internLeistungen(req: IncomingMessage, w: Wer, q: URLSearchParams
   if (c.id !== 'dampsoft') return json(res, 501, { ok: false, pvs: c.name, meldung: `Abgerechnete Leistungen liest PlanR aus ${c.name} noch nicht.` })
   const p: PlanPatient = { vorname: (q.get('vorname') ?? '').trim(), name: (q.get('name') ?? '').trim(), geburtsdatum: (q.get('geburt') ?? '').trim() }
   if (!p.name || !p.geburtsdatum) return json(res, 400, { ok: false, pvs: c.name, meldung: `Ohne Name und Geburtsdatum finde ich den Patienten in ${c.name} nicht sicher.` })
+  const nummer = (q.get('nummer') ?? '').trim().replace(/^0+(?=\d)/, '')
+  if (nummer && !/^\d{1,9}$/.test(nummer)) return json(res, 400, { ok: false, pvs: c.name, meldung: 'Die Patientennummer besteht nur aus Ziffern.' })
   try {
-    const s = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: suchwort(p.name), limit: '100' })}`, { ms: 30_000 })
-    if (!s.ok) return json(res, 502, { ok: false, pvs: c.name, meldung: `${c.name}: ${s.daten.error ?? `HTTP ${s.status}`}` })
-    const treffer = (s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
-    const wahl = patientWaehlen(treffer, p, c.name!)
+    let treffer: { id: string; firstName?: string; lastName?: string; birthDate?: string }[]
+    if (nummer) {
+      const z = await c.rufen<PvsZeile>(`/patients/${nummer}`, { ms: 30_000 })
+      if (!z.ok && z.status !== 404) return json(res, 502, { ok: false, pvs: c.name, meldung: `${c.name}: ${z.daten.error ?? `HTTP ${z.status}`}` })
+      treffer = z.ok ? [{ ...z.daten, id: String(z.daten.id ?? z.daten.patientNumber ?? '').trim().replace(/^0+(?=\d)/, '') }] : []
+    } else {
+      const s = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: suchwort(p.name), limit: '100' })}`, { ms: 30_000 })
+      if (!s.ok) return json(res, 502, { ok: false, pvs: c.name, meldung: `${c.name}: ${s.daten.error ?? `HTTP ${s.status}`}` })
+      treffer = (s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
+    }
+    const wahl = patientFuerLesen(treffer, p, c.name!, nummer)
     if (!wahl.id) return json(res, 409, { ok: false, pvs: c.name, meldung: wahl.fehler })
     const r = await c.rufen<{ entries?: Record<string, unknown>[] }>(`/patients/${wahl.id}/leistungen`, { ms: 30_000 })
     if (!r.ok) {
