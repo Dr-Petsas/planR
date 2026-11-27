@@ -1863,7 +1863,7 @@ async function ortEinstellungAnlegen(ort: string, pvs: string) {
 
 /**
  * POST { browser, aktiv }: Der Browser meldet sich (alle paar Sekunden und bei jeder Bedienung). Die Antwort sagt ihm,
- * mit welchem PVS er verbunden ist; Clara nimmt das PVS des Browsers, an dem zuletzt gearbeitet wurde.
+ * mit welchem PVS er verbunden ist. Abfragen von MAS und Clara richten sich nicht danach (werFuerClient).
  */
 async function ortEndpunkt(req: IncomingMessage, res: ServerResponse, w: Wer) {
   res.setHeader('Cache-Control', 'no-store')
@@ -2804,6 +2804,7 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
   }
   if (url === '/api/intern/pvs/patienten') return internPatienten(req, w, q, res)
   if (url === '/api/intern/pvs/befund') return internBefund(req, w, q, res)
+  if (url === '/api/intern/pvs/leistungen') return internLeistungen(req, w, q, res)
   if (url === '/api/intern/pvs/doku') return internDoku(req, w, res)
   if (url.startsWith('/api/intern/befund/')) return internBefundAendern(req, w, url, res)
   await pvsLesen(req, w, url.slice('/api/intern/pvs/'.length), q, res)
@@ -2811,7 +2812,6 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
 
 /**
  * Pläne der Planer für Clara (MAS), Schlüssel wie internPvs. Der Kassen-HKP liegt in MAS selbst und kommt hier nicht vor.
-  if (url === '/api/intern/pvs/leistungen') return internLeistungen(req, w, q, res)
  * GET  /api/intern/plaene?clientId=                 Köpfe aller Pläne der Praxis
  * GET  /api/intern/plan?clientId=&modul=&nummer=    Kopf, Inhalt und Einstellungen des Planers
  * POST /api/intern/plan?clientId= { modul, nummer, plan, betrag, pvs?, basis }   geänderter Plan; basis = Stand, auf dem die Änderung fußt
@@ -2882,13 +2882,10 @@ async function werFuerClient(clientId: string): Promise<Wer | null> {
   const z = await zugaengeLesen()
   if (!/^[A-Za-z0-9_-]{2,64}$/.test(clientId) || !(clientId in z.mandanten || Object.values(z.benutzer).some((b) => b.clientId === clientId))) return null
   const konto = { clientId } as Konto
-  const mandant = mandantVon(z, konto)
-  // Clara hat keinen Browser: Sie nimmt das PVS des Browsers der Praxis, an dem zuletzt gearbeitet wurde.
-  const ort = anwesenheit.ort(mandant)
-  return {
-    konto, mandant, register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto),
-    ...(ort && await ortErlaubt(mandant, ort) ? { ort } : {}),
-  }
+  // MAS und Clara haben keinen Browser. Sie arbeiten immer mit dem fest eingestellten Praxisprogramm der Praxis und
+  // deren Bridge – nie mit der Bridge eines PCs, an dem zuletzt ein Browser benutzt wurde (kein `ort`). Ist die
+  // Bridge der Praxis nicht verbunden, meldet pvsConnector das; ausgewichen wird nicht.
+  return { konto, mandant: mandantVon(z, konto), register: registerVon(z, konto), praxen: null, haupt: hauptpraxis(z, konto) }
 }
 
 /**
@@ -2918,13 +2915,6 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
   return json(res, 200, { ok: true, pvs: l.c.name, patient: l.nummer, geschrieben: s.geschrieben })
 }
 
-/**
- * POST /api/intern/pvs/doku { patient | vorname, name, geburt; text; wer }: Freitext in die Karteikarte des Patienten
- * im eingestellten Praxisprogramm (Memo aus dem Gespräch oder dem Chat). MAS ruft erst nach dem Ja.
- */
-async function internDoku(req: IncomingMessage, w: Wer, res: ServerResponse) {
-  let body: Record<string, unknown>
-  try {
 /** Praxen, für die die Leseabfrage der abgerechneten Leistungen freigegeben ist (Freigabe je Praxis, nur lesen). */
 const LEISTUNGEN_PRAXEN = new Set((process.env.PLANR_LEISTUNGEN_PRAXEN ?? 'MEe4ZQHEzOPzLcexyhdT').split(',').map((s) => s.trim()).filter(Boolean))
 
@@ -2962,6 +2952,13 @@ async function internLeistungen(req: IncomingMessage, w: Wer, q: URLSearchParams
   }
 }
 
+/**
+ * POST /api/intern/pvs/doku { patient | vorname, name, geburt; text; wer }: Freitext in die Karteikarte des Patienten
+ * im eingestellten Praxisprogramm (Memo aus dem Gespräch oder dem Chat). MAS ruft erst nach dem Ja.
+ */
+async function internDoku(req: IncomingMessage, w: Wer, res: ServerResponse) {
+  let body: Record<string, unknown>
+  try {
     body = JSON.parse(await lesenBody(req, 16_000)) as Record<string, unknown>
   } catch {
     return json(res, 400, { ok: false, meldung: 'Ungültiger Karteieintrag.' })

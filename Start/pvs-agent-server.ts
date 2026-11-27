@@ -89,8 +89,8 @@ export const neueOrtKennung = () => `pc-${randomBytes(6).toString('hex')}`
 export const ortGueltig = (liste: AgentListe, mandant: string, ort: string) => !!ort && liste[ort]?.lokalVon === mandant
 
 /**
- * Welcher Browser der Praxis ist gerade in Benutzung? Clara (Telefon, Chat) kommt ohne Browser an und nimmt das PVS
- * des Browsers, an dem zuletzt gearbeitet wurde. Ein Browser zählt, solange er sich alle paar Sekunden meldet.
+ * Welcher Browser der Praxis ist gerade in Benutzung? Ein Browser zählt, solange er sich alle paar Sekunden meldet.
+ * Abfragen von MAS und Clara richten sich nicht danach: sie gehen an das eingestellte Praxisprogramm der Praxis.
  */
 export const ANWESEND_MS = 3 * 60_000
 export class Anwesenheit {
