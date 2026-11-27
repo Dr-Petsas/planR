@@ -228,6 +228,14 @@ describe('erlaubte Connector-Aufrufe', () => {
     expect(auftragErlaubt('DELETE', '/appointments/1')).toBe(false)
   })
 
+  it('abgerechnete Leistungen: nur lesen, nur je Patient', () => {
+    expect(auftragErlaubt('GET', '/patients/3/leistungen')).toBe(true)
+    expect(auftragErlaubt('POST', '/patients/3/leistungen')).toBe(false)
+    expect(auftragErlaubt('GET', '/patients/3/leistungen/1')).toBe(false)
+    expect(auftragErlaubt('GET', '/patients/3/leistungen?alle=1')).toBe(false)
+    expect(auftragErlaubt('GET', '/leistungen')).toBe(false)
+  })
+
   it('Befund: aktuellen lesen und neuen schreiben, keine Test- und Importwege', () => {
     expect(auftragErlaubt('GET', '/patients/12/befunde/01')).toBe(true)
     expect(auftragErlaubt('POST', '/patients/12/befunde/01')).toBe(true)

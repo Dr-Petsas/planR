@@ -8,7 +8,7 @@ namespace PlanR.Bridge.Dampsoft;
 /// <summary>1:1-Port von connector_service.py als direkter In-Prozess-Connector.</summary>
 public sealed class DsWinConnector : IConnector
 {
-    static readonly Regex PatientRouteRe = new(@"^/patients/([0-9]{1,5})/(befunde/01|hkps|hkps/([0-9]{1,6})/planr)$", RegexOptions.Compiled);
+    static readonly Regex PatientRouteRe = new(@"^/patients/([0-9]{1,5})/(befunde/01|leistungen|hkps|hkps/([0-9]{1,6})/planr)$", RegexOptions.Compiled);
     static readonly Regex PatNrPrefixRe = new(@"^/patients/([0-9]{1,5})(/|$)", RegexOptions.Compiled);
     static readonly Regex HkpImportRe = new(@"^/patients/([0-9]{1,5})/hkps/import$", RegexOptions.Compiled);
     static readonly Regex PlanImportRe = new(@"^/patients/([0-9]{1,5})/plaene/import$", RegexOptions.Compiled);
@@ -240,6 +240,8 @@ public sealed class DsWinConnector : IConnector
                 var sub = pm.Groups[2].Value;
                 if (sub == "befunde/01")
                     return Ok(200, DsWinBefund.ReadFindings(_daten, patNr, praxis, _encoding));
+                if (sub == "leistungen")
+                    return Ok(200, DsWinLeistungen.Lesen(_daten, patNr, praxis, _encoding));
                 if (sub == "hkps")
                     return Ok(200, new Dictionary<string, object?>(StringComparer.Ordinal) { ["items"] = DsWinHkp.ListPlans(_daten, patNr, praxis, _encoding) });
                 var hkpNum = int.Parse(pm.Groups[3].Value, CultureInfo.InvariantCulture);

@@ -2811,6 +2811,7 @@ async function internPvs(req: IncomingMessage, res: ServerResponse, url: string,
 
 /**
  * Pläne der Planer für Clara (MAS), Schlüssel wie internPvs. Der Kassen-HKP liegt in MAS selbst und kommt hier nicht vor.
+  if (url === '/api/intern/pvs/leistungen') return internLeistungen(req, w, q, res)
  * GET  /api/intern/plaene?clientId=                 Köpfe aller Pläne der Praxis
  * GET  /api/intern/plan?clientId=&modul=&nummer=    Kopf, Inhalt und Einstellungen des Planers
  * POST /api/intern/plan?clientId= { modul, nummer, plan, betrag, pvs?, basis }   geänderter Plan; basis = Stand, auf dem die Änderung fußt
@@ -2924,6 +2925,43 @@ async function internBefund(req: IncomingMessage, w: Wer, q: URLSearchParams, re
 async function internDoku(req: IncomingMessage, w: Wer, res: ServerResponse) {
   let body: Record<string, unknown>
   try {
+/** Praxen, für die die Leseabfrage der abgerechneten Leistungen freigegeben ist (Freigabe je Praxis, nur lesen). */
+const LEISTUNGEN_PRAXEN = new Set((process.env.PLANR_LEISTUNGEN_PRAXEN ?? 'MEe4ZQHEzOPzLcexyhdT').split(',').map((s) => s.trim()).filter(Boolean))
+
+/**
+ * GET /api/intern/pvs/leistungen?clientId=&vorname=&name=&geburt=: abgerechnete Leistungen des Patienten aus der
+ * Karteikarte in DS-Win (Datum, Gebührennummer, Text aus dem Leistungsverzeichnis, Zahn, Anzahl) – nur lesen, nur ein
+ * eindeutiger Treffer nach Name und Geburtsdatum, nur für freigegebene Praxen.
+ */
+async function internLeistungen(req: IncomingMessage, w: Wer, q: URLSearchParams, res: ServerResponse) {
+  if (req.method !== 'GET') return json(res, 405, { ok: false })
+  if (!LEISTUNGEN_PRAXEN.has(q.get('clientId') ?? '')) return json(res, 403, { ok: false, meldung: 'Für diese Praxis ist die Abfrage nicht freigegeben.' })
+  const c = await pvsConnector(req, w, 'suche')
+  if (!c.rufen) return wegFehler(res, c)
+  if (c.id !== 'dampsoft') return json(res, 501, { ok: false, pvs: c.name, meldung: `Abgerechnete Leistungen liest PlanR aus ${c.name} noch nicht.` })
+  const p: PlanPatient = { vorname: (q.get('vorname') ?? '').trim(), name: (q.get('name') ?? '').trim(), geburtsdatum: (q.get('geburt') ?? '').trim() }
+  if (!p.name || !p.geburtsdatum) return json(res, 400, { ok: false, pvs: c.name, meldung: `Ohne Name und Geburtsdatum finde ich den Patienten in ${c.name} nicht sicher.` })
+  try {
+    const s = await c.rufen<{ items?: PvsZeile[] }>(`/patients?${new URLSearchParams({ q: suchwort(p.name), limit: '100' })}`, { ms: 30_000 })
+    if (!s.ok) return json(res, 502, { ok: false, pvs: c.name, meldung: `${c.name}: ${s.daten.error ?? `HTTP ${s.status}`}` })
+    const treffer = (s.daten.items ?? []).map((t) => ({ ...t, id: String(t.id ?? t.patientNumber ?? '') }))
+    const wahl = patientWaehlen(treffer, p, c.name!)
+    if (!wahl.id) return json(res, 409, { ok: false, pvs: c.name, meldung: wahl.fehler })
+    const r = await c.rufen<{ entries?: Record<string, unknown>[] }>(`/patients/${wahl.id}/leistungen`, { ms: 30_000 })
+    if (!r.ok) {
+      const alt = r.status === 403 || r.status === 404
+      return json(res, 502, { ok: false, pvs: c.name, meldung: alt ? 'Die PlanR-Bridge in der Praxis kennt diese Abfrage noch nicht (Update nötig).' : `${c.name}: ${r.daten.error ?? `HTTP ${r.status}`}` })
+    }
+    const leistungen = (r.daten.entries ?? []).slice(0, 60).map((e) => ({
+      date: String(e.date ?? ''), kind: String(e.kind ?? ''), nr: String(e.nr ?? '').slice(0, 12), text: String(e.text ?? '').slice(0, 120),
+      zahn: String(e.zahn ?? '').slice(0, 2), anzahl: Number(e.anzahl) || 0,
+    }))
+    return json(res, 200, { ok: true, pvs: c.name, leistungen })
+  } catch (e) {
+    return json(res, 503, { ok: false, pvs: c.name, meldung: stumm(c, e) })
+  }
+}
+
     body = JSON.parse(await lesenBody(req, 16_000)) as Record<string, unknown>
   } catch {
     return json(res, 400, { ok: false, meldung: 'Ungültiger Karteieintrag.' })
@@ -4319,7 +4357,7 @@ export function plaeneMiddleware(req: IncomingMessage, res: ServerResponse, next
   if (url === '/api/probe/eingang') return void probeEingangJson(req, res).catch(fehler500(res))
   if (url === '/probe-eingang') return void probeEingangSeite(req, res).catch(fehler500(res))
   if (url.startsWith('/probe-eingang/')) return void probeEingangSeite(req, res, url.slice('/probe-eingang/'.length)).catch(fehler500(res))
-  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/praxiskatalog'
+  if (url === '/api/intern/pvs/patienten' || url === '/api/intern/pvs/patient' || url === '/api/intern/pvs/befund' || url === '/api/intern/pvs/leistungen' || url === '/api/intern/praxiskatalog'
     || url === '/api/intern/pvs/doku' || url === '/api/intern/befund/aenderung' || url === '/api/intern/befund/verwerfen' || url === '/api/intern/befund/vorgang') {
     return void internPvs(req, res, url, query).catch(fehler500(res))
   }

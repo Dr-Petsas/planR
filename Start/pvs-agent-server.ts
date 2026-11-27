@@ -340,6 +340,8 @@ const PFADE: [Auftrag['method'], RegExp][] = [
   ['GET', /^\/patients\?[\w%=&.+-]{0,300}$/],
   ['GET', /^\/patients\/\d{1,9}$/],
   ['GET', /^\/patients\/\d{1,9}\/(clinical|hkps)$/],
+  // Abgerechnete Leistungen aus der Karteikarte, nur lesen (DS-Win, ab Bridge 2.0.7)
+  ['GET', /^\/patients\/\d{1,9}\/leistungen$/],
   ['GET', /^\/patients\/\d{1,9}\/hkps\/\d{1,5}\/planr$/],
   ['POST', /^\/patients\/\d{1,9}\/hkps(\/import)?$/],
   ['POST', /^\/patients\/\d{1,9}\/plaene\/import$/],

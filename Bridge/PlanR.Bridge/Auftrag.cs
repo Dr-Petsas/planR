@@ -13,7 +13,7 @@ public static class Pfade
     [
         ("GET", new Regex(@"^/patients\?[\w%=&.+-]{0,300}$", RegexOptions.CultureInvariant)),
         ("GET", new Regex(@"^/patients/\d{1,9}$", RegexOptions.CultureInvariant)),
-        ("GET", new Regex(@"^/patients/\d{1,9}/(clinical|hkps)$", RegexOptions.CultureInvariant)),
+        ("GET", new Regex(@"^/patients/\d{1,9}/(clinical|hkps|leistungen)$", RegexOptions.CultureInvariant)),
         ("GET", new Regex(@"^/patients/\d{1,9}/hkps/\d{1,5}/planr$", RegexOptions.CultureInvariant)),
         ("POST", new Regex(@"^/patients/\d{1,9}/hkps(/import)?$", RegexOptions.CultureInvariant)),
         ("POST", new Regex(@"^/patients/\d{1,9}/plaene/import$", RegexOptions.CultureInvariant)),
@@ -81,7 +81,7 @@ public static class Ausfuehren
 
 public static class Umfrage
 {
-    public const string Version = "2.0.4";
+    public const string Version = "2.0.7";
 
     public static string Abfrage(string pvs, string? status, IReadOnlyList<string>? kann)
     {
