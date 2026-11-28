@@ -9,6 +9,7 @@ import { ausfuehrungAnwenden, implantateIn, verblendungLage, zahnFuerWerkstoff, 
 import { kronenEinheiten, werkstoffVon, WERKSTOFFE, WERKSTOFFE_FUER, type KronenEinheit, type Werkstoff } from './engine/material'
 import { BEFUND_KUERZEL, THERAPIE_KUERZEL } from './engine/zahnschema'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './engine/regeln'
+import { planungAmtlich } from './engine/tpAmtlich'
 import { privatStufeAnwenden, regelUebernehmen } from './engine/aufwertung'
 import { IMPLANTATSYSTEME, implantatsystem } from './data/implantatsysteme'
 import { REPARATUR_ARTEN, reparaturArt } from './engine/reparaturen'
@@ -102,11 +103,12 @@ export function zahnSetzen(plan: HkpPlan, zahn: string, w: KiZahnWerte): { plan:
 
 /** Regelversorgung und Positionen aus dem Zahnschema, wie »Berechnen« im Planer. */
 export function neuRechnen(q: HkpPlan): { plan: HkpPlan; hinweise: string[] } {
-  const stufe = q.einstellungen.eigenPrivatStufe ?? 0
-  const privat = stufe > 0 ? privatStufeAnwenden(q, stufe) : undefined
-  const zaehne = privat?.plan.zaehne ?? q.zaehne
-  const regel = therapieAnwenden(regelversorgungErmitteln(zaehne, regelOptionen(q)), zaehne, q)
-  return { plan: privat ? privat.plan : regelUebernehmen(q, regel), hinweise: [...regel.hinweise, ...(privat?.hinweise ?? [])] }
+  const migriert = { ...q, zaehne: planungAmtlich(q.zaehne) }
+  const stufe = migriert.einstellungen.eigenPrivatStufe ?? 0
+  const privat = stufe > 0 ? privatStufeAnwenden(migriert, stufe) : undefined
+  const zaehne = privat?.plan.zaehne ?? migriert.zaehne
+  const regel = therapieAnwenden(regelversorgungErmitteln(zaehne, regelOptionen(migriert)), zaehne, migriert)
+  return { plan: privat ? privat.plan : regelUebernehmen(migriert, regel), hinweise: [...regel.hinweise, ...(privat?.hinweise ?? [])] }
 }
 
 const EBENEN = ['BEMA', 'GOZ', 'BEL', 'BEB']

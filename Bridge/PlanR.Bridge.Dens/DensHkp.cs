@@ -272,13 +272,28 @@ public static class DensHkp
         var zaehne = new Dictionary<string, object?>(StringComparer.Ordinal);
         var schema = plan.TryGetValue("toothSchema", out var tsObj) && tsObj is List<object?> tsl ? tsl.OfType<Dictionary<string, object?>>().ToList() : [];
         var ohneTp = !schema.Any(row => !string.IsNullOrEmpty(Convert.ToString(row.GetValueOrDefault("therapy"))));
+        var rohTherapie = new Dictionary<int, string>();
+        var rohBefund = new Dictionary<int, string>();
+        foreach (var row in schema)
+        {
+            if (!int.TryParse(Convert.ToString(row.GetValueOrDefault("number")), out var n)) continue;
+            rohBefund[n] = Convert.ToString(row.GetValueOrDefault("finding")) ?? "";
+            rohTherapie[n] = Convert.ToString(row.GetValueOrDefault("therapy")) ?? "";
+        }
         foreach (var row in schema)
         {
             var befund = Convert.ToString(row.GetValueOrDefault("finding")) ?? "";
             var regel = DensKuerzel.AmtlichR(Convert.ToString(row.GetValueOrDefault("regular")) ?? "");
-            var therapie = ohneTp ? regel : DensKuerzel.AmtlichTp(Convert.ToString(row.GetValueOrDefault("therapy")) ?? "");
+            var nummer = Convert.ToString(row["number"]) ?? "";
+            var therapie = regel;
+            if (!ohneTp && int.TryParse(nummer, out var n))
+            {
+                var roh = rohTherapie.GetValueOrDefault(n, "");
+                var implantat = roh.Trim().ToLowerInvariant() == "zab" && DensKuerzel.ImplantatGlied(n, rohBefund.GetValueOrDefault(n, ""), rohTherapie);
+                therapie = DensKuerzel.AmtlichTp(DensKuerzel.PlanungNachAmtlich(roh, implantat));
+            }
             if (befund.Length > 0 || regel.Length > 0 || therapie.Length > 0)
-                zaehne[Convert.ToString(row["number"])!] = new Dictionary<string, object?> { ["B"] = befund, ["R"] = regel, ["TP"] = therapie };
+                zaehne[nummer] = new Dictionary<string, object?> { ["B"] = befund, ["R"] = regel, ["TP"] = therapie };
         }
         var positionen = new List<Dictionary<string, object?>>();
         var befunde = new List<Dictionary<string, object?>>();
@@ -840,16 +855,24 @@ public static class DensHkp
         var findings = new Dictionary<int, string>();
         var zeileR = new Dictionary<int, string>();
         var zeileTp = new Dictionary<int, string>();
+        var rohTp = new Dictionary<int, string>();
+        var rohBefund = new Dictionary<int, string>();
         foreach (var (tooth, row) in teeth)
         {
             var n = int.Parse(tooth);
-            findings[n] = DensKuerzel.BefundKasse(row.GetValueOrDefault("B", ""));
+            var befund = row.GetValueOrDefault("B", "");
+            findings[n] = DensKuerzel.BefundKasse(befund);
+            rohBefund[n] = befund;
             zeileR[n] = DensKuerzel.PlanHuk(row.GetValueOrDefault("R", ""));
             if (versorgung != "regel")
             {
-                var tpSrc = row.TryGetValue("planung", out var pl) ? pl : (row.GetValueOrDefault("TP", "") is { Length: > 0 } tp ? tp : row.GetValueOrDefault("R", ""));
-                zeileTp[n] = DensKuerzel.PlanHuk(tpSrc);
+                rohTp[n] = row.TryGetValue("planung", out var pl) ? pl : (row.GetValueOrDefault("TP", "") is { Length: > 0 } tp ? tp : row.GetValueOrDefault("R", ""));
             }
+        }
+        foreach (var (n, src) in rohTp)
+        {
+            var implantat = src.Trim().ToLowerInvariant() == "zab" && DensKuerzel.ImplantatGlied(n, rohBefund.GetValueOrDefault(n, ""), rohTp);
+            zeileTp[n] = DensKuerzel.PlanHuk(DensKuerzel.PlanungNachAmtlich(src, implantat));
         }
         var geschlossen = findings.Where(kv => kv.Value == ")(").Select(kv => kv.Key).ToHashSet();
         var ankerR = DensKuerzel.AnkerZaehne(zeileR, geschlossen);

@@ -1,6 +1,7 @@
 import type { Ebene, Position, ZahnZeilen } from '../types'
 import type { RegelErgebnis } from './regeln'
 import { befundOhneStrich, brueckenBereiche, pfeilerIm } from './bruecken'
+import { bebDerPlanung, bebFront } from './tpAmtlich'
 import { FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerblendbereich, istFrontzahn, istWeisheitszahn, kieferVon } from './zahnschema'
 
 /**
@@ -95,11 +96,8 @@ const zahnListe = (zahn: string) => zahn.split(/[,\s]+/).filter(Boolean)
 const spanne = (zaehne: string[]) => (zaehne.length === 1 ? zaehne[0] : `${zaehne[0]}-${zaehne[zaehne.length - 1]}`)
 
 /** Vollanatomische Seitenzahnkrone 2251, Front 2252; Brückenglied 2351 bzw. 2352 */
-function bebFuer(k: string, b: string, z: string) {
-  if (!istFrontzahn(z)) return b
-  if ((k === 'ZA' || k === 'ZAS') && b === '2251') return '2252'
-  if (k === 'ZAB' && b === '2351') return '2352'
-  return b
+function bebFuer(k: string, b: string, z: string, labor?: ZahnZeilen['labor']) {
+  return bebFront(k, b, istFrontzahn(z), labor)
 }
 
 export type KuerzelArt = '' | 'implantat' | 'prothese' | 'kombi' | 'bruecke' | 'krone'
@@ -328,8 +326,9 @@ export function therapieplanAnwenden(regel: RegelErgebnis, zaehne: Record<string
       const anker = brueckenAnker.has(z) || GESCHIEBE.test(k) || stegAnker.has(z)
       const goz = anker && zuo.gozAnker ? zuo.gozAnker : zuo.goz
       if (goz) neu.push(pos('GOZ', goz, z))
-      for (const b of zuo.beb) neu.push(pos('BEB', bebFuer(k, b, z), z))
-      if (/^(TM|STM|T2M|TZV|STZV)$/.test(k)) hinweis('Vollverblendete Teleskope: Verblendung aus Kunststoff (Komposite, BEB 2602). Keramik platzt beim Aufsetzen durch die Spannung ab.')
+      const labor = zaehne[z]?.labor
+      for (const b of bebDerPlanung(k, zuo.beb, labor)) neu.push(pos('BEB', bebFuer(k, b, z, labor), z))
+      if (/^(TM|STM|T2M|TZV|STZV)$/.test(k) && labor !== 'zirkon-teleskop') hinweis('Vollverblendete Teleskope: Verblendung aus Kunststoff (Komposite, BEB 2602). Keramik platzt beim Aufsetzen durch die Spannung ab.')
       if (/^VEK?$/.test(k)) neu.push(pos('GOZ', '2197', z))
       if (GESCHIEBE.test(k)) neu.push(pos('GOZ', '5080', z))
       if (PFEILERKRONE.test(k) && (andersZ || !hatte19)) neu.push(pos('GOZ', andersZ && brueckenAnker.has(z) ? '5120' : '2270', z))

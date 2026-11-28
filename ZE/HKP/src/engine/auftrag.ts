@@ -11,6 +11,7 @@ import { BEFUND_KUERZEL, FEHLEND, KRONE_NOETIG, OBERKIEFER, UNTERKIEFER, imVerbl
 import { WERKSTOFFE, WERKSTOFFE_FUER, kronenEinheiten, type Werkstoff } from './material'
 import { ausfuehrungIn, zaehneFuerVerblendung, type Verblendung } from './ausfuehrung'
 import { ALLON_SITZ, prothetikIn, type AbutmentArt, type AnkerArt, type KronenArt, type Retention } from './vokabular'
+import { planungAmtlich } from './tpAmtlich'
 
 export type Versorgung = 'teleskopprothese' | 'totalprothese' | 'kronen' | 'bruecke' | 'implantatkronen' | 'locator' | 'steg' | 'allon' | 'inlay'
 export type Kiefer = 'OK' | 'UK'
@@ -1190,6 +1191,7 @@ function planRechnen(auftrag: HkpAuftrag, teile: HkpAuftrag[], befund: Befund, t
   plan.patient = { ...plan.patient, ...optionen.patient }
   for (const [z, b] of Object.entries(befund)) if (plan.zaehne[z]) plan.zaehne[z].B = b
   for (const [z, t] of Object.entries(tp)) plan.zaehne[z].TP = t
+  plan.zaehne = planungAmtlich(plan.zaehne)
   plan.abformung = auftrag.abformung ?? optionen.abformung ?? 'abdruck'
   if (!auftrag.abformung && !optionen.abformung) hinweise.push('Abformung nicht genannt – konventioneller Abdruck angenommen.')
   if (teile.some((x) => x.versorgung === 'teleskopprothese' || x.versorgung === 'locator' || x.versorgung === 'steg')) plan.abformungProthese = plan.abformung

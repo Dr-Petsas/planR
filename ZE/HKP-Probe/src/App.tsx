@@ -13,6 +13,7 @@ import { ListenStand } from './components/ListenStand'
 import { berechnen, type Listen } from '@kern/engine/berechnung'
 import { listenFuer, planMitKatalog } from '@kern/clara'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from '@kern/engine/regeln'
+import { planungAmtlich } from '@kern/engine/tpAmtlich'
 import { privatStufeAnwenden, regelUebernehmen } from '@kern/engine/aufwertung'
 import { implantateErfasst } from '@kern/engine/implantat'
 import { relevanzErmitteln } from '@kern/engine/relevanz'
@@ -347,14 +348,15 @@ export default function App() {
   }
 
   function regelengine(aenderung: Partial<HkpPlan> = {}) {
-    const q = { ...ohneBlatt(plan, original), ...aenderung }
+    const grund = ohneBlatt(plan, original)
+    const q = { ...grund, ...aenderung, zaehne: planungAmtlich({ ...grund.zaehne, ...aenderung.zaehne }) }
     const stufe = q.einstellungen.eigenPrivatStufe ?? 0
     const privat = stufe > 0 ? privatStufeAnwenden(q, stufe) : undefined
     const zaehne = privat?.plan.zaehne ?? q.zaehne
     const regel = therapieAnwenden(regelversorgungErmitteln(zaehne, regelOptionen(q)), zaehne, q)
     setPlan((roh) => {
       const p = ohneBlatt(roh, original)
-      return stufe > 0 ? privatStufeAnwenden({ ...p, ...aenderung }, stufe).plan : regelUebernehmen({ ...p, ...aenderung }, regel)
+      return stufe > 0 ? privatStufeAnwenden({ ...p, ...aenderung, zaehne: q.zaehne }, stufe).plan : regelUebernehmen({ ...p, ...aenderung, zaehne: q.zaehne }, regel)
     })
     setEngineHinweise([...regel.hinweise, ...(privat?.hinweise ?? [])])
   }

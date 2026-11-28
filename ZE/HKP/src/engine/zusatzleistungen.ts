@@ -77,12 +77,13 @@ export function zusatzleistungen(plan: HkpPlan): ZusatzErgebnis {
   const implantat = (z: string) => /^S/.test(versorgung(z)) || /^[si]/.test(plan.zaehne[z].B.trim().toLowerCase())
   const praepariert = zaehne.filter((z) => !fehlt(z) && !implantat(z) && anZahn(z).some((p) =>
     (p.ebene === 'BEMA' && /^(20[abc]|91[abcd])$/.test(p.nr)) || (p.ebene === 'GOZ' && /^(22[012]0|50[0-4]0)$/.test(p.nr))))
-  /** vollkeramische bzw. keramisch vollverblendete Kronen/Teilkronen – adhäsiv zu befestigen (auch vom Eigenlabor-Regler aufgewertete) */
-  const adhaesiv = praepariert.filter((z) => /^(K|PK)M/.test(versorgung(z)) || anZahn(z).some((p) => p.ebene === 'BEB' && (p.nr === '2281' || p.nr === '2534')))
+  /** vollkeramische bzw. keramisch vollverblendete Kronen/Teilkronen – adhäsiv zu befestigen (auch vom Eigenlabor-Regler aufgewertete). Unverblendete Vollanatomie wird zementiert. */
+  const monolith = (z: string) => plan.zaehne[z].labor === 'vollanatomisch'
+  const adhaesiv = praepariert.filter((z) => !monolith(z) && (/^(K|PK)M/.test(versorgung(z)) || anZahn(z).some((p) => p.ebene === 'BEB' && (p.nr === '2281' || p.nr === '2534'))))
   const hatGoz = plan.positionen.some((p) => p.ebene === 'GOZ')
   const implantatKronen = zaehne.filter((z) => /^S(K|B|T)/.test(versorgung(z)) && (anZahn(z).some((p) => p.ebene === 'GOZ') || hatGoz))
   /** keramische Implantatkronen werden wie Keramikkronen adhäsiv befestigt (Wissensbasis Suprakonstruktion) */
-  const adhaesivImplantat = implantatKronen.filter((z) => IMPLANTAT_KERAMIK.has(versorgung(z)))
+  const adhaesivImplantat = implantatKronen.filter((z) => !monolith(z) && IMPLANTAT_KERAMIK.has(versorgung(z)))
   const teleskope = zaehne.filter((z) => TELESKOP.has(versorgung(z)))
   const gross = zaehne.some((z) => BRUECKE.has(versorgung(z))) || teleskope.length > 0 || implantatKronen.length >= 4
   const herausnehmbar = plan.positionen.some((p) => (p.ebene === 'BEMA' && /^9[67][abc]$/.test(p.nr)) || (p.ebene === 'GOZ' && /^52[0-5]0$/.test(p.nr)))

@@ -14,6 +14,8 @@ export interface Zahn {
   /** Brückenanfang bzw. -ende, eingegeben als „-K“ bzw. „K-“ */
   bAnfang?: boolean
   bEnde?: boolean
+  /** Laborweg, wenn das amtliche Kürzel mehrere BEB-Wege hat */
+  labor?: 'vollanatomisch' | 'zirkon-teleskop' | 'zirkon-teleskop-verblendet'
 }
 
 export interface Position {

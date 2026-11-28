@@ -40,7 +40,7 @@ describe('privater Zahnersatz per Sprache', () => {
 
   it('vollanatomische Zirkonkrone ohne Verblendschicht', () => {
     const e = ok(privatZeEntwurf('vollanatomische Zirkonkrone 16', { 16: 'ww' }))
-    expect(tp(e)['16']).toBe('ZA')
+    expect(tp(e)['16']).toBe('KM')
     expect(e.kalkulation.labor.map((z) => z.nr)).toContain('2251')
     expect(e.kalkulation.labor.map((z) => z.nr)).not.toContain('2612')
   })

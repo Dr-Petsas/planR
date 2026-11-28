@@ -156,6 +156,11 @@ export interface ZahnZeilen {
   /** Brückenanfang bzw. -ende in Zeile TP, eingegeben als „-K“ bzw. „K-“ */
   bAnfang?: boolean
   bEnde?: boolean
+  /**
+   * Laborweg, wenn das amtliche Kürzel mehrere BEB-Wege hat.
+   * Vollanatomie bleibt unverblendet; ein Zirkon-Primärteleskop behält den Keramikzuschlag.
+   */
+  labor?: 'vollanatomisch' | 'zirkon-teleskop' | 'zirkon-teleskop-verblendet'
 }
 
 export type Versorgungsart = 'regel' | 'gleichartig' | 'andersartig'

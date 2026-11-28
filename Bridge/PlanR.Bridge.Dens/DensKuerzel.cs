@@ -65,7 +65,7 @@ public static class DensKuerzel
         ["pk"] = "pk", ["pkm"] = "pkm", ["pkv"] = "pkv", ["r"] = "r",
         ["se"] = "se", ["sk"] = "sk", ["skm"] = "skm", ["skv"] = "skv", ["so"] = "so", ["st"] = "st", ["stm"] = "stm", ["stv"] = "stv",
         ["t"] = "t", ["tm"] = "tm", ["tv"] = "tv", ["t2"] = "t2", ["t2v"] = "tv2",
-        ["za"] = "km", ["zab"] = "bm", ["zas"] = "skm", ["tz"] = "t", ["tzv"] = "tm", ["stz"] = "st", ["stzv"] = "stm",
+        ["za"] = "km", ["zab"] = "bm", ["zas"] = "skm", ["tz"] = "tm", ["tzv"] = "tm", ["stz"] = "stm", ["stzv"] = "stm",
     };
 
     public static readonly Dictionary<string, string> TpBemaAnker = new(StringComparer.Ordinal)
@@ -84,14 +84,14 @@ public static class DensKuerzel
         ["st"] = "ST", ["stm"] = "STM", ["stv"] = "STV", ["t"] = "T", ["tm"] = "TM", ["tv"] = "TV", ["t2"] = "T2", ["t2m"] = "T2M", ["t2v"] = "T2V",
         ["ve"] = "VE", ["i1"] = "I1", ["i2"] = "I2", ["i3"] = "I3", ["i4"] = "I4", ["c1"] = "IM1", ["c2"] = "IM2", ["c3"] = "IM3", ["c4"] = "IM4",
         ["on"] = "I4", ["onk"] = "IM4",
-        ["za"] = "KM", ["zab"] = "BM", ["zas"] = "SKM", ["tz"] = "T", ["tzv"] = "TM", ["stz"] = "ST", ["stzv"] = "STM",
+        ["za"] = "KM", ["zab"] = "BM", ["zas"] = "SKM", ["tz"] = "TM", ["tzv"] = "TM", ["stz"] = "STM", ["stzv"] = "STM",
     };
 
     public static readonly Dictionary<string, string> TpGozAnker = new(StringComparer.Ordinal)
     {
         ["k"] = "K-", ["kh"] = "KH-", ["km"] = "KM-", ["kmh"] = "KMH-", ["kmo"] = "KM-O", ["ko"] = "K-O", ["kv"] = "KV-", ["kvh"] = "KVH-",
         ["kvo"] = "KV-O", ["pk"] = "PK-", ["pkm"] = "PKM-", ["pkv"] = "PKV-", ["sk"] = "SK-", ["skm"] = "SKM-", ["skv"] = "SKV-",
-        ["t"] = "T-", ["tm"] = "TM-", ["tv"] = "TV-", ["za"] = "KM-", ["zas"] = "SKM-", ["tz"] = "T-", ["tzv"] = "TM-",
+        ["t"] = "T-", ["tm"] = "TM-", ["tv"] = "TV-", ["za"] = "KM-", ["zas"] = "SKM-", ["tz"] = "TM-", ["tzv"] = "TM-", ["stz"] = "STM", ["stzv"] = "STM",
     };
 
     public static readonly HashSet<string> Brueckenglied = new(StringComparer.Ordinal) { "b", "bv", "bm", "sb", "sbv", "sbm", "zab" };
@@ -127,6 +127,7 @@ public static class DensKuerzel
         ["se"] = "se", ["sk"] = "sk", ["skm"] = "skm", ["skms"] = "skm", ["sks"] = "sk", ["skv"] = "skv", ["skvs"] = "skv", ["sm"] = "skm",
         ["smg"] = "skm", ["so"] = "so", ["sr"] = "so", ["sro"] = "so", ["st"] = "st", ["stm"] = "stm", ["stv"] = "stv", ["t"] = "t", ["t."] = "t",
         ["t2"] = "t2", ["tm"] = "tm", ["tv"] = "tv", ["tv."] = "tv", ["tv2"] = "t2v", ["tvv"] = "tv",
+        ["za"] = "km", ["zas"] = "skm", ["zab"] = "bm", ["tz"] = "tm", ["tzv"] = "tm", ["stz"] = "stm", ["stzv"] = "stm",
         ["A"] = "a", ["ABM"] = "abm", ["ABMM"] = "abm", ["ABV"] = "abv", ["ABVV"] = "abv", ["B"] = "b", ["BM"] = "bm", ["BMV"] = "bv", ["BV"] = "bv",
         ["E"] = "e", ["EI"] = "e", ["EO"] = "eo", ["ET"] = "e", ["ETC"] = "e", ["ETM"] = "e", ["H"] = "h", ["I1"] = "i1", ["I2"] = "i2", ["I3"] = "i3",
         ["I4"] = "i4", ["IC1"] = "i1", ["IC2"] = "i2", ["IC3"] = "i3", ["IM1"] = "i1", ["IM2"] = "i2", ["IM3"] = "i3", ["IM4"] = "i4",
@@ -199,6 +200,49 @@ public static class DensKuerzel
         var key = PlanHuk(code);
         if (anker && RAnker.TryGetValue(key, out var a)) return a;
         return RDens.TryGetValue(key, out var r) ? r : "";
+    }
+
+    static readonly HashSet<string> ImplantatBefund = new(StringComparer.Ordinal)
+    {
+        "i", "ix", "sk", "skw", "sb", "sbw", "se", "sew", "so", "sow", "st", "stw",
+    };
+
+    /** Implantatkrone oder implantatgetragenes Glied in der Planung, auch in der alten Schreibweise. */
+    public static bool ImplantatPlan(string code)
+    {
+        var k = code.Trim().ToLowerInvariant();
+        return k is "zas" or "stz" or "stzv" or "skm" or "sbm" or "stm" || (k.Length > 0 && k[0] == 's');
+    }
+
+    /** ZAB an einem Implantat wird SBM, zwischen eigenen Zähnen BM. */
+    public static bool ImplantatGlied(int zahn, string befund, IReadOnlyDictionary<int, string> planung)
+    {
+        if (ImplantatBefund.Contains(befund.Trim().ToLowerInvariant())) return true;
+        foreach (var reihe in Zahnreihen)
+        {
+            var i = Array.IndexOf(reihe, zahn);
+            if (i < 0) continue;
+            if (i > 0 && planung.TryGetValue(reihe[i - 1], out var links) && ImplantatPlan(links)) return true;
+            if (i + 1 < reihe.Length && planung.TryGetValue(reihe[i + 1], out var rechts) && ImplantatPlan(rechts)) return true;
+        }
+        return false;
+    }
+
+    /** Interne Planungskürzel auf die amtliche Zeile TP. Schon amtliche Kürzel bleiben. */
+    public static string PlanungNachAmtlich(string code, bool implantatGlied)
+    {
+        var roh = code.Trim();
+        switch (roh.ToLowerInvariant())
+        {
+            case "za": return "km";
+            case "zas": return "skm";
+            case "zab": return implantatGlied ? "sbm" : "bm";
+            case "tz":
+            case "tzv": return "tm";
+            case "stz":
+            case "stzv": return "stm";
+            default: return roh;
+        }
     }
 
     public static string TpSymbol(object? code, string versorgung, bool anker = false)

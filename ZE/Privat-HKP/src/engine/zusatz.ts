@@ -120,7 +120,7 @@ export function zusatzleistungen({ zaehne, abformung, basis, gozStufe, laborStuf
   if (fuehrung) nichtAngesetzt.push(`Regler folgt der Wissensbasis: ${fuehrung.titel}`)
   const gruppe = (e: ExotEintrag, name: string | undefined, goz?: string[]) => {
     const liste = (name && e.gruppen[name]) || []
-    return einzelzaehne.filter((z) => liste.includes(TP(z)) && (!goz?.length || anZahn(z).some((p) => p.ebene === 'GOZ' && goz.includes(p.nr))))
+    return einzelzaehne.filter((z) => liste.includes(TP(z)) && !(name === 'keramik' && zaehne[z]?.labor === 'vollanatomisch') && (!goz?.length || anZahn(z).some((p) => p.ebene === 'GOZ' && goz.includes(p.nr))))
   }
   for (const e of treffer) {
     for (const zeile of e.stufen) {

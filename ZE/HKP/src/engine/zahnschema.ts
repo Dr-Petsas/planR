@@ -70,9 +70,9 @@ export const THERAPIE_KUERZEL: Record<string, string> = {
   PK: 'Teilkrone',
   PKM: 'Teilkrone vollkeramisch oder keramisch vollverblendet',
   VE: 'Veneer',
-  ZA: 'vollanatomische Krone',
-  ZAB: 'vollanatomisches Brückenglied',
-  ZAS: 'vollanatomische implantatgetragene Krone',
+  ZA: 'unverblendete Zirkonkrone (amtlich KM)',
+  ZAB: 'unverblendetes Zirkonglied (amtlich BM oder SBM)',
+  ZAS: 'unverblendete implantatgetragene Zirkonkrone (amtlich SKM)',
   I1: 'einflächiges Inlay',
   I2: 'zweiflächiges Inlay',
   I3: 'dreiflächiges Inlay',
@@ -83,10 +83,10 @@ export const THERAPIE_KUERZEL: Record<string, string> = {
   C4: 'mehrflächiges Keramikinlay',
   ON: 'Onlay',
   ONK: 'Keramikonlay',
-  TZ: 'Primärteleskop aus Keramik',
-  TZV: 'Primärteleskop aus Keramik, vollverblendet aus Komposite',
-  STZ: 'implantatgetragenes Primärteleskop aus Keramik',
-  STZV: 'implantatgetragenes Primärteleskop aus Keramik, vollverblendet aus Komposite',
+  TZ: 'Zirkon-Primärteleskop (amtlich TM)',
+  TZV: 'vollverblendetes Zirkon-Primärteleskop (amtlich TM)',
+  STZ: 'implantatgetragenes Zirkon-Primärteleskop (amtlich STM)',
+  STZV: 'vollverblendetes implantatgetragenes Zirkon-Primärteleskop (amtlich STM)',
   PKV: 'Teilkrone mit vestibulärer Verblendung',
   R: 'Wurzelstiftkappe',
   SB: 'implantatgetragenes Brückenglied',
@@ -112,6 +112,12 @@ export const THERAPIE_KUERZEL: Record<string, string> = {
   T2V: 'Sekundärteil einer Teleskopkrone mit vestibulärer Verblendung',
   ')(': 'Lückenschluss',
 }
+
+/** Vorschläge für die Zeile TP. Interne Kürzel bleiben gültig, stehen aber nicht mehr zur Auswahl. */
+const NICHT_AMT = new Set(['ZA', 'ZAB', 'ZAS', 'TZ', 'TZV', 'STZ', 'STZV'])
+export const THERAPIE_VORSCHLAG: Record<string, string> = Object.fromEntries(
+  Object.entries(THERAPIE_KUERZEL).filter(([k]) => !NICHT_AMT.has(k)),
+)
 
 /** Befundkürzel, die einen fehlenden oder zu ersetzenden Zahn bedeuten */
 export const FEHLEND = new Set(['f', 'x', 'b', 'bw', 'e', 'ew', 'ab', 'abw', 'sb', 'sbw', 'se', 'sew', 'r', 'rw', 'so', 'sow'])

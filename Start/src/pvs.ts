@@ -1,4 +1,5 @@
 /** Export eines HKP ins PVS über den lokalen pvsConnectoR. Mapping und Schreiben macht der Connector. */
+import { planungAmtlich, type LaborWeg } from '../../ZE/HKP/src/engine/tpAmtlich'
 
 /** PVS mit fertigem HKP-Connector; die Adresse kennt nur der Server der Übersicht */
 export const PVS_CONNECTOR: Record<string, string> = {
@@ -93,10 +94,20 @@ function zaehneDer(p: Obj): string[] {
  * Zeile TP, wie sie auf dem HKP steht: leeres TP heißt Regelversorgung – aber nur an Zähnen, die der Plan
  * auch versorgt (Anker einer durch ein Implantat ersetzten Brücke bleiben leer).
  */
+function zahnDerZeile(v: Obj) {
+  const labor = v.labor
+  return {
+    B: typeof v.B === 'string' ? v.B : '',
+    TP: typeof v.TP === 'string' ? v.TP : '',
+    ...(labor === 'vollanatomisch' || labor === 'zirkon-teleskop' || labor === 'zirkon-teleskop-verblendet' ? { labor: labor as LaborWeg } : {}),
+  }
+}
+
 export function planungJeZahn(zaehne: Record<string, Obj>, positionen: Obj[]): Record<string, string> {
   const versorgt = new Set(positionen.flatMap(zaehneDer))
+  const amtlich = planungAmtlich(Object.fromEntries(Object.entries(zaehne).map(([z, v]) => [z, zahnDerZeile(v)])))
   return Object.fromEntries(Object.entries(zaehne).map(([z, v]) => {
-    const tp = String(v.TP ?? '').trim()
+    const tp = (amtlich[z]?.TP ?? '').trim()
     return [z, tp || (versorgt.has(z) ? String(v.R ?? '').trim() : '')]
   }))
 }
@@ -143,14 +154,17 @@ export function hkpFuerPvs(plan: Obj, ergebnis: Obj): string {
   const berechnet = Array.isArray(ergebnis.positionen) ? (ergebnis.positionen as Obj[]) : []
   const zaehne = (plan.zaehne ?? {}) as Record<string, Obj>
   const planung = planungJeZahn(zaehne, berechnet)
+  const amtlich = planungAmtlich(Object.fromEntries(Object.entries(zaehne).map(([z, v]) => [z, zahnDerZeile(v)])))
   const supra = new Set(supraErneuerung(plan))
   return JSON.stringify({
     verwaltung: nur(plan.verwaltung, ['ausstellungsdatum']),
     zuschuss: plan.zuschuss,
     zaehne: Object.fromEntries(Object.entries(zaehne).map(([z, v]) => {
-      if (!supra.has(z)) return [z, { ...v, planung: planung[z] }]
-      const tp = String(v.TP ?? '').trim() || String(v.R ?? '').trim()
-      return [z, { ...v, R: '', TP: tp, planung: tp }]
+      const { labor: _weg, ...zahn } = v
+      const gezeigt = (amtlich[z]?.TP ?? '').trim()
+      if (!supra.has(z)) return [z, { ...zahn, ...(gezeigt ? { TP: gezeigt } : {}), planung: planung[z] }]
+      const tp = gezeigt || String(v.R ?? '').trim()
+      return [z, { ...zahn, R: '', TP: tp, planung: tp }]
     })),
     positionen: berechnet.map((p) => nur(p, ['id', 'ebene', 'nr', 'anzahl', 'zahn', 'labor', 'eigen', 'bezeichnung'])),
     ergebnis: {

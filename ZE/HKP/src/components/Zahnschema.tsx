@@ -1,5 +1,5 @@
 import type { ZahnZeilen } from '../types'
-import { BEFUND_KUERZEL, OBERKIEFER, THERAPIE_KUERZEL, UNTERKIEFER, imVerblendbereich } from '../engine/zahnschema'
+import { BEFUND_KUERZEL, OBERKIEFER, THERAPIE_KUERZEL, THERAPIE_VORSCHLAG, UNTERKIEFER, imVerblendbereich } from '../engine/zahnschema'
 import { befundOhneStrich, brueckenLagen, markeLesen, planungText } from '../engine/bruecken'
 
 type Zeile = 'B' | 'R' | 'TP'
@@ -115,7 +115,7 @@ export function Zahnschema({ zaehne, onChange }: Props) {
         {Object.entries(BEFUND_KUERZEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
       </datalist>
       <datalist id="kuerzel-therapie">
-        {Object.entries(THERAPIE_KUERZEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        {Object.entries(THERAPIE_VORSCHLAG).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
       </datalist>
     </div>
   )

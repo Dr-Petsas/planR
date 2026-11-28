@@ -64,7 +64,7 @@ function zaehneAus(hkp: HkpPlan['zaehne']): Record<string, Zahn> {
     const B = (z.B ?? '').trim()
     const TP = ((ohneTp ? z.R : z.TP) ?? '').trim().toUpperCase()
     if (!B && !TP) continue
-    zaehne[nr] = { B, TP, ...(!ohneTp && z.bAnfang ? { bAnfang: true } : {}), ...(!ohneTp && z.bEnde ? { bEnde: true } : {}) }
+    zaehne[nr] = { B, TP, ...(!ohneTp && z.bAnfang ? { bAnfang: true } : {}), ...(!ohneTp && z.bEnde ? { bEnde: true } : {}), ...(z.labor ? { labor: z.labor } : {}) }
   }
   return zaehne
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { HkpPlan } from '../types'
 import { ALLE_ZAEHNE } from '../engine/zahnschema'
 import { befundOhneStrich, markeLesen } from '../engine/bruecken'
+import { planungAmtlich } from '../engine/tpAmtlich'
 import { mk } from '../mandant'
 import { leererPatient, patientMigrieren } from '../stammdaten'
 
@@ -63,7 +64,7 @@ export function planNormalisieren(p: Partial<HkpPlan>): HkpPlan {
     ...p,
     patient: patientMigrieren(p.patient),
     verwaltung: { ...leer.verwaltung, ...p.verwaltung },
-    zaehne: Object.fromEntries(ALLE_ZAEHNE.map((z) => {
+    zaehne: planungAmtlich(Object.fromEntries(ALLE_ZAEHNE.map((z) => {
       const zahn = p.zaehne?.[z]
       const d = {
         ...leer.zaehne[z], ...zahn,
@@ -73,7 +74,7 @@ export function planNormalisieren(p: Partial<HkpPlan>): HkpPlan {
       if (!d.TP.includes('-')) return [z, d]
       const m = markeLesen(d.TP)
       return [z, { ...d, TP: m.kuerzel, bAnfang: d.bAnfang || m.bAnfang, bEnde: d.bEnde || m.bEnde }]
-    })),
+    }))),
     weitere: { ...leer.weitere, ...p.weitere },
     klinisch: { ...leer.klinisch, ...p.klinisch },
     reparaturen: p.reparaturen ?? [],

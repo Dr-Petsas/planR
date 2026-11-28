@@ -4,6 +4,7 @@ import { KOMPONENTEN, implantatsystem, type Komponente } from '../data/implantat
 import { brueckenBereiche, pfeilerIm } from './bruecken'
 import { DIGITAL, DIGITAL_BEB } from './digital'
 import { kronenEinheiten } from './material'
+import { bebDerPlanung, bebFront } from '../../../HKP/src/engine/tpAmtlich'
 
 export const ABUTMENTS: { id: ImplantatAngaben['abutment']; titel: string }[] = [
   { id: 'standard', titel: 'konfektioniert (Titan)' },
@@ -102,11 +103,8 @@ export interface PlanungsErgebnis {
 
 const spanne = (z: string[]) => (z.length === 1 ? z[0] : `${z[0]}-${z[z.length - 1]}`)
 
-function bebFuer(k: string, b: string, z: string) {
-  if (!istFrontzahn(z)) return b
-  if ((k === 'ZA' || k === 'ZAS') && b === '2251') return '2252'
-  if (k === 'ZAB' && b === '2351') return '2352'
-  return b
+function bebFuer(k: string, b: string, z: string, labor?: Zahn['labor']) {
+  return bebFront(k, b, istFrontzahn(z), labor)
 }
 
 /** Kieferhälften und Frontzahnbereiche für die optisch-elektronische Abformung (GOZ 0065) */
@@ -243,8 +241,9 @@ export function planen(zaehne: Record<string, Zahn>, abformung: Abformung, impla
       const anker = brueckenAnker.has(z) || GESCHIEBE.test(k) || stegAnker.has(z) || (prothesenZaehne.length > 0 && /^S?T/.test(k))
       const goz = anker && zuo.anker ? zuo.anker : zuo.goz
       if (goz) pos('GOZ', goz, z)
-      for (const b of zuo.beb) pos('BEB', bebFuer(k, b, z), z)
-      if (/^(TM|STM|T2M|TZV|STZV)$/.test(k) && !hinweise.some((h) => h.startsWith('Vollverblendete Teleskope')))
+      const labor = zaehne[z]?.labor
+      for (const b of bebDerPlanung(k, zuo.beb, labor)) pos('BEB', bebFuer(k, b, z, labor), z)
+      if (/^(TM|STM|T2M|TZV|STZV)$/.test(k) && labor !== 'zirkon-teleskop' && !hinweise.some((h) => h.startsWith('Vollverblendete Teleskope')))
         hinweise.push('Vollverblendete Teleskope: Verblendung aus Kunststoff (Komposite, BEB 2602). Keramik platzt beim Aufsetzen durch die Spannung ab.')
       if (VENEER.test(k)) pos('GOZ', '2197', z)
       if (GESCHIEBE.test(k)) pos('GOZ', '5080', z)

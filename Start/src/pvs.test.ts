@@ -157,6 +157,26 @@ describe('PVS-Export: HKP-Daten', () => {
     expect(d.ergebnis.versorgungsart).toBe('andersartig')
   })
 
+  it('interne Therapiekürzel gehen amtlich an DS-Win, die Regelversorgung bleibt', () => {
+    const ergebnis = { versorgungsart: 'gleichartig', summen: {}, befunde: [], positionen: [] }
+    const zaehne = {
+      14: { B: 'ww', R: 'KV', TP: 'ZA' },
+      15: { B: 'f', R: 'BV', TP: 'ZAB' },
+      16: { B: 'ww', R: 'KV', TP: 'ZA' },
+      26: { B: 'f', R: 'SK', TP: 'ZAS' },
+      27: { B: 'f', R: 'SB', TP: 'ZAB' },
+      28: { B: 'f', R: 'SK', TP: 'ZAS' },
+      13: { B: 'kw', R: 'T', TP: 'TZ' },
+    }
+    const d = JSON.parse(hkpFuerPvs({ zaehne, versorgungsart: 'gleichartig' }, ergebnis))
+    expect(d.zaehne['14'].TP).toBe('KM')
+    expect(d.zaehne['15'].TP).toBe('BM')
+    expect(d.zaehne['26'].TP).toBe('SKM')
+    expect(d.zaehne['27'].TP).toBe('SBM')
+    expect(d.zaehne['13'].TP).toBe('TM')
+    expect(d.zaehne['14'].R).toBe('KV')
+  })
+
   it('Suprakonstruktion als Regelversorgung bleibt in Zeile R: Ausnahmefall Nr. 36 (7.6) und von Hand gesetzte Versorgungsart', () => {
     const ergebnis = { versorgungsart: 'gleichartig', summen: {}, befunde: [], positionen: [{ id: 'g', ebene: 'GOZ', nr: '5230', anzahl: 1, zahn: 'UK' }] }
     const zaehne = { 33: { B: 'sow', R: 'SO', TP: '' }, 34: { B: 'sew', R: 'SE', TP: '' }, 13: { B: 'sow', R: 'SO', TP: '' } }

@@ -14,6 +14,7 @@ import { hkpKi } from './kiPlan'
 import { planKiHoeren } from './arbeitFenster'
 import { listenFuer, planMitKatalog } from './clara'
 import { regelOptionen, regelversorgungErmitteln, therapieAnwenden } from './engine/regeln'
+import { planungAmtlich } from './engine/tpAmtlich'
 import { privatStufeAnwenden, regelUebernehmen } from './engine/aufwertung'
 import { implantateErfasst } from './engine/implantat'
 import { relevanzErmitteln } from './engine/relevanz'
@@ -281,13 +282,13 @@ export default function App() {
   }
 
   function regelengine(aenderung: Partial<HkpPlan> = {}) {
-    const q = { ...plan, ...aenderung }
+    const q = { ...plan, ...aenderung, zaehne: planungAmtlich({ ...plan.zaehne, ...aenderung.zaehne }) }
     const stufe = q.einstellungen.eigenPrivatStufe ?? 0
     const privat = stufe > 0 ? privatStufeAnwenden(q, stufe) : undefined
     const zaehne = privat?.plan.zaehne ?? q.zaehne
     const regel = therapieAnwenden(regelversorgungErmitteln(zaehne, regelOptionen(q)), zaehne, q)
     setPlan((p) => {
-      return stufe > 0 ? privatStufeAnwenden({ ...p, ...aenderung }, stufe).plan : regelUebernehmen({ ...p, ...aenderung }, regel)
+      return stufe > 0 ? privatStufeAnwenden({ ...p, ...aenderung, zaehne: q.zaehne }, stufe).plan : regelUebernehmen({ ...p, ...aenderung, zaehne: q.zaehne }, regel)
     })
     setEngineHinweise([...regel.hinweise, ...(privat?.hinweise ?? [])])
   }
