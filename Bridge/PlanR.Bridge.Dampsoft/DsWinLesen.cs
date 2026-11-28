@@ -171,7 +171,7 @@ public static class DsWinBefund
 
     public static HashSet<string> FindingCodes(string? root = null)
     {
-        var codes = new HashSet<string>(EhkpCodes, StringComparer.Ordinal) { "i" };
+        var codes = new HashSet<string>(EhkpCodes, StringComparer.Ordinal) { "i", "j", "j1", "j2" };
         foreach (var d in DpfCodes) codes.Add(d);
         if (!string.IsNullOrEmpty(root))
         {
@@ -191,6 +191,20 @@ public static class DsWinBefund
             }
         }
         return codes;
+    }
+
+    /// <summary>
+    /// DS-Win speichert Implantate als j, j1, j2 ohne Leerzeichen.
+    /// PlanR zeigt sie als i; aus der Sprache kommt manchmal „i 2“ / „i 1“.
+    /// Ein nacktes i bleibt i.
+    /// </summary>
+    public static string ImplantatNachDsWin(string status)
+    {
+        var c = status.Trim().ToLowerInvariant().Replace(" ", "");
+        if (c is "i2" or "j2") return "j2";
+        if (c is "i1" or "j1") return "j1";
+        if (c == "j") return "j";
+        return status.Trim();
     }
 
     public static string ToothStatus(byte[] raw) =>
@@ -389,7 +403,7 @@ public static class DsWinBefund
         {
             if (!teethSet.Contains(t) || sv is not string s)
                 throw new EditError("teeth enthält einen nicht unterstützten Zahnstatus.");
-            teeth[t] = s;
+            teeth[t] = ImplantatNachDsWin(s);
         }
         var allowedStatuses = new HashSet<string>(codes ?? FindingCodes(), StringComparer.Ordinal) { "healthy", "missing" };
         var unsupported = teeth.Where(kv => !allowedStatuses.Contains(kv.Value))

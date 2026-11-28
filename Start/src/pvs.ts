@@ -289,6 +289,20 @@ export function implantKuerzel(code: string): string {
   return /^j(?:\s*[12])?$/i.test(code.trim()) ? 'i' : code
 }
 
+/**
+ * DS-Win speichert Implantate als j, j1, j2 ohne Leerzeichen.
+ * PlanR zeigt sie als i; aus der Sprache kommt manchmal „i 2“ / „i 1“.
+ * Ein nacktes i bleibt i, damit schon angenommene Befunde gleich bleiben.
+ */
+export function dsWinKuerzel(code: string): string {
+  const roh = code.trim()
+  const eng = roh.toLowerCase().split(' ').join('')
+  if (eng === 'i2' || eng === 'j2') return 'j2'
+  if (eng === 'i1' || eng === 'j1') return 'j1'
+  if (eng === 'j') return 'j'
+  return roh
+}
+
 /** Antwort des Connectors auf GET /patients/<nr>/befunde/01; Datum: aktueller Status, sonst letzter 01-Befund */
 export function befundAusPvs(d: unknown): PvsBefund | null {
   const o = d as { version?: unknown; current?: { date?: unknown; teeth?: Record<string, { status?: unknown }> }; items?: { date?: unknown }[] }
@@ -299,13 +313,14 @@ export function befundAusPvs(d: unknown): PvsBefund | null {
 }
 
 /** Neuer Befund → Schreibauftrag für den Connector: nur die genannten Kiefer, ohne Kürzel = vorhanden */
-export function befundAuftrag(zaehne: Record<string, unknown>, kiefer: unknown[]): Record<string, string> {
+export function befundAuftrag(zaehne: Record<string, unknown>, kiefer: unknown[], pvs?: string): Record<string, string> {
   const teeth: Record<string, string> = {}
   for (const k of kiefer) {
     for (const z of KIEFER[String(k)] ?? []) {
       if (!(z in zaehne)) continue
       const code = String(zaehne[z] ?? '').trim()
-      teeth[z] = code || 'healthy'
+      const norm = pvs === 'dampsoft' ? dsWinKuerzel(code) : code
+      teeth[z] = norm || 'healthy'
     }
   }
   return teeth

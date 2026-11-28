@@ -3090,7 +3090,7 @@ async function befundGelesen(w: Wer, l: BefundGelesen): Promise<Befund01> {
 
 /** Kiefer ins PVS (DS-Win hebt den alten Befund als Historie auf); danach stehen sie so im aktuellen Befund. */
 async function befundSchreiben(w: Wer, l: BefundGelesen, kiefer: unknown[], zaehne: Record<string, unknown>, wo: string): Promise<{ geschrieben: string[]; befund: Befund01 } | BefundFehler> {
-  const teeth = befundAuftrag(zaehne, kiefer)
+  const teeth = befundAuftrag(zaehne, kiefer, l.c.id)
   if (!Object.keys(teeth).length) return { status: 400, daten: { ok: false, meldung: 'Im Befund steht kein Zahn der genannten Kiefer.' } }
   const { c, rufen, nummer } = l
   const schreiben = (version: string) => rufen<{ selectedTeeth?: string[]; message?: string }>(`/patients/${nummer}/befunde/01`, {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgeKann, bridgeKannGemeldet, bridgePvsGemeldet, bridgeSollPvs, bridgeWaehlen, datumIso, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, pvsFuerBridge, supraErneuerung, vermerkText } from './pvs'
+import { befundAuftrag, befundAusPvs, bridgeFolgtEinstellung, bridgeKann, bridgeKannGemeldet, bridgePvsGemeldet, bridgeSollPvs, bridgeWaehlen, datumIso, dsWinKuerzel, hkpFuerPvs, patientWaehlen, planInsPvsMoeglich, planungJeZahn, pvsFuerBridge, supraErneuerung, vermerkText } from './pvs'
 
 describe('PVS-Vermerk', () => {
   it('ein Plan bzw. MKV und Privatvereinbarung als zwei DS-Win-Pläne', () => {
@@ -223,5 +223,14 @@ describe('Befund aus dem und ins PVS', () => {
     expect(t).toEqual({ 18: 'f', 17: 'healthy', 16: 'kw' })
     expect(befundAuftrag({ 18: 'f', 36: 'x' }, ['OK', 'UK', 'XX'])).toEqual({ 18: 'f', 36: 'x' })
     expect(befundAuftrag({ 18: 'f' }, [])).toEqual({})
+  })
+
+  it('schreibt „i 2“ nach DS-Win als j2 und lässt ein nacktes i stehen', () => {
+    expect(befundAuftrag({ 24: 'i 2', 15: 'i', 16: 'kw' }, ['OK'], 'dampsoft')).toEqual({ 24: 'j2', 15: 'i', 16: 'kw' })
+    expect(befundAuftrag({ 24: 'i 2' }, ['OK'], 'dens')).toEqual({ 24: 'i 2' })
+    expect(befundAuftrag({ 24: 'i 2' }, ['OK'])).toEqual({ 24: 'i 2' })
+    expect(dsWinKuerzel('j 1')).toBe('j1')
+    expect(dsWinKuerzel('I 2')).toBe('j2')
+    expect(dsWinKuerzel('kw')).toBe('kw')
   })
 })

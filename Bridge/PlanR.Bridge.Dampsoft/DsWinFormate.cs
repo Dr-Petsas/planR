@@ -76,10 +76,15 @@ public static class DsWinFormate
         return s;
     }
 
+    // Ein digitaler Eigenlabor-Plan (BEB je Krone) liegt weit über 100 Zeilen;
+    // 64 KB reichen dafür nicht. Gleiche Grenze wie beim DENS-Connector.
+    const int MaxHkpBytes = 262144;
+    const int MaxHkpPositionen = 500;
+
     /// <summary>Port von import_formats.parse_hkp_json.</summary>
     public static Dictionary<string, object?> ParseHkpJson(string? text, string encoding)
     {
-        if (text is null || Encoding.UTF8.GetByteCount(text) > 65536)
+        if (text is null || Encoding.UTF8.GetByteCount(text) > MaxHkpBytes)
             throw new EditError("HKP-JSON ist leer oder zu groß.");
         JsonDocument doc;
         try { doc = JsonDocument.Parse(text); }
@@ -94,9 +99,13 @@ public static class DsWinFormate
                 throw new EditError("Ungültiges HKP-JSON.");
             if (administration.ValueKind != JsonValueKind.Object
                 || result.ValueKind != JsonValueKind.Object
-                || positions.ValueKind != JsonValueKind.Array
-                || positions.GetArrayLength() < 1 || positions.GetArrayLength() > 100)
+                || positions.ValueKind != JsonValueKind.Array)
                 throw new EditError("HKP-JSON enthält keine unterstützten Planpositionen.");
+            var anzahl = positions.GetArrayLength();
+            if (anzahl < 1)
+                throw new EditError("HKP-JSON enthält keine unterstützten Planpositionen.");
+            if (anzahl > MaxHkpPositionen)
+                throw new EditError($"HKP-JSON enthält {anzahl} Planpositionen. DS-Win übernimmt höchstens {MaxHkpPositionen}.");
 
             string date;
             double bemaHonorar, gozHonorar, materialUndLabor, total, subsidy, subsidy100, patientShare, labFremd, labRate;
